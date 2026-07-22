@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { requireSession, unauthorized, badRequest } from "@/lib/api-auth";
-import { scheduledCollection, ensureTicker, processDuePushes } from "@/lib/push";
+import { scheduledCollection, ensureTicker, processDuePushes, armPrecise } from "@/lib/push";
 
 const MAX_AHEAD_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -52,6 +52,7 @@ export async function POST(request: Request) {
   });
 
   ensureTicker();
+  armPrecise(body.fireAt); // exact-moment delivery for this push
   processDuePushes().catch(() => {}); // catch up anything overdue right away
   return NextResponse.json({ ok: true });
 }

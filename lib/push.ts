@@ -99,6 +99,22 @@ export function ensureTicker(): void {
   if (global._kairoPushTicker) return;
   global._kairoPushTicker = setInterval(() => {
     processDuePushes().catch(() => {});
-  }, 15_000);
+  }, 5_000);
   global._kairoPushTicker.unref?.();
+  // catch up anything stranded the moment the process starts
+  processDuePushes().catch(() => {});
+}
+
+/**
+ * Precision timer: fires the sweep at the exact moment a push is due, so
+ * delivery is on the second instead of waiting for the next sweep. The
+ * interval sweep stays as the safety net (restarts, far-future pushes).
+ */
+export function armPrecise(fireAt: number): void {
+  const delay = fireAt - Date.now();
+  if (delay > 60 * 60 * 1000) return; // far future — the sweep will handle it
+  const t = setTimeout(() => {
+    processDuePushes().catch(() => {});
+  }, Math.max(0, delay) + 200);
+  t.unref?.();
 }

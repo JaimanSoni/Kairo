@@ -217,18 +217,26 @@ export function Modal({
     let velocity = 0;
     let active = false;
     let dragging = false;
+    let grabOffset = 0; // dy at the moment the drag engages — keeps the start jump-free
+    let pendingY = 0;
+    let raf = 0;
 
     const setDrag = (y: number, animate: boolean) => {
       panel.style.transition = animate
-        ? "transform 0.25s cubic-bezier(0.32, 0.72, 0.24, 1)"
+        ? "transform 0.3s cubic-bezier(0.22, 1, 0.36, 1)"
         : "none";
-      panel.style.transform = y > 0 ? `translateY(${y}px)` : "";
+      panel.style.transform = y > 0 ? `translate3d(0,${y}px,0)` : "";
       if (backdropRef.current) {
-        backdropRef.current.style.transition = animate ? "opacity 0.25s ease" : "none";
+        backdropRef.current.style.transition = animate ? "opacity 0.3s ease" : "none";
         backdropRef.current.style.opacity = String(
           1 - Math.min(1, y / Math.max(1, panel.offsetHeight)) * 0.9
         );
       }
+    };
+
+    const flushDrag = () => {
+      raf = 0;
+      setDrag(pendingY, false);
     };
 
     /* a touch inside a nested scrollable (estimate wheel, sweep list…) belongs to it */
@@ -248,9 +256,11 @@ export function Modal({
       if (!fromHandle && insideNestedScroller(target)) return;
       active = true;
       dragging = false;
+      grabOffset = 0;
       startY = lastY = e.touches[0].clientY;
       lastT = e.timeStamp;
       velocity = 0;
+      panel.style.transition = "none"; // never fight a leftover transition mid-grab
       // the grab handle always drags, content drags only when scrolled to top
       if (fromHandle) dragging = true;
     };
@@ -260,31 +270,39 @@ export function Modal({
       const y = e.touches[0].clientY;
       const dy = y - startY;
       const dt = e.timeStamp - lastT || 1;
-      velocity = (y - lastY) / dt;
+      // smoothed velocity — a single jittery event shouldn't decide a flick
+      velocity = velocity * 0.6 + ((y - lastY) / dt) * 0.4;
       lastY = y;
       lastT = e.timeStamp;
 
       if (!dragging) {
-        if (dy > 8 && panel.scrollTop <= 0) dragging = true;
-        else if (dy < -8) {
+        if (dy > 4 && panel.scrollTop <= 0) {
+          dragging = true;
+          grabOffset = dy; // translation starts at 0 from here — no jump
+        } else if (dy < -6) {
           active = false; // user is scrolling content upward
           return;
         } else return;
       }
       if (e.cancelable) e.preventDefault();
-      setDrag(Math.max(0, dy), false);
+      pendingY = Math.max(0, dy - grabOffset);
+      if (!raf) raf = requestAnimationFrame(flushDrag); // one style write per frame
     };
 
     const onEnd = () => {
       if (!active) return;
       active = false;
       if (!dragging) return;
-      const dy = lastY - startY;
-      if (dy > panel.offsetHeight * 0.35 || (dy > 60 && velocity > 0.45)) {
+      if (raf) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
+      const dy = Math.max(0, lastY - startY - grabOffset);
+      if (dy > panel.offsetHeight * 0.3 || (dy > 50 && velocity > 0.4)) {
         closingRef.current = true;
         setDrag(panel.offsetHeight + 40, true);
         if (backdropRef.current) backdropRef.current.style.opacity = "0";
-        setTimeout(onClose, 220);
+        setTimeout(onClose, 260);
       } else {
         setDrag(0, true);
       }
@@ -319,8 +337,8 @@ export function Modal({
         role="dialog"
         aria-modal
       >
-        <div data-sheet-handle className="sticky top-0 z-20 -mb-2 flex touch-none justify-center pb-3 pt-2 sm:hidden" aria-hidden>
-          <div className="h-1 w-9 rounded-full bg-line" />
+        <div data-sheet-handle className="sticky top-0 z-20 -mb-3 flex touch-none justify-center pb-4 pt-2.5 sm:hidden" aria-hidden>
+          <div className="h-1 w-10 rounded-full bg-ink-faint/40" />
         </div>
         {children}
       </div>
