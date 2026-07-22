@@ -139,18 +139,20 @@ export function Shell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      {/* bottom nav — mobile */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t border-line bg-card/95 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur md:hidden">
+      {/* bottom nav — mobile: strict 5-column grid keeps the + dead center */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 items-center border-t border-line bg-card/95 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur md:hidden">
         {NAV.slice(0, 2).map(({ href, label, icon: Icon }) => (
           <MobileTab key={href} href={href} label={label} Icon={Icon} active={pathname.startsWith(href)} />
         ))}
-        <button
-          onClick={() => setOmnibar(true)}
-          aria-label="Capture"
-          className="grid size-12 -translate-y-3 place-items-center rounded-full bg-sun text-on-accent shadow-lg shadow-sun/35 active:scale-95"
-        >
-          <IconPlus size={20} />
-        </button>
+        <div className="flex justify-center">
+          <button
+            onClick={() => setOmnibar(true)}
+            aria-label="Capture"
+            className="grid size-12 -translate-y-3 place-items-center rounded-full bg-sun text-on-accent shadow-lg shadow-sun/35 active:scale-95"
+          >
+            <IconPlus size={20} />
+          </button>
+        </div>
         {NAV.slice(2).map(({ href, label, icon: Icon }) => (
           <MobileTab key={href} href={href} label={label} Icon={Icon} active={pathname.startsWith(href)} />
         ))}
@@ -367,7 +369,7 @@ function MobileTab({
   return (
     <Link
       href={href}
-      className={`flex flex-col items-center gap-0.5 px-3 py-1 text-[10px] font-medium ${
+      className={`flex flex-col items-center gap-0.5 py-1 text-[10px] font-medium ${
         active ? "text-sun-deep" : "text-ink-faint"
       }`}
     >
