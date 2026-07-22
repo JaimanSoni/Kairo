@@ -1,26 +1,283 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display-serif), Georgia, serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@theme {
+  /* Sunset palette: warm cream base, espresso ink (never pure black),
+     one alive coral accent, fresh pastel support. Soft ≠ washed out. */
+  --color-paper: #fbf6ef;
+  --color-paper-deep: #f3ece0;
+  --color-card: #ffffff;
+  --color-ink: #322e28;
+  --color-ink-soft: #6b6357;
+  --color-ink-faint: #a79e90;
+  --color-line: #eae2d3;
+  --color-sun: #f08a4b;
+  --color-sun-deep: #ae5a22;
+  --color-sun-soft: #fbe9d9;
+  --color-moss: #4f9068;
+  --color-moss-soft: #e1f0e5;
+  --color-sky: #5e9ec8;
+  --color-sky-soft: #e6f1f8;
+  --color-clay: #d26a54;
+  --color-clay-soft: #f9e6df;
+  --color-lilac: #8b7bd8;
+  --color-lilac-soft: #efebfb;
+}
+
+/* Dark theme — same warm identity, lights off. Applied via data-theme,
+   resolved by the inline script in the root layout before first paint. */
+:root[data-theme="dark"] {
+  --color-paper: #181411;
+  --color-paper-deep: #2a241e;
+  --color-card: #221d18;
+  --color-ink: #ede6db;
+  --color-ink-soft: #b3a99c;
+  --color-ink-faint: #776e62;
+  --color-line: #352e27;
+  --color-sun: #f0904f;
+  --color-sun-deep: #f5a97b;
+  --color-sun-soft: #3d2a1c;
+  --color-moss: #6fb287;
+  --color-moss-soft: #223328;
+  --color-sky: #7fb6d9;
+  --color-sky-soft: #1f2e38;
+  --color-clay: #e08a70;
+  --color-clay-soft: #3a241d;
+  --color-lilac: #a99ae8;
+  --color-lilac-soft: #2a2438;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-x: none;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+button,
+a,
+input,
+[draggable] {
+  touch-action: manipulation;
+}
+
+::selection {
+  background: var(--color-sun-soft);
+}
+
+/* ---------- animations ---------- */
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  70% {
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes check-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.35);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes fade-slide-out {
+  to {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--rot, 0deg));
+  }
+  50% {
+    transform: translateY(-10px) rotate(var(--rot, 0deg));
+  }
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    opacity: 0.6;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shake-x {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-7px);
+  }
+  40%,
+  80% {
+    transform: translateX(7px);
+  }
+}
+
+.anim-shake {
+  animation: shake-x 0.4s ease;
+}
+
+@keyframes soft-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(0.94);
+  }
+}
+
+.anim-rise {
+  animation: rise-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.anim-pop {
+  animation: pop-in 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.anim-check {
+  animation: check-pop 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.anim-out {
+  animation: fade-slide-out 0.3s ease forwards;
+}
+.anim-float {
+  animation: float-slow 5s ease-in-out infinite;
+}
+.anim-marquee {
+  animation: marquee 30s linear infinite;
+}
+.anim-pulse {
+  animation: soft-pulse 1.2s ease-in-out infinite;
+}
+
+/* modals: bottom sheet on touch screens, centered pop on desktop */
+.anim-modal {
+  animation: sheet-up 0.32s cubic-bezier(0.32, 0.72, 0.24, 1) both;
+}
+@media (min-width: 640px) {
+  .anim-modal {
+    animation: pop-in 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-rise,
+  .anim-pop,
+  .anim-check,
+  .anim-out,
+  .anim-float,
+  .anim-marquee,
+  .anim-pulse,
+  .anim-modal {
+    animation: none;
+  }
+}
+
+/* ---------- shared bits ---------- */
+
+.font-display {
+  font-family: var(--font-display);
+  /* Fraunces soft axis: rounded terminals, gentle contrast */
+  font-variation-settings: "SOFT" 100;
+  letter-spacing: -0.01em;
+}
+
+.glow-warm {
+  background:
+    radial-gradient(38rem 22rem at 18% 0%, rgba(240, 138, 75, 0.13), transparent 60%),
+    radial-gradient(32rem 22rem at 85% 18%, rgba(139, 123, 216, 0.1), transparent 60%);
+}
+
+.squiggle {
+  background-image: url("data:image/svg+xml,%3Csvg width='40' height='8' viewBox='0 0 40 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 4 Q5 0 10 4 T20 4 T30 4 T40 4' fill='none' stroke='%23f08a4b' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-size: 40px 8px;
+  height: 8px;
+}
+
+.strike-done {
+  position: relative;
+  color: var(--color-ink-faint);
+}
+.strike-done::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  height: 1.5px;
+  background: var(--color-ink-faint);
+  animation: strike 0.3s ease-out forwards;
+}
+@keyframes strike {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+input,
+textarea,
+button {
+  font-family: inherit;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
 }
