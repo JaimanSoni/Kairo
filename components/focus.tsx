@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { playComplete } from "@/lib/sound";
+import { cancelPush, enablePush, pushEnabled, pushPermission, schedulePush } from "@/lib/push-client";
 import { useApp } from "./store";
 import { IconX } from "./ui";
 
@@ -54,8 +55,39 @@ export function FocusOverlay() {
 
   const [timer, setTimer] = useState<SavedTimer | null>(null);
   const [now, setNow] = useState(0);
+  const [pushOn, setPushOn] = useState<boolean | null>(null);
+  const [perm, setPerm] = useState<string>("default");
   const zeroFired = useRef(false);
   const restored = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setPerm(pushPermission());
+      pushEnabled().then((v) => !cancelled && setPushOn(v));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /** Server-side push at the timer's end — arrives even if the tab is gone. */
+  const scheduleEndPush = useCallback(
+    (endAt: number, taskId: string, title: string) => {
+      pushEnabled().then((ok) => {
+        if (!ok || endAt <= Date.now()) return;
+        schedulePush({
+          fireAt: endAt,
+          title: "⏱ Time's up",
+          body: `“${title}” — nice work. Finish it, or go overtime.`,
+          tag: `focus-${taskId}`,
+          url: "/today",
+        });
+      });
+    },
+    []
+  );
 
   /* restore a timer from a previous session (as a pill, not a takeover) */
   useEffect(() => {
@@ -86,6 +118,9 @@ export function FocusOverlay() {
       const saved = load();
       if (saved && saved.taskId === focus.taskId) {
         zeroFired.current = (saved.running ? saved.endAt - Date.now() : saved.remainingMs) <= 0;
+        if (saved.running && saved.endAt > Date.now()) {
+          scheduleEndPush(saved.endAt, focus.taskId, task.title);
+        }
         apply(saved);
         return;
       }
@@ -100,6 +135,7 @@ export function FocusOverlay() {
       };
       zeroFired.current = false;
       save(fresh);
+      scheduleEndPush(fresh.endAt, focus.taskId, task.title);
       apply(fresh);
     });
     return () => {
@@ -133,7 +169,8 @@ export function FocusOverlay() {
       : timer.remainingMs
     : 0;
 
-  /* time's up chime — once */
+  /* time's up chime — once. If the page is visibly open, the in-page chime is
+     enough; drop the pending push so it doesn't double-notify. */
   useEffect(() => {
     if (timer && remaining <= 0 && !zeroFired.current) {
       zeroFired.current = true;
@@ -141,6 +178,9 @@ export function FocusOverlay() {
       try {
         navigator.vibrate?.([60, 40, 60]);
       } catch {}
+      if (document.visibilityState === "visible") {
+        cancelPush(`focus-${timer.taskId}`);
+      }
     }
   });
 
@@ -155,28 +195,40 @@ export function FocusOverlay() {
   const overtime = remaining < 0;
   const fraction = overtime ? 1 : 1 - Math.min(1, Math.max(0, remaining / timer.totalMs));
 
-  const pause = () => update({ ...timer, running: false, remainingMs: remaining });
-  const resume = () => update({ ...timer, running: true, endAt: Date.now() + timer.remainingMs });
+  const pause = () => {
+    cancelPush(`focus-${task.id}`);
+    update({ ...timer, running: false, remainingMs: remaining });
+  };
+  const resume = () => {
+    const endAt = Date.now() + timer.remainingMs;
+    scheduleEndPush(endAt, task.id, task.title);
+    update({ ...timer, running: true, endAt });
+  };
   const reset = () => {
     zeroFired.current = false;
+    cancelPush(`focus-${task.id}`);
     update({ ...timer, running: false, remainingMs: timer.totalMs, endAt: 0 });
   };
   const addFive = () => {
     zeroFired.current = false;
     const extra = 5 * 60 * 1000;
     if (timer.running) {
-      update({ ...timer, totalMs: timer.totalMs + extra, endAt: Math.max(timer.endAt, Date.now()) + extra });
+      const endAt = Math.max(timer.endAt, Date.now()) + extra;
+      scheduleEndPush(endAt, task.id, task.title);
+      update({ ...timer, totalMs: timer.totalMs + extra, endAt });
     } else {
       update({ ...timer, totalMs: timer.totalMs + extra, remainingMs: Math.max(timer.remainingMs, 0) + extra });
     }
   };
   const finish = () => {
+    cancelPush(`focus-${task.id}`);
     save(null);
     stopFocus();
     completeTask(task.id);
     showToast({ message: "🎉 Nailed it. One more in the log." });
   };
   const exit = () => {
+    cancelPush(`focus-${task.id}`);
     save(null);
     stopFocus();
   };
@@ -233,6 +285,23 @@ export function FocusOverlay() {
             <p className="mt-2 text-sm font-medium text-clay">Overtime — still going. Respect.</p>
           ) : (
             !timer.running && <p className="mt-2 text-sm text-ink-faint">Paused — breathe.</p>
+          )}
+          {pushOn === false && perm === "default" && !overtime && (
+            <button
+              onClick={async () => {
+                const result = await enablePush();
+                if (result === "enabled") {
+                  setPushOn(true);
+                  if (timer.running) scheduleEndPush(timer.endAt, task.id, task.title);
+                  showToast({ message: "🔔 You'll get a ping when time's up" });
+                } else {
+                  setPerm(pushPermission());
+                }
+              }}
+              className="mt-3 rounded-full border border-line bg-card px-4 py-1.5 text-xs font-medium text-ink-soft transition-colors hover:border-sun hover:text-sun-deep"
+            >
+              🔔 Notify me when time&apos;s up
+            </button>
           )}
         </div>
 

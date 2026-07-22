@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { hiddenListIds, useApp } from "./store";
+import { registerServiceWorker } from "@/lib/push-client";
 import { Omnibar } from "./omnibar";
 import { TaskEditor } from "./task-editor";
 import { FocusOverlay } from "./focus";
@@ -29,6 +30,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
       (t) => t.status === "inbox" && !(t.listId && hidden.has(t.listId))
     ).length;
   }, [state]);
+
+  // service worker for web push (timer-end notifications)
+  useEffect(() => {
+    registerServiceWorker();
+  }, []);
 
   // app-wide keyboard shortcuts
   useEffect(() => {
@@ -216,6 +222,8 @@ function ProfileSheet({
           <ThemeToggle />
         </div>
 
+        <NotificationSettings />
+
         <form action="/api/auth/signout" method="POST" className="mt-6 border-t border-line pt-4">
           <button
             type="submit"
@@ -226,6 +234,74 @@ function ProfileSheet({
         </form>
       </div>
     </Modal>
+  );
+}
+
+function NotificationSettings() {
+  const [status, setStatus] = useState<"loading" | "enabled" | "disabled" | "denied" | "unsupported">("loading");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    import("@/lib/push-client").then(async ({ pushPermission, pushEnabled }) => {
+      const perm = pushPermission();
+      const next =
+        perm === "unsupported"
+          ? ("unsupported" as const)
+          : perm === "denied"
+            ? ("denied" as const)
+            : (await pushEnabled())
+              ? ("enabled" as const)
+              : ("disabled" as const);
+      if (!cancelled) setStatus(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const toggle = async () => {
+    if (busy) return;
+    setBusy(true);
+    const { enablePush, disablePush } = await import("@/lib/push-client");
+    if (status === "enabled") {
+      await disablePush();
+      setStatus("disabled");
+    } else {
+      const result = await enablePush();
+      setStatus(result === "enabled" ? "enabled" : result === "denied" ? "denied" : "disabled");
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div className="mt-6">
+      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">
+        Notifications
+      </div>
+      {status === "unsupported" ? (
+        <p className="text-sm text-ink-faint">This browser doesn&apos;t support push notifications.</p>
+      ) : status === "denied" ? (
+        <p className="text-sm text-ink-faint">
+          Blocked — allow notifications for this site in your browser settings.
+        </p>
+      ) : (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-ink-soft">Get notified when a focus timer ends.</p>
+          <button
+            onClick={toggle}
+            disabled={status === "loading" || busy}
+            className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
+              status === "enabled"
+                ? "bg-sun-soft text-sun-deep"
+                : "border border-line bg-card text-ink-soft hover:border-sun hover:text-sun-deep"
+            }`}
+          >
+            {busy ? "…" : status === "enabled" ? "On ✓" : "Enable"}
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -1,0 +1,69 @@
+import { NextResponse } from "next/server";
+import { ObjectId } from "mongodb";
+import { requireSession, unauthorized, badRequest } from "@/lib/api-auth";
+import { scheduledCollection, ensureTicker, processDuePushes } from "@/lib/push";
+
+const MAX_AHEAD_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Schedules a push for a future moment (e.g. a focus timer's end).
+ * Same-tag scheduling replaces the previous one — pause/extend just reschedules.
+ */
+export async function POST(request: Request) {
+  const session = await requireSession();
+  if (!session) return unauthorized();
+
+  let body: { fireAt?: unknown; title?: unknown; body?: unknown; tag?: unknown; url?: unknown };
+  try {
+    body = await request.json();
+  } catch {
+    return badRequest("Invalid JSON");
+  }
+
+  if (typeof body.fireAt !== "number" || !Number.isFinite(body.fireAt)) {
+    return badRequest("fireAt (epoch ms) required");
+  }
+  const now = Date.now();
+  if (body.fireAt < now - 60_000 || body.fireAt > now + MAX_AHEAD_MS) {
+    return badRequest("fireAt out of range");
+  }
+  if (typeof body.title !== "string" || !body.title.trim() || body.title.length > 200) {
+    return badRequest("title required");
+  }
+  const tag = typeof body.tag === "string" && body.tag.length <= 100 ? body.tag : null;
+
+  const scheduled = await scheduledCollection();
+  const userId = new ObjectId(session.userId);
+  if (tag) await scheduled.deleteMany({ userId, tag });
+  await scheduled.insertOne({
+    userId,
+    fireAt: body.fireAt,
+    title: body.title.trim(),
+    body: typeof body.body === "string" ? body.body.slice(0, 500) : null,
+    tag,
+    url: typeof body.url === "string" && body.url.startsWith("/") ? body.url : "/today",
+    createdAt: new Date(),
+  });
+
+  ensureTicker();
+  processDuePushes().catch(() => {}); // catch up anything overdue right away
+  return NextResponse.json({ ok: true });
+}
+
+/** Cancels pending scheduled pushes by tag (e.g. when a timer is paused). */
+export async function DELETE(request: Request) {
+  const session = await requireSession();
+  if (!session) return unauthorized();
+
+  let body: { tag?: unknown };
+  try {
+    body = await request.json();
+  } catch {
+    return badRequest("Invalid JSON");
+  }
+  if (typeof body.tag !== "string" || !body.tag) return badRequest("tag required");
+
+  const scheduled = await scheduledCollection();
+  await scheduled.deleteMany({ userId: new ObjectId(session.userId), tag: body.tag });
+  return NextResponse.json({ ok: true });
+}
