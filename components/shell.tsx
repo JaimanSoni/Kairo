@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { hiddenListIds, useApp } from "./store";
 import { registerServiceWorker } from "@/lib/push-client";
+import { playNotify } from "@/lib/sound";
 import { Omnibar } from "./omnibar";
 import { TaskEditor } from "./task-editor";
 import { FocusOverlay } from "./focus";
@@ -34,6 +35,16 @@ export function Shell({ children }: { children: React.ReactNode }) {
   // service worker for web push (timer-end notifications)
   useEffect(() => {
     registerServiceWorker();
+  }, []);
+
+  // when a push arrives while a tab is open, play the in-app chime
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    const onMessage = (e: MessageEvent) => {
+      if ((e.data as { type?: string })?.type === "kairo-push") playNotify();
+    };
+    navigator.serviceWorker.addEventListener("message", onMessage);
+    return () => navigator.serviceWorker.removeEventListener("message", onMessage);
   }, []);
 
   // app-wide keyboard shortcuts

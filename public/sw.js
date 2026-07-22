@@ -11,15 +11,26 @@ self.addEventListener("push", (event) => {
     /* non-JSON payload */
   }
   const title = data.title || "Kairo";
+
   event.waitUntil(
-    self.registration.showNotification(title, {
-      body: data.body || "",
-      icon: "/img/sunrise.png",
-      tag: data.tag || "kairo",
-      renotify: true,
-      vibrate: [80, 40, 80],
-      data: { url: data.url || "/today" },
-    })
+    (async () => {
+      await self.registration.showNotification(title, {
+        body: data.body || "",
+        icon: "/img/sunrise.png",
+        tag: data.tag || "kairo",
+        renotify: true,
+        silent: false, // let the OS play its notification sound
+        requireInteraction: true, // stay on screen until dismissed
+        vibrate: [80, 40, 80],
+        data: { url: data.url || "/today" },
+      });
+
+      // any open Kairo tab plays the in-app chime for a richer sound
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      for (const client of windows) {
+        client.postMessage({ type: "kairo-push", title, body: data.body || "" });
+      }
+    })()
   );
 });
 

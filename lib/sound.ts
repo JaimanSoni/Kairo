@@ -4,6 +4,45 @@
 
 let ctx: AudioContext | null = null;
 
+/** A pleasant two-note chime for arriving notifications. */
+export function playNotify(): void {
+  try {
+    const w = window as unknown as {
+      AudioContext?: typeof AudioContext;
+      webkitAudioContext?: typeof AudioContext;
+    };
+    const AC = w.AudioContext ?? w.webkitAudioContext;
+    if (!AC) return;
+    ctx ??= new AC();
+    if (ctx.state === "suspended") void ctx.resume();
+
+    const t = ctx.currentTime;
+    const notes: [number, number][] = [
+      [659.25, 0], // E5
+      [880.0, 0.16], // A5
+    ];
+    for (const [freq, delay] of notes) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, t + delay);
+      gain.gain.setValueAtTime(0.0001, t + delay);
+      gain.gain.exponentialRampToValueAtTime(0.14, t + delay + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + delay + 0.6);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t + delay);
+      osc.stop(t + delay + 0.65);
+    }
+  } catch {
+    /* audio is a garnish, never an error */
+  }
+  try {
+    navigator.vibrate?.([60, 40, 60]);
+  } catch {
+    /* ignore */
+  }
+}
+
 export function playComplete(): void {
   try {
     const w = window as unknown as {
