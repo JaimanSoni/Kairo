@@ -6,6 +6,7 @@ import { addDays, friendlyDay, fmtMinutes } from "@/lib/dates";
 import { repeatLabel } from "@/lib/repeat";
 import { useApp } from "./store";
 import { playComplete } from "@/lib/sound";
+import { useStepToggle } from "./step-row";
 import { Icon3d, ListMark } from "./img3d";
 import { Chip, IconCheck, IconDots, IconStar } from "./ui";
 
@@ -28,7 +29,9 @@ export function TaskItem({
   dropIndicator?: "above" | "below" | null;
 }) {
   const { state, completeTask, uncompleteTask, updateTask, deleteTask, setEditing, showToast, startFocus } = useApp();
+  const toggleStep = useStepToggle();
   const [checking, setChecking] = useState(false);
+  const [stepsOpen, setStepsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const done = task.status === "done";
@@ -69,7 +72,7 @@ export function TaskItem({
 
   return (
     <div
-      className={`group relative flex select-none items-center gap-3 rounded-xl border bg-card px-3.5 py-3 transition-[transform,box-shadow] duration-150 hover:shadow-sm active:scale-[0.99] ${
+      className={`group relative select-none rounded-xl border bg-card px-3.5 py-3 transition-[transform,box-shadow] duration-150 hover:shadow-sm ${
         checking ? "anim-out" : ""
       } ${task.spotlight && !done ? "border-sun/60" : "border-line"}`}
       draggable={draggable}
@@ -77,6 +80,7 @@ export function TaskItem({
       onDragOver={onDragOver}
       onDrop={onDrop}
     >
+      <div className="flex items-center gap-3">
       {dropIndicator && (
         <div
           className={`absolute inset-x-2 h-0.5 rounded bg-sun ${
@@ -90,7 +94,7 @@ export function TaskItem({
         aria-label={done ? "Mark as not done" : "Mark as done"}
         className={`grid size-[22px] shrink-0 place-items-center rounded-full border-2 transition-colors ${
           done || checking
-            ? "anim-check border-moss bg-moss text-white"
+            ? "anim-check border-moss bg-moss text-on-accent"
             : "border-ink-faint text-transparent hover:border-moss hover:text-moss/40"
         }`}
       >
@@ -123,9 +127,27 @@ export function TaskItem({
               </Chip>
             )}
             {task.subtasks.length > 0 && (
-              <Chip tone={subDone === task.subtasks.length ? "moss" : "neutral"}>
-                {subDone}/{task.subtasks.length}
-              </Chip>
+              <span
+                role="button"
+                tabIndex={0}
+                title={stepsOpen ? "Hide steps" : "Show steps"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setStepsOpen((v) => !v);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setStepsOpen((v) => !v);
+                  }
+                }}
+                className="cursor-pointer"
+              >
+                <Chip tone={subDone === task.subtasks.length ? "moss" : "neutral"}>
+                  {subDone}/{task.subtasks.length} {stepsOpen ? "▾" : "▸"}
+                </Chip>
+              </span>
             )}
             {task.carryCount >= 2 && !done && (
               <Chip tone="lilac" title="Carried over — maybe break it down, or let it go?">
@@ -218,6 +240,40 @@ export function TaskItem({
               </MenuBtn>
             </div>
           )}
+        </div>
+      )}
+      </div>
+
+      {/* inline checklist — check steps off without opening the editor */}
+      {stepsOpen && task.subtasks.length > 0 && (
+        <div className="anim-rise mt-2.5 space-y-1.5 border-t border-line/70 pt-2.5 pl-8">
+          {task.subtasks.map((s) => (
+            <div key={s.id} className="flex items-center gap-2.5">
+              <button
+                onClick={() => toggleStep(task.id, s.id)}
+                aria-label={s.done ? "Mark step as not done" : "Mark step as done"}
+                className={`grid size-[17px] shrink-0 place-items-center rounded-full border-2 transition-colors ${
+                  s.done
+                    ? "border-moss bg-moss text-on-accent"
+                    : "border-ink-faint text-transparent hover:border-moss"
+                }`}
+              >
+                <IconCheck size={9} />
+              </button>
+              <span className={`min-w-0 flex-1 truncate text-[13px] ${s.done ? "text-ink-faint line-through" : "text-ink-soft"}`}>
+                {s.title}
+              </span>
+              {s.plannedFor && !s.done && (
+                <span
+                  className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] ${
+                    s.plannedFor < today ? "bg-paper-deep text-ink-soft" : "bg-sun-soft text-sun-deep"
+                  }`}
+                >
+                  {friendlyDay(s.plannedFor, today)}
+                </span>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>

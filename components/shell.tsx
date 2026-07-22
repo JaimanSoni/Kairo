@@ -61,7 +61,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
         <button
           onClick={() => setOmnibar(true)}
-          className="mt-6 flex items-center justify-between rounded-xl border-2 border-ink bg-sun px-3.5 py-2.5 text-sm font-bold text-white shadow-[3px_3px_0_0_var(--color-ink)] transition-transform hover:-translate-y-0.5"
+          className="mt-6 flex items-center justify-between rounded-xl bg-sun px-3.5 py-2.5 text-sm font-bold text-on-accent shadow-lg shadow-sun/25 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-sun/30"
         >
           <span className="flex items-center gap-2">
             <IconPlus size={15} /> Capture
@@ -130,7 +130,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <button
           onClick={() => setOmnibar(true)}
           aria-label="Capture"
-          className="grid size-12 -translate-y-3 place-items-center rounded-full border-2 border-ink bg-sun text-white shadow-[3px_3px_0_0_var(--color-ink)]"
+          className="grid size-12 -translate-y-3 place-items-center rounded-full bg-sun text-on-accent shadow-lg shadow-sun/35 active:scale-95"
         >
           <IconPlus size={20} />
         </button>

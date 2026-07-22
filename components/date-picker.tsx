@@ -120,7 +120,7 @@ export function DatePicker({
               onClick={() => onChange(date)}
               className={`mx-auto grid size-9 place-items-center rounded-full text-[13px] tabular-nums transition-colors ${
                 selected
-                  ? "bg-sun font-bold text-white shadow-sm"
+                  ? "bg-sun font-bold text-on-accent shadow-sm"
                   : past
                     ? "text-ink-faint/40"
                     : isToday

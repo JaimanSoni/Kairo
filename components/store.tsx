@@ -365,7 +365,8 @@ export function AppProvider({
           status: "planned",
           spotlight: false,
           carryCount: 0,
-          subtasks: t.subtasks.map((s) => ({ ...s, done: false })),
+          // a fresh occurrence starts with a fresh checklist
+          subtasks: t.subtasks.map((s) => ({ ...s, done: false, plannedFor: null })),
         });
         showToast({ message: `↻ Next: ${friendlyDay(next, today)}` });
         return;

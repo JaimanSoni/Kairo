@@ -147,7 +147,12 @@ export function sanitizeTaskPatch(body: Record<string, unknown>): TaskPatch | nu
       if (typeof s !== "object" || s === null) return null;
       const st = s as Record<string, unknown>;
       if (typeof st.id !== "string" || typeof st.title !== "string" || st.title.length > 500 || typeof st.done !== "boolean") return null;
-      subtasks.push({ id: st.id, title: st.title, done: st.done });
+      const sub: Subtask = { id: st.id, title: st.title, done: st.done };
+      if ("plannedFor" in st && st.plannedFor !== undefined) {
+        if (st.plannedFor !== null && !isDateString(st.plannedFor)) return null;
+        sub.plannedFor = st.plannedFor as string | null;
+      }
+      subtasks.push(sub);
     }
     patch.subtasks = subtasks;
   }

@@ -29,6 +29,8 @@
   --color-clay-soft: #fae8e4;
   --color-lilac: #8d7bd4;
   --color-lilac-soft: #efecfa;
+  /* text/icon color on accent fills (sun/moss/clay) — flips in dark mode */
+  --color-on-accent: #ffffff;
 }
 
 /* Dark theme — same calm identity, lights off. Applied via data-theme,
@@ -52,6 +54,7 @@
   --color-clay-soft: #3b2521;
   --color-lilac: #a796e8;
   --color-lilac-soft: #272138;
+  --color-on-accent: #0f2420;
 }
 
 body {

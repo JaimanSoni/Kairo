@@ -49,7 +49,7 @@ function CheckDot({ done }: { done?: boolean }) {
   return (
     <span
       className={`grid size-5 shrink-0 place-items-center rounded-full border-2 ${
-        done ? "border-moss bg-moss text-white" : "border-ink-faint/60"
+        done ? "border-moss bg-moss text-on-accent" : "border-ink-faint/60"
       }`}
       aria-hidden
     >
@@ -161,7 +161,7 @@ export default async function Landing({
         <div className="mt-9 flex flex-col items-center gap-3">
           <a
             href="/api/auth/google"
-            className="flex items-center gap-3 rounded-full bg-sun px-8 py-4 text-base font-semibold text-white shadow-xl shadow-sun/25 transition-all hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-sun/30 active:translate-y-0"
+            className="flex items-center gap-3 rounded-full bg-sun px-8 py-4 text-base font-semibold text-on-accent shadow-xl shadow-sun/25 transition-all hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-sun/30 active:translate-y-0"
           >
             <GoogleMark /> Continue with Google
           </a>

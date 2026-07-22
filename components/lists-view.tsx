@@ -10,20 +10,32 @@ import { Icon3d, ListMark, LIST_ICONS } from "./img3d";
 import { EmptyState, IconPlus, IconTrash, IconX } from "./ui";
 
 export function ListsView() {
-  const { state, createList, renameList, deleteList, setListUnlocked, showToast } = useApp();
+  const {
+    state,
+    createList,
+    renameList,
+    deleteList,
+    setListUnlocked,
+    showToast,
+  } = useApp();
   const all = useMemo(() => Object.values(state.tasks), [state.tasks]);
   const hidden = useMemo(() => hiddenListIds(state), [state]);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newEmoji, setNewEmoji] = useState("list-folder");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-  const [pinTarget, setPinTarget] = useState<{ list: List; mode: PinMode } | null>(null);
+  const [pinTarget, setPinTarget] = useState<{
+    list: List;
+    mode: PinMode;
+  } | null>(null);
 
   const inbox = all
     .filter((t) => t.status === "inbox" && !(t.listId && hidden.has(t.listId)))
     .sort(byOrder);
   const someday = all
-    .filter((t) => t.status === "someday" && !(t.listId && hidden.has(t.listId)))
+    .filter(
+      (t) => t.status === "someday" && !(t.listId && hidden.has(t.listId)),
+    )
     .sort(byOrder);
 
   const submitCreate = async () => {
@@ -39,9 +51,6 @@ export function ListsView() {
       <header className="anim-rise mb-6 flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="font-display text-4xl">Lists</h1>
-          <p className="mt-1 text-sm text-ink-soft">
-            The backlog lives here — out of sight of your day, exactly where it belongs.
-          </p>
         </div>
         <button
           onClick={() => setCreating(true)}
@@ -84,7 +93,11 @@ export function ListsView() {
             >
               Create
             </button>
-            <button onClick={() => setCreating(false)} className="p-2 text-ink-faint" aria-label="Cancel">
+            <button
+              onClick={() => setCreating(false)}
+              className="p-2 text-ink-faint"
+              aria-label="Cancel"
+            >
               <IconX />
             </button>
           </div>
@@ -109,7 +122,9 @@ export function ListsView() {
         const isHidden = hidden.has(list.id);
         const tasks = isHidden
           ? []
-          : all.filter((t) => t.listId === list.id && t.status !== "done").sort(byOrder);
+          : all
+              .filter((t) => t.listId === list.id && t.status !== "done")
+              .sort(byOrder);
         return (
           <Section
             key={list.id}
@@ -118,7 +133,11 @@ export function ListsView() {
             count={isHidden ? null : tasks.length}
             locked={list.locked}
             lockedHidden={isHidden}
-            onRename={isHidden ? undefined : (name) => renameList(list.id, name, list.emoji)}
+            onRename={
+              isHidden
+                ? undefined
+                : (name) => renameList(list.id, name, list.emoji)
+            }
             onDelete={isHidden ? undefined : () => setConfirmDelete(list.id)}
             onLockAction={(mode) => setPinTarget({ list, mode })}
             onRelock={
@@ -142,17 +161,23 @@ export function ListsView() {
                 {tasks.map((t) => (
                   <TaskItem key={t.id} task={t} context="backlog" />
                 ))}
-                <AddRow placeholder={`Add to ${list.name}…`} plannedFor={null} listId={list.id} />
+                <AddRow
+                  placeholder={`Add to ${list.name}…`}
+                  plannedFor={null}
+                  listId={list.id}
+                />
                 {confirmDelete === list.id && (
                   <div className="anim-pop mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-clay/50 bg-clay-soft px-4 py-3 text-sm">
-                    <span className="min-w-0 break-words">Delete “{list.name}”? Its tasks move to the inbox.</span>
+                    <span className="min-w-0 break-words">
+                      Delete “{list.name}”? Its tasks move to the inbox.
+                    </span>
                     <span className="flex gap-2">
                       <button
                         onClick={() => {
                           deleteList(list.id);
                           setConfirmDelete(null);
                         }}
-                        className="flex items-center gap-1 rounded-full bg-clay px-3 py-1 text-xs font-semibold text-white"
+                        className="flex items-center gap-1 rounded-full bg-clay px-3 py-1 text-xs font-semibold text-on-accent"
                       >
                         <IconTrash size={12} /> Delete
                       </button>
@@ -181,7 +206,11 @@ export function ListsView() {
         {someday.length > 0 ? (
           someday.map((t) => <TaskItem key={t.id} task={t} context="backlog" />)
         ) : (
-          <EmptyState icon="moon" title="Nothing parked" body="Someday holds ideas you're not ready for — a kindness, not a graveyard." />
+          <EmptyState
+            icon="moon"
+            title="Nothing parked"
+            body="Someday holds ideas you're not ready for — a kindness, not a graveyard."
+          />
         )}
       </Section>
 
@@ -199,11 +228,28 @@ export function ListsView() {
 function LockGlyph({ open }: { open?: boolean }) {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-      <rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+      <rect
+        x="3"
+        y="7"
+        width="10"
+        height="7"
+        rx="1.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
       {open ? (
-        <path d="M5.5 7V4.5a2.5 2.5 0 014.9-.7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path
+          d="M5.5 7V4.5a2.5 2.5 0 014.9-.7"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
       ) : (
-        <path d="M5.5 7V4.5a2.5 2.5 0 015 0V7" stroke="currentColor" strokeWidth="1.5" />
+        <path
+          d="M5.5 7V4.5a2.5 2.5 0 015 0V7"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        />
       )}
       <circle cx="8" cy="10.5" r="1.2" fill="currentColor" />
     </svg>
@@ -275,26 +321,40 @@ function Section({
             <LockGlyph />
           </span>
         )}
-        {count !== null && <span className="text-sm text-ink-faint">{count}</span>}
+        {count !== null && (
+          <span className="text-sm text-ink-faint">{count}</span>
+        )}
 
         {onLockAction && (
           <span className="ml-auto flex flex-wrap items-center justify-end gap-1 opacity-0 transition-opacity group-hover/section:opacity-100 pointer-coarse:opacity-100 max-md:opacity-100">
             {!locked && (
-              <IconTextBtn onClick={() => onLockAction("set")} title="Lock this list with a PIN">
+              <IconTextBtn
+                onClick={() => onLockAction("set")}
+                title="Lock this list with a PIN"
+              >
                 <LockGlyph /> Lock
               </IconTextBtn>
             )}
             {locked && !lockedHidden && (
               <>
                 {onRelock && (
-                  <IconTextBtn onClick={onRelock} title="Hide this list again now">
+                  <IconTextBtn
+                    onClick={onRelock}
+                    title="Hide this list again now"
+                  >
                     <LockGlyph /> Relock
                   </IconTextBtn>
                 )}
-                <IconTextBtn onClick={() => onLockAction("change")} title="Change PIN">
+                <IconTextBtn
+                  onClick={() => onLockAction("change")}
+                  title="Change PIN"
+                >
                   <LockGlyph /> PIN
                 </IconTextBtn>
-                <IconTextBtn onClick={() => onLockAction("remove")} title="Remove the lock">
+                <IconTextBtn
+                  onClick={() => onLockAction("remove")}
+                  title="Remove the lock"
+                >
                   <LockGlyph open /> Remove
                 </IconTextBtn>
               </>

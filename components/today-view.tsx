@@ -8,6 +8,7 @@ import Link from "next/link";
 import { byOrder, hiddenListIds, useApp, visibleLists } from "./store";
 import { Icon3d } from "./img3d";
 import { FreshStart } from "./fresh-start";
+import { StepRow } from "./step-row";
 import { TaskItem } from "./task-item";
 import { EmptyState, IconPlus, IconStar } from "./ui";
 
@@ -63,10 +64,24 @@ export function TodayView() {
     [all]
   );
 
+  /* steps scheduled for today (or overdue) whose parent isn't already on today's list */
+  const plannedSteps = useMemo(
+    () =>
+      all
+        .filter((t) => t.status !== "done" && !(t.plannedFor === today && t.status === "planned"))
+        .flatMap((t) =>
+          t.subtasks
+            .filter((s) => !s.done && s.plannedFor && s.plannedFor <= today)
+            .map((s) => ({ task: t, step: s }))
+        )
+        .sort((a, b) => (a.step.plannedFor ?? "").localeCompare(b.step.plannedFor ?? "")),
+    [all, today]
+  );
+
   const totalEstimate = todayTasks.reduce((sum, t) => sum + (t.estimateMin ?? 0), 0);
   const overCapacity = totalEstimate > DAY_CAPACITY_MIN;
 
-  const dayWon = todayTasks.length === 0 && doneToday.length > 0;
+  const dayWon = todayTasks.length === 0 && plannedSteps.length === 0 && doneToday.length > 0;
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 pb-32 pt-8 sm:px-6">
@@ -137,6 +152,20 @@ export function TodayView() {
         placeholder={todayTasks.length ? "Add to today…" : "What would make today good?"}
         plannedFor={today}
       />
+
+      {/* steps planned onto today from bigger tasks */}
+      {plannedSteps.length > 0 && (
+        <section className="mt-6">
+          <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">
+            ↳ Steps today · {plannedSteps.length}
+          </div>
+          <div className="space-y-1.5">
+            {plannedSteps.map(({ task, step }) => (
+              <StepRow key={`${task.id}:${step.id}`} task={task} step={step} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* empty / celebration states */}
       {todayTasks.length === 0 && !dayWon && (

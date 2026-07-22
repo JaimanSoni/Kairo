@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Subtask, Task } from "@/lib/types";
-import { friendlyDay, fmtMinutes, parseDateStr } from "@/lib/dates";
+import { addDays, friendlyDay, fmtMinutes, parseDateStr } from "@/lib/dates";
 import { firstOccurrence, repeatLabel, type Repeat } from "@/lib/repeat";
 import { useApp, visibleLists } from "./store";
 import { Icon3d, ListMark } from "./img3d";
@@ -21,6 +21,7 @@ export function TaskEditor({ task }: { task: Task }) {
   const [note, setNote] = useState(task.note);
   const [subtasks, setSubtasks] = useState<Subtask[]>(task.subtasks);
   const [newSub, setNewSub] = useState("");
+  const [stepMenu, setStepMenu] = useState<string | null>(null);
   const [open, setOpen] = useState<Section>(null);
   const today = state.today;
   const list = task.listId ? state.lists.find((l) => l.id === task.listId) : null;
@@ -110,7 +111,7 @@ export function TaskEditor({ task }: { task: Task }) {
                     setSubtasks((subs) => subs.map((x) => (x.id === s.id ? { ...x, done: !x.done } : x)))
                   }
                   className={`grid size-[18px] shrink-0 place-items-center rounded-full border-2 ${
-                    s.done ? "border-moss bg-moss text-white" : "border-ink-faint text-transparent"
+                    s.done ? "border-moss bg-moss text-on-accent" : "border-ink-faint text-transparent"
                   }`}
                 >
                   <IconCheck size={10} />
@@ -118,6 +119,61 @@ export function TaskEditor({ task }: { task: Task }) {
                 <span className={`min-w-0 flex-1 break-words text-sm ${s.done ? "text-ink-faint line-through" : ""}`}>
                   {s.title}
                 </span>
+                <div className="relative shrink-0">
+                  <button
+                    onClick={() => setStepMenu(stepMenu === s.id ? null : s.id)}
+                    title="Plan this step onto a day"
+                    className={`rounded-md px-1.5 py-0.5 text-[11px] transition-colors ${
+                      s.plannedFor
+                        ? "bg-sun-soft font-medium text-sun-deep"
+                        : "text-ink-faint hover:bg-paper-deep hover:text-ink-soft"
+                    }`}
+                  >
+                    {s.plannedFor ? friendlyDay(s.plannedFor, today) : "+ day"}
+                  </button>
+                  {stepMenu === s.id && (
+                    <>
+                      <div className="fixed inset-0 z-20" onClick={() => setStepMenu(null)} />
+                      <div className="anim-pop absolute right-0 top-7 z-30 w-40 rounded-xl border border-line bg-card p-1.5 shadow-lg">
+                        {[0, 1, 2, 3, 4, 5, 6].map((n) => {
+                          const d = addDays(today, n);
+                          return (
+                            <button
+                              key={d}
+                              onClick={() => {
+                                setSubtasks((subs) =>
+                                  subs.map((x) => (x.id === s.id ? { ...x, plannedFor: d } : x))
+                                );
+                                setStepMenu(null);
+                              }}
+                              className={`block w-full rounded-lg px-3 py-1.5 text-left text-xs hover:bg-paper-deep ${
+                                s.plannedFor === d ? "font-bold text-sun-deep" : ""
+                              }`}
+                            >
+                              {friendlyDay(d, today)}
+                            </button>
+                          );
+                        })}
+                        {s.plannedFor && (
+                          <>
+                            <div className="my-1 border-t border-line" />
+                            <button
+                              onClick={() => {
+                                setSubtasks((subs) =>
+                                  subs.map((x) => (x.id === s.id ? { ...x, plannedFor: null } : x))
+                                );
+                                setStepMenu(null);
+                              }}
+                              className="block w-full rounded-lg px-3 py-1.5 text-left text-xs text-ink-faint hover:bg-paper-deep"
+                            >
+                              No day
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
                 <button
                   onClick={() => setSubtasks((subs) => subs.filter((x) => x.id !== s.id))}
                   className="text-ink-faint opacity-0 hover:text-clay group-hover:opacity-100 pointer-coarse:opacity-100 max-md:opacity-100"
@@ -238,7 +294,7 @@ export function TaskEditor({ task }: { task: Task }) {
                         key={d}
                         onClick={() => toggleWeekday(d)}
                         className={`grid size-9 place-items-center rounded-full text-xs font-bold transition-colors ${
-                          on ? "bg-sun text-white" : "bg-card text-ink-soft border border-line hover:border-ink-faint"
+                          on ? "bg-sun text-on-accent" : "bg-card text-ink-soft border border-line hover:border-ink-faint"
                         }`}
                         aria-pressed={on}
                       >

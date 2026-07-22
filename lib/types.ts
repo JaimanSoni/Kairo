@@ -6,6 +6,8 @@ export type Subtask = {
   id: string;
   title: string;
   done: boolean;
+  /** Steps can be planned onto days of their own: "YYYY-MM-DD" or null/absent. */
+  plannedFor?: string | null;
 };
 
 export type Task = {

@@ -301,7 +301,7 @@ export function FocusOverlay() {
 
         <button
           onClick={finish}
-          className="flex items-center gap-2 rounded-full bg-moss px-7 py-3 text-sm font-bold text-white shadow-md transition-transform hover:-translate-y-0.5 active:translate-y-0"
+          className="flex items-center gap-2 rounded-full bg-moss px-7 py-3 text-sm font-bold text-on-accent shadow-md transition-transform hover:-translate-y-0.5 active:translate-y-0"
         >
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
             <path d="M3 8.5l3.5 3.5L13 5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />

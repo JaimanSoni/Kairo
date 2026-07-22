@@ -199,7 +199,7 @@ export function Omnibar() {
               aria-label={listening ? "Stop listening" : "Speak a task"}
               className={`grid size-10 shrink-0 place-items-center rounded-full transition-colors ${
                 listening
-                  ? "anim-pulse bg-clay text-white"
+                  ? "anim-pulse bg-clay text-on-accent"
                   : "bg-paper-deep text-ink-soft hover:bg-sun-soft hover:text-sun-deep"
               }`}
             >
