@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Icon3d } from "./img3d";
 
 /* ---------------- icons (inline, 16px grid) ---------------- */
@@ -163,16 +163,38 @@ export function Modal({
   children: React.ReactNode;
   wide?: boolean;
 }) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
+  const closingRef = useRef(false);
+
+  /* slide the sheet out before unmounting (mobile); instant on desktop */
+  const animatedClose = useCallback(() => {
+    if (closingRef.current) return;
+    const panel = panelRef.current;
+    if (!panel || window.innerWidth >= 640) {
+      onClose();
+      return;
+    }
+    closingRef.current = true;
+    panel.style.transition = "transform 0.22s cubic-bezier(0.32, 0.72, 0.24, 1)";
+    panel.style.transform = `translateY(${panel.offsetHeight + 40}px)`;
+    if (backdropRef.current) {
+      backdropRef.current.style.transition = "opacity 0.22s ease";
+      backdropRef.current.style.opacity = "0";
+    }
+    setTimeout(onClose, 210);
+  }, [onClose]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
-        onClose();
+        animatedClose();
       }
     };
     document.addEventListener("keydown", onKey, true);
     return () => document.removeEventListener("keydown", onKey, true);
-  }, [onClose]);
+  }, [animatedClose]);
 
   /* lock the page behind the modal — background scroll on touch feels broken */
   useEffect(() => {
@@ -183,20 +205,123 @@ export function Modal({
     };
   }, []);
 
+  /* drag-to-dismiss (mobile bottom sheet). Native listeners because React's
+     root touch handlers are passive and can't preventDefault scrolling. */
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!panel) return;
+
+    let startY = 0;
+    let lastY = 0;
+    let lastT = 0;
+    let velocity = 0;
+    let active = false;
+    let dragging = false;
+
+    const setDrag = (y: number, animate: boolean) => {
+      panel.style.transition = animate
+        ? "transform 0.25s cubic-bezier(0.32, 0.72, 0.24, 1)"
+        : "none";
+      panel.style.transform = y > 0 ? `translateY(${y}px)` : "";
+      if (backdropRef.current) {
+        backdropRef.current.style.transition = animate ? "opacity 0.25s ease" : "none";
+        backdropRef.current.style.opacity = String(
+          1 - Math.min(1, y / Math.max(1, panel.offsetHeight)) * 0.9
+        );
+      }
+    };
+
+    /* a touch inside a nested scrollable (estimate wheel, sweep list…) belongs to it */
+    const insideNestedScroller = (el: HTMLElement | null): boolean => {
+      while (el && el !== panel) {
+        const style = getComputedStyle(el);
+        if (/(auto|scroll)/.test(style.overflowY) && el.scrollHeight > el.clientHeight) return true;
+        el = el.parentElement;
+      }
+      return false;
+    };
+
+    const onStart = (e: TouchEvent) => {
+      if (window.innerWidth >= 640 || closingRef.current) return;
+      const target = e.target as HTMLElement;
+      const fromHandle = target.closest("[data-sheet-handle]") !== null;
+      if (!fromHandle && insideNestedScroller(target)) return;
+      active = true;
+      dragging = false;
+      startY = lastY = e.touches[0].clientY;
+      lastT = e.timeStamp;
+      velocity = 0;
+      // the grab handle always drags, content drags only when scrolled to top
+      if (fromHandle) dragging = true;
+    };
+
+    const onMove = (e: TouchEvent) => {
+      if (!active) return;
+      const y = e.touches[0].clientY;
+      const dy = y - startY;
+      const dt = e.timeStamp - lastT || 1;
+      velocity = (y - lastY) / dt;
+      lastY = y;
+      lastT = e.timeStamp;
+
+      if (!dragging) {
+        if (dy > 8 && panel.scrollTop <= 0) dragging = true;
+        else if (dy < -8) {
+          active = false; // user is scrolling content upward
+          return;
+        } else return;
+      }
+      if (e.cancelable) e.preventDefault();
+      setDrag(Math.max(0, dy), false);
+    };
+
+    const onEnd = () => {
+      if (!active) return;
+      active = false;
+      if (!dragging) return;
+      const dy = lastY - startY;
+      if (dy > panel.offsetHeight * 0.35 || (dy > 60 && velocity > 0.45)) {
+        closingRef.current = true;
+        setDrag(panel.offsetHeight + 40, true);
+        if (backdropRef.current) backdropRef.current.style.opacity = "0";
+        setTimeout(onClose, 220);
+      } else {
+        setDrag(0, true);
+      }
+    };
+
+    panel.addEventListener("touchstart", onStart, { passive: true });
+    panel.addEventListener("touchmove", onMove, { passive: false });
+    panel.addEventListener("touchend", onEnd);
+    panel.addEventListener("touchcancel", onEnd);
+    return () => {
+      panel.removeEventListener("touchstart", onStart);
+      panel.removeEventListener("touchmove", onMove);
+      panel.removeEventListener("touchend", onEnd);
+      panel.removeEventListener("touchcancel", onEnd);
+    };
+  }, [onClose]);
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/30 backdrop-blur-[2px] sm:items-start sm:p-4 sm:pt-[12vh]"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-start sm:p-4 sm:pt-[12vh]">
       <div
+        ref={backdropRef}
+        className="absolute inset-0 bg-ink/30 backdrop-blur-[2px]"
+        aria-hidden
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) animatedClose();
+        }}
+      />
+      <div
+        ref={panelRef}
         data-modal-scroll
-        className={`anim-modal w-full ${wide ? "sm:max-w-2xl" : "sm:max-w-lg"} max-h-[92dvh] overflow-y-auto overscroll-contain rounded-t-3xl border border-line bg-card pb-[env(safe-area-inset-bottom)] shadow-2xl sm:rounded-2xl sm:pb-0`}
+        className={`anim-modal relative w-full ${wide ? "sm:max-w-2xl" : "sm:max-w-lg"} max-h-[92dvh] overflow-y-auto overscroll-contain rounded-t-3xl border border-line bg-card pb-[env(safe-area-inset-bottom)] shadow-2xl will-change-transform sm:rounded-2xl sm:pb-0`}
         role="dialog"
         aria-modal
       >
-        <div className="mx-auto mt-2 h-1 w-9 rounded-full bg-line sm:hidden" aria-hidden />
+        <div data-sheet-handle className="sticky top-0 z-20 -mb-2 flex touch-none justify-center pb-3 pt-2 sm:hidden" aria-hidden>
+          <div className="h-1 w-9 rounded-full bg-line" />
+        </div>
         {children}
       </div>
     </div>
