@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Kairo — win the day",
+    name: "Kairo",
     short_name: "Kairo",
     description:
       "A daily planner that forgives. Plan a day you can actually finish — no red badges, no overdue guilt.",
