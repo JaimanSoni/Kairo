@@ -51,7 +51,7 @@ export function UpcomingView() {
 
       <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
         {/* the week */}
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
           {days.map((day) => {
             const tasks = byDay(day);
             const load = tasks.reduce((s, t) => s + (t.estimateMin ?? 0), 0);
@@ -114,7 +114,7 @@ export function UpcomingView() {
         </div>
 
         {/* inbox tray */}
-        <aside className="lg:sticky lg:top-8 lg:self-start">
+        <aside className="min-w-0 lg:sticky lg:top-8 lg:self-start">
           <div className="rounded-2xl border border-line bg-paper-deep/60 p-4">
             <h2 className="flex items-center gap-1.5 text-sm font-bold">
               <Icon3d name="inbox" size={18} /> Inbox · {inbox.length}

@@ -168,7 +168,7 @@ export function PinModal({ list, mode, onClose }: { list: List; mode: PinMode; o
         </div>
 
         {/* keypad */}
-        <div className="mt-6 grid grid-cols-3 gap-3">
+        <div className="mt-6 grid grid-cols-3 gap-2.5 sm:gap-3">
           {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
             <KeyBtn key={d} onClick={() => press(d)}>
               {d}
@@ -185,7 +185,7 @@ export function PinModal({ list, mode, onClose }: { list: List; mode: PinMode; o
             onClick={submit}
             disabled={pin.length < MIN_PIN || busy}
             aria-label="Confirm"
-            className="grid size-16 place-items-center rounded-full bg-ink text-paper transition-all active:scale-95 disabled:opacity-20"
+            className="grid size-14 place-items-center rounded-full bg-ink text-paper transition-all active:scale-95 disabled:opacity-20 sm:size-16"
           >
             <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
               <path d="M3 8.5l3.5 3.5L13 5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
@@ -213,7 +213,7 @@ function KeyBtn({
   return (
     <button
       onClick={onClick}
-      className={`grid size-16 place-items-center rounded-full text-xl font-semibold transition-all active:scale-95 ${
+      className={`grid size-14 place-items-center rounded-full text-xl font-semibold transition-all active:scale-95 sm:size-16 ${
         subtle ? "text-ink-soft hover:bg-paper-deep" : "bg-paper-deep text-ink hover:bg-line"
       }`}
     >

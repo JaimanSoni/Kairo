@@ -163,7 +163,7 @@ export function TaskItem({
           className={`shrink-0 transition-opacity ${
             task.spotlight
               ? "text-sun"
-              : "text-ink-faint opacity-0 hover:text-sun group-hover:opacity-100"
+              : "text-ink-faint opacity-0 hover:text-sun group-hover:opacity-100 pointer-coarse:opacity-100 max-md:opacity-100"
           }`}
         >
           <IconStar size={16} filled={task.spotlight} />
@@ -176,7 +176,7 @@ export function TaskItem({
             onClick={() => setMenuOpen((v) => !v)}
             aria-label="Task actions"
             className={`rounded-md p-1 text-ink-faint transition-opacity hover:bg-paper-deep hover:text-ink ${
-              menuOpen ? "" : "opacity-0 group-hover:opacity-100"
+              menuOpen ? "" : "opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100 max-md:opacity-100"
             }`}
           >
             <IconDots size={16} />

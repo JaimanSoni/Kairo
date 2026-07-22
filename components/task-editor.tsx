@@ -98,7 +98,7 @@ export function TaskEditor({ task }: { task: Task }) {
                 </span>
                 <button
                   onClick={() => setSubtasks((subs) => subs.filter((x) => x.id !== s.id))}
-                  className="text-ink-faint opacity-0 hover:text-clay group-hover:opacity-100"
+                  className="text-ink-faint opacity-0 hover:text-clay group-hover:opacity-100 pointer-coarse:opacity-100 max-md:opacity-100"
                   aria-label="Remove step"
                 >
                   <IconX size={13} />

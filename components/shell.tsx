@@ -154,8 +154,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
       {/* toast */}
       {state.toast && (
-        <div className="anim-pop fixed bottom-20 left-1/2 z-50 -translate-x-1/2 md:bottom-8">
-          <div className="flex items-center gap-3 rounded-full border border-line bg-ink px-5 py-2.5 text-sm text-paper shadow-lg">
+        <div className="anim-pop fixed bottom-20 left-1/2 z-50 w-max max-w-[92vw] -translate-x-1/2 md:bottom-8">
+          <div className="flex items-center gap-3 rounded-2xl border border-line bg-ink px-5 py-2.5 text-sm text-paper shadow-lg">
             {state.toast.message}
             {state.toast.action && (
               <button

@@ -36,8 +36,8 @@ export function ListsView() {
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 pb-32 pt-8 sm:px-6">
-      <header className="anim-rise mb-6 flex items-center justify-between">
-        <div>
+      <header className="anim-rise mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="font-display text-4xl">Lists</h1>
           <p className="mt-1 text-sm text-ink-soft">
             The backlog lives here — out of sight of your day, exactly where it belongs.
@@ -45,7 +45,7 @@ export function ListsView() {
         </div>
         <button
           onClick={() => setCreating(true)}
-          className="flex items-center gap-1.5 rounded-full border border-line bg-card px-4 py-2 text-sm font-semibold hover:border-sun hover:text-sun-deep"
+          className="flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-card px-4 py-2 text-sm font-semibold hover:border-sun hover:text-sun-deep"
         >
           <IconPlus size={14} /> New list
         </button>
@@ -240,7 +240,7 @@ function Section({
 
   return (
     <section className="group/section mb-8">
-      <div className="mb-1 flex items-center gap-2">
+      <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1.5">
         <span className="shrink-0">{mark}</span>
         {editing && onRename ? (
           <input
@@ -254,12 +254,12 @@ function Section({
               if (e.key === "Escape") setEditing(false);
             }}
             onBlur={() => setEditing(false)}
-            className="rounded-lg border border-line bg-paper px-2 py-1 text-lg font-bold outline-none focus:border-sun"
+            className="w-40 rounded-lg border border-line bg-paper px-2 py-1 text-lg font-bold outline-none focus:border-sun"
             autoFocus
           />
         ) : (
           <h2
-            className={`text-lg font-bold ${onRename ? "cursor-pointer hover:text-sun-deep" : ""}`}
+            className={`min-w-0 max-w-full truncate text-lg font-bold ${onRename ? "cursor-pointer hover:text-sun-deep" : ""}`}
             onClick={() => {
               if (!onRename) return;
               setName(sectionName);
@@ -271,14 +271,14 @@ function Section({
           </h2>
         )}
         {locked && (
-          <span className="text-ink-faint" title="PIN-protected list">
+          <span className="shrink-0 text-ink-faint" title="PIN-protected list">
             <LockGlyph />
           </span>
         )}
         {count !== null && <span className="text-sm text-ink-faint">{count}</span>}
 
         {onLockAction && (
-          <span className="ml-auto flex items-center gap-1 opacity-0 transition-opacity group-hover/section:opacity-100 max-sm:opacity-100">
+          <span className="ml-auto flex flex-wrap items-center justify-end gap-1 opacity-0 transition-opacity group-hover/section:opacity-100 pointer-coarse:opacity-100 max-md:opacity-100">
             {!locked && (
               <IconTextBtn onClick={() => onLockAction("set")} title="Lock this list with a PIN">
                 <LockGlyph /> Lock

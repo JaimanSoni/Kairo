@@ -55,11 +55,21 @@ function WheelColumn({
 
   const pad = ((VISIBLE - 1) / 2) * ITEM_H;
 
+  /* While a finger is on the wheel, freeze the surrounding modal so ONLY the
+     numbers scroll — otherwise the sheet scrolls along and the screen jumps. */
+  const lockModal = (lock: boolean) => {
+    const modal = ref.current?.closest("[data-modal-scroll]") as HTMLElement | null;
+    if (modal) modal.style.overflow = lock ? "hidden" : "";
+  };
+
   return (
     <div
       ref={ref}
       onScroll={handleScroll}
-      className="no-scrollbar h-[180px] snap-y snap-mandatory overflow-y-auto overscroll-contain"
+      onTouchStart={() => lockModal(true)}
+      onTouchEnd={() => lockModal(false)}
+      onTouchCancel={() => lockModal(false)}
+      className="no-scrollbar h-[180px] touch-pan-y snap-y snap-mandatory overflow-y-auto overscroll-contain"
       style={{ paddingTop: pad, paddingBottom: pad }}
     >
       {options.map((opt, i) => (

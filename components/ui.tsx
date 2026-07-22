@@ -147,7 +147,7 @@ export function Chip({
   return (
     <span
       title={title}
-      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[11px] font-medium ${tones[tone]}`}
+      className={`inline-flex max-w-full items-center gap-1 overflow-hidden whitespace-nowrap rounded-md px-1.5 py-0.5 text-[11px] font-medium ${tones[tone]}`}
     >
       {children}
     </span>
@@ -174,6 +174,15 @@ export function Modal({
     return () => document.removeEventListener("keydown", onKey, true);
   }, [onClose]);
 
+  /* lock the page behind the modal — background scroll on touch feels broken */
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-ink/30 backdrop-blur-[2px] sm:items-start sm:p-4 sm:pt-[12vh]"
@@ -182,7 +191,8 @@ export function Modal({
       }}
     >
       <div
-        className={`anim-modal w-full ${wide ? "sm:max-w-2xl" : "sm:max-w-lg"} max-h-[92dvh] overflow-y-auto rounded-t-3xl border border-line bg-card pb-[env(safe-area-inset-bottom)] shadow-2xl sm:rounded-2xl sm:pb-0`}
+        data-modal-scroll
+        className={`anim-modal w-full ${wide ? "sm:max-w-2xl" : "sm:max-w-lg"} max-h-[92dvh] overflow-y-auto overscroll-contain rounded-t-3xl border border-line bg-card pb-[env(safe-area-inset-bottom)] shadow-2xl sm:rounded-2xl sm:pb-0`}
         role="dialog"
         aria-modal
       >
