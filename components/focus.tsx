@@ -227,8 +227,8 @@ export function FocusOverlay() {
 
       {/* center */}
       <div className="flex flex-1 flex-col items-center justify-center gap-5 overflow-y-auto px-6 pb-6 sm:gap-8 sm:pb-10">
-        <div className="max-w-md text-center">
-          <div className="font-display text-2xl leading-snug sm:text-3xl">{task.title}</div>
+        <div className="w-full max-w-md text-center">
+          <div className="font-display break-words text-2xl leading-snug sm:text-3xl">{task.title}</div>
           {overtime ? (
             <p className="mt-2 text-sm font-medium text-clay">Overtime — still going. Respect.</p>
           ) : (

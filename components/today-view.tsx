@@ -150,7 +150,7 @@ export function TodayView() {
               <div className="space-y-2">
                 {inboxPreview.map((t) => (
                   <div key={t.id} className="flex items-center gap-2">
-                    <div className="flex-1">
+                    <div className="min-w-0 flex-1">
                       <TaskItem task={t} context="backlog" />
                     </div>
                     <button

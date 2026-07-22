@@ -144,8 +144,8 @@ export function ListsView() {
                 ))}
                 <AddRow placeholder={`Add to ${list.name}…`} plannedFor={null} listId={list.id} />
                 {confirmDelete === list.id && (
-                  <div className="anim-pop mt-2 flex items-center justify-between rounded-xl border border-clay/50 bg-clay-soft px-4 py-3 text-sm">
-                    <span>Delete “{list.name}”? Its tasks move to the inbox.</span>
+                  <div className="anim-pop mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-clay/50 bg-clay-soft px-4 py-3 text-sm">
+                    <span className="min-w-0 break-words">Delete “{list.name}”? Its tasks move to the inbox.</span>
                     <span className="flex gap-2">
                       <button
                         onClick={() => {

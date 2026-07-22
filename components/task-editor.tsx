@@ -93,7 +93,7 @@ export function TaskEditor({ task }: { task: Task }) {
                 >
                   <IconCheck size={10} />
                 </button>
-                <span className={`flex-1 text-sm ${s.done ? "text-ink-faint line-through" : ""}`}>
+                <span className={`min-w-0 flex-1 break-words text-sm ${s.done ? "text-ink-faint line-through" : ""}`}>
                   {s.title}
                 </span>
                 <button
