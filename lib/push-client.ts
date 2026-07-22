@@ -39,18 +39,34 @@ export async function pushEnabled(): Promise<boolean> {
   return (await reg.pushManager.getSubscription()) !== null;
 }
 
-/** Full enable flow: permission → subscribe → save server-side. */
-export async function enablePush(): Promise<"enabled" | "denied" | "failed" | "unsupported"> {
-  if (!pushSupported()) return "unsupported";
+export type EnableResult =
+  | { status: "enabled" }
+  | { status: "denied" }
+  | { status: "insecure" }
+  | { status: "unsupported" }
+  | { status: "failed"; detail: string };
+
+/** Full enable flow: permission → subscribe → save server-side. Loud on failure. */
+export async function enablePush(): Promise<EnableResult> {
+  if (typeof window !== "undefined" && window.isSecureContext === false) {
+    return { status: "insecure" };
+  }
+  if (!pushSupported()) return { status: "unsupported" };
   const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  if (!key) return "failed";
+  if (!key) return { status: "failed", detail: "VAPID public key missing from the build" };
 
   const permission = await Notification.requestPermission();
-  if (permission !== "granted") return "denied";
+  if (permission !== "granted") return { status: "denied" };
 
   const reg = (await navigator.serviceWorker.getRegistration()) ?? (await registerServiceWorker());
-  if (!reg) return "failed";
-  await navigator.serviceWorker.ready;
+  if (!reg) return { status: "failed", detail: "service worker registration failed" };
+
+  // wait for the worker to activate — but never hang the UI on it
+  const start = Date.now();
+  while (!reg.active && Date.now() - start < 5000) {
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  if (!reg.active) return { status: "failed", detail: "service worker didn't activate" };
 
   try {
     const subscription =
@@ -65,9 +81,12 @@ export async function enablePush(): Promise<"enabled" | "denied" | "failed" | "u
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ subscription: subscription.toJSON() }),
     });
-    return res.ok ? "enabled" : "failed";
-  } catch {
-    return "failed";
+    if (!res.ok) return { status: "failed", detail: `server rejected subscription (${res.status})` };
+    return { status: "enabled" };
+  } catch (err) {
+    console.error("Push subscribe failed:", err);
+    const message = err instanceof Error ? err.message : "unknown error";
+    return { status: "failed", detail: message };
   }
 }
 

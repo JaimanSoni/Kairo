@@ -81,13 +81,17 @@ export function TaskEditor({ task }: { task: Task }) {
     let ok = await pushEnabled();
     if (!ok) {
       const result = await enablePush();
-      ok = result === "enabled";
+      ok = result.status === "enabled";
       if (!ok) {
         showToast({
           message:
-            result === "denied"
+            result.status === "denied"
               ? "Notifications are blocked for this site — allow them in browser settings"
-              : "Couldn't enable notifications",
+              : result.status === "insecure"
+                ? "Push needs HTTPS or localhost — LAN IPs can't receive notifications"
+                : result.status === "failed"
+                  ? `Couldn't enable notifications: ${result.detail}`
+                  : "Push isn't supported in this browser",
         });
         return;
       }

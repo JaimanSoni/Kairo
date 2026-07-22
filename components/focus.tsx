@@ -290,12 +290,22 @@ export function FocusOverlay() {
             <button
               onClick={async () => {
                 const result = await enablePush();
-                if (result === "enabled") {
+                if (result.status === "enabled") {
                   setPushOn(true);
                   if (timer.running) scheduleEndPush(timer.endAt, task.id, task.title);
                   showToast({ message: "🔔 You'll get a ping when time's up" });
                 } else {
                   setPerm(pushPermission());
+                  showToast({
+                    message:
+                      result.status === "denied"
+                        ? "Notifications are blocked for this site"
+                        : result.status === "insecure"
+                          ? "Push needs HTTPS or localhost"
+                          : result.status === "failed"
+                            ? `Couldn't enable: ${result.detail}`
+                            : "Push isn't supported here",
+                  });
                 }
               }}
               className="mt-3 rounded-full border border-line bg-card px-4 py-1.5 text-xs font-medium text-ink-soft transition-colors hover:border-sun hover:text-sun-deep"

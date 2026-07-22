@@ -238,15 +238,18 @@ function ProfileSheet({
 }
 
 function NotificationSettings() {
-  const [status, setStatus] = useState<"loading" | "enabled" | "disabled" | "denied" | "unsupported">("loading");
+  const [status, setStatus] = useState<"loading" | "enabled" | "disabled" | "denied" | "unsupported" | "insecure">("loading");
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     import("@/lib/push-client").then(async ({ pushPermission, pushEnabled }) => {
+      const insecure = typeof window !== "undefined" && window.isSecureContext === false;
       const perm = pushPermission();
-      const next =
-        perm === "unsupported"
+      const next = insecure
+        ? ("insecure" as const)
+        : perm === "unsupported"
           ? ("unsupported" as const)
           : perm === "denied"
             ? ("denied" as const)
@@ -263,13 +266,21 @@ function NotificationSettings() {
   const toggle = async () => {
     if (busy) return;
     setBusy(true);
+    setError(null);
     const { enablePush, disablePush } = await import("@/lib/push-client");
     if (status === "enabled") {
       await disablePush();
       setStatus("disabled");
     } else {
       const result = await enablePush();
-      setStatus(result === "enabled" ? "enabled" : result === "denied" ? "denied" : "disabled");
+      if (result.status === "enabled") setStatus("enabled");
+      else if (result.status === "denied") setStatus("denied");
+      else if (result.status === "insecure") setStatus("insecure");
+      else if (result.status === "unsupported") setStatus("unsupported");
+      else {
+        setStatus("disabled");
+        setError(result.detail);
+      }
     }
     setBusy(false);
   };
@@ -279,27 +290,42 @@ function NotificationSettings() {
       <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">
         Notifications
       </div>
-      {status === "unsupported" ? (
-        <p className="text-sm text-ink-faint">This browser doesn&apos;t support push notifications.</p>
+      {status === "insecure" ? (
+        <p className="text-sm text-ink-faint">
+          Push needs a secure connection (HTTPS or localhost). Opening Kairo via a LAN IP like
+          192.168.x.x can&apos;t receive notifications — use it on this machine at localhost, or host it
+          with HTTPS.
+        </p>
+      ) : status === "unsupported" ? (
+        <p className="text-sm text-ink-faint">
+          This browser doesn&apos;t support push notifications. On iPhone, install Kairo to the home
+          screen first (Share → Add to Home Screen), then enable from inside the installed app.
+        </p>
       ) : status === "denied" ? (
         <p className="text-sm text-ink-faint">
-          Blocked — allow notifications for this site in your browser settings.
+          Blocked — allow notifications for this site in your browser settings (tap the lock icon
+          in the address bar), then try again.
         </p>
       ) : (
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-sm text-ink-soft">Get notified when a focus timer ends.</p>
-          <button
-            onClick={toggle}
-            disabled={status === "loading" || busy}
-            className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
-              status === "enabled"
-                ? "bg-sun-soft text-sun-deep"
-                : "border border-line bg-card text-ink-soft hover:border-sun hover:text-sun-deep"
-            }`}
-          >
-            {busy ? "…" : status === "enabled" ? "On ✓" : "Enable"}
-          </button>
-        </div>
+        <>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-ink-soft">Get notified when a focus timer ends.</p>
+            <button
+              onClick={toggle}
+              disabled={status === "loading" || busy}
+              className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
+                status === "enabled"
+                  ? "bg-sun-soft text-sun-deep"
+                  : "border border-line bg-card text-ink-soft hover:border-sun hover:text-sun-deep"
+              }`}
+            >
+              {busy ? "…" : status === "enabled" ? "On ✓" : "Enable"}
+            </button>
+          </div>
+          {error && (
+            <p className="mt-2 text-xs text-clay">Couldn&apos;t enable: {error}</p>
+          )}
+        </>
       )}
     </div>
   );
