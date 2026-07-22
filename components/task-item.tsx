@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Task } from "@/lib/types";
 import { addDays, friendlyDay, fmtMinutes } from "@/lib/dates";
+import { repeatLabel } from "@/lib/repeat";
 import { useApp } from "./store";
 import { playComplete } from "@/lib/sound";
 import { Icon3d, ListMark } from "./img3d";
@@ -103,7 +104,7 @@ export function TaskItem({
         <span className={`w-full truncate text-[15px] leading-snug ${done ? "strike-done" : ""}`}>
           {task.title}
         </span>
-        {(list || task.estimateMin || task.dueDate || task.carryCount >= 2 || task.subtasks.length > 0 || task.note) && (
+        {(list || task.estimateMin || task.dueDate || task.repeat || task.carryCount >= 2 || task.subtasks.length > 0 || task.note) && (
           <span className="flex flex-wrap items-center gap-1.5">
             {list && (
               <Chip>
@@ -114,6 +115,11 @@ export function TaskItem({
             {task.dueDate && !done && (
               <Chip tone={dueSoon ? "clay" : "neutral"} title="A real deadline">
                 due {friendlyDay(task.dueDate, today)}
+              </Chip>
+            )}
+            {task.repeat && !done && (
+              <Chip tone="sky" title="Repeats — completing it advances to the next date">
+                ↻ {repeatLabel(task.repeat)}
               </Chip>
             )}
             {task.subtasks.length > 0 && (

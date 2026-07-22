@@ -18,11 +18,12 @@ export async function POST(request: Request) {
   if (!patch || !patch.title) return badRequest("A task needs a title");
 
   const now = new Date();
+  const status = patch.status ?? "inbox";
   const doc = {
     userId: new ObjectId(session.userId),
     title: patch.title,
     note: patch.note ?? "",
-    status: patch.status ?? "inbox",
+    status,
     plannedFor: patch.plannedFor ?? null,
     dueDate: patch.dueDate ?? null,
     spotlight: patch.spotlight ?? false,
@@ -30,8 +31,10 @@ export async function POST(request: Request) {
     estimateMin: patch.estimateMin ?? null,
     order: patch.order ?? now.getTime(),
     carryCount: 0,
+    repeat: patch.repeat ?? null,
     subtasks: patch.subtasks ?? [],
-    completedAt: null,
+    // completed-instance copies of recurring tasks are created already done
+    completedAt: status === "done" ? now : null,
     createdAt: now,
     updatedAt: now,
   };

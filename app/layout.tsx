@@ -20,7 +20,7 @@ const displayFont = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Kairo — win the day",
+  title: "Kairo",
   description:
     "A daily planner that forgives. Plan a day you can actually finish — no red badges, no overdue guilt, no infinite lists.",
   appleWebApp: {

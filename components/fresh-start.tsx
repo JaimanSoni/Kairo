@@ -15,6 +15,13 @@ const CHOICES: { value: SweepAction; label: string; hint: string }[] = [
   { value: "letgo", label: "Let go", hint: "It doesn't matter anymore" },
 ];
 
+/* repeating tasks can't be deleted or parked from the sweep — skip keeps the series alive */
+const CHOICES_RECURRING: { value: SweepAction; label: string; hint: string }[] = [
+  { value: "today", label: "Today", hint: "Do it today" },
+  { value: "done", label: "Did it", hint: "Log the win, roll to the next date" },
+  { value: "letgo", label: "Skip", hint: "Jump to the next occurrence — no guilt" },
+];
+
 /**
  * The anti-"62 overdue tasks" mechanic: unfinished tasks from previous days
  * are swept each morning with one decision each — never left to rot in red.
@@ -22,7 +29,7 @@ const CHOICES: { value: SweepAction; label: string; hint: string }[] = [
 export function FreshStart({ carryover }: { carryover: Task[] }) {
   const { state, sweep, dismissSweep } = useApp();
   const [decisions, setDecisions] = useState<Record<string, SweepAction>>(() =>
-    Object.fromEntries(carryover.map((t) => [t.id, "later" as SweepAction]))
+    Object.fromEntries(carryover.map((t) => [t.id, (t.repeat ? "today" : "later") as SweepAction]))
   );
 
   const setAll = (action: SweepAction) =>
@@ -59,6 +66,7 @@ export function FreshStart({ carryover }: { carryover: Task[] }) {
                 <span className="text-xs text-ink-faint">
                   planned {friendlyDay(t.plannedFor!, state.today).toLowerCase()}
                 </span>
+                {t.repeat && <Chip tone="sky" title="A repeating task">↻ repeats</Chip>}
                 {t.carryCount >= 2 && (
                   <Chip tone="lilac" title="This one keeps coming back">↻ ×{t.carryCount}</Chip>
                 )}
@@ -69,14 +77,14 @@ export function FreshStart({ carryover }: { carryover: Task[] }) {
                 </p>
               )}
               <div className="mt-2.5 flex flex-wrap gap-1.5">
-                {CHOICES.map((c) => (
+                {(t.repeat ? CHOICES_RECURRING : CHOICES).map((c) => (
                   <button
                     key={c.value}
                     title={c.hint}
                     onClick={() => setDecisions((d) => ({ ...d, [t.id]: c.value }))}
                     className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                       decisions[t.id] === c.value
-                        ? c.value === "letgo"
+                        ? c.value === "letgo" && !t.repeat
                           ? "border-clay bg-clay-soft text-clay"
                           : c.value === "done"
                             ? "border-moss bg-moss-soft text-moss"

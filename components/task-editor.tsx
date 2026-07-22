@@ -2,14 +2,18 @@
 
 import { useState } from "react";
 import type { Subtask, Task } from "@/lib/types";
-import { friendlyDay, fmtMinutes } from "@/lib/dates";
+import { friendlyDay, fmtMinutes, parseDateStr } from "@/lib/dates";
+import { firstOccurrence, repeatLabel, type Repeat } from "@/lib/repeat";
 import { useApp, visibleLists } from "./store";
 import { Icon3d, ListMark } from "./img3d";
 import { DatePicker } from "./date-picker";
 import { DurationWheel } from "./wheel";
 import { IconCheck, IconPlus, IconTrash, IconX, Modal } from "./ui";
 
-type Section = "day" | "deadline" | "estimate" | "list" | null;
+type Section = "day" | "repeat" | "deadline" | "estimate" | "list" | null;
+
+const WEEK_MON_FIRST = [1, 2, 3, 4, 5, 6, 0];
+const DAY_LETTER = ["S", "M", "T", "W", "T", "F", "S"];
 
 export function TaskEditor({ task }: { task: Task }) {
   const { state, updateTask, deleteTask, setEditing, startFocus } = useApp();
@@ -45,6 +49,24 @@ export function TaskEditor({ task }: { task: Task }) {
       : task.plannedFor
         ? friendlyDay(task.plannedFor, today)
         : "No day";
+
+  const anchorDate = task.plannedFor ?? today;
+  const applyRepeat = (r: Repeat | null) => {
+    const patch: Partial<Task> = { repeat: r };
+    if (r && !task.plannedFor) {
+      patch.plannedFor = firstOccurrence(r, today);
+      if (task.status === "inbox" || task.status === "someday") patch.status = "planned";
+    }
+    updateTask(task.id, patch);
+  };
+
+  const toggleWeekday = (d: number) => {
+    if (task.repeat?.type !== "weekly") return;
+    const cur = task.repeat.weekdays ?? [];
+    const next = cur.includes(d) ? cur.filter((x) => x !== d) : [...cur, d].sort((a, b) => a - b);
+    if (next.length === 0) return; // a weekly rule needs at least one day
+    applyRepeat({ type: "weekly", weekdays: next });
+  };
 
   return (
     <Modal onClose={close} wide>
@@ -155,6 +177,96 @@ export function TaskEditor({ task }: { task: Task }) {
               >
                 <Icon3d name="moon" size={14} /> Someday — park it, guilt-free
               </button>
+            </div>
+          )}
+
+          <PropRow
+            label="Repeat"
+            value={task.repeat ? `↻ ${repeatLabel(task.repeat)}` : "Never"}
+            active={Boolean(task.repeat)}
+            open={open === "repeat"}
+            onClick={() => toggleSection("repeat")}
+            icon="🔁"
+          />
+          {open === "repeat" && (
+            <div className="anim-rise border-b border-line bg-paper px-4 py-4">
+              <div className="flex flex-wrap gap-1.5">
+                <RuleChip active={!task.repeat} onClick={() => applyRepeat(null)}>
+                  Never
+                </RuleChip>
+                <RuleChip
+                  active={task.repeat?.type === "daily"}
+                  onClick={() => applyRepeat({ type: "daily", interval: 1 })}
+                >
+                  Daily
+                </RuleChip>
+                <RuleChip
+                  active={task.repeat?.type === "weekly"}
+                  onClick={() =>
+                    applyRepeat({ type: "weekly", weekdays: [parseDateStr(anchorDate).getDay()] })
+                  }
+                >
+                  Weekly
+                </RuleChip>
+                <RuleChip
+                  active={task.repeat?.type === "monthly"}
+                  onClick={() =>
+                    applyRepeat({ type: "monthly", dayOfMonth: Number(anchorDate.slice(8)) })
+                  }
+                >
+                  Monthly
+                </RuleChip>
+              </div>
+
+              {task.repeat?.type === "daily" && (
+                <Stepper
+                  label="every"
+                  suffix={(task.repeat.interval ?? 1) === 1 ? "day" : "days"}
+                  value={task.repeat.interval ?? 1}
+                  min={1}
+                  max={365}
+                  onChange={(interval) => applyRepeat({ type: "daily", interval })}
+                />
+              )}
+
+              {task.repeat?.type === "weekly" && (
+                <div className="mt-3 flex gap-1.5">
+                  {WEEK_MON_FIRST.map((d) => {
+                    const on = task.repeat?.type === "weekly" && (task.repeat.weekdays ?? []).includes(d);
+                    return (
+                      <button
+                        key={d}
+                        onClick={() => toggleWeekday(d)}
+                        className={`grid size-9 place-items-center rounded-full text-xs font-bold transition-colors ${
+                          on ? "bg-sun text-white" : "bg-card text-ink-soft border border-line hover:border-ink-faint"
+                        }`}
+                        aria-pressed={on}
+                      >
+                        {DAY_LETTER[d]}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {task.repeat?.type === "monthly" && (
+                <Stepper
+                  label="on the"
+                  suffix=""
+                  ordinal
+                  value={task.repeat.dayOfMonth ?? 1}
+                  min={1}
+                  max={31}
+                  onChange={(dayOfMonth) => applyRepeat({ type: "monthly", dayOfMonth })}
+                />
+              )}
+
+              {task.repeat && (
+                <p className="mt-3 text-xs text-ink-soft">
+                  Finishing it logs a win and rolls the card to the next date — miss a day and the
+                  morning sweep offers a guilt-free skip.
+                </p>
+              )}
             </div>
           )}
 
@@ -279,6 +391,80 @@ export function TaskEditor({ task }: { task: Task }) {
         </div>
       </div>
     </Modal>
+  );
+}
+
+function RuleChip({
+  children,
+  active,
+  onClick,
+}: {
+  children: React.ReactNode;
+  active?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+        active
+          ? "border-sun bg-sun-soft text-sun-deep"
+          : "border-line bg-card text-ink-soft hover:border-ink-faint"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Stepper({
+  label,
+  suffix,
+  value,
+  min,
+  max,
+  onChange,
+  ordinal,
+}: {
+  label: string;
+  suffix: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (v: number) => void;
+  ordinal?: boolean;
+}) {
+  const fmt = (n: number) => {
+    if (!ordinal) return String(n);
+    const r10 = n % 10;
+    const r100 = n % 100;
+    if (r10 === 1 && r100 !== 11) return `${n}st`;
+    if (r10 === 2 && r100 !== 12) return `${n}nd`;
+    if (r10 === 3 && r100 !== 13) return `${n}rd`;
+    return `${n}th`;
+  };
+  return (
+    <div className="mt-3 flex items-center gap-2 text-sm">
+      <span className="text-ink-soft">{label}</span>
+      <button
+        onClick={() => onChange(Math.max(min, value - 1))}
+        aria-label="Decrease"
+        className="grid size-8 place-items-center rounded-full border border-line bg-card text-ink-soft hover:border-ink-faint disabled:opacity-30"
+        disabled={value <= min}
+      >
+        −
+      </button>
+      <span className="min-w-10 text-center font-bold tabular-nums">{fmt(value)}</span>
+      <button
+        onClick={() => onChange(Math.min(max, value + 1))}
+        aria-label="Increase"
+        className="grid size-8 place-items-center rounded-full border border-line bg-card text-ink-soft hover:border-ink-faint disabled:opacity-30"
+        disabled={value >= max}
+      >
+        +
+      </button>
+      {suffix && <span className="text-ink-soft">{suffix}</span>}
+    </div>
   );
 }
 

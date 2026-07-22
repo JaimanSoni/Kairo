@@ -1,3 +1,5 @@
+import type { Repeat } from "./repeat";
+
 export type TaskStatus = "inbox" | "planned" | "done" | "someday";
 
 export type Subtask = {
@@ -23,6 +25,8 @@ export type Task = {
   order: number;
   /** How many days this task has carried over without being done. */
   carryCount: number;
+  /** Recurrence rule. A repeating task is one card that advances on completion. */
+  repeat: Repeat | null;
   subtasks: Subtask[];
   completedAt: string | null;
   createdAt: string;

@@ -1,4 +1,5 @@
 import { addDays, nextWeekday, todayStr } from "./dates";
+import { firstOccurrence, type Repeat } from "./repeat";
 import type { List } from "./types";
 
 export type ParsedInput = {
@@ -9,6 +10,7 @@ export type ParsedInput = {
   listId: string | null;
   listName: string | null;
   spotlight: boolean;
+  repeat: Repeat | null;
 };
 
 const WEEKDAY_TOKENS: Record<string, number> = {
@@ -42,10 +44,57 @@ function parseEstimate(token: string): number | null {
   return total;
 }
 
+/** Extracts a recurrence phrase ("every monday", "daily", "every 2 days"…). */
+function extractRepeat(text: string): { repeat: Repeat | null; rest: string } {
+  const weekdayNames = "sun(?:day)?|mon(?:day)?|tue(?:s|sday)?|wed(?:s|nesday)?|thu(?:r|rs|rsday)?|fri(?:day)?|sat(?:urday)?";
+
+  // "every mon", "every mon and wed", "every tue, thu"
+  const weeklyRe = new RegExp(
+    `\\bevery\\s+((?:(?:${weekdayNames})(?:\\s*(?:,|and|&)\\s*|\\s+)?)+)(?=\\s|$)`,
+    "i"
+  );
+  const weeklyMatch = text.match(weeklyRe);
+  if (weeklyMatch) {
+    const tokens = weeklyMatch[1].toLowerCase().match(new RegExp(weekdayNames, "g")) ?? [];
+    const weekdays = [...new Set(tokens.map((t) => WEEKDAY_TOKENS[t.slice(0, 3)]))].filter(
+      (d): d is number => d !== undefined
+    );
+    if (weekdays.length > 0) {
+      return { repeat: { type: "weekly", weekdays }, rest: text.replace(weeklyRe, " ") };
+    }
+  }
+
+  const everyNDays = text.match(/\bevery\s+(\d{1,3})\s+days?\b/i);
+  if (everyNDays) {
+    const interval = Math.min(365, Math.max(1, parseInt(everyNDays[1], 10)));
+    return { repeat: { type: "daily", interval }, rest: text.replace(everyNDays[0], " ") };
+  }
+
+  if (/\bevery\s?day\b|\bdaily\b/i.test(text)) {
+    return { repeat: { type: "daily", interval: 1 }, rest: text.replace(/\bevery\s?day\b|\bdaily\b/i, " ") };
+  }
+
+  if (/\bevery\s+month\b|\bmonthly\b/i.test(text)) {
+    const dayOfMonth = Number(todayStr().slice(8));
+    return { repeat: { type: "monthly", dayOfMonth }, rest: text.replace(/\bevery\s+month\b|\bmonthly\b/i, " ") };
+  }
+
+  if (/\bevery\s+week\b|\bweekly\b/i.test(text)) {
+    const [y, m, d] = todayStr().split("-").map(Number);
+    return {
+      repeat: { type: "weekly", weekdays: [new Date(y, m - 1, d).getDay()] },
+      rest: text.replace(/\bevery\s+week\b|\bweekly\b/i, " "),
+    };
+  }
+
+  return { repeat: null, rest: text };
+}
+
 /**
  * Parses quick-add text. Recognized, order-independent:
  *   dates:      today · tomorrow · mon…sunday · "next week"
  *   deadline:   due <date-token>
+ *   repeat:     daily · every 2 days · every mon and wed · monthly
  *   estimate:   ~30m · ~1h30m · 45m · 2h
  *   list:       #listname (matches existing list by prefix)
  *   spotlight:  !
@@ -60,9 +109,16 @@ export function parseQuickAdd(raw: string, lists: List[]): ParsedInput {
     listId: null,
     listName: null,
     spotlight: false,
+    repeat: null,
   };
 
   let text = raw;
+
+  const { repeat, rest } = extractRepeat(text);
+  if (repeat) {
+    result.repeat = repeat;
+    text = rest;
+  }
 
   // "next week" → next Monday
   if (/\bnext week\b/i.test(text)) {
@@ -118,5 +174,11 @@ export function parseQuickAdd(raw: string, lists: List[]): ParsedInput {
   }
 
   result.title = kept.join(" ").trim();
+
+  // a repeating task needs a day — snap to the rule's first occurrence
+  if (result.repeat && !result.plannedFor) {
+    result.plannedFor = firstOccurrence(result.repeat, todayStr());
+  }
+
   return result;
 }

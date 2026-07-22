@@ -10,7 +10,8 @@ import {
   useRef,
 } from "react";
 import type { List, Task, UserProfile } from "@/lib/types";
-import { todayStr } from "@/lib/dates";
+import { friendlyDay, todayStr } from "@/lib/dates";
+import { nextOccurrence } from "@/lib/repeat";
 import type { ParsedInput } from "@/lib/nlp";
 
 /* ---------------- state ---------------- */
@@ -250,6 +251,7 @@ export function AppProvider({
         estimateMin: input.estimateMin,
         order: Date.now(),
         carryCount: 0,
+        repeat: input.repeat ?? null,
         subtasks: [],
         completedAt: null,
         createdAt: now,
@@ -267,6 +269,7 @@ export function AppProvider({
           listId: task.listId,
           estimateMin: task.estimateMin,
           order: task.order,
+          repeat: task.repeat,
         }),
       })
         .then(({ task: saved }) => {
@@ -300,7 +303,7 @@ export function AppProvider({
       const body: Record<string, unknown> = {};
       const fields: (keyof Task)[] = [
         "title", "note", "status", "plannedFor", "dueDate",
-        "spotlight", "listId", "estimateMin", "order", "carryCount", "subtasks",
+        "spotlight", "listId", "estimateMin", "order", "carryCount", "repeat", "subtasks",
       ];
       for (const f of fields) {
         if (f in patch) body[f] = patch[f];
@@ -312,7 +315,66 @@ export function AppProvider({
     [syncError]
   );
 
-  const completeTask = useCallback((id: string) => updateTask(id, { status: "done" }), [updateTask]);
+  /**
+   * Completing a repeating task logs a finished copy (for Today/Log) and
+   * advances the card to its next occurrence — the series is one document.
+   */
+  const completeTask = useCallback(
+    (id: string) => {
+      const t = stateRef.current.tasks[id];
+      if (!t || t.status === "done") return;
+
+      if (t.repeat) {
+        const today = stateRef.current.today;
+        const nowIso = new Date().toISOString();
+
+        // 1) the finished copy that lands in Done today / the Log
+        const tempId = `temp-${crypto.randomUUID()}`;
+        const instance: Task = {
+          ...t,
+          id: tempId,
+          repeat: null,
+          dueDate: null,
+          status: "done",
+          spotlight: false,
+          completedAt: nowIso,
+          createdAt: nowIso,
+          order: Date.now(),
+        };
+        dispatch({ type: "UPSERT_TASK", task: instance });
+        api<{ task: Task }>("/api/tasks", {
+          method: "POST",
+          body: JSON.stringify({
+            title: instance.title,
+            note: instance.note,
+            status: "done",
+            listId: instance.listId,
+            estimateMin: instance.estimateMin,
+            subtasks: instance.subtasks,
+            order: instance.order,
+          }),
+        })
+          .then(({ task: saved }) => dispatch({ type: "REPLACE_TASK", tempId, task: saved }))
+          .catch(() => syncError(() => dispatch({ type: "REMOVE_TASK", id: tempId })));
+
+        // 2) advance the series
+        const after = t.plannedFor && t.plannedFor > today ? t.plannedFor : today;
+        const next = nextOccurrence(t.repeat, after);
+        updateTask(id, {
+          plannedFor: next,
+          status: "planned",
+          spotlight: false,
+          carryCount: 0,
+          subtasks: t.subtasks.map((s) => ({ ...s, done: false })),
+        });
+        showToast({ message: `↻ Next: ${friendlyDay(next, today)}` });
+        return;
+      }
+
+      updateTask(id, { status: "done" });
+    },
+    [updateTask, showToast, syncError]
+  );
 
   const uncompleteTask = useCallback(
     (id: string) => {
@@ -403,6 +465,22 @@ export function AppProvider({
       for (const { id, action } of decisions) {
         const t = stateRef.current.tasks[id];
         if (!t) continue;
+
+        // repeating tasks: "done" logs+advances, "letgo" means skip — never delete the series
+        if (t.repeat && action === "done") {
+          completeTask(id);
+          continue;
+        }
+        if (t.repeat && (action === "letgo" || action === "later" || action === "someday")) {
+          const next = nextOccurrence(t.repeat, today);
+          const skipped: Task = { ...t, plannedFor: next, spotlight: false, carryCount: 0 };
+          upserts.push(skipped);
+          if (!id.startsWith("temp-")) {
+            updates.push({ id, plannedFor: next, spotlight: false, carryCount: 0 });
+          }
+          continue;
+        }
+
         if (action === "letgo") {
           dispatch({ type: "REMOVE_TASK", id });
           if (!id.startsWith("temp-")) {
@@ -439,7 +517,7 @@ export function AppProvider({
       }
       dispatch({ type: "SET_SWEEP_DISMISSED", dismissed: true });
     },
-    [syncError]
+    [syncError, completeTask]
   );
 
   const createList = useCallback(

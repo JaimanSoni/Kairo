@@ -1,5 +1,6 @@
 import { ObjectId, type Document, type WithId } from "mongodb";
 import { getDb } from "./db";
+import { sanitizeRepeat, type Repeat } from "./repeat";
 import type { List, Subtask, Task, TaskStatus } from "./types";
 
 export const TASK_STATUSES: TaskStatus[] = ["inbox", "planned", "done", "someday"];
@@ -23,6 +24,7 @@ export function toTask(doc: WithId<Document>): Task {
     estimateMin: typeof doc.estimateMin === "number" ? doc.estimateMin : null,
     order: typeof doc.order === "number" ? doc.order : 0,
     carryCount: typeof doc.carryCount === "number" ? doc.carryCount : 0,
+    repeat: doc.repeat ? (sanitizeRepeat(doc.repeat) ?? null) : null,
     subtasks: Array.isArray(doc.subtasks) ? (doc.subtasks as Subtask[]) : [],
     completedAt: doc.completedAt ? (doc.completedAt as Date).toISOString() : null,
     createdAt: doc.createdAt ? (doc.createdAt as Date).toISOString() : new Date(0).toISOString(),
@@ -85,6 +87,7 @@ type TaskPatch = {
   estimateMin?: number | null;
   order?: number;
   carryCount?: number;
+  repeat?: Repeat | null;
   subtasks?: Subtask[];
 };
 
@@ -131,6 +134,11 @@ export function sanitizeTaskPatch(body: Record<string, unknown>): TaskPatch | nu
   if ("carryCount" in body) {
     if (typeof body.carryCount !== "number" || body.carryCount < 0 || body.carryCount > 10000) return null;
     patch.carryCount = body.carryCount;
+  }
+  if ("repeat" in body) {
+    const repeat = sanitizeRepeat(body.repeat);
+    if (repeat === undefined) return null;
+    patch.repeat = repeat;
   }
   if ("subtasks" in body) {
     if (!Array.isArray(body.subtasks) || body.subtasks.length > 100) return null;
