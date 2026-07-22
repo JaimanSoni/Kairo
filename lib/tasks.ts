@@ -25,6 +25,7 @@ export function toTask(doc: WithId<Document>): Task {
     order: typeof doc.order === "number" ? doc.order : 0,
     carryCount: typeof doc.carryCount === "number" ? doc.carryCount : 0,
     repeat: doc.repeat ? (sanitizeRepeat(doc.repeat) ?? null) : null,
+    reminderAt: typeof doc.reminderAt === "number" ? doc.reminderAt : null,
     subtasks: Array.isArray(doc.subtasks) ? (doc.subtasks as Subtask[]) : [],
     completedAt: doc.completedAt ? (doc.completedAt as Date).toISOString() : null,
     createdAt: doc.createdAt ? (doc.createdAt as Date).toISOString() : new Date(0).toISOString(),
@@ -88,6 +89,7 @@ type TaskPatch = {
   order?: number;
   carryCount?: number;
   repeat?: Repeat | null;
+  reminderAt?: number | null;
   subtasks?: Subtask[];
 };
 
@@ -139,6 +141,18 @@ export function sanitizeTaskPatch(body: Record<string, unknown>): TaskPatch | nu
     const repeat = sanitizeRepeat(body.repeat);
     if (repeat === undefined) return null;
     patch.repeat = repeat;
+  }
+  if ("reminderAt" in body) {
+    if (body.reminderAt !== null) {
+      const yearAhead = Date.now() + 366 * 24 * 60 * 60 * 1000;
+      if (
+        typeof body.reminderAt !== "number" ||
+        !Number.isFinite(body.reminderAt) ||
+        body.reminderAt > yearAhead
+      )
+        return null;
+    }
+    patch.reminderAt = body.reminderAt as number | null;
   }
   if ("subtasks" in body) {
     if (!Array.isArray(body.subtasks) || body.subtasks.length > 100) return null;

@@ -1,6 +1,7 @@
 import webpush from "web-push";
 import { ObjectId } from "mongodb";
 import { getDb } from "./db";
+import { tasksCollection } from "./tasks";
 
 export type PushPayload = {
   title: string;
@@ -64,6 +65,17 @@ export async function processDuePushes(): Promise<void> {
   for (;;) {
     const doc = await scheduled.findOneAndDelete({ fireAt: { $lte: now } });
     if (!doc) break;
+
+    // task-linked pushes (reminders): clear the marker, skip if already done/gone
+    if (doc.taskId) {
+      const tasks = await tasksCollection();
+      const task = await tasks.findOne({ _id: doc.taskId as ObjectId, userId: doc.userId as ObjectId });
+      if (task) {
+        await tasks.updateOne({ _id: task._id }, { $set: { reminderAt: null } });
+      }
+      if (!task || task.status === "done") continue;
+    }
+
     await sendToUser(doc.userId as ObjectId, {
       title: String(doc.title ?? "Kairo"),
       body: typeof doc.body === "string" ? doc.body : undefined,

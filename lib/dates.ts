@@ -58,3 +58,14 @@ export function fullDate(dateStr: string): string {
   const d = parseDateStr(dateStr);
   return `${WEEKDAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]}`;
 }
+
+export function fmtClockTime(ms: number): string {
+  const d = new Date(ms);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+/** "Today 15:00" / "Tomorrow 09:00" / "Thu 24 Jul 09:00" for a reminder moment. */
+export function fmtReminder(ms: number, today: string): string {
+  const day = toDateStr(new Date(ms));
+  return `${friendlyDay(day, today)} ${fmtClockTime(ms)}`;
+}

@@ -32,6 +32,7 @@ export async function POST(request: Request) {
     order: patch.order ?? now.getTime(),
     carryCount: 0,
     repeat: patch.repeat ?? null,
+    reminderAt: patch.reminderAt ?? null,
     subtasks: patch.subtasks ?? [],
     // completed-instance copies of recurring tasks are created already done
     completedAt: status === "done" ? now : null,

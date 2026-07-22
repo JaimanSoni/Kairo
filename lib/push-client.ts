@@ -93,6 +93,8 @@ export async function schedulePush(opts: {
   body?: string;
   tag: string;
   url?: string;
+  /** Link to a task: the push is skipped if that task is done/deleted by fire time. */
+  taskId?: string;
 }): Promise<void> {
   try {
     await fetch("/api/push/schedule", {

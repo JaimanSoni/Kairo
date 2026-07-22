@@ -3,7 +3,7 @@ import { ObjectId } from "mongodb";
 import { requireSession, unauthorized, badRequest } from "@/lib/api-auth";
 import { scheduledCollection, ensureTicker, processDuePushes } from "@/lib/push";
 
-const MAX_AHEAD_MS = 24 * 60 * 60 * 1000;
+const MAX_AHEAD_MS = 30 * 24 * 60 * 60 * 1000;
 
 /**
  * Schedules a push for a future moment (e.g. a focus timer's end).
@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   const session = await requireSession();
   if (!session) return unauthorized();
 
-  let body: { fireAt?: unknown; title?: unknown; body?: unknown; tag?: unknown; url?: unknown };
+  let body: { fireAt?: unknown; title?: unknown; body?: unknown; tag?: unknown; url?: unknown; taskId?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -32,6 +32,11 @@ export async function POST(request: Request) {
   }
   const tag = typeof body.tag === "string" && body.tag.length <= 100 ? body.tag : null;
 
+  const taskId =
+    typeof body.taskId === "string" && ObjectId.isValid(body.taskId)
+      ? new ObjectId(body.taskId)
+      : null;
+
   const scheduled = await scheduledCollection();
   const userId = new ObjectId(session.userId);
   if (tag) await scheduled.deleteMany({ userId, tag });
@@ -41,6 +46,7 @@ export async function POST(request: Request) {
     title: body.title.trim(),
     body: typeof body.body === "string" ? body.body.slice(0, 500) : null,
     tag,
+    taskId,
     url: typeof body.url === "string" && body.url.startsWith("/") ? body.url : "/today",
     createdAt: new Date(),
   });

@@ -2,21 +2,28 @@
 
 import { useState } from "react";
 import type { Subtask, Task } from "@/lib/types";
-import { addDays, friendlyDay, fmtMinutes, parseDateStr } from "@/lib/dates";
+import { addDays, friendlyDay, fmtMinutes, fmtReminder, parseDateStr } from "@/lib/dates";
 import { firstOccurrence, repeatLabel, type Repeat } from "@/lib/repeat";
+import { cancelPush, enablePush, pushEnabled, schedulePush } from "@/lib/push-client";
 import { useApp, visibleLists } from "./store";
 import { Icon3d, ListMark } from "./img3d";
 import { DatePicker } from "./date-picker";
 import { DurationWheel } from "./wheel";
 import { IconCheck, IconPlus, IconTrash, IconX, Modal } from "./ui";
 
-type Section = "day" | "repeat" | "deadline" | "estimate" | "list" | null;
+type Section = "day" | "repeat" | "deadline" | "estimate" | "list" | "reminder" | null;
+
+function toLocalInputValue(ms: number): string {
+  const d = new Date(ms);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
 
 const WEEK_MON_FIRST = [1, 2, 3, 4, 5, 6, 0];
 const DAY_LETTER = ["S", "M", "T", "W", "T", "F", "S"];
 
 export function TaskEditor({ task }: { task: Task }) {
-  const { state, updateTask, deleteTask, setEditing, startFocus } = useApp();
+  const { state, updateTask, deleteTask, setEditing, startFocus, showToast } = useApp();
   const [title, setTitle] = useState(task.title);
   const [note, setNote] = useState(task.note);
   const [subtasks, setSubtasks] = useState<Subtask[]>(task.subtasks);
@@ -59,6 +66,42 @@ export function TaskEditor({ task }: { task: Task }) {
       if (task.status === "inbox" || task.status === "someday") patch.status = "planned";
     }
     updateTask(task.id, patch);
+  };
+
+  const setReminder = async (fireAt: number | null) => {
+    if (fireAt === null) {
+      cancelPush(`remind-${task.id}`);
+      updateTask(task.id, { reminderAt: null });
+      return;
+    }
+    if (fireAt <= Date.now() + 30_000) {
+      showToast({ message: "Pick a time in the future" });
+      return;
+    }
+    let ok = await pushEnabled();
+    if (!ok) {
+      const result = await enablePush();
+      ok = result === "enabled";
+      if (!ok) {
+        showToast({
+          message:
+            result === "denied"
+              ? "Notifications are blocked for this site — allow them in browser settings"
+              : "Couldn't enable notifications",
+        });
+        return;
+      }
+    }
+    updateTask(task.id, { reminderAt: fireAt });
+    schedulePush({
+      fireAt,
+      title: `🔔 ${task.title}`,
+      body: "A reminder you set in Kairo.",
+      tag: `remind-${task.id}`,
+      url: "/today",
+      taskId: task.id,
+    });
+    showToast({ message: `🔔 ${fmtReminder(fireAt, today)}` });
   };
 
   const toggleWeekday = (d: number) => {
@@ -373,6 +416,75 @@ export function TaskEditor({ task }: { task: Task }) {
                 clearLabel="No deadline"
                 onChange={(date) => updateTask(task.id, { dueDate: date })}
               />
+            </div>
+          )}
+
+          <PropRow
+            label="Reminder"
+            value={task.reminderAt ? fmtReminder(task.reminderAt, today) : "None"}
+            active={Boolean(task.reminderAt)}
+            open={open === "reminder"}
+            onClick={() => toggleSection("reminder")}
+            icon="🔔"
+          />
+          {open === "reminder" && (
+            <div className="anim-rise border-b border-line bg-paper px-4 py-4">
+              <div className="flex flex-wrap gap-1.5">
+                <RuleChip
+                  onClick={() => setReminder(Date.now() + 60 * 60 * 1000)}
+                >
+                  In 1 hour
+                </RuleChip>
+                <RuleChip
+                  onClick={() => setReminder(Date.now() + 3 * 60 * 60 * 1000)}
+                >
+                  In 3 hours
+                </RuleChip>
+                <RuleChip
+                  onClick={() => {
+                    const d = new Date();
+                    d.setHours(18, 0, 0, 0);
+                    if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
+                    setReminder(d.getTime());
+                  }}
+                >
+                  Evening 18:00
+                </RuleChip>
+                <RuleChip
+                  onClick={() => {
+                    const d = new Date();
+                    d.setDate(d.getDate() + 1);
+                    d.setHours(9, 0, 0, 0);
+                    setReminder(d.getTime());
+                  }}
+                >
+                  Tomorrow 9:00
+                </RuleChip>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <input
+                  type="datetime-local"
+                  defaultValue={task.reminderAt ? toLocalInputValue(task.reminderAt) : ""}
+                  onChange={(e) => {
+                    if (!e.target.value) return;
+                    const ms = new Date(e.target.value).getTime();
+                    if (Number.isFinite(ms)) setReminder(ms);
+                  }}
+                  className="rounded-lg border border-line bg-card px-2.5 py-1.5 text-base outline-none focus:border-sun sm:text-sm"
+                />
+                {task.reminderAt && (
+                  <button
+                    onClick={() => setReminder(null)}
+                    className="text-xs font-medium text-ink-faint underline hover:text-ink"
+                  >
+                    clear
+                  </button>
+                )}
+              </div>
+              <p className="mt-2 text-xs text-ink-soft">
+                A push notification, even if the app is closed. It quietly skips itself if the
+                task is already done.
+              </p>
             </div>
           )}
 

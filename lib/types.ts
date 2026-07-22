@@ -29,6 +29,8 @@ export type Task = {
   carryCount: number;
   /** Recurrence rule. A repeating task is one card that advances on completion. */
   repeat: Repeat | null;
+  /** One-off "remind me" push, epoch ms. Cleared when it fires or the task completes. */
+  reminderAt: number | null;
   subtasks: Subtask[];
   completedAt: string | null;
   createdAt: string;

@@ -12,6 +12,7 @@ import {
 import type { List, Task, UserProfile } from "@/lib/types";
 import { friendlyDay, todayStr } from "@/lib/dates";
 import { nextOccurrence } from "@/lib/repeat";
+import { cancelPush } from "@/lib/push-client";
 import type { ParsedInput } from "@/lib/nlp";
 
 /* ---------------- state ---------------- */
@@ -252,6 +253,7 @@ export function AppProvider({
         order: Date.now(),
         carryCount: 0,
         repeat: input.repeat ?? null,
+        reminderAt: null,
         subtasks: [],
         completedAt: null,
         createdAt: now,
@@ -302,8 +304,8 @@ export function AppProvider({
 
       const body: Record<string, unknown> = {};
       const fields: (keyof Task)[] = [
-        "title", "note", "status", "plannedFor", "dueDate",
-        "spotlight", "listId", "estimateMin", "order", "carryCount", "repeat", "subtasks",
+        "title", "note", "status", "plannedFor", "dueDate", "spotlight",
+        "listId", "estimateMin", "order", "carryCount", "repeat", "reminderAt", "subtasks",
       ];
       for (const f of fields) {
         if (f in patch) body[f] = patch[f];
@@ -323,6 +325,8 @@ export function AppProvider({
     (id: string) => {
       const t = stateRef.current.tasks[id];
       if (!t || t.status === "done") return;
+
+      if (t.reminderAt) cancelPush(`remind-${id}`); // a done task needs no reminder
 
       if (t.repeat) {
         const today = stateRef.current.today;
@@ -365,6 +369,7 @@ export function AppProvider({
           status: "planned",
           spotlight: false,
           carryCount: 0,
+          reminderAt: null,
           // a fresh occurrence starts with a fresh checklist
           subtasks: t.subtasks.map((s) => ({ ...s, done: false, plannedFor: null })),
         });
@@ -372,7 +377,7 @@ export function AppProvider({
         return;
       }
 
-      updateTask(id, { status: "done" });
+      updateTask(id, { status: "done", ...(t.reminderAt ? { reminderAt: null } : {}) });
     },
     [updateTask, showToast, syncError]
   );
@@ -393,6 +398,7 @@ export function AppProvider({
     (id: string, opts?: { silent?: boolean }) => {
       const task = stateRef.current.tasks[id];
       if (!task) return;
+      if (task.reminderAt) cancelPush(`remind-${id}`);
       dispatch({ type: "REMOVE_TASK", id });
 
       const doDelete = () =>

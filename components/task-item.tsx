@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Task } from "@/lib/types";
-import { addDays, friendlyDay, fmtMinutes } from "@/lib/dates";
+import { addDays, friendlyDay, fmtMinutes, fmtReminder } from "@/lib/dates";
 import { repeatLabel } from "@/lib/repeat";
 import { useApp } from "./store";
 import { playComplete } from "@/lib/sound";
@@ -108,7 +108,7 @@ export function TaskItem({
         <span className={`w-full truncate text-[15px] leading-snug ${done ? "strike-done" : ""}`}>
           {task.title}
         </span>
-        {(list || task.estimateMin || task.dueDate || task.repeat || task.carryCount >= 2 || task.subtasks.length > 0 || task.note) && (
+        {(list || task.estimateMin || task.dueDate || task.repeat || task.reminderAt || task.carryCount >= 2 || task.subtasks.length > 0 || task.note) && (
           <span className="flex flex-wrap items-center gap-1.5">
             {list && (
               <Chip>
@@ -124,6 +124,11 @@ export function TaskItem({
             {task.repeat && !done && (
               <Chip tone="sky" title="Repeats — completing it advances to the next date">
                 ↻ {repeatLabel(task.repeat)}
+              </Chip>
+            )}
+            {task.reminderAt && !done && (
+              <Chip title="You'll get a push notification">
+                🔔 {fmtReminder(task.reminderAt, today)}
               </Chip>
             )}
             {task.subtasks.length > 0 && (
