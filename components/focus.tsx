@@ -190,7 +190,7 @@ export function FocusOverlay() {
       >
         <span className={`size-2 rounded-full ${timer.running ? "anim-pulse bg-sun" : "bg-ink-faint"}`} />
         <span className="max-w-32 truncate text-xs">{task.title}</span>
-        <span className={`font-mono text-sm font-bold tabular-nums ${overtime ? "text-clay" : "text-sun"}`}>
+        <span className={`font-mono text-sm font-bold tabular-nums ${overtime ? "text-clay" : "text-sun-soft"}`}>
           {overtime ? "+" : ""}
           {fmtClock(remaining)}
         </span>

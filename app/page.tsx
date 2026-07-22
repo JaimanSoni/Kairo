@@ -143,7 +143,7 @@ export default async function Landing({
         <div className="mt-8 flex flex-col items-center gap-3">
           <a
             href="/api/auth/google"
-            className="flex items-center gap-3 rounded-full border-2 border-ink bg-sun px-7 py-3.5 text-base font-bold shadow-[4px_4px_0_0_var(--color-ink)] transition-transform hover:-translate-y-0.5 active:translate-y-0"
+            className="flex items-center gap-3 rounded-full border-2 border-ink bg-sun px-7 py-3.5 text-base font-bold text-white shadow-[4px_4px_0_0_var(--color-ink)] transition-transform hover:-translate-y-0.5 active:translate-y-0"
           >
             <GoogleMark /> Continue with Google
           </a>
@@ -173,7 +173,7 @@ export default async function Landing({
 
       {/* marquee */}
       <div className="my-12 -rotate-1 border-y-2 border-ink bg-sun py-3 overflow-hidden">
-        <div className="anim-marquee flex w-max gap-8 whitespace-nowrap font-semibold">
+        <div className="anim-marquee flex w-max gap-8 whitespace-nowrap font-semibold text-white">
           {[...MARQUEE, ...MARQUEE].map((m, i) => (
             <span key={i} className="flex items-center gap-8">
               {m} <span aria-hidden>✱</span>

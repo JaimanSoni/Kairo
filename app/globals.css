@@ -7,49 +7,51 @@
 }
 
 @theme {
-  /* Sunset palette: warm cream base, espresso ink (never pure black),
-     one alive coral accent, fresh pastel support. Soft ≠ washed out. */
-  --color-paper: #fbf6ef;
-  --color-paper-deep: #f3ece0;
+  /* Aurora palette: cool porcelain base, charcoal ink (never pure black),
+     violet-indigo primary, mint/sky/rose support. Soft ≠ washed out.
+     Token names are historical — "sun" is the primary accent, "moss" is
+     success, "clay" is destructive/urgent, "lilac" is the gentle-warning. */
+  --color-paper: #f6f7fb;
+  --color-paper-deep: #ebecf3;
   --color-card: #ffffff;
-  --color-ink: #322e28;
-  --color-ink-soft: #6b6357;
-  --color-ink-faint: #a79e90;
-  --color-line: #eae2d3;
-  --color-sun: #f08a4b;
-  --color-sun-deep: #ae5a22;
-  --color-sun-soft: #fbe9d9;
-  --color-moss: #4f9068;
-  --color-moss-soft: #e1f0e5;
-  --color-sky: #5e9ec8;
-  --color-sky-soft: #e6f1f8;
-  --color-clay: #d26a54;
-  --color-clay-soft: #f9e6df;
-  --color-lilac: #8b7bd8;
-  --color-lilac-soft: #efebfb;
+  --color-ink: #23252e;
+  --color-ink-soft: #5d6070;
+  --color-ink-faint: #9da0b0;
+  --color-line: #e4e5ee;
+  --color-sun: #6e62e5;
+  --color-sun-deep: #4f43c4;
+  --color-sun-soft: #eceafb;
+  --color-moss: #2f9e6f;
+  --color-moss-soft: #e0f3ea;
+  --color-sky: #4795cf;
+  --color-sky-soft: #e5f1fa;
+  --color-clay: #d95c6c;
+  --color-clay-soft: #fbe7ea;
+  --color-lilac: #b0862c;
+  --color-lilac-soft: #f7efdb;
 }
 
-/* Dark theme — same warm identity, lights off. Applied via data-theme,
+/* Dark theme — same cool identity, lights off. Applied via data-theme,
    resolved by the inline script in the root layout before first paint. */
 :root[data-theme="dark"] {
-  --color-paper: #181411;
-  --color-paper-deep: #2a241e;
-  --color-card: #221d18;
-  --color-ink: #ede6db;
-  --color-ink-soft: #b3a99c;
-  --color-ink-faint: #776e62;
-  --color-line: #352e27;
-  --color-sun: #f0904f;
-  --color-sun-deep: #f5a97b;
-  --color-sun-soft: #3d2a1c;
-  --color-moss: #6fb287;
-  --color-moss-soft: #223328;
-  --color-sky: #7fb6d9;
-  --color-sky-soft: #1f2e38;
-  --color-clay: #e08a70;
-  --color-clay-soft: #3a241d;
-  --color-lilac: #a99ae8;
-  --color-lilac-soft: #2a2438;
+  --color-paper: #15161c;
+  --color-paper-deep: #242631;
+  --color-card: #1c1e26;
+  --color-ink: #e8e9f1;
+  --color-ink-soft: #a6a9bc;
+  --color-ink-faint: #696d80;
+  --color-line: #2e3140;
+  --color-sun: #8e7ff5;
+  --color-sun-deep: #aca0f8;
+  --color-sun-soft: #2a2749;
+  --color-moss: #4cbe8c;
+  --color-moss-soft: #1c332a;
+  --color-sky: #62aee5;
+  --color-sky-soft: #1c2f40;
+  --color-clay: #e67284;
+  --color-clay-soft: #3b232b;
+  --color-lilac: #d3a94b;
+  --color-lilac-soft: #37301a;
 }
 
 body {
@@ -237,12 +239,12 @@ input,
 
 .glow-warm {
   background:
-    radial-gradient(38rem 22rem at 18% 0%, rgba(240, 138, 75, 0.13), transparent 60%),
-    radial-gradient(32rem 22rem at 85% 18%, rgba(139, 123, 216, 0.1), transparent 60%);
+    radial-gradient(38rem 22rem at 18% 0%, rgba(110, 98, 229, 0.12), transparent 60%),
+    radial-gradient(32rem 22rem at 85% 18%, rgba(71, 149, 207, 0.1), transparent 60%);
 }
 
 .squiggle {
-  background-image: url("data:image/svg+xml,%3Csvg width='40' height='8' viewBox='0 0 40 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 4 Q5 0 10 4 T20 4 T30 4 T40 4' fill='none' stroke='%23f08a4b' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg width='40' height='8' viewBox='0 0 40 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 4 Q5 0 10 4 T20 4 T30 4 T40 4' fill='none' stroke='%236e62e5' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat: repeat-x;
   background-size: 40px 8px;
   height: 8px;

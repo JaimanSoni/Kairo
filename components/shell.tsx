@@ -61,7 +61,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
         <button
           onClick={() => setOmnibar(true)}
-          className="mt-6 flex items-center justify-between rounded-xl border-2 border-ink bg-sun px-3.5 py-2.5 text-sm font-bold shadow-[3px_3px_0_0_var(--color-ink)] transition-transform hover:-translate-y-0.5"
+          className="mt-6 flex items-center justify-between rounded-xl border-2 border-ink bg-sun px-3.5 py-2.5 text-sm font-bold text-white shadow-[3px_3px_0_0_var(--color-ink)] transition-transform hover:-translate-y-0.5"
         >
           <span className="flex items-center gap-2">
             <IconPlus size={15} /> Capture
@@ -130,7 +130,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <button
           onClick={() => setOmnibar(true)}
           aria-label="Capture"
-          className="grid size-12 -translate-y-3 place-items-center rounded-full border-2 border-ink bg-sun shadow-[3px_3px_0_0_var(--color-ink)]"
+          className="grid size-12 -translate-y-3 place-items-center rounded-full border-2 border-ink bg-sun text-white shadow-[3px_3px_0_0_var(--color-ink)]"
         >
           <IconPlus size={20} />
         </button>
@@ -160,7 +160,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             {state.toast.action && (
               <button
                 onClick={state.toast.action.run}
-                className="font-bold text-sun underline-offset-2 hover:underline"
+                className="font-bold text-sun-soft underline underline-offset-2"
               >
                 {state.toast.action.label}
               </button>

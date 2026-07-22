@@ -7,10 +7,14 @@ material, palette and camera angle for every icon that follows."*
 ## Master style block (paste before every subject)
 
 > A minimal 3D cartoon icon of **[SUBJECT]**, soft matte clay render, smooth rounded shapes with
-> gentle bevels, cute but not childish, palette: soft coral orange #F08A4B, warm cream #FBF6EF,
-> sage green #4F9068, soft lilac #8B7BD8, espresso brown #322E28 accents, soft studio lighting,
+> gentle bevels, cute but not childish, palette: violet indigo #6E62E5, cool porcelain white
+> #F6F7FB, mint green #2F9E6F, sky blue #4795CF, charcoal #23252E accents, soft studio lighting,
 > subtle ambient occlusion, slight 3/4 top-down angle, single object centered, **fully transparent
 > background, PNG, no text, no floor, no drop shadow on ground**, high resolution.
+
+> **Note (2026-07-22):** the app's theme moved from warm coral/cream to this cool violet palette.
+> The 15 icons already generated use the old warm colors — they still work, but regenerating them
+> with this updated block will match the new look. New icons should use this block.
 
 ## Specs
 
