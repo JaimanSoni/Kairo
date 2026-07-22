@@ -279,7 +279,7 @@ function NotificationSettings() {
       else if (result.status === "unsupported") setStatus("unsupported");
       else {
         setStatus("disabled");
-        setError(result.detail);
+        setError(`Couldn't enable: ${result.detail}`);
       }
     }
     setBusy(false);
@@ -322,8 +322,19 @@ function NotificationSettings() {
               {busy ? "…" : status === "enabled" ? "On ✓" : "Enable"}
             </button>
           </div>
+          {status === "enabled" && (
+            <button
+              onClick={async () => {
+                const res = await fetch("/api/push/test", { method: "POST" });
+                setError(res.ok ? null : "Test send failed — check the server logs");
+              }}
+              className="mt-2 text-xs font-medium text-ink-faint underline hover:text-ink"
+            >
+              Send a test notification
+            </button>
+          )}
           {error && (
-            <p className="mt-2 text-xs text-clay">Couldn&apos;t enable: {error}</p>
+            <p className="mt-2 text-xs text-clay">{error}</p>
           )}
         </>
       )}

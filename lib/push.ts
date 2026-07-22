@@ -49,6 +49,11 @@ export async function sendToUser(userId: ObjectId, payload: PushPayload): Promis
         const status = (err as { statusCode?: number }).statusCode;
         if (status === 404 || status === 410) {
           await subs.deleteOne({ _id: doc._id }); // browser revoked this subscription
+        } else {
+          console.error(
+            `Push send failed (${status ?? "?"}) for ${String(doc.endpoint).slice(0, 50)}:`,
+            (err as { body?: string; message?: string }).body ?? (err as Error).message
+          );
         }
       }
     })
