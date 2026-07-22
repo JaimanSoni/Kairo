@@ -7,51 +7,51 @@
 }
 
 @theme {
-  /* Aurora palette: cool porcelain base, charcoal ink (never pure black),
-     violet-indigo primary, mint/sky/rose support. Soft ≠ washed out.
+  /* Tide palette: mint-tinted porcelain base, deep-green charcoal ink,
+     confident teal primary, grass/sky/rose/lilac support. Soft ≠ washed out.
      Token names are historical — "sun" is the primary accent, "moss" is
      success, "clay" is destructive/urgent, "lilac" is the gentle-warning. */
-  --color-paper: #f6f7fb;
-  --color-paper-deep: #ebecf3;
+  --color-paper: #f4f7f6;
+  --color-paper-deep: #e8eeec;
   --color-card: #ffffff;
-  --color-ink: #23252e;
-  --color-ink-soft: #5d6070;
-  --color-ink-faint: #9da0b0;
-  --color-line: #e4e5ee;
-  --color-sun: #6e62e5;
-  --color-sun-deep: #4f43c4;
-  --color-sun-soft: #eceafb;
-  --color-moss: #2f9e6f;
-  --color-moss-soft: #e0f3ea;
-  --color-sky: #4795cf;
-  --color-sky-soft: #e5f1fa;
-  --color-clay: #d95c6c;
-  --color-clay-soft: #fbe7ea;
-  --color-lilac: #b0862c;
-  --color-lilac-soft: #f7efdb;
+  --color-ink: #1c2624;
+  --color-ink-soft: #54655f;
+  --color-ink-faint: #93a39d;
+  --color-line: #dfe7e4;
+  --color-sun: #0c9384;
+  --color-sun-deep: #076b60;
+  --color-sun-soft: #ddf1ee;
+  --color-moss: #4ca75b;
+  --color-moss-soft: #e2f2e6;
+  --color-sky: #4e93c9;
+  --color-sky-soft: #e3f0f9;
+  --color-clay: #d96354;
+  --color-clay-soft: #fae8e4;
+  --color-lilac: #8d7bd4;
+  --color-lilac-soft: #efecfa;
 }
 
-/* Dark theme — same cool identity, lights off. Applied via data-theme,
+/* Dark theme — same calm identity, lights off. Applied via data-theme,
    resolved by the inline script in the root layout before first paint. */
 :root[data-theme="dark"] {
-  --color-paper: #15161c;
-  --color-paper-deep: #242631;
-  --color-card: #1c1e26;
-  --color-ink: #e8e9f1;
-  --color-ink-soft: #a6a9bc;
-  --color-ink-faint: #696d80;
-  --color-line: #2e3140;
-  --color-sun: #8e7ff5;
-  --color-sun-deep: #aca0f8;
-  --color-sun-soft: #2a2749;
-  --color-moss: #4cbe8c;
-  --color-moss-soft: #1c332a;
-  --color-sky: #62aee5;
-  --color-sky-soft: #1c2f40;
-  --color-clay: #e67284;
-  --color-clay-soft: #3b232b;
-  --color-lilac: #d3a94b;
-  --color-lilac-soft: #37301a;
+  --color-paper: #131917;
+  --color-paper-deep: #202926;
+  --color-card: #1a2220;
+  --color-ink: #e6edea;
+  --color-ink-soft: #a3b2ac;
+  --color-ink-faint: #67756f;
+  --color-line: #2b3733;
+  --color-sun: #2fb5a4;
+  --color-sun-deep: #7bd6c9;
+  --color-sun-soft: #143732;
+  --color-moss: #5cbe72;
+  --color-moss-soft: #1b3324;
+  --color-sky: #64a9db;
+  --color-sky-soft: #16303f;
+  --color-clay: #e37f70;
+  --color-clay-soft: #3b2521;
+  --color-lilac: #a796e8;
+  --color-lilac-soft: #272138;
 }
 
 body {
@@ -237,14 +237,24 @@ input,
   letter-spacing: -0.01em;
 }
 
-.glow-warm {
+/* soft mesh backdrop for the landing — teal / sky / lilac breaths */
+.mesh {
   background:
-    radial-gradient(38rem 22rem at 18% 0%, rgba(110, 98, 229, 0.12), transparent 60%),
-    radial-gradient(32rem 22rem at 85% 18%, rgba(71, 149, 207, 0.1), transparent 60%);
+    radial-gradient(42rem 26rem at 15% -5%, rgba(12, 147, 132, 0.14), transparent 60%),
+    radial-gradient(36rem 24rem at 90% 12%, rgba(78, 147, 201, 0.12), transparent 60%),
+    radial-gradient(30rem 22rem at 50% 55%, rgba(141, 123, 212, 0.07), transparent 65%);
+}
+
+/* frosted glass surface, theme-aware */
+.glass {
+  background: color-mix(in srgb, var(--color-card) 62%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  backdrop-filter: blur(16px) saturate(1.4);
+  border: 1px solid color-mix(in srgb, var(--color-line) 75%, transparent);
 }
 
 .squiggle {
-  background-image: url("data:image/svg+xml,%3Csvg width='40' height='8' viewBox='0 0 40 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 4 Q5 0 10 4 T20 4 T30 4 T40 4' fill='none' stroke='%236e62e5' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg width='40' height='8' viewBox='0 0 40 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 4 Q5 0 10 4 T20 4 T30 4 T40 4' fill='none' stroke='%230c9384' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat: repeat-x;
   background-size: 40px 8px;
   height: 8px;
