@@ -10,6 +10,7 @@ import { Omnibar } from "./omnibar";
 import { TaskEditor } from "./task-editor";
 import { FocusOverlay } from "./focus";
 import { AppLockGate, AppLockModal, type AppLockMode } from "./app-lock";
+import { CommandPalette } from "./command-palette";
 import { ThemeToggle } from "./theme";
 import { IconBook, IconCalendar, IconInbox, IconPlus, IconSun, IconX, Kbd, Modal } from "./ui";
 
@@ -25,6 +26,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [profileOpen, setProfileOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   const inboxCount = useMemo(() => {
     const hidden = hiddenListIds(state);
@@ -48,9 +50,18 @@ export function Shell({ children }: { children: React.ReactNode }) {
     return () => navigator.serviceWorker.removeEventListener("message", onMessage);
   }, []);
 
-  // app-wide keyboard shortcuts
+  // app-wide keyboard shortcuts (dead while the app-lock gate is up)
+  const appLocked = state.appLocked;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (appLocked) return;
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+        return;
+      }
+
       const target = e.target as HTMLElement;
       const typing =
         target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
@@ -65,7 +76,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [router, setOmnibar]);
+  }, [router, setOmnibar, appLocked]);
 
   const editingTask = state.editingId ? state.tasks[state.editingId] : null;
 
@@ -85,6 +96,20 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <IconPlus size={15} /> Capture
           </span>
           <Kbd>N</Kbd>
+        </button>
+
+        <button
+          onClick={() => setPaletteOpen(true)}
+          className="mt-2 flex items-center justify-between rounded-xl border border-line bg-card/60 px-3.5 py-2 text-sm text-ink-faint transition-colors hover:border-ink-faint hover:text-ink-soft"
+        >
+          <span className="flex items-center gap-2">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            Search
+          </span>
+          <Kbd>⌘K</Kbd>
         </button>
 
         <nav className="mt-6 space-y-1">
@@ -133,9 +158,21 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <Link href="/today" className="flex items-center gap-1.5 text-base font-bold tracking-tight">
             <span className="text-sun text-lg leading-none">✱</span> kairo
           </Link>
-          <button onClick={() => setProfileOpen(true)} aria-label="Profile and settings">
-            <Avatar name={state.user.name} picture={state.user.picture} size={8} />
-          </button>
+          <span className="flex items-center gap-3">
+            <button
+              onClick={() => setPaletteOpen(true)}
+              aria-label="Search"
+              className="grid size-8 place-items-center rounded-full text-ink-soft hover:bg-paper-deep"
+            >
+              <svg width="17" height="17" viewBox="0 0 16 16" fill="none">
+                <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5" />
+                <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </button>
+            <button onClick={() => setProfileOpen(true)} aria-label="Profile and settings">
+              <Avatar name={state.user.name} picture={state.user.picture} size={8} />
+            </button>
+          </span>
         </div>
         {children}
       </main>
@@ -160,6 +197,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </nav>
 
       {/* overlays */}
+      {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}
       {state.omnibarOpen && <Omnibar />}
       {editingTask && <TaskEditor key={editingTask.id} task={editingTask} />}
       {profileOpen && (
