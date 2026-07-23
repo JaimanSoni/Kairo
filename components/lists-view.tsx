@@ -6,6 +6,7 @@ import { byOrder, hiddenListIds, useApp } from "./store";
 import { TaskItem } from "./task-item";
 import { AddRow } from "./today-view";
 import { PinModal, type PinMode } from "./pin-modal";
+import { ShareListModal } from "./share-modal";
 import { Icon3d, ListMark, LIST_ICONS } from "./img3d";
 import { EmptyState, IconPlus, IconTrash, IconX } from "./ui";
 
@@ -28,6 +29,7 @@ export function ListsView() {
     list: List;
     mode: PinMode;
   } | null>(null);
+  const [shareTarget, setShareTarget] = useState<List | null>(null);
 
   const inbox = all
     .filter((t) => t.status === "inbox" && !(t.listId && hidden.has(t.listId)))
@@ -120,6 +122,7 @@ export function ListsView() {
       {/* user lists */}
       {state.lists.map((list) => {
         const isHidden = hidden.has(list.id);
+        const isOwner = list.role === "owner";
         const tasks = isHidden
           ? []
           : all
@@ -133,12 +136,15 @@ export function ListsView() {
             count={isHidden ? null : tasks.length}
             locked={list.locked}
             lockedHidden={isHidden}
+            canManage={isOwner}
+            peopleCount={list.memberCount > 0 || !isOwner ? list.memberCount + 1 : 0}
+            onShare={isHidden ? undefined : () => setShareTarget(list)}
             onRename={
-              isHidden
+              isHidden || !isOwner
                 ? undefined
                 : (name) => renameList(list.id, name, list.emoji)
             }
-            onDelete={isHidden ? undefined : () => setConfirmDelete(list.id)}
+            onDelete={isHidden || !isOwner ? undefined : () => setConfirmDelete(list.id)}
             onLockAction={(mode) => setPinTarget({ list, mode })}
             onRelock={
               list.locked && !isHidden
@@ -221,6 +227,12 @@ export function ListsView() {
           onClose={() => setPinTarget(null)}
         />
       )}
+      {shareTarget && (
+        <ShareListModal
+          list={state.lists.find((l) => l.id === shareTarget.id) ?? shareTarget}
+          onClose={() => setShareTarget(null)}
+        />
+      )}
     </div>
   );
 }
@@ -268,6 +280,9 @@ function Section({
   lockedHidden,
   onLockAction,
   onRelock,
+  canManage = true,
+  peopleCount = 0,
+  onShare,
 }: {
   mark: React.ReactNode;
   name: string;
@@ -280,6 +295,9 @@ function Section({
   lockedHidden?: boolean;
   onLockAction?: (mode: PinMode) => void;
   onRelock?: () => void;
+  canManage?: boolean;
+  peopleCount?: number;
+  onShare?: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState("");
@@ -325,9 +343,25 @@ function Section({
           <span className="text-sm text-ink-faint">{count}</span>
         )}
 
+        {peopleCount > 0 && (
+          <span
+            className="shrink-0 rounded-md bg-sky-soft px-1.5 py-0.5 text-[11px] font-medium text-sky"
+            title="Shared list"
+          >
+            👥 {peopleCount}
+          </span>
+        )}
         {onLockAction && (
           <span className="ml-auto flex flex-wrap items-center justify-end gap-1 opacity-0 transition-opacity group-hover/section:opacity-100 pointer-coarse:opacity-100 max-md:opacity-100">
-            {!locked && (
+            {onShare && (
+              <IconTextBtn
+                onClick={onShare}
+                title={canManage ? "Share this list" : "See who's on this list"}
+              >
+                👥 {canManage ? "Share" : "Shared"}
+              </IconTextBtn>
+            )}
+            {!locked && canManage && (
               <IconTextBtn
                 onClick={() => onLockAction("set")}
                 title="Lock this list with a PIN"
@@ -345,18 +379,22 @@ function Section({
                     <LockGlyph /> Relock
                   </IconTextBtn>
                 )}
-                <IconTextBtn
-                  onClick={() => onLockAction("change")}
-                  title="Change PIN"
-                >
-                  <LockGlyph /> PIN
-                </IconTextBtn>
-                <IconTextBtn
-                  onClick={() => onLockAction("remove")}
-                  title="Remove the lock"
-                >
-                  <LockGlyph open /> Remove
-                </IconTextBtn>
+                {canManage && (
+                  <>
+                    <IconTextBtn
+                      onClick={() => onLockAction("change")}
+                      title="Change PIN"
+                    >
+                      <LockGlyph /> PIN
+                    </IconTextBtn>
+                    <IconTextBtn
+                      onClick={() => onLockAction("remove")}
+                      title="Remove the lock"
+                    >
+                      <LockGlyph open /> Remove
+                    </IconTextBtn>
+                  </>
+                )}
               </>
             )}
             {onDelete && (

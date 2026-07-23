@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { requireSession, unauthorized, badRequest } from "@/lib/api-auth";
-import { tasksCollection, toTask, sanitizeTaskPatch } from "@/lib/tasks";
+import { tasksCollection, toTask, sanitizeTaskPatch, accessibleListIds } from "@/lib/tasks";
 
 export async function POST(request: Request) {
   const session = await requireSession();
@@ -16,6 +16,14 @@ export async function POST(request: Request) {
 
   const patch = sanitizeTaskPatch(body);
   if (!patch || !patch.title) return badRequest("A task needs a title");
+
+  // a task can only be filed into a list the user can access
+  if (patch.listId) {
+    const ids = await accessibleListIds(new ObjectId(session.userId));
+    if (!ids.some((x) => x.toHexString() === patch.listId)) {
+      return badRequest("Unknown list");
+    }
+  }
 
   const now = new Date();
   const status = patch.status ?? "inbox";

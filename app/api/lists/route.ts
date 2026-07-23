@@ -26,9 +26,13 @@ export async function POST(request: Request) {
     name: body.name.trim(),
     emoji,
     order: now.getTime(),
+    memberIds: [] as ObjectId[],
     createdAt: now,
   };
   const lists = await listsCollection();
   const result = await lists.insertOne(doc);
-  return NextResponse.json({ list: toList({ ...doc, _id: result.insertedId }) }, { status: 201 });
+  return NextResponse.json(
+    { list: toList({ ...doc, _id: result.insertedId }, session.userId) },
+    { status: 201 }
+  );
 }

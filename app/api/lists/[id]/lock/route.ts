@@ -52,7 +52,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/lists/[id]/
     { returnDocument: "after" }
   );
   if (!updated) return notFound();
-  return NextResponse.json({ list: toList(updated) });
+  return NextResponse.json({ list: toList(updated, session.userId) });
 }
 
 /** Remove the lock — requires the current PIN. */
@@ -87,5 +87,5 @@ export async function DELETE(request: Request, ctx: RouteContext<"/api/lists/[id
     { returnDocument: "after" }
   );
   if (!updated) return notFound();
-  return NextResponse.json({ list: toList(updated) });
+  return NextResponse.json({ list: toList(updated, session.userId) });
 }

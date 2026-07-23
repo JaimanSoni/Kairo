@@ -32,14 +32,35 @@ export function toTask(doc: WithId<Document>): Task {
   };
 }
 
-export function toList(doc: WithId<Document>): List {
+export function toList(doc: WithId<Document>, viewerIdHex: string): List {
+  const memberIds = Array.isArray(doc.memberIds) ? (doc.memberIds as ObjectId[]) : [];
   return {
     id: doc._id.toHexString(),
     name: String(doc.name ?? ""),
     emoji: String(doc.emoji ?? "📁"),
     order: typeof doc.order === "number" ? doc.order : 0,
     locked: Boolean(doc.pinHash),
+    role: (doc.userId as ObjectId).toHexString() === viewerIdHex ? "owner" : "member",
+    memberCount: memberIds.length,
   };
+}
+
+/** Mongo filter matching lists the user can access (owner or member). */
+export function listAccessFilter(userId: ObjectId): Document {
+  return { $or: [{ userId }, { memberIds: userId }] };
+}
+
+/** Ids of all lists the user can access. */
+export async function accessibleListIds(userId: ObjectId): Promise<ObjectId[]> {
+  const lists = await listsCollection();
+  const docs = await lists.find(listAccessFilter(userId)).project({ _id: 1 }).toArray();
+  return docs.map((d) => d._id);
+}
+
+/** Mongo filter matching tasks the user can access (own, or in an accessible list). */
+export async function taskAccessFilter(userId: ObjectId): Promise<Document> {
+  const listIds = await accessibleListIds(userId);
+  return { $or: [{ userId }, { listId: { $in: listIds } }] };
 }
 
 export async function tasksCollection() {
@@ -58,21 +79,27 @@ export async function loadUserData(userIdHex: string): Promise<{ tasks: Task[]; 
     const lists = await listsCollection();
     const recentCutoff = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
 
-    const [liveTasks, recentDone, userLists] = await Promise.all([
+    const listDocs = await lists
+      .find(listAccessFilter(userId))
+      .sort({ order: 1, createdAt: 1 })
+      .toArray();
+    const listIds = listDocs.map((d) => d._id);
+    const access = { $or: [{ userId }, { listId: { $in: listIds } }] };
+
+    const [liveTasks, recentDone] = await Promise.all([
       tasks
-        .find({ userId, status: { $in: ["inbox", "planned", "someday"] } })
+        .find({ ...access, status: { $in: ["inbox", "planned", "someday"] } })
         .sort({ order: 1, createdAt: 1 })
         .toArray(),
       tasks
-        .find({ userId, status: "done", completedAt: { $gte: recentCutoff } })
+        .find({ ...access, status: "done", completedAt: { $gte: recentCutoff } })
         .sort({ completedAt: -1 })
         .toArray(),
-      lists.find({ userId }).sort({ order: 1, createdAt: 1 }).toArray(),
     ]);
 
     return {
       tasks: [...liveTasks, ...recentDone].map(toTask),
-      lists: userLists.map(toList),
+      lists: listDocs.map((d) => toList(d, userIdHex)),
     };
   });
 }

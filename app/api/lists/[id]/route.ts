@@ -37,7 +37,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/lists/[id]
     { returnDocument: "after" }
   );
   if (!result) return notFound();
-  return NextResponse.json({ list: toList(result) });
+  return NextResponse.json({ list: toList(result, session.userId) });
 }
 
 export async function DELETE(_request: Request, ctx: RouteContext<"/api/lists/[id]">) {
@@ -52,9 +52,9 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/lists/[i
   const result = await lists.deleteOne({ _id: new ObjectId(id), userId });
   if (result.deletedCount === 0) return notFound();
 
-  // Tasks in the deleted list fall back to the inbox rather than disappearing.
+  // Tasks in the deleted list fall back to their creators' inboxes.
   const tasks = await tasksCollection();
-  await tasks.updateMany({ userId, listId: new ObjectId(id) }, { $set: { listId: null } });
+  await tasks.updateMany({ listId: new ObjectId(id) }, { $set: { listId: null } });
 
   return NextResponse.json({ ok: true });
 }

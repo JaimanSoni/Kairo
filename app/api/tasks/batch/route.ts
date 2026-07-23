@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { ObjectId, type AnyBulkWriteOperation } from "mongodb";
 import { requireSession, unauthorized, badRequest } from "@/lib/api-auth";
-import { tasksCollection, sanitizeTaskPatch, buildTaskUpdate } from "@/lib/tasks";
+import { tasksCollection, sanitizeTaskPatch, buildTaskUpdate, taskAccessFilter } from "@/lib/tasks";
 
 /** Batch updates — used for reorders and the Fresh Start sweep. */
 export async function POST(request: Request) {
@@ -20,6 +20,7 @@ export async function POST(request: Request) {
   }
 
   const userId = new ObjectId(session.userId);
+  const access = await taskAccessFilter(userId);
   const ops: AnyBulkWriteOperation[] = [];
 
   for (const raw of body.updates) {
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
     if (!patch || Object.keys(patch).length === 0) return badRequest("No valid fields in update");
     ops.push({
       updateOne: {
-        filter: { _id: new ObjectId(id), userId },
+        filter: { _id: new ObjectId(id), ...access },
         update: buildTaskUpdate(patch),
       },
     });

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { requireSession, unauthorized, badRequest, notFound } from "@/lib/api-auth";
-import { tasksCollection, toTask, sanitizeTaskPatch, buildTaskUpdate } from "@/lib/tasks";
+import { tasksCollection, toTask, sanitizeTaskPatch, buildTaskUpdate, taskAccessFilter } from "@/lib/tasks";
 
 export async function PATCH(request: Request, ctx: RouteContext<"/api/tasks/[id]">) {
   const session = await requireSession();
@@ -22,7 +22,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/tasks/[id]
 
   const tasks = await tasksCollection();
   const result = await tasks.findOneAndUpdate(
-    { _id: new ObjectId(id), userId: new ObjectId(session.userId) },
+    { _id: new ObjectId(id), ...(await taskAccessFilter(new ObjectId(session.userId))) },
     buildTaskUpdate(patch),
     { returnDocument: "after" }
   );
@@ -40,7 +40,7 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/tasks/[i
   const tasks = await tasksCollection();
   const result = await tasks.deleteOne({
     _id: new ObjectId(id),
-    userId: new ObjectId(session.userId),
+    ...(await taskAccessFilter(new ObjectId(session.userId))),
   });
   if (result.deletedCount === 0) return notFound();
   return NextResponse.json({ ok: true });

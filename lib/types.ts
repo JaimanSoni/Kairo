@@ -43,6 +43,10 @@ export type List = {
   order: number;
   /** True when the list is protected by a PIN (hash lives server-side only). */
   locked: boolean;
+  /** Viewer's relationship to the list. Owners manage lock/rename/share/delete. */
+  role: "owner" | "member";
+  /** Number of people the list is shared with (excluding the owner). */
+  memberCount: number;
 };
 
 export type UserProfile = {

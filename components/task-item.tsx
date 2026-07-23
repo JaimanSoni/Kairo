@@ -7,6 +7,7 @@ import { repeatLabel } from "@/lib/repeat";
 import { useApp } from "./store";
 import { playComplete } from "@/lib/sound";
 import { useStepToggle } from "./step-row";
+import { SendTaskModal } from "./share-modal";
 import { Icon3d, ListMark } from "./img3d";
 import { Chip, IconCheck, IconDots, IconStar } from "./ui";
 
@@ -32,6 +33,7 @@ export function TaskItem({
   const toggleStep = useStepToggle();
   const [checking, setChecking] = useState(false);
   const [stepsOpen, setStepsOpen] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const done = task.status === "done";
@@ -239,6 +241,11 @@ export function TaskItem({
               <MenuBtn onClick={() => { setMenuOpen(false); setEditing(task.id); }}>
                 ✏️ Edit details
               </MenuBtn>
+              {!done && !task.id.startsWith("temp-") && (
+                <MenuBtn onClick={() => { setMenuOpen(false); setSendOpen(true); }}>
+                  📤 Send a copy
+                </MenuBtn>
+              )}
               <div className="my-1 border-t border-line" />
               <MenuBtn onClick={() => { setMenuOpen(false); deleteTask(task.id); }}>
                 🍃 Let it go
@@ -248,6 +255,8 @@ export function TaskItem({
         </div>
       )}
       </div>
+
+      {sendOpen && <SendTaskModal task={task} onClose={() => setSendOpen(false)} />}
 
       {/* inline checklist — check steps off without opening the editor */}
       {stepsOpen && task.subtasks.length > 0 && (

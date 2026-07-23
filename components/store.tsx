@@ -53,6 +53,7 @@ type Action =
   | { type: "SET_UNLOCKED"; ids: string[] }
   | { type: "SET_APP_LOCKED"; locked: boolean }
   | { type: "SET_APPLOCK_ENABLED"; enabled: boolean }
+  | { type: "REPLACE_ALL"; tasks: Task[]; lists: List[] }
   | { type: "BULK_UPSERT"; tasks: Task[] };
 
 function reducer(state: State, action: Action): State {
@@ -75,6 +76,12 @@ function reducer(state: State, action: Action): State {
       for (const t of action.tasks) tasks[t.id] = t;
       return { ...state, tasks };
     }
+    case "REPLACE_ALL":
+      return {
+        ...state,
+        tasks: Object.fromEntries(action.tasks.map((t) => [t.id, t])),
+        lists: action.lists,
+      };
     case "UPSERT_LIST": {
       const exists = state.lists.some((l) => l.id === action.list.id);
       return {
@@ -157,6 +164,8 @@ type AppContextValue = {
   lockApp: () => void;
   unlockApp: () => void;
   setAppLockEnabled: (enabled: boolean) => void;
+  /** Re-pulls tasks+lists from the server (shared lists change under you). */
+  refreshData: () => Promise<void>;
 };
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -637,6 +646,30 @@ export function AppProvider({
     dispatch({ type: "SET_APP_LOCKED", locked: false });
   }, []);
 
+  const refreshData = useCallback(async () => {
+    // don't clobber optimistic creates that are still in flight
+    if (Object.keys(stateRef.current.tasks).some((id) => id.startsWith("temp-"))) return;
+    try {
+      const res = await fetch("/api/bootstrap");
+      if (!res.ok) return;
+      const data: { tasks: Task[]; lists: List[] } = await res.json();
+      dispatch({ type: "REPLACE_ALL", tasks: data.tasks, lists: data.lists });
+    } catch {}
+  }, []);
+
+  /* shared lists change under you — refresh when the tab regains focus */
+  useEffect(() => {
+    let last = Date.now();
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() - last < 20_000) return;
+      last = Date.now();
+      refreshData();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [refreshData]);
+
   const setAppLockEnabled = useCallback((enabled: boolean) => {
     dispatch({ type: "SET_APPLOCK_ENABLED", enabled });
     try {
@@ -685,12 +718,13 @@ export function AppProvider({
       lockApp,
       unlockApp,
       setAppLockEnabled,
+      refreshData,
     }),
     [
       state, addTask, getTask, updateTask, completeTask, uncompleteTask, deleteTask,
       reorderTasks, sweep, createList, renameList, upsertList, deleteList, showToast,
       setOmnibar, setEditing, dismissSweep, reopenSweep, startFocus, stopFocus, minimizeFocus,
-      setListUnlocked, lockApp, unlockApp, setAppLockEnabled,
+      setListUnlocked, lockApp, unlockApp, setAppLockEnabled, refreshData,
     ]
   );
 

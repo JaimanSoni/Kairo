@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { requireSession, unauthorized, badRequest } from "@/lib/api-auth";
-import { listsCollection, toList, isDateString } from "@/lib/tasks";
+import { listsCollection, listAccessFilter, toList, isDateString } from "@/lib/tasks";
 import { aiParseTask } from "@/lib/ai";
 
 /**
@@ -24,9 +24,9 @@ export async function POST(request: Request) {
   const lists = await listsCollection();
   // Locked lists stay out of the AI prompt entirely — their names are private.
   const userLists = (
-    await lists.find({ userId: new ObjectId(session.userId) }).sort({ order: 1 }).toArray()
+    await lists.find(listAccessFilter(new ObjectId(session.userId))).sort({ order: 1 }).toArray()
   )
-    .map(toList)
+    .map((d) => toList(d, session.userId))
     .filter((l) => !l.locked);
 
   const parsed = await aiParseTask(body.text, today, userLists);

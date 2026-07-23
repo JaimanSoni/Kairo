@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { requireSession, unauthorized, badRequest, notFound } from "@/lib/api-auth";
-import { listsCollection } from "@/lib/tasks";
+import { listsCollection, listAccessFilter } from "@/lib/tasks";
 import { verifyPin } from "@/lib/pin";
 
 const FAIL_DELAY_MS = 400;
@@ -22,10 +22,11 @@ export async function POST(request: Request, ctx: RouteContext<"/api/lists/[id]/
   }
   if (typeof body.pin !== "string") return badRequest("pin required");
 
+  // members unlock with the same PIN — the hash lives on the shared list itself
   const lists = await listsCollection();
   const doc = (await lists.findOne({
     _id: new ObjectId(id),
-    userId: new ObjectId(session.userId),
+    ...listAccessFilter(new ObjectId(session.userId)),
   })) as { pinHash?: string; pinSalt?: string } | null;
   if (!doc) return notFound();
   if (!doc.pinHash || !doc.pinSalt) return badRequest("List is not locked");
