@@ -1,13 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { addDays, friendlyDay, fmtMinutes } from "@/lib/dates";
 import { byOrder, hiddenListIds, useApp } from "./store";
+import { CalendarView } from "./calendar-view";
 import { StepRow } from "./step-row";
 import { TaskItem } from "./task-item";
 import { AddRow } from "./today-view";
 import { Icon3d } from "./img3d";
 import { EmptyState } from "./ui";
+
+type UpcomingViewMode = "week" | "month";
 
 /**
  * The week as a calm spread: 7 day-rows you can drop tasks onto,
@@ -25,6 +28,24 @@ export function UpcomingView() {
     [state.tasks, hidden],
   );
   const [dragOverDay, setDragOverDay] = useState<string | null>(null);
+  const [view, setView] = useState<UpcomingViewMode>("week");
+
+  /* remembered preference — read after mount so SSR and hydration agree */
+  useEffect(() => {
+    queueMicrotask(() => {
+      try {
+        const saved = localStorage.getItem("kairo-upcoming-view");
+        if (saved === "month") setView("month");
+      } catch {}
+    });
+  }, []);
+
+  const pickView = (v: UpcomingViewMode) => {
+    setView(v);
+    try {
+      localStorage.setItem("kairo-upcoming-view", v);
+    } catch {}
+  };
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(today, i));
 
@@ -60,11 +81,27 @@ export function UpcomingView() {
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 pb-32 pt-8 sm:px-6">
-      <header className="anim-rise mb-6">
+      <header className="anim-rise mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-4xl">Upcoming</h1>
+        <div className="flex rounded-full border border-line bg-paper-deep p-0.5">
+          {(["week", "month"] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => pickView(v)}
+              aria-pressed={view === v}
+              className={`rounded-full px-3.5 py-1.5 text-xs font-semibold capitalize transition-colors ${
+                view === v ? "bg-card text-ink shadow-sm" : "text-ink-faint hover:text-ink-soft"
+              }`}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
       </header>
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
+      {view === "month" && <CalendarView />}
+
+      <div className={view === "month" ? "hidden" : "grid gap-8 lg:grid-cols-[1fr_320px]"}>
         {/* the week */}
         <div className="min-w-0 space-y-5">
           {days.map((day) => {
