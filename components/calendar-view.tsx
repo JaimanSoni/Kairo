@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { Task } from "@/lib/types";
+import type { List, Task } from "@/lib/types";
 import { addDays, friendlyDay, fmtMinutes, fullDate, toDateStr } from "@/lib/dates";
 import { byOrder, hiddenListIds, useApp } from "./store";
 import { StepRow } from "./step-row";
@@ -15,6 +15,26 @@ const MONTHS = [
 ];
 const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const DAY_CAPACITY_MIN = 6 * 60;
+
+/* stable per-list colors, tuned to read on light and dark surfaces */
+const LIST_COLORS = [
+  "#0c9384", // teal
+  "#4e93c9", // sky
+  "#8d7bd4", // lilac
+  "#d96354", // rose
+  "#d8a03e", // amber
+  "#4ca75b", // grass
+  "#c960a5", // pink
+  "#5a6acf", // indigo
+  "#2fa5b8", // cyan
+  "#a97b50", // clay-brown
+];
+
+function colorForList(listId: string | null, lists: List[]): string | null {
+  if (!listId) return null;
+  const idx = lists.findIndex((l) => l.id === listId);
+  return idx === -1 ? null : LIST_COLORS[idx % LIST_COLORS.length];
+}
 
 /**
  * Month calendar for Upcoming: grid for overview, a day panel for detail.
@@ -205,28 +225,39 @@ export function CalendarView() {
 
                 {/* desktop: text chips */}
                 <div className="mt-0.5 hidden space-y-0.5 sm:block">
-                  {visible.slice(0, 3).map((t) => (
-                    <div
-                      key={t.id}
-                      draggable={t.status !== "done"}
-                      onDragStart={(e) => {
-                        e.stopPropagation();
-                        e.dataTransfer.effectAllowed = "move";
-                        e.dataTransfer.setData("text/task-id", t.id);
-                      }}
-                      className={`truncate rounded px-1 py-px text-[10px] leading-tight ${
-                        t.status === "done"
-                          ? "bg-moss-soft text-moss line-through"
-                          : t.spotlight
-                            ? "bg-sun-soft font-medium text-sun-deep"
-                            : "bg-paper-deep text-ink-soft"
-                      }`}
-                      title={t.title}
-                    >
-                      {t.spotlight && t.status !== "done" ? "✦ " : ""}
-                      {t.title}
-                    </div>
-                  ))}
+                  {visible.slice(0, 3).map((t) => {
+                    const color = colorForList(t.listId, state.lists);
+                    return (
+                      <div
+                        key={t.id}
+                        draggable={t.status !== "done"}
+                        onDragStart={(e) => {
+                          e.stopPropagation();
+                          e.dataTransfer.effectAllowed = "move";
+                          e.dataTransfer.setData("text/task-id", t.id);
+                        }}
+                        className={`flex items-center gap-1 truncate rounded px-1 py-px text-[10px] leading-tight ${
+                          t.status === "done"
+                            ? "bg-moss-soft text-moss line-through"
+                            : t.spotlight
+                              ? "bg-sun-soft font-medium text-sun-deep"
+                              : "bg-paper-deep text-ink-soft"
+                        }`}
+                        title={t.title}
+                      >
+                        {color && (
+                          <span
+                            className="size-1.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: color }}
+                          />
+                        )}
+                        <span className="truncate">
+                          {t.spotlight && t.status !== "done" ? "✦ " : ""}
+                          {t.title}
+                        </span>
+                      </div>
+                    );
+                  })}
                   {(overflow > 0 || stepCount > 0) && (
                     <div className="px-1 text-[9px] text-ink-faint">
                       {overflow > 0 ? `+${overflow} more` : ""}
@@ -236,21 +267,50 @@ export function CalendarView() {
                   )}
                 </div>
 
-                {/* mobile: dots */}
+                {/* mobile: dots, colored by list */}
                 <div className="mt-1 flex flex-wrap justify-center gap-0.5 sm:hidden">
-                  {visible.slice(0, 4).map((t) => (
-                    <span
-                      key={t.id}
-                      className={`size-1.5 rounded-full ${
-                        t.status === "done" ? "bg-moss" : t.spotlight ? "bg-sun" : "bg-ink-faint"
-                      }`}
-                    />
-                  ))}
+                  {visible.slice(0, 4).map((t) => {
+                    const color = colorForList(t.listId, state.lists);
+                    return (
+                      <span
+                        key={t.id}
+                        className={`size-1.5 rounded-full ${
+                          t.status === "done" ? "bg-moss" : color ? "" : "bg-ink-faint"
+                        }`}
+                        style={
+                          t.status !== "done" && color ? { backgroundColor: color } : undefined
+                        }
+                      />
+                    );
+                  })}
                   {visible.length > 4 && <span className="text-[8px] leading-none text-ink-faint">+</span>}
                 </div>
               </div>
             );
           })}
+        </div>
+        {/* legend — which color is which list */}
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          {state.lists
+            .filter((l) => !hidden.has(l.id))
+            .map((l) => (
+              <span key={l.id} className="flex items-center gap-1.5 text-[11px] text-ink-soft">
+                <span
+                  className="size-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: colorForList(l.id, state.lists) ?? undefined }}
+                />
+                {l.name}
+              </span>
+            ))}
+          <span className="flex items-center gap-1.5 text-[11px] text-ink-soft">
+            <span className="size-2 shrink-0 rounded-full bg-ink-faint" /> no list
+          </span>
+          <span className="flex items-center gap-1.5 text-[11px] text-ink-soft">
+            <span className="size-2 shrink-0 rounded-full bg-moss" /> done
+          </span>
+          <span className="hidden items-center gap-1.5 text-[11px] text-ink-soft sm:flex">
+            <span className="text-sun" aria-hidden>✦</span> must-win
+          </span>
         </div>
         <p className="mt-2 hidden text-[11px] text-ink-faint sm:block">
           Drag a task onto a day to reschedule it. Click a day for details.
