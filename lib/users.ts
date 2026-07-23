@@ -1,5 +1,5 @@
 import { ObjectId } from "mongodb";
-import { getDb } from "./db";
+import { getDb, withDbRetry } from "./db";
 import type { GoogleProfile } from "./google";
 
 export type DbUser = {
@@ -13,6 +13,10 @@ export type DbUser = {
 };
 
 export async function upsertGoogleUser(profile: GoogleProfile): Promise<DbUser> {
+  return withDbRetry(() => upsertGoogleUserOnce(profile));
+}
+
+async function upsertGoogleUserOnce(profile: GoogleProfile): Promise<DbUser> {
   const db = await getDb();
   const users = db.collection<DbUser>("users");
   const now = new Date();

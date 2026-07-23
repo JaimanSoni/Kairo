@@ -1,5 +1,5 @@
 import { ObjectId, type Document, type WithId } from "mongodb";
-import { getDb } from "./db";
+import { getDb, withDbRetry } from "./db";
 import { sanitizeRepeat, type Repeat } from "./repeat";
 import type { List, Subtask, Task, TaskStatus } from "./types";
 
@@ -47,29 +47,34 @@ export async function tasksCollection() {
   return db.collection("tasks");
 }
 
-/** Everything the client store needs on boot: live tasks, recent done, lists. */
+/**
+ * Everything the client store needs on boot: live tasks, recent done, lists.
+ * Retried — a transient Atlas blip must not take down a page render.
+ */
 export async function loadUserData(userIdHex: string): Promise<{ tasks: Task[]; lists: List[] }> {
-  const userId = new ObjectId(userIdHex);
-  const tasks = await tasksCollection();
-  const lists = await listsCollection();
-  const recentCutoff = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+  return withDbRetry(async () => {
+    const userId = new ObjectId(userIdHex);
+    const tasks = await tasksCollection();
+    const lists = await listsCollection();
+    const recentCutoff = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
 
-  const [liveTasks, recentDone, userLists] = await Promise.all([
-    tasks
-      .find({ userId, status: { $in: ["inbox", "planned", "someday"] } })
-      .sort({ order: 1, createdAt: 1 })
-      .toArray(),
-    tasks
-      .find({ userId, status: "done", completedAt: { $gte: recentCutoff } })
-      .sort({ completedAt: -1 })
-      .toArray(),
-    lists.find({ userId }).sort({ order: 1, createdAt: 1 }).toArray(),
-  ]);
+    const [liveTasks, recentDone, userLists] = await Promise.all([
+      tasks
+        .find({ userId, status: { $in: ["inbox", "planned", "someday"] } })
+        .sort({ order: 1, createdAt: 1 })
+        .toArray(),
+      tasks
+        .find({ userId, status: "done", completedAt: { $gte: recentCutoff } })
+        .sort({ completedAt: -1 })
+        .toArray(),
+      lists.find({ userId }).sort({ order: 1, createdAt: 1 }).toArray(),
+    ]);
 
-  return {
-    tasks: [...liveTasks, ...recentDone].map(toTask),
-    lists: userLists.map(toList),
-  };
+    return {
+      tasks: [...liveTasks, ...recentDone].map(toTask),
+      lists: userLists.map(toList),
+    };
+  });
 }
 
 export async function listsCollection() {
