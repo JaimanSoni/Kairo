@@ -48,6 +48,40 @@ export function AppLockGate() {
 
       <PinPad pin={pin} onPinChange={setPin} onSubmit={submit} busy={busy} shake={shake} />
 
+      {/* other signed-in accounts stay reachable without unlocking this one */}
+      {state.accounts.filter((a) => a.id !== state.user.id).length > 0 && (
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+          {state.accounts
+            .filter((a) => a.id !== state.user.id)
+            .map((a) => (
+              <button
+                key={a.id}
+                onClick={async () => {
+                  try {
+                    const res = await fetch("/api/auth/switch", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ userId: a.id }),
+                    });
+                    if (res.ok) window.location.assign("/today");
+                  } catch {}
+                }}
+                className="flex items-center gap-1.5 rounded-full border border-line bg-card px-3 py-1.5 text-xs font-medium text-ink-soft hover:border-ink-faint"
+              >
+                {a.picture ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={a.picture} alt="" className="size-5 rounded-full" referrerPolicy="no-referrer" />
+                ) : (
+                  <span className="grid size-5 place-items-center rounded-full bg-sun-soft text-[10px] font-bold text-sun-deep">
+                    {a.name.charAt(0).toUpperCase()}
+                  </span>
+                )}
+                {a.name.split(" ")[0]}
+              </button>
+            ))}
+        </div>
+      )}
+
       <form action="/api/auth/signout" method="POST" className="mt-8">
         <button type="submit" className="text-xs text-ink-faint hover:text-ink">
           Sign out instead

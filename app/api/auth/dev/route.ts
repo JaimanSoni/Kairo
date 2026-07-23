@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSession } from "@/lib/session";
+import { addAccountSession } from "@/lib/session";
 import { upsertGoogleUser } from "@/lib/users";
 
 // Local-only escape hatch to try the app before Google OAuth is configured.
@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     email: "dev@local.test",
     name: "Dev User",
   });
-  await createSession({
+  await addAccountSession({
     userId: user._id.toHexString(),
     email: user.email,
     name: user.name,

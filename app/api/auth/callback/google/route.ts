@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { exchangeCode } from "@/lib/google";
 import { upsertGoogleUser } from "@/lib/users";
-import { createSession } from "@/lib/session";
+import { addAccountSession } from "@/lib/session";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   try {
     const profile = await exchangeCode(code);
     const user = await upsertGoogleUser(profile);
-    await createSession({
+    await addAccountSession({
       userId: user._id.toHexString(),
       email: user.email,
       name: user.name,

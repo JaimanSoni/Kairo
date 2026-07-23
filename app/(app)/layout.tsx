@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/session";
+import { getSession, getSessionAccounts } from "@/lib/session";
 import { loadUserData } from "@/lib/tasks";
 import { getUserById } from "@/lib/users";
 import { AppProvider } from "@/components/store";
@@ -9,9 +9,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const session = await getSession();
   if (!session) redirect("/");
 
-  const [{ tasks, lists }, userDoc] = await Promise.all([
+  const [{ tasks, lists }, userDoc, roster] = await Promise.all([
     loadUserData(session.userId),
     getUserById(session.userId),
+    getSessionAccounts(),
   ]);
 
   return (
@@ -23,6 +24,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         picture: session.picture,
         appLockEnabled: Boolean(userDoc?.appLockHash),
       }}
+      accounts={(roster?.accounts ?? []).map((a) => ({
+        id: a.userId,
+        email: a.email,
+        name: a.name,
+        picture: a.picture,
+      }))}
       initialTasks={tasks}
       initialLists={lists}
     >

@@ -49,6 +49,13 @@ export type List = {
   memberCount: number;
 };
 
+export type AccountInfo = {
+  id: string;
+  email: string;
+  name: string;
+  picture?: string;
+};
+
 export type UserProfile = {
   id: string;
   email: string;

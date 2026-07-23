@@ -26,13 +26,12 @@ export async function POST(request: Request) {
     return badRequest("Invalid subscription");
   }
 
+  // keyed by endpoint+user: multiple accounts in one browser each get their pushes
   const subs = await subscriptionsCollection();
   await subs.updateOne(
-    { endpoint: sub.endpoint },
+    { endpoint: sub.endpoint, userId: new ObjectId(session.userId) },
     {
       $set: {
-        userId: new ObjectId(session.userId),
-        endpoint: sub.endpoint,
         keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth },
         updatedAt: new Date(),
       },

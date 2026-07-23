@@ -9,7 +9,7 @@ import {
   useReducer,
   useRef,
 } from "react";
-import type { List, Task, UserProfile } from "@/lib/types";
+import type { AccountInfo, List, Task, UserProfile } from "@/lib/types";
 import { friendlyDay, todayStr } from "@/lib/dates";
 import { nextOccurrence } from "@/lib/repeat";
 import { cancelPush } from "@/lib/push-client";
@@ -26,6 +26,8 @@ type State = {
   tasks: Record<string, Task>;
   lists: List[];
   user: UserProfile;
+  /** All accounts signed in to this browser (for the switcher). */
+  accounts: AccountInfo[];
   today: string;
   toast: Toast | null;
   omnibarOpen: boolean;
@@ -203,19 +205,25 @@ export function visibleLists(state: { lists: List[]; unlockedLists: string[] }):
 
 export function AppProvider({
   user,
+  accounts,
   initialTasks,
   initialLists,
   children,
 }: {
   user: UserProfile;
+  accounts: AccountInfo[];
   initialTasks: Task[];
   initialLists: List[];
   children: React.ReactNode;
 }) {
+  /* unlock state is scoped per account — switching users never leaks an unlock */
+  const unlockedListsKey = `kairo-unlocked:${user.id}`;
+  const appLockKey = `kairo-applock:${user.id}`;
   const [state, dispatch] = useReducer(reducer, undefined, () => ({
     tasks: Object.fromEntries(initialTasks.map((t) => [t.id, t])),
     lists: initialLists,
     user,
+    accounts,
     today: todayStr(),
     toast: null,
     omnibarOpen: false,
@@ -621,30 +629,30 @@ export function AppProvider({
   /* restore per-session unlocks (survives refresh, not a new browser session) */
   useEffect(() => {
     try {
-      const raw = sessionStorage.getItem("kairo-unlocked");
+      const raw = sessionStorage.getItem(unlockedListsKey);
       if (raw) {
         const ids = (JSON.parse(raw) as unknown[]).filter((x): x is string => typeof x === "string");
         if (ids.length) dispatch({ type: "SET_UNLOCKED", ids });
       }
-      if (sessionStorage.getItem("kairo-applock") === "open") {
+      if (sessionStorage.getItem(appLockKey) === "open") {
         dispatch({ type: "SET_APP_LOCKED", locked: false });
       }
     } catch {}
-  }, []);
+  }, [unlockedListsKey, appLockKey]);
 
   const lockApp = useCallback(() => {
     try {
-      sessionStorage.removeItem("kairo-applock");
+      sessionStorage.removeItem(appLockKey);
     } catch {}
     dispatch({ type: "SET_APP_LOCKED", locked: true });
-  }, []);
+  }, [appLockKey]);
 
   const unlockApp = useCallback(() => {
     try {
-      sessionStorage.setItem("kairo-applock", "open");
+      sessionStorage.setItem(appLockKey, "open");
     } catch {}
     dispatch({ type: "SET_APP_LOCKED", locked: false });
-  }, []);
+  }, [appLockKey]);
 
   const refreshData = useCallback(async () => {
     // don't clobber optimistic creates that are still in flight
@@ -670,26 +678,32 @@ export function AppProvider({
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [refreshData]);
 
-  const setAppLockEnabled = useCallback((enabled: boolean) => {
-    dispatch({ type: "SET_APPLOCK_ENABLED", enabled });
-    try {
-      if (enabled) sessionStorage.setItem("kairo-applock", "open");
-      else sessionStorage.removeItem("kairo-applock");
-    } catch {}
-  }, []);
+  const setAppLockEnabled = useCallback(
+    (enabled: boolean) => {
+      dispatch({ type: "SET_APPLOCK_ENABLED", enabled });
+      try {
+        if (enabled) sessionStorage.setItem(appLockKey, "open");
+        else sessionStorage.removeItem(appLockKey);
+      } catch {}
+    },
+    [appLockKey]
+  );
 
-  const setListUnlocked = useCallback((listId: string, unlocked: boolean) => {
-    const cur = stateRef.current.unlockedLists;
-    const ids = unlocked
-      ? cur.includes(listId)
-        ? cur
-        : [...cur, listId]
-      : cur.filter((id) => id !== listId);
-    dispatch({ type: "SET_UNLOCKED", ids });
-    try {
-      sessionStorage.setItem("kairo-unlocked", JSON.stringify(ids));
-    } catch {}
-  }, []);
+  const setListUnlocked = useCallback(
+    (listId: string, unlocked: boolean) => {
+      const cur = stateRef.current.unlockedLists;
+      const ids = unlocked
+        ? cur.includes(listId)
+          ? cur
+          : [...cur, listId]
+        : cur.filter((id) => id !== listId);
+      dispatch({ type: "SET_UNLOCKED", ids });
+      try {
+        sessionStorage.setItem(unlockedListsKey, JSON.stringify(ids));
+      } catch {}
+    },
+    [unlockedListsKey]
+  );
 
   const value = useMemo<AppContextValue>(
     () => ({

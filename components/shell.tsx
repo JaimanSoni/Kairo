@@ -241,12 +241,14 @@ function ProfileSheet({
 
         <AppLockSettings />
 
+        <AccountSwitcher />
+
         <form action="/api/auth/signout" method="POST" className="mt-6 border-t border-line pt-4">
           <button
             type="submit"
             className="w-full rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-semibold text-clay transition-colors hover:border-clay hover:bg-clay-soft"
           >
-            Sign out
+            Sign out of this account
           </button>
         </form>
       </div>
@@ -405,6 +407,73 @@ function AppLockSettings() {
         </div>
       )}
       {modal && <AppLockModal mode={modal} onClose={() => setModal(null)} />}
+    </div>
+  );
+}
+
+function AccountSwitcher() {
+  const { state } = useApp();
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const switchTo = async (userId: string) => {
+    if (busy) return;
+    setBusy(userId);
+    try {
+      const res = await fetch("/api/auth/switch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      if (res.ok) {
+        // full reload: the new account's data, lock state, and theme apply cleanly
+        window.location.assign("/today");
+        return;
+      }
+    } catch {}
+    setBusy(null);
+  };
+
+  return (
+    <div className="mt-6">
+      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">
+        Accounts
+      </div>
+      <div className="space-y-1.5">
+        {state.accounts.map((a) => {
+          const current = a.id === state.user.id;
+          return (
+            <button
+              key={a.id}
+              onClick={() => !current && switchTo(a.id)}
+              disabled={current || busy !== null}
+              className={`flex w-full items-center gap-2.5 rounded-xl border px-3 py-2 text-left transition-colors ${
+                current
+                  ? "border-sun/50 bg-sun-soft/50"
+                  : "border-line bg-card hover:border-ink-faint"
+              }`}
+            >
+              <Avatar name={a.name} picture={a.picture} size={8} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium">{a.name}</span>
+                <span className="block truncate text-xs text-ink-faint">{a.email}</span>
+              </span>
+              {current ? (
+                <span className="shrink-0 text-xs font-semibold text-sun-deep">✓ current</span>
+              ) : (
+                <span className="shrink-0 text-xs font-medium text-ink-faint">
+                  {busy === a.id ? "…" : "Switch"}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+      <a
+        href="/api/auth/google"
+        className="mt-2 block w-full rounded-xl border border-dashed border-line px-3 py-2 text-center text-sm font-medium text-ink-soft transition-colors hover:border-sun hover:text-sun-deep"
+      >
+        + Add another account
+      </a>
     </div>
   );
 }

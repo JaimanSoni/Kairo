@@ -6,8 +6,6 @@ import { cancelPush, enablePush, pushEnabled, pushPermission, schedulePush } fro
 import { useApp } from "./store";
 import { IconX } from "./ui";
 
-const STORAGE_KEY = "kairo-focus";
-
 type SavedTimer = {
   taskId: string;
   totalMs: number;
@@ -17,16 +15,21 @@ type SavedTimer = {
   savedAt: number;
 };
 
-function save(t: SavedTimer | null) {
+/* timer persistence is scoped per account — switching users keeps each timer */
+function storageKey(userId: string) {
+  return `kairo-focus:${userId}`;
+}
+
+function save(userId: string, t: SavedTimer | null) {
   try {
-    if (t) localStorage.setItem(STORAGE_KEY, JSON.stringify(t));
-    else localStorage.removeItem(STORAGE_KEY);
+    if (t) localStorage.setItem(storageKey(userId), JSON.stringify(t));
+    else localStorage.removeItem(storageKey(userId));
   } catch {}
 }
 
-function load(): SavedTimer | null {
+function load(userId: string): SavedTimer | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey(userId));
     return raw ? (JSON.parse(raw) as SavedTimer) : null;
   } catch {
     return null;
@@ -93,16 +96,16 @@ export function FocusOverlay() {
   useEffect(() => {
     if (restored.current || focus) return;
     restored.current = true;
-    const saved = load();
+    const saved = load(state.user.id);
     if (!saved) return;
     const t = getTask(saved.taskId);
     if (!t || t.status === "done") {
-      save(null);
+      save(state.user.id, null);
       return;
     }
     startFocus(saved.taskId);
     minimizeFocus(true);
-  }, [focus, getTask, startFocus, minimizeFocus]);
+  }, [focus, getTask, startFocus, minimizeFocus, state.user.id]);
 
   /* init / adopt timer when the focused task changes */
   useEffect(() => {
@@ -115,7 +118,7 @@ export function FocusOverlay() {
         apply(null);
         return;
       }
-      const saved = load();
+      const saved = load(state.user.id);
       if (saved && saved.taskId === focus.taskId) {
         zeroFired.current = (saved.running ? saved.endAt - Date.now() : saved.remainingMs) <= 0;
         if (saved.running && saved.endAt > Date.now()) {
@@ -134,7 +137,7 @@ export function FocusOverlay() {
         savedAt: Date.now(),
       };
       zeroFired.current = false;
-      save(fresh);
+      save(state.user.id, fresh);
       scheduleEndPush(fresh.endAt, focus.taskId, task.title);
       apply(fresh);
     });
@@ -158,10 +161,10 @@ export function FocusOverlay() {
   /* task finished or deleted elsewhere → drop the session */
   useEffect(() => {
     if (focus && (!task || task.status === "done")) {
-      save(null);
+      save(state.user.id, null);
       stopFocus();
     }
-  }, [focus, task, stopFocus]);
+  }, [focus, task, stopFocus, state.user.id]);
 
   const remaining = timer
     ? timer.running && now > 0
@@ -184,11 +187,14 @@ export function FocusOverlay() {
     }
   });
 
-  const update = useCallback((next: SavedTimer) => {
-    next.savedAt = Date.now();
-    setTimer(next);
-    save(next);
-  }, []);
+  const update = useCallback(
+    (next: SavedTimer) => {
+      next.savedAt = Date.now();
+      setTimer(next);
+      save(state.user.id, next);
+    },
+    [state.user.id]
+  );
 
   if (!focus || !task || !timer) return null;
 
@@ -222,14 +228,14 @@ export function FocusOverlay() {
   };
   const finish = () => {
     cancelPush(`focus-${task.id}`);
-    save(null);
+    save(state.user.id, null);
     stopFocus();
     completeTask(task.id);
     showToast({ message: "🎉 Nailed it. One more in the log." });
   };
   const exit = () => {
     cancelPush(`focus-${task.id}`);
-    save(null);
+    save(state.user.id, null);
     stopFocus();
   };
 
