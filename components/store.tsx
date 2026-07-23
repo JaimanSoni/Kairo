@@ -34,6 +34,8 @@ type State = {
   focus: { taskId: string; minimized: boolean } | null;
   /** List ids unlocked for this browser session. */
   unlockedLists: string[];
+  /** App-wide PIN gate. Starts locked when enabled; session unlock lifts it. */
+  appLocked: boolean;
 };
 
 type Action =
@@ -49,6 +51,8 @@ type Action =
   | { type: "SET_SWEEP_DISMISSED"; dismissed: boolean }
   | { type: "SET_FOCUS"; focus: State["focus"] }
   | { type: "SET_UNLOCKED"; ids: string[] }
+  | { type: "SET_APP_LOCKED"; locked: boolean }
+  | { type: "SET_APPLOCK_ENABLED"; enabled: boolean }
   | { type: "BULK_UPSERT"; tasks: Task[] };
 
 function reducer(state: State, action: Action): State {
@@ -96,6 +100,14 @@ function reducer(state: State, action: Action): State {
       return { ...state, focus: action.focus };
     case "SET_UNLOCKED":
       return { ...state, unlockedLists: action.ids };
+    case "SET_APP_LOCKED":
+      return { ...state, appLocked: action.locked };
+    case "SET_APPLOCK_ENABLED":
+      return {
+        ...state,
+        user: { ...state.user, appLockEnabled: action.enabled },
+        appLocked: action.enabled ? state.appLocked : false,
+      };
     default:
       return state;
   }
@@ -142,6 +154,9 @@ type AppContextValue = {
   stopFocus: () => void;
   minimizeFocus: (minimized: boolean) => void;
   setListUnlocked: (listId: string, unlocked: boolean) => void;
+  lockApp: () => void;
+  unlockApp: () => void;
+  setAppLockEnabled: (enabled: boolean) => void;
 };
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -199,6 +214,9 @@ export function AppProvider({
     sweepDismissed: false,
     focus: null,
     unlockedLists: [],
+    // starts locked when a lock exists — the mount effect lifts it for
+    // sessions that already unlocked (SSR-safe: no storage read here)
+    appLocked: user.appLockEnabled,
   }));
 
   const stateRef = useRef(state);
@@ -599,6 +617,31 @@ export function AppProvider({
         const ids = (JSON.parse(raw) as unknown[]).filter((x): x is string => typeof x === "string");
         if (ids.length) dispatch({ type: "SET_UNLOCKED", ids });
       }
+      if (sessionStorage.getItem("kairo-applock") === "open") {
+        dispatch({ type: "SET_APP_LOCKED", locked: false });
+      }
+    } catch {}
+  }, []);
+
+  const lockApp = useCallback(() => {
+    try {
+      sessionStorage.removeItem("kairo-applock");
+    } catch {}
+    dispatch({ type: "SET_APP_LOCKED", locked: true });
+  }, []);
+
+  const unlockApp = useCallback(() => {
+    try {
+      sessionStorage.setItem("kairo-applock", "open");
+    } catch {}
+    dispatch({ type: "SET_APP_LOCKED", locked: false });
+  }, []);
+
+  const setAppLockEnabled = useCallback((enabled: boolean) => {
+    dispatch({ type: "SET_APPLOCK_ENABLED", enabled });
+    try {
+      if (enabled) sessionStorage.setItem("kairo-applock", "open");
+      else sessionStorage.removeItem("kairo-applock");
     } catch {}
   }, []);
 
@@ -639,12 +682,15 @@ export function AppProvider({
       stopFocus,
       minimizeFocus,
       setListUnlocked,
+      lockApp,
+      unlockApp,
+      setAppLockEnabled,
     }),
     [
       state, addTask, getTask, updateTask, completeTask, uncompleteTask, deleteTask,
       reorderTasks, sweep, createList, renameList, upsertList, deleteList, showToast,
       setOmnibar, setEditing, dismissSweep, reopenSweep, startFocus, stopFocus, minimizeFocus,
-      setListUnlocked,
+      setListUnlocked, lockApp, unlockApp, setAppLockEnabled,
     ]
   );
 

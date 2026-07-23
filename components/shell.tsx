@@ -9,6 +9,7 @@ import { playNotify } from "@/lib/sound";
 import { Omnibar } from "./omnibar";
 import { TaskEditor } from "./task-editor";
 import { FocusOverlay } from "./focus";
+import { AppLockGate, AppLockModal, type AppLockMode } from "./app-lock";
 import { ThemeToggle } from "./theme";
 import { IconBook, IconCalendar, IconInbox, IconPlus, IconSun, IconX, Kbd, Modal } from "./ui";
 
@@ -170,6 +171,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         />
       )}
       <FocusOverlay />
+      <AppLockGate />
 
       {/* toast */}
       {state.toast && (
@@ -236,6 +238,8 @@ function ProfileSheet({
         </div>
 
         <NotificationSettings />
+
+        <AppLockSettings />
 
         <form action="/api/auth/signout" method="POST" className="mt-6 border-t border-line pt-4">
           <button
@@ -351,6 +355,56 @@ function NotificationSettings() {
           )}
         </>
       )}
+    </div>
+  );
+}
+
+function AppLockSettings() {
+  const { state, lockApp } = useApp();
+  const [modal, setModal] = useState<AppLockMode | null>(null);
+  const enabled = state.user.appLockEnabled;
+
+  return (
+    <div className="mt-6">
+      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">
+        App lock
+      </div>
+      {enabled ? (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-ink-soft">PIN lock is on.</p>
+          <span className="flex flex-wrap gap-1.5">
+            <button
+              onClick={lockApp}
+              className="rounded-full bg-sun-soft px-4 py-1.5 text-xs font-semibold text-sun-deep"
+            >
+              🔒 Lock now
+            </button>
+            <button
+              onClick={() => setModal("change")}
+              className="rounded-full border border-line bg-card px-3 py-1.5 text-xs font-medium text-ink-soft hover:border-ink-faint"
+            >
+              Change PIN
+            </button>
+            <button
+              onClick={() => setModal("remove")}
+              className="rounded-full border border-line bg-card px-3 py-1.5 text-xs font-medium text-ink-soft hover:border-clay hover:text-clay"
+            >
+              Remove
+            </button>
+          </span>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-ink-soft">Lock Kairo behind a numeric PIN.</p>
+          <button
+            onClick={() => setModal("set")}
+            className="shrink-0 rounded-full border border-line bg-card px-4 py-1.5 text-xs font-semibold text-ink-soft hover:border-sun hover:text-sun-deep"
+          >
+            Set up
+          </button>
+        </div>
+      )}
+      {modal && <AppLockModal mode={modal} onClose={() => setModal(null)} />}
     </div>
   );
 }

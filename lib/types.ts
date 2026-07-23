@@ -50,4 +50,6 @@ export type UserProfile = {
   email: string;
   name: string;
   picture?: string;
+  /** True when an app-wide PIN lock is set for this account. */
+  appLockEnabled: boolean;
 };

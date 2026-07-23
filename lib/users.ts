@@ -10,7 +10,17 @@ export type DbUser = {
   picture?: string;
   createdAt: Date;
   lastLoginAt: Date;
+  /** App-wide PIN lock (hash + salt live server-side only). */
+  appLockHash?: string;
+  appLockSalt?: string;
 };
+
+export async function getUserById(idHex: string): Promise<DbUser | null> {
+  return withDbRetry(async () => {
+    const db = await getDb();
+    return db.collection<DbUser>("users").findOne({ _id: new ObjectId(idHex) });
+  });
+}
 
 export async function upsertGoogleUser(profile: GoogleProfile): Promise<DbUser> {
   return withDbRetry(() => upsertGoogleUserOnce(profile));
