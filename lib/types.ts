@@ -17,6 +17,8 @@ export type Task = {
   status: TaskStatus;
   /** The day the user has committed to doing this: "YYYY-MM-DD", or null. */
   plannedFor: string | null;
+  /** Optional time-of-day on the planned day: "HH:MM" (24h), or null. */
+  plannedTime: string | null;
   /** A real external deadline, distinct from plannedFor. */
   dueDate: string | null;
   /** True for the 1-3 tasks marked as today's "must win" items. */

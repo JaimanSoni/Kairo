@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Task } from "@/lib/types";
 import { parseQuickAdd, type ParsedInput } from "@/lib/nlp";
-import { friendlyDay, fmtMinutes } from "@/lib/dates";
+import { friendlyDay, fmtMinutes, fmtTime12 } from "@/lib/dates";
 import { repeatLabel } from "@/lib/repeat";
 import { useApp, visibleLists } from "./store";
 import { Icon3d } from "./img3d";
@@ -220,6 +220,7 @@ export function Omnibar() {
 
         <div className="mt-3 flex min-h-6 flex-wrap items-center gap-1.5">
           {parsed.plannedFor && <Chip tone="sun">☀️ {friendlyDay(parsed.plannedFor, state.today)}</Chip>}
+          {parsed.plannedTime && <Chip tone="sun">🕐 {fmtTime12(parsed.plannedTime)}</Chip>}
           {parsed.dueDate && <Chip tone="clay">due {friendlyDay(parsed.dueDate, state.today)}</Chip>}
           {parsed.estimateMin != null && <Chip>~{fmtMinutes(parsed.estimateMin)}</Chip>}
           {parsed.listName && <Chip>#{parsed.listName}</Chip>}

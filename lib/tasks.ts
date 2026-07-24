@@ -6,9 +6,14 @@ import type { AccountInfo, List, Subtask, Task, TaskStatus } from "./types";
 export const TASK_STATUSES: TaskStatus[] = ["inbox", "planned", "done", "someday"];
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export function isDateString(v: unknown): v is string {
   return typeof v === "string" && DATE_RE.test(v);
+}
+
+export function isTimeString(v: unknown): v is string {
+  return typeof v === "string" && TIME_RE.test(v);
 }
 
 export function toTask(doc: WithId<Document>): Task {
@@ -18,6 +23,7 @@ export function toTask(doc: WithId<Document>): Task {
     note: String(doc.note ?? ""),
     status: (doc.status as TaskStatus) ?? "inbox",
     plannedFor: (doc.plannedFor as string) ?? null,
+    plannedTime: isTimeString(doc.plannedTime) ? doc.plannedTime : null,
     dueDate: (doc.dueDate as string) ?? null,
     spotlight: Boolean(doc.spotlight),
     listId: doc.listId ? (doc.listId as ObjectId).toHexString() : null,
@@ -142,6 +148,7 @@ type TaskPatch = {
   note?: string;
   status?: TaskStatus;
   plannedFor?: string | null;
+  plannedTime?: string | null;
   dueDate?: string | null;
   spotlight?: boolean;
   listId?: string | null;
@@ -173,6 +180,10 @@ export function sanitizeTaskPatch(body: Record<string, unknown>): TaskPatch | nu
   if ("plannedFor" in body) {
     if (body.plannedFor !== null && !isDateString(body.plannedFor)) return null;
     patch.plannedFor = body.plannedFor as string | null;
+  }
+  if ("plannedTime" in body) {
+    if (body.plannedTime !== null && !isTimeString(body.plannedTime)) return null;
+    patch.plannedTime = body.plannedTime as string | null;
   }
   if ("dueDate" in body) {
     if (body.dueDate !== null && !isDateString(body.dueDate)) return null;
@@ -250,6 +261,8 @@ export function buildTaskUpdate(patch: TaskPatch): Document {
   if (patch.assigneeId !== undefined) {
     set.assigneeId = patch.assigneeId === null ? null : new ObjectId(patch.assigneeId);
   }
+  // a time only makes sense on a planned day — drop it when the day is cleared
+  if (patch.plannedFor === null) set.plannedTime = null;
   if (patch.status === "done") {
     set.completedAt = new Date();
     set.spotlight = false;

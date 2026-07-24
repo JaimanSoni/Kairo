@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Task } from "@/lib/types";
-import { addDays, friendlyDay, fmtMinutes, fmtReminder } from "@/lib/dates";
+import { addDays, friendlyDay, fmtMinutes, fmtReminder, fmtTime12 } from "@/lib/dates";
 import { repeatLabel } from "@/lib/repeat";
 import { personById, useApp } from "./store";
 import { playComplete } from "@/lib/sound";
@@ -112,8 +112,13 @@ export function TaskItem({
         <span className={`w-full truncate text-[15px] leading-snug ${done ? "strike-done" : ""}`}>
           {task.title}
         </span>
-        {(list || assignee || task.estimateMin || task.dueDate || task.repeat || task.reminderAt || task.carryCount >= 2 || task.subtasks.length > 0 || task.note) && (
+        {(list || assignee || task.plannedTime || task.estimateMin || task.dueDate || task.repeat || task.reminderAt || task.carryCount >= 2 || task.subtasks.length > 0 || task.note) && (
           <span className="flex flex-wrap items-center gap-1.5">
+            {task.plannedTime && !done && (
+              <Chip tone="sun" title="Planned time">
+                🕐 {fmtTime12(task.plannedTime)}
+              </Chip>
+            )}
             {list && (
               <Chip>
                 <ListMark value={list.emoji} size={13} /> {list.name}

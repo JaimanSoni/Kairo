@@ -64,6 +64,21 @@ export function fmtClockTime(ms: number): string {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
+/** "HH:MM" (24h) → "6:00 PM" for display. */
+export function fmtTime12(hhmm: string): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  const period = h < 12 ? "AM" : "PM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return m === 0 ? `${h12} ${period}` : `${h12}:${String(m).padStart(2, "0")} ${period}`;
+}
+
+/** Epoch ms for a planned day + "HH:MM" in local time. */
+export function planEpoch(dateStr: string, hhmm: string): number {
+  const [y, mo, d] = dateStr.split("-").map(Number);
+  const [h, mi] = hhmm.split(":").map(Number);
+  return new Date(y, mo - 1, d, h, mi, 0, 0).getTime();
+}
+
 /** "Today 15:00" / "Tomorrow 09:00" / "Thu 24 Jul 09:00" for a reminder moment. */
 export function fmtReminder(ms: number, today: string): string {
   const day = toDateStr(new Date(ms));

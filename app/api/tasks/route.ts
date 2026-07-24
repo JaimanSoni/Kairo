@@ -33,6 +33,7 @@ export async function POST(request: Request) {
     note: patch.note ?? "",
     status,
     plannedFor: patch.plannedFor ?? null,
+    plannedTime: patch.plannedFor ? patch.plannedTime ?? null : null,
     dueDate: patch.dueDate ?? null,
     spotlight: patch.spotlight ?? false,
     listId: patch.listId ? new ObjectId(patch.listId) : null,

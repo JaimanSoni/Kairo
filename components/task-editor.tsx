@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Subtask, Task } from "@/lib/types";
-import { addDays, friendlyDay, fmtMinutes, fmtReminder, parseDateStr } from "@/lib/dates";
+import { addDays, friendlyDay, fmtMinutes, fmtReminder, fmtTime12, parseDateStr, planEpoch } from "@/lib/dates";
 import { firstOccurrence, repeatLabel, type Repeat } from "@/lib/repeat";
 import { cancelPush, enablePush, pushEnabled, schedulePush } from "@/lib/push-client";
 import { personById, useApp, visibleLists } from "./store";
@@ -76,7 +76,7 @@ export function TaskEditor({ task }: { task: Task }) {
     task.status === "someday"
       ? "Someday"
       : task.plannedFor
-        ? friendlyDay(task.plannedFor, today)
+        ? `${friendlyDay(task.plannedFor, today)}${task.plannedTime ? ` · ${fmtTime12(task.plannedTime)}` : ""}`
         : "No day";
 
   const anchorDate = task.plannedFor ?? today;
@@ -289,11 +289,69 @@ export function TaskEditor({ task }: { task: Task }) {
                   });
                 }}
               />
+              {/* time-of-day — only when a real day is chosen */}
+              {task.plannedFor && task.status !== "someday" && (
+                <div className="mt-4 border-t border-line pt-3">
+                  <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-ink-faint">
+                    Time <span className="normal-case text-ink-faint">(optional)</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {[
+                      ["09:00", "9 AM"],
+                      ["12:00", "Noon"],
+                      ["15:00", "3 PM"],
+                      ["18:00", "6 PM"],
+                      ["21:00", "9 PM"],
+                    ].map(([val, label]) => (
+                      <button
+                        key={val}
+                        onClick={() => updateTask(task.id, { plannedTime: task.plannedTime === val ? null : val })}
+                        className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                          task.plannedTime === val
+                            ? "border-sun bg-sun-soft text-sun-deep"
+                            : "border-line bg-card text-ink-soft hover:border-ink-faint"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                    <input
+                      type="time"
+                      value={task.plannedTime ?? ""}
+                      onChange={(e) => updateTask(task.id, { plannedTime: e.target.value || null })}
+                      className="rounded-lg border border-line bg-card px-2.5 py-1.5 text-base outline-none focus:border-sun sm:text-sm"
+                    />
+                    {task.plannedTime && (
+                      <button
+                        onClick={() => updateTask(task.id, { plannedTime: null })}
+                        className="text-xs font-medium text-ink-faint underline hover:text-ink"
+                      >
+                        clear
+                      </button>
+                    )}
+                  </div>
+                  {task.plannedTime && (
+                    <button
+                      onClick={() => setReminder(planEpoch(task.plannedFor!, task.plannedTime!))}
+                      className={`mt-2 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                        task.reminderAt === planEpoch(task.plannedFor, task.plannedTime)
+                          ? "border-sun bg-sun-soft text-sun-deep"
+                          : "border-line bg-card text-ink-soft hover:border-sun hover:text-sun-deep"
+                      }`}
+                    >
+                      🔔 {task.reminderAt === planEpoch(task.plannedFor, task.plannedTime)
+                        ? `Reminder set for ${fmtTime12(task.plannedTime)}`
+                        : "Remind me at this time"}
+                    </button>
+                  )}
+                </div>
+              )}
+
               <button
                 onClick={() =>
                   updateTask(task.id, { plannedFor: null, status: "someday", spotlight: false })
                 }
-                className={`mt-2 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${
+                className={`mt-4 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${
                   task.status === "someday"
                     ? "border-sun bg-sun-soft text-sun-deep"
                     : "border-line bg-card text-ink-soft hover:border-ink-faint"

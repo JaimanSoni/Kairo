@@ -299,6 +299,7 @@ export function AppProvider({
         note: "",
         status,
         plannedFor: input.plannedFor,
+        plannedTime: input.plannedTime,
         dueDate: input.dueDate,
         spotlight: input.spotlight,
         listId: input.listId,
@@ -320,6 +321,7 @@ export function AppProvider({
           title: task.title,
           status: task.status,
           plannedFor: task.plannedFor,
+          plannedTime: task.plannedTime,
           dueDate: task.dueDate,
           spotlight: task.spotlight,
           listId: task.listId,
@@ -352,13 +354,15 @@ export function AppProvider({
         next.spotlight = false;
       }
       if (patch.status && patch.status !== "done") next.completedAt = null;
+      // a time can't outlive its day
+      if (patch.plannedFor === null) next.plannedTime = null;
       dispatch({ type: "UPSERT_TASK", task: next });
 
       if (id.startsWith("temp-")) return; // will be persisted by the pending create
 
       const body: Record<string, unknown> = {};
       const fields: (keyof Task)[] = [
-        "title", "note", "status", "plannedFor", "dueDate", "spotlight", "listId",
+        "title", "note", "status", "plannedFor", "plannedTime", "dueDate", "spotlight", "listId",
         "estimateMin", "order", "carryCount", "repeat", "reminderAt", "assigneeId", "subtasks",
       ];
       for (const f of fields) {

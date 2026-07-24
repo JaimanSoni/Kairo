@@ -5,6 +5,7 @@ import type { List } from "./types";
 export type ParsedInput = {
   title: string;
   plannedFor: string | null;
+  plannedTime: string | null;
   dueDate: string | null;
   estimateMin: number | null;
   listId: string | null;
@@ -12,6 +13,32 @@ export type ParsedInput = {
   spotlight: boolean;
   repeat: Repeat | null;
 };
+
+/** Pulls a clock time ("6pm", "6:30 pm", "at 18:00") out of the text. */
+function extractTime(text: string): { time: string | null; rest: string } {
+  // 12-hour: 6pm, 6:30pm, 6 pm, at 6pm
+  const twelve = text.match(/\b(?:at\s+)?(\d{1,2})(?::([0-5]\d))?\s*(am|pm)\b/i);
+  if (twelve) {
+    let h = parseInt(twelve[1], 10);
+    const m = twelve[2] ? parseInt(twelve[2], 10) : 0;
+    const pm = twelve[3].toLowerCase() === "pm";
+    if (h >= 1 && h <= 12) {
+      if (pm && h !== 12) h += 12;
+      if (!pm && h === 12) h = 0;
+      const time = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+      return { time, rest: text.replace(twelve[0], " ") };
+    }
+  }
+  // 24-hour with a colon: 18:00, at 9:30 (won't collide with ~30m estimates)
+  const military = text.match(/\b(?:at\s+)?([01]?\d|2[0-3]):([0-5]\d)\b/);
+  if (military) {
+    const h = parseInt(military[1], 10);
+    const m = parseInt(military[2], 10);
+    const time = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+    return { time, rest: text.replace(military[0], " ") };
+  }
+  return { time: null, rest: text };
+}
 
 const WEEKDAY_TOKENS: Record<string, number> = {
   sun: 0, sunday: 0,
@@ -93,6 +120,7 @@ function extractRepeat(text: string): { repeat: Repeat | null; rest: string } {
 /**
  * Parses quick-add text. Recognized, order-independent:
  *   dates:      today · tomorrow · mon…sunday · "next week"
+ *   time:       6pm · 6:30pm · at 18:00
  *   deadline:   due <date-token>
  *   repeat:     daily · every 2 days · every mon and wed · monthly
  *   estimate:   ~30m · ~1h30m · 45m · 2h
@@ -104,6 +132,7 @@ export function parseQuickAdd(raw: string, lists: List[]): ParsedInput {
   const result: ParsedInput = {
     title: "",
     plannedFor: null,
+    plannedTime: null,
     dueDate: null,
     estimateMin: null,
     listId: null,
@@ -118,6 +147,12 @@ export function parseQuickAdd(raw: string, lists: List[]): ParsedInput {
   if (repeat) {
     result.repeat = repeat;
     text = rest;
+  }
+
+  const { time, rest: afterTime } = extractTime(text);
+  if (time) {
+    result.plannedTime = time;
+    text = afterTime;
   }
 
   // "next week" → next Monday
@@ -178,6 +213,10 @@ export function parseQuickAdd(raw: string, lists: List[]): ParsedInput {
   // a repeating task needs a day — snap to the rule's first occurrence
   if (result.repeat && !result.plannedFor) {
     result.plannedFor = firstOccurrence(result.repeat, todayStr());
+  }
+  // a time implies a day — default to today when none was given
+  if (result.plannedTime && !result.plannedFor) {
+    result.plannedFor = todayStr();
   }
 
   return result;
