@@ -12,15 +12,30 @@ export function googleConfigured(): boolean {
   );
 }
 
-export function redirectUri(): string {
-  const base = process.env.APP_URL || "http://localhost:3010";
-  return `${base}/api/auth/callback/google`;
+/**
+ * The origin the browser actually reached us on — honoring proxy headers
+ * (Vercel/any reverse proxy). This is what keeps OAuth on the SAME domain the
+ * user started from, so multi-domain deployments each hold their own session.
+ */
+export function originFromRequest(request: Request): string {
+  const url = new URL(request.url);
+  const proto = (request.headers.get("x-forwarded-proto") || url.protocol.replace(/:$/, ""))
+    .split(",")[0]
+    .trim();
+  const host = (request.headers.get("x-forwarded-host") || request.headers.get("host") || url.host)
+    .split(",")[0]
+    .trim();
+  return `${proto}://${host}`;
 }
 
-export function buildAuthUrl(state: string): string {
+export function redirectUri(origin: string): string {
+  return `${origin.replace(/\/+$/, "")}/api/auth/callback/google`;
+}
+
+export function buildAuthUrl(state: string, origin: string): string {
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID!,
-    redirect_uri: redirectUri(),
+    redirect_uri: redirectUri(origin),
     response_type: "code",
     scope: "openid email profile",
     state,
@@ -36,7 +51,7 @@ export type GoogleProfile = {
   picture?: string;
 };
 
-export async function exchangeCode(code: string): Promise<GoogleProfile> {
+export async function exchangeCode(code: string, origin: string): Promise<GoogleProfile> {
   const res = await fetch(GOOGLE_TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -44,7 +59,8 @@ export async function exchangeCode(code: string): Promise<GoogleProfile> {
       code,
       client_id: process.env.GOOGLE_CLIENT_ID!,
       client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-      redirect_uri: redirectUri(),
+      // MUST match the redirect_uri used to obtain the code (same origin)
+      redirect_uri: redirectUri(origin),
       grant_type: "authorization_code",
     }),
   });

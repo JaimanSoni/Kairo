@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { buildAuthUrl, googleConfigured } from "@/lib/google";
+import { buildAuthUrl, googleConfigured, originFromRequest } from "@/lib/google";
 
 export async function GET(request: Request) {
   if (!googleConfigured()) {
@@ -18,5 +18,5 @@ export async function GET(request: Request) {
     maxAge: 600,
   });
 
-  return NextResponse.redirect(buildAuthUrl(state));
+  return NextResponse.redirect(buildAuthUrl(state, originFromRequest(request)));
 }
