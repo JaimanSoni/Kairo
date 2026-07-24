@@ -4,11 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import type { Task } from "@/lib/types";
 import { addDays, friendlyDay, fmtMinutes, fmtReminder } from "@/lib/dates";
 import { repeatLabel } from "@/lib/repeat";
-import { useApp } from "./store";
+import { personById, useApp } from "./store";
 import { playComplete } from "@/lib/sound";
 import { useStepToggle } from "./step-row";
 import { SendTaskModal } from "./share-modal";
 import { Icon3d, ListMark } from "./img3d";
+import { PersonAvatar } from "./person-avatar";
 import { Chip, IconCheck, IconDots, IconStar } from "./ui";
 
 export function TaskItem({
@@ -66,6 +67,7 @@ export function TaskItem({
   const subDone = task.subtasks.filter((s) => s.done).length;
   const dueSoon =
     task.dueDate && !done && task.dueDate <= addDays(today, 2);
+  const assignee = personById(state, task.assigneeId);
 
   const plan = (patch: Partial<Task>) => {
     updateTask(task.id, patch);
@@ -110,11 +112,20 @@ export function TaskItem({
         <span className={`w-full truncate text-[15px] leading-snug ${done ? "strike-done" : ""}`}>
           {task.title}
         </span>
-        {(list || task.estimateMin || task.dueDate || task.repeat || task.reminderAt || task.carryCount >= 2 || task.subtasks.length > 0 || task.note) && (
+        {(list || assignee || task.estimateMin || task.dueDate || task.repeat || task.reminderAt || task.carryCount >= 2 || task.subtasks.length > 0 || task.note) && (
           <span className="flex flex-wrap items-center gap-1.5">
             {list && (
               <Chip>
                 <ListMark value={list.emoji} size={13} /> {list.name}
+              </Chip>
+            )}
+            {assignee && (
+              <Chip
+                tone={assignee.id === state.user.id ? "sun" : "neutral"}
+                title={`Assigned to ${assignee.name}`}
+              >
+                <PersonAvatar name={assignee.name} picture={assignee.picture} size={13} />
+                {assignee.id === state.user.id ? "You" : assignee.name.split(" ")[0]}
               </Chip>
             )}
             {task.estimateMin != null && <Chip>~{fmtMinutes(task.estimateMin)}</Chip>}

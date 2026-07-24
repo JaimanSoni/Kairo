@@ -1,7 +1,7 @@
 import { ObjectId, type Document, type WithId } from "mongodb";
 import { getDb, withDbRetry } from "./db";
 import { sanitizeRepeat, type Repeat } from "./repeat";
-import type { List, Subtask, Task, TaskStatus } from "./types";
+import type { AccountInfo, List, Subtask, Task, TaskStatus } from "./types";
 
 export const TASK_STATUSES: TaskStatus[] = ["inbox", "planned", "done", "someday"];
 
@@ -26,6 +26,7 @@ export function toTask(doc: WithId<Document>): Task {
     carryCount: typeof doc.carryCount === "number" ? doc.carryCount : 0,
     repeat: doc.repeat ? (sanitizeRepeat(doc.repeat) ?? null) : null,
     reminderAt: typeof doc.reminderAt === "number" ? doc.reminderAt : null,
+    assigneeId: doc.assigneeId ? (doc.assigneeId as ObjectId).toHexString() : null,
     subtasks: Array.isArray(doc.subtasks) ? (doc.subtasks as Subtask[]) : [],
     completedAt: doc.completedAt ? (doc.completedAt as Date).toISOString() : null,
     createdAt: doc.createdAt ? (doc.createdAt as Date).toISOString() : new Date(0).toISOString(),
@@ -69,12 +70,16 @@ export async function tasksCollection() {
 }
 
 /**
- * Everything the client store needs on boot: live tasks, recent done, lists.
- * Retried — a transient Atlas blip must not take down a page render.
+ * Everything the client store needs on boot: live tasks, recent done, lists,
+ * and the people directory (everyone on the user's shared lists — needed to
+ * render assignees). Retried — a transient Atlas blip must not take down a render.
  */
-export async function loadUserData(userIdHex: string): Promise<{ tasks: Task[]; lists: List[] }> {
+export async function loadUserData(
+  userIdHex: string
+): Promise<{ tasks: Task[]; lists: List[]; people: AccountInfo[] }> {
   return withDbRetry(async () => {
     const userId = new ObjectId(userIdHex);
+    const db = await getDb();
     const tasks = await tasksCollection();
     const lists = await listsCollection();
     const recentCutoff = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
@@ -86,7 +91,17 @@ export async function loadUserData(userIdHex: string): Promise<{ tasks: Task[]; 
     const listIds = listDocs.map((d) => d._id);
     const access = { $or: [{ userId }, { listId: { $in: listIds } }] };
 
-    const [liveTasks, recentDone] = await Promise.all([
+    // everyone reachable through a shared list (owners + members), for assignee display
+    const peopleIds = new Map<string, ObjectId>();
+    for (const l of listDocs) {
+      const members = Array.isArray(l.memberIds) ? (l.memberIds as ObjectId[]) : [];
+      if (members.length > 0) {
+        peopleIds.set((l.userId as ObjectId).toHexString(), l.userId as ObjectId);
+        for (const m of members) peopleIds.set(m.toHexString(), m);
+      }
+    }
+
+    const [liveTasks, recentDone, peopleDocs] = await Promise.all([
       tasks
         .find({ ...access, status: { $in: ["inbox", "planned", "someday"] } })
         .sort({ order: 1, createdAt: 1 })
@@ -95,11 +110,24 @@ export async function loadUserData(userIdHex: string): Promise<{ tasks: Task[]; 
         .find({ ...access, status: "done", completedAt: { $gte: recentCutoff } })
         .sort({ completedAt: -1 })
         .toArray(),
+      peopleIds.size > 0
+        ? db
+            .collection("users")
+            .find({ _id: { $in: [...peopleIds.values()] } })
+            .project({ name: 1, email: 1, picture: 1 })
+            .toArray()
+        : Promise.resolve([]),
     ]);
 
     return {
       tasks: [...liveTasks, ...recentDone].map(toTask),
       lists: listDocs.map((d) => toList(d, userIdHex)),
+      people: peopleDocs.map((u) => ({
+        id: u._id.toHexString(),
+        name: String(u.name ?? ""),
+        email: String(u.email ?? ""),
+        picture: typeof u.picture === "string" ? u.picture : undefined,
+      })),
     };
   });
 }
@@ -122,6 +150,7 @@ type TaskPatch = {
   carryCount?: number;
   repeat?: Repeat | null;
   reminderAt?: number | null;
+  assigneeId?: string | null;
   subtasks?: Subtask[];
 };
 
@@ -186,6 +215,12 @@ export function sanitizeTaskPatch(body: Record<string, unknown>): TaskPatch | nu
     }
     patch.reminderAt = body.reminderAt as number | null;
   }
+  if ("assigneeId" in body) {
+    if (body.assigneeId !== null && (typeof body.assigneeId !== "string" || !ObjectId.isValid(body.assigneeId))) {
+      return null;
+    }
+    patch.assigneeId = body.assigneeId as string | null;
+  }
   if ("subtasks" in body) {
     if (!Array.isArray(body.subtasks) || body.subtasks.length > 100) return null;
     const subtasks: Subtask[] = [];
@@ -211,6 +246,9 @@ export function buildTaskUpdate(patch: TaskPatch): Document {
   const set: Document = { ...patch, updatedAt: new Date() };
   if (patch.listId !== undefined) {
     set.listId = patch.listId === null ? null : new ObjectId(patch.listId);
+  }
+  if (patch.assigneeId !== undefined) {
+    set.assigneeId = patch.assigneeId === null ? null : new ObjectId(patch.assigneeId);
   }
   if (patch.status === "done") {
     set.completedAt = new Date();

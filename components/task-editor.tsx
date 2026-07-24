@@ -1,17 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Subtask, Task } from "@/lib/types";
 import { addDays, friendlyDay, fmtMinutes, fmtReminder, parseDateStr } from "@/lib/dates";
 import { firstOccurrence, repeatLabel, type Repeat } from "@/lib/repeat";
 import { cancelPush, enablePush, pushEnabled, schedulePush } from "@/lib/push-client";
-import { useApp, visibleLists } from "./store";
+import { personById, useApp, visibleLists } from "./store";
 import { Icon3d, ListMark } from "./img3d";
+import { PersonAvatar } from "./person-avatar";
 import { DatePicker } from "./date-picker";
 import { DurationWheel } from "./wheel";
 import { IconCheck, IconPlus, IconTrash, IconX, Modal } from "./ui";
 
-type Section = "day" | "repeat" | "deadline" | "estimate" | "list" | "reminder" | null;
+type Member = { id: string; name: string; email: string; picture?: string };
+
+type Section = "day" | "repeat" | "deadline" | "estimate" | "list" | "reminder" | "assignee" | null;
 
 function toLocalInputValue(ms: number): string {
   const d = new Date(ms);
@@ -30,8 +33,26 @@ export function TaskEditor({ task }: { task: Task }) {
   const [newSub, setNewSub] = useState("");
   const [stepMenu, setStepMenu] = useState<string | null>(null);
   const [open, setOpen] = useState<Section>(null);
+  const [members, setMembers] = useState<Member[] | null>(null);
   const today = state.today;
   const list = task.listId ? state.lists.find((l) => l.id === task.listId) : null;
+  const isShared = Boolean(list && (list.memberCount > 0 || list.role === "member"));
+  const assignee = personById(state, task.assigneeId);
+
+  /* pull the list's members when the assignee picker opens */
+  useEffect(() => {
+    if (open !== "assignee" || !task.listId) return;
+    let cancelled = false;
+    fetch(`/api/lists/${task.listId}/share`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!cancelled && d?.members) setMembers(d.members as Member[]);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [open, task.listId]);
 
   const close = () => {
     const patch: Partial<Task> = {};
@@ -499,10 +520,10 @@ export function TaskEditor({ task }: { task: Task }) {
             open={open === "list"}
             onClick={() => toggleSection("list")}
             icon={list ? <ListMark value={list.emoji} size={18} /> : <Icon3d name="list-folder" size={18} />}
-            last
+            last={!isShared}
           />
           {open === "list" && (
-            <div className="anim-rise bg-paper px-4 py-4">
+            <div className="anim-rise border-b border-line bg-paper px-4 py-4">
               <div className="flex flex-wrap gap-1.5">
                 {visibleLists(state).map((l) => (
                   <button
@@ -524,6 +545,73 @@ export function TaskEditor({ task }: { task: Task }) {
                 )}
               </div>
             </div>
+          )}
+
+          {isShared && (
+            <>
+              <PropRow
+                label="Assignee"
+                value={
+                  assignee
+                    ? assignee.id === state.user.id
+                      ? "You"
+                      : assignee.name.split(" ")[0]
+                    : "Anyone"
+                }
+                active={Boolean(task.assigneeId)}
+                open={open === "assignee"}
+                onClick={() => toggleSection("assignee")}
+                icon={
+                  assignee ? (
+                    <PersonAvatar name={assignee.name} picture={assignee.picture} size={18} />
+                  ) : (
+                    <span className="text-base">👥</span>
+                  )
+                }
+                last
+              />
+              {open === "assignee" && (
+                <div className="anim-rise bg-paper px-4 py-4">
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      onClick={() => updateTask(task.id, { assigneeId: null })}
+                      className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                        !task.assigneeId
+                          ? "border-sun bg-sun-soft text-sun-deep"
+                          : "border-line bg-card text-ink-soft hover:border-ink-faint"
+                      }`}
+                    >
+                      Anyone
+                    </button>
+                    {members === null ? (
+                      <span className="self-center text-xs text-ink-faint">Loading people…</span>
+                    ) : (
+                      members.map((m) => (
+                        <button
+                          key={m.id}
+                          onClick={() =>
+                            updateTask(task.id, {
+                              assigneeId: task.assigneeId === m.id ? null : m.id,
+                            })
+                          }
+                          className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+                            task.assigneeId === m.id
+                              ? "border-sun bg-sun-soft text-sun-deep"
+                              : "border-line bg-card text-ink-soft hover:border-ink-faint"
+                          }`}
+                        >
+                          <PersonAvatar name={m.name} picture={m.picture} size={16} />
+                          {m.id === state.user.id ? "You" : m.name.split(" ")[0]}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                  <p className="mt-2 text-xs text-ink-faint">
+                    The assignee gets a notification. Anyone on the list can still see and complete it.
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </div>
 

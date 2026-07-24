@@ -10,7 +10,7 @@ export async function GET() {
   const session = await requireSession();
   if (!session) return unauthorized();
 
-  const { tasks, lists } = await loadUserData(session.userId);
+  const { tasks, lists, people } = await loadUserData(session.userId);
 
   return NextResponse.json({
     user: {
@@ -21,5 +21,6 @@ export async function GET() {
     },
     tasks,
     lists,
+    people,
   });
 }

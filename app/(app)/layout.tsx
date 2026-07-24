@@ -9,7 +9,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const session = await getSession();
   if (!session) redirect("/");
 
-  const [{ tasks, lists }, userDoc, roster] = await Promise.all([
+  const [{ tasks, lists, people }, userDoc, roster] = await Promise.all([
     loadUserData(session.userId),
     getUserById(session.userId),
     getSessionAccounts(),
@@ -32,6 +32,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       }))}
       initialTasks={tasks}
       initialLists={lists}
+      initialPeople={people}
     >
       <Shell>{children}</Shell>
     </AppProvider>

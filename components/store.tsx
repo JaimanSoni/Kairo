@@ -28,6 +28,8 @@ type State = {
   user: UserProfile;
   /** All accounts signed in to this browser (for the switcher). */
   accounts: AccountInfo[];
+  /** Directory of people on shared lists — resolves assignee ids to name/avatar. */
+  people: AccountInfo[];
   today: string;
   toast: Toast | null;
   omnibarOpen: boolean;
@@ -55,7 +57,7 @@ type Action =
   | { type: "SET_UNLOCKED"; ids: string[] }
   | { type: "SET_APP_LOCKED"; locked: boolean }
   | { type: "SET_APPLOCK_ENABLED"; enabled: boolean }
-  | { type: "REPLACE_ALL"; tasks: Task[]; lists: List[] }
+  | { type: "REPLACE_ALL"; tasks: Task[]; lists: List[]; people: AccountInfo[] }
   | { type: "BULK_UPSERT"; tasks: Task[] };
 
 function reducer(state: State, action: Action): State {
@@ -83,6 +85,7 @@ function reducer(state: State, action: Action): State {
         ...state,
         tasks: Object.fromEntries(action.tasks.map((t) => [t.id, t])),
         lists: action.lists,
+        people: action.people,
       };
     case "UPSERT_LIST": {
       const exists = state.lists.some((l) => l.id === action.list.id);
@@ -201,6 +204,18 @@ export function visibleLists(state: { lists: List[]; unlockedLists: string[] }):
   return state.lists.filter((l) => !l.locked || state.unlockedLists.includes(l.id));
 }
 
+/** Resolves an assignee id to a person (checks the directory, then the current user). */
+export function personById(
+  state: { people: AccountInfo[]; user: UserProfile },
+  id: string | null
+): AccountInfo | null {
+  if (!id) return null;
+  if (id === state.user.id) {
+    return { id: state.user.id, name: state.user.name, email: state.user.email, picture: state.user.picture };
+  }
+  return state.people.find((p) => p.id === id) ?? null;
+}
+
 /* ---------------- provider ---------------- */
 
 export function AppProvider({
@@ -208,12 +223,14 @@ export function AppProvider({
   accounts,
   initialTasks,
   initialLists,
+  initialPeople,
   children,
 }: {
   user: UserProfile;
   accounts: AccountInfo[];
   initialTasks: Task[];
   initialLists: List[];
+  initialPeople: AccountInfo[];
   children: React.ReactNode;
 }) {
   /* unlock state is scoped per account — switching users never leaks an unlock */
@@ -224,6 +241,7 @@ export function AppProvider({
     lists: initialLists,
     user,
     accounts,
+    people: initialPeople,
     today: todayStr(),
     toast: null,
     omnibarOpen: false,
@@ -289,6 +307,7 @@ export function AppProvider({
         carryCount: 0,
         repeat: input.repeat ?? null,
         reminderAt: null,
+        assigneeId: null,
         subtasks: [],
         completedAt: null,
         createdAt: now,
@@ -339,8 +358,8 @@ export function AppProvider({
 
       const body: Record<string, unknown> = {};
       const fields: (keyof Task)[] = [
-        "title", "note", "status", "plannedFor", "dueDate", "spotlight",
-        "listId", "estimateMin", "order", "carryCount", "repeat", "reminderAt", "subtasks",
+        "title", "note", "status", "plannedFor", "dueDate", "spotlight", "listId",
+        "estimateMin", "order", "carryCount", "repeat", "reminderAt", "assigneeId", "subtasks",
       ];
       for (const f of fields) {
         if (f in patch) body[f] = patch[f];
@@ -660,8 +679,13 @@ export function AppProvider({
     try {
       const res = await fetch("/api/bootstrap");
       if (!res.ok) return;
-      const data: { tasks: Task[]; lists: List[] } = await res.json();
-      dispatch({ type: "REPLACE_ALL", tasks: data.tasks, lists: data.lists });
+      const data: { tasks: Task[]; lists: List[]; people?: AccountInfo[] } = await res.json();
+      dispatch({
+        type: "REPLACE_ALL",
+        tasks: data.tasks,
+        lists: data.lists,
+        people: data.people ?? stateRef.current.people,
+      });
     } catch {}
   }, []);
 

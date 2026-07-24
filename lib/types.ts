@@ -31,6 +31,8 @@ export type Task = {
   repeat: Repeat | null;
   /** One-off "remind me" push, epoch ms. Cleared when it fires or the task completes. */
   reminderAt: number | null;
+  /** In a shared list, the member this task is assigned to (their user id) or null. */
+  assigneeId: string | null;
   subtasks: Subtask[];
   completedAt: string | null;
   createdAt: string;
