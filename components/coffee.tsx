@@ -1,12 +1,21 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { COFFEE, coffeeEnabled, upiLink } from "@/lib/coffee";
+import { COFFEE, coffeeEnabled, upiIntentLink, upiLink } from "@/lib/coffee";
 import { markAsked, shouldAsk } from "@/lib/coffee-nudge";
 import { IconCheck, IconX, Modal } from "./ui";
 import { Icon3d } from "./img3d";
 
 const TOUCH_QUERY = "(hover: none) and (pointer: coarse)";
+
+/** Android, where a bare upi:// link is unreliable and an intent URL isn't. */
+function useIsAndroid() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => /android/i.test(navigator.userAgent),
+    () => false
+  );
+}
 
 /**
  * True on phones and tablets — the only places a `upi://` link resolves to an
@@ -140,11 +149,15 @@ function CoffeeModal({ onClose, earned }: { onClose: () => void; earned?: boolea
   const [custom, setCustom] = useState(false);
   const [customText, setCustomText] = useState("");
   const isTouch = useIsTouch();
+  const isAndroid = useIsAndroid();
+  const [showQr, setShowQr] = useState(false);
 
   const customAmount = Number.parseInt(customText, 10);
   const customValid = Number.isFinite(customAmount) && customAmount > 0 && customAmount <= MAX_AMOUNT;
   const effective = custom ? (customValid ? customAmount : null) : amount;
   const link = upiLink(effective);
+  // the QR always encodes the plain upi:// string — scanners expect that
+  const tapLink = isAndroid ? upiIntentLink(effective) : link;
   const canPay = effective != null;
 
   return (
@@ -257,14 +270,37 @@ function CoffeeModal({ onClose, earned }: { onClose: () => void; earned?: boolea
         {isTouch ? (
           <div className="mt-6">
             <a
-              href={link}
+              href={tapLink}
               className="flex w-full items-center justify-center gap-2 rounded-2xl bg-sun px-5 py-3.5 text-base font-semibold text-on-accent shadow-lg shadow-sun/25 transition-transform active:scale-[0.98]"
             >
               {canPay ? `Pay ₹${effective}` : "Pay with any UPI app"}
             </a>
             <p className="mt-2 text-center text-xs text-ink-faint">
-              Opens GPay, PhonePe or Paytm — whichever you prefer. If nothing opens, the ID below works too.
+              Opens GPay, PhonePe or Paytm — whichever you prefer.
             </p>
+
+            {/* Some browsers simply won't hand off to an app — an in-app
+                browser, a phone with no UPI app, iOS without one installed.
+                There is always a way through from here. */}
+            {showQr ? (
+              <div className="anim-rise mt-4">
+                <div className="mx-auto max-w-[12rem] rounded-2xl bg-white p-3 shadow-sm ring-1 ring-line">
+                  <QrCode value={link} />
+                </div>
+                <p className="mt-2 text-center text-xs text-ink-faint">
+                  Scan this from another device
+                  {canPay && <> — it&apos;ll prefill ₹{effective}</>}
+                </p>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowQr(true)}
+                className="mt-2 w-full text-center text-xs font-medium text-sun-deep underline underline-offset-2"
+              >
+                Nothing opened? Show a QR instead
+              </button>
+            )}
           </div>
         ) : (
           <div className="mt-6">

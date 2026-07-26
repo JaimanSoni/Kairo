@@ -34,6 +34,21 @@ export const coffeeEnabled = COFFEE.upiId.length > 0;
  *
  * Omitting `amount` leaves the field blank for the payer to fill in.
  */
+/**
+ * Android's intent URL for the same payment.
+ *
+ * Chrome on Android often refuses a bare `upi://` link — "the scheme does not
+ * have a registered handler" — even with a UPI app installed. An intent URL is
+ * the supported way to hand off to an app there, and with no `package` set it
+ * opens the chooser so any UPI app can take it.
+ *
+ * Android only. iOS has no intent scheme and uses the plain link.
+ */
+export function upiIntentLink(amount?: number | null): string {
+  const query = upiLink(amount).slice("upi://pay?".length);
+  return `intent://pay?${query}#Intent;scheme=upi;action=android.intent.action.VIEW;end`;
+}
+
 export function upiLink(amount?: number | null): string {
   const q = new URLSearchParams({
     pa: COFFEE.upiId,
