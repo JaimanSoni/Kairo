@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { List, Task } from "@/lib/types";
 import { addDays, friendlyDay, fmtMinutes, fullDate, toDateStr } from "@/lib/dates";
 import { byOrder, hiddenListIds, useApp } from "./store";
@@ -29,6 +29,149 @@ const LIST_COLORS = [
   "#2fa5b8", // cyan
   "#a97b50", // clay-brown
 ];
+
+/** Past this much horizontal travel, a release changes month. */
+const SWIPE_COMMIT_PX = 70;
+/** A flick counts even when short — px per ms. */
+const SWIPE_FLICK = 0.4;
+const SLIDE_OUT_MS = 170;
+const SLIDE_IN_MS = 210;
+
+/**
+ * Month-swiping for touch screens.
+ *
+ * `frame` clips, `track` moves. The axis is locked on the first meaningful
+ * movement so a vertical scroll is never stolen, and once we own the gesture
+ * we preventDefault to stop the page scrolling underneath. A committed swipe
+ * carries the old month out, swaps, then brings the new one in from the other
+ * side, so the direction of travel matches the direction of time.
+ */
+function useMonthSwipe(
+  frame: React.RefObject<HTMLDivElement | null>,
+  track: React.RefObject<HTMLDivElement | null>,
+  onSwipe: (delta: number) => void
+) {
+  // the gesture listeners are bound once; this keeps them calling the newest
+  // callback without re-binding mid-swipe (assigned in an effect, not render)
+  const swipeRef = useRef(onSwipe);
+  useEffect(() => {
+    swipeRef.current = onSwipe;
+  });
+
+  useEffect(() => {
+    const frameEl = frame.current;
+    const trackEl = track.current;
+    if (!frameEl || !trackEl) return;
+
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let startX = 0, startY = 0, dx = 0, lastX = 0, lastT = 0, velocity = 0;
+    let axis: "" | "x" | "y" = "";
+    let active = false, raf = 0, settling = false;
+    let swipedAt = 0;
+
+    const paint = (x: number, ms: number) => {
+      trackEl.style.transition = ms && !reduced ? `transform ${ms}ms cubic-bezier(0.22,0.61,0.36,1)` : "none";
+      trackEl.style.transform = `translate3d(${x}px,0,0)`;
+    };
+
+    const onStart = (e: TouchEvent) => {
+      if (settling || e.touches.length !== 1) return;
+      active = true;
+      axis = "";
+      dx = 0;
+      velocity = 0;
+      startX = lastX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      lastT = e.timeStamp;
+      paint(0, 0);
+    };
+
+    const onMove = (e: TouchEvent) => {
+      if (!active) return;
+      const x = e.touches[0].clientX - startX;
+      const y = e.touches[0].clientY - startY;
+
+      if (!axis) {
+        if (Math.abs(x) < 10 && Math.abs(y) < 10) return;
+        // bias toward vertical: scrolling the page must stay easy
+        axis = Math.abs(x) > Math.abs(y) * 1.3 ? "x" : "y";
+        if (axis === "y") {
+          active = false;
+          return;
+        }
+      }
+
+      if (e.cancelable) e.preventDefault();
+      const dt = e.timeStamp - lastT || 1;
+      velocity = velocity * 0.6 + ((e.touches[0].clientX - lastX) / dt) * 0.4;
+      lastX = e.touches[0].clientX;
+      lastT = e.timeStamp;
+      dx = x;
+      if (!raf) {
+        raf = requestAnimationFrame(() => {
+          raf = 0;
+          paint(dx, 0);
+        });
+      }
+    };
+
+    const onEnd = () => {
+      if (!active) return;
+      active = false;
+      if (raf) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
+      if (axis !== "x") return;
+
+      swipedAt = performance.now(); // swallow the click this gesture would fire
+      const width = frameEl.offsetWidth || 1;
+      const commit = Math.abs(dx) > SWIPE_COMMIT_PX || Math.abs(velocity) > SWIPE_FLICK;
+      if (!commit) {
+        paint(0, 200);
+        return;
+      }
+
+      const delta = dx < 0 ? 1 : -1; // drag left reveals the next month
+      settling = true;
+      paint(delta === 1 ? -width : width, SLIDE_OUT_MS);
+      window.setTimeout(
+        () => {
+          swipeRef.current(delta);
+          paint(delta === 1 ? width : -width, 0);
+          requestAnimationFrame(() =>
+            requestAnimationFrame(() => {
+              paint(0, SLIDE_IN_MS);
+              settling = false;
+            })
+          );
+        },
+        reduced ? 0 : SLIDE_OUT_MS
+      );
+    };
+
+    // a swipe that starts on a day cell must not also select that day
+    const onClick = (e: MouseEvent) => {
+      if (performance.now() - swipedAt < 350) {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    };
+
+    frameEl.addEventListener("touchstart", onStart, { passive: true });
+    frameEl.addEventListener("touchmove", onMove, { passive: false });
+    frameEl.addEventListener("touchend", onEnd);
+    frameEl.addEventListener("touchcancel", onEnd);
+    frameEl.addEventListener("click", onClick, true);
+    return () => {
+      frameEl.removeEventListener("touchstart", onStart);
+      frameEl.removeEventListener("touchmove", onMove);
+      frameEl.removeEventListener("touchend", onEnd);
+      frameEl.removeEventListener("touchcancel", onEnd);
+      frameEl.removeEventListener("click", onClick, true);
+    };
+  }, [frame, track]);
+}
 
 function colorForList(listId: string | null, lists: List[]): string | null {
   if (!listId) return null;
@@ -96,6 +239,10 @@ export function CalendarView() {
     const d = new Date(gy, gm - 1 + delta, 1);
     setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
   };
+
+  const frameRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  useMonthSwipe(frameRef, trackRef, moveMonth);
   const goToday = () => {
     setMonth(today.slice(0, 7));
     setSelected(today);
@@ -159,8 +306,13 @@ export function CalendarView() {
           ))}
         </div>
 
-        {/* grid */}
-        <div className="grid grid-cols-7 overflow-hidden rounded-b-2xl border-x border-b border-line bg-card">
+        {/* grid — the frame clips, the track slides under a swipe */}
+        <div
+          ref={frameRef}
+          className="overflow-hidden rounded-b-2xl border-x border-b border-line bg-card"
+          style={{ touchAction: "pan-y" }}
+        >
+          <div ref={trackRef} className="grid grid-cols-7 will-change-transform">
           {days.map((day, i) => {
             const inMonth = day.slice(0, 7) === month;
             const isToday = day === today;
@@ -288,6 +440,7 @@ export function CalendarView() {
               </div>
             );
           })}
+          </div>
         </div>
         {/* legend — which color is which list */}
         <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5">
