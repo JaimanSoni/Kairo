@@ -188,7 +188,7 @@ export function Omnibar() {
             onKeyDown={(e) => {
               if (e.key === "Enter") submit(e.shiftKey);
             }}
-            placeholder={listening ? "Listening…" : "What's on your mind?"}
+            placeholder={listening ? "Listening…" : "What's on your mind? Say it or type it."}
             className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-ink-faint sm:text-lg"
             autoFocus
             enterKeyHint="done"
@@ -218,21 +218,52 @@ export function Omnibar() {
           </button>
         </div>
 
-        <div className="mt-3 flex min-h-6 flex-wrap items-center gap-1.5">
-          {parsed.plannedFor && <Chip tone="sun">☀️ {friendlyDay(parsed.plannedFor, state.today)}</Chip>}
-          {parsed.plannedTime && <Chip tone="sun">🕐 {fmtTime12(parsed.plannedTime)}</Chip>}
-          {parsed.dueDate && <Chip tone="clay">due {friendlyDay(parsed.dueDate, state.today)}</Chip>}
-          {parsed.estimateMin != null && <Chip>~{fmtMinutes(parsed.estimateMin)}</Chip>}
-          {parsed.listName && <Chip>#{parsed.listName}</Chip>}
-          {parsed.repeat && <Chip tone="sky">↻ {repeatLabel(parsed.repeat)}</Chip>}
-          {parsed.spotlight && <Chip tone="sun">✦ spotlight</Chip>}
-          {!parsed.plannedFor && !parsed.dueDate && parsed.title && (
-            <Chip>
-              <Icon3d name="inbox" size={13} /> inbox — decide later
-            </Chip>
-          )}
-          {parsed.title && (
-            <span className="text-[11px] text-ink-faint">✨ AI sorts the rest after capture</span>
+        {/* one row, three states: recording · idle explainer · live preview */}
+        <div className="mt-3 flex min-h-7 flex-wrap items-center gap-1.5">
+          {listening ? (
+            <div className="anim-shimmer flex items-center gap-2.5">
+              <span className="flex h-4 items-center gap-[3px]" aria-hidden>
+                {[0, 1, 2, 3].map((i) => (
+                  <span
+                    key={i}
+                    className="anim-bar h-full w-[3px] rounded-full bg-clay"
+                    style={{ animationDelay: `${i * 130}ms` }}
+                  />
+                ))}
+              </span>
+              <span className="text-sm text-ink-soft">
+                Listening — just talk. <b className="font-medium text-ink">AI turns it into a task.</b>
+              </span>
+            </div>
+          ) : !text.trim() ? (
+            <div className="anim-shimmer flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 rounded-full bg-sun-soft px-2 py-0.5 text-[11px] font-semibold text-sun-deep">
+                ✨ AI
+              </span>
+              <span className="text-[12px] leading-snug text-ink-soft">
+                Type or speak anything — the day, time, list and steps get filled in for you.
+              </span>
+            </div>
+          ) : (
+            <>
+              {parsed.plannedFor && (
+                <Chip tone="sun">☀️ {friendlyDay(parsed.plannedFor, state.today)}</Chip>
+              )}
+              {parsed.plannedTime && <Chip tone="sun">🕐 {fmtTime12(parsed.plannedTime)}</Chip>}
+              {parsed.dueDate && <Chip tone="clay">due {friendlyDay(parsed.dueDate, state.today)}</Chip>}
+              {parsed.estimateMin != null && <Chip>~{fmtMinutes(parsed.estimateMin)}</Chip>}
+              {parsed.listName && <Chip>#{parsed.listName}</Chip>}
+              {parsed.repeat && <Chip tone="sky">↻ {repeatLabel(parsed.repeat)}</Chip>}
+              {parsed.spotlight && <Chip tone="sun">✦ spotlight</Chip>}
+              {!parsed.plannedFor && !parsed.dueDate && (
+                <Chip>
+                  <Icon3d name="inbox" size={13} /> inbox — decide later
+                </Chip>
+              )}
+              <span className="inline-flex items-center gap-1 text-[11px] text-ink-faint">
+                <span className="text-sun-deep">✨</span> AI adds the rest after capture
+              </span>
+            </>
           )}
         </div>
 

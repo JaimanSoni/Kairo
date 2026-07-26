@@ -155,6 +155,36 @@ input,
   }
 }
 
+@keyframes sound-bar {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.anim-bar {
+  transform-origin: center;
+  animation: sound-bar 0.9s ease-in-out infinite;
+}
+
+@keyframes shimmer-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.anim-shimmer {
+  animation: shimmer-in 0.3s ease both;
+}
+
 @keyframes shake-x {
   0%,
   100% {
@@ -226,6 +256,8 @@ input,
   .anim-float,
   .anim-marquee,
   .anim-pulse,
+  .anim-bar,
+  .anim-shimmer,
   .anim-modal {
     animation: none;
   }
