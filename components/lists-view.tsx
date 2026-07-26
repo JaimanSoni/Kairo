@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { List } from "@/lib/types";
 import { byOrder, hiddenListIds, useApp } from "./store";
 import { TaskItem } from "./task-item";
@@ -72,6 +72,74 @@ export function ListsView() {
       navigator.vibrate?.(6);
     } catch {}
     reorderLists(ids);
+  };
+
+  /* ---- drag to reorder: pointer events, so it works on touch as well ---- */
+
+  const rowsRef = useRef<HTMLUListElement>(null);
+  const dragRef = useRef<{ from: number; to: number; startY: number } | null>(null);
+  const stepRef = useRef(64); // row height + gap, measured on grab
+  const [drag, setDrag] = useState<{ from: number; to: number; dy: number; step: number } | null>(
+    null
+  );
+
+  const startDrag = (e: React.PointerEvent<HTMLButtonElement>, i: number) => {
+    const rows = rowsRef.current;
+    if (rows && rows.children.length > 1) {
+      const a = rows.children[0].getBoundingClientRect();
+      const b = rows.children[1].getBoundingClientRect();
+      stepRef.current = b.top - a.top;
+    }
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragRef.current = { from: i, to: i, startY: e.clientY };
+    setDrag({ from: i, to: i, dy: 0, step: stepRef.current || 64 });
+    try {
+      navigator.vibrate?.(8);
+    } catch {}
+  };
+
+  const moveDrag = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const d = dragRef.current;
+    if (!d) return;
+    e.preventDefault();
+    const dy = e.clientY - d.startY;
+    const to = Math.max(
+      0,
+      Math.min(state.lists.length - 1, d.from + Math.round(dy / (stepRef.current || 64)))
+    );
+    if (to !== d.to) {
+      d.to = to;
+      try {
+        navigator.vibrate?.(4);
+      } catch {}
+    }
+    setDrag((prev) => ({ from: d.from, to, dy, step: prev?.step ?? 64 }));
+  };
+
+  const endDrag = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const d = dragRef.current;
+    dragRef.current = null;
+    setDrag(null);
+    if (!d) return;
+    e.currentTarget.releasePointerCapture?.(e.pointerId);
+    if (d.to === d.from) return;
+    const ids = state.lists.map((l) => l.id);
+    const [moved] = ids.splice(d.from, 1);
+    ids.splice(d.to, 0, moved);
+    try {
+      navigator.vibrate?.(6);
+    } catch {}
+    reorderLists(ids);
+  };
+
+  /** How far a row slides while another one is being dragged over it. */
+  const shiftFor = (i: number) => {
+    if (!drag) return 0;
+    const step = drag.step;
+    if (i === drag.from) return drag.dy;
+    if (drag.from < drag.to && i > drag.from && i <= drag.to) return -step;
+    if (drag.from > drag.to && i < drag.from && i >= drag.to) return step;
+    return 0;
   };
 
   const inbox = all
@@ -177,40 +245,59 @@ export function ListsView() {
         </div>
       )}
 
-      {/* reorder mode — compact rows, move up/down; works on touch, unlike drag */}
+      {/* reorder mode — drag by the grip (pointer events, so touch works too),
+          or use the arrows for keyboard and precision */}
       {reordering && (
         <div className="anim-rise">
           <p className="mb-3 text-xs text-ink-soft">
-            Move your lists into the order you want. Inbox and Someday stay put.
+            Drag by the grip, or use the arrows. Inbox and Someday stay put.
           </p>
-          <ul className="overflow-hidden rounded-2xl border border-line bg-card">
-            {state.lists.map((list, i) => (
-              <li
-                key={list.id}
-                className={`flex items-center gap-3 px-3 py-2.5 ${i > 0 ? "border-t border-line" : ""}`}
-              >
-                <ListMark value={list.emoji} size={22} />
-                <span className="min-w-0 flex-1 truncate text-sm font-medium">{list.name}</span>
-                <span className="flex shrink-0 gap-1">
+          <ul ref={rowsRef} className="space-y-2">
+            {state.lists.map((list, i) => {
+              const dragging = drag?.from === i;
+              return (
+                <li
+                  key={list.id}
+                  style={{ transform: `translate3d(0, ${shiftFor(i)}px, 0)` }}
+                  className={`flex h-14 select-none items-center gap-2.5 rounded-xl border bg-card px-2.5 ${
+                    dragging
+                      ? "z-10 border-sun shadow-lg shadow-sun/15"
+                      : "border-line transition-transform duration-150"
+                  }`}
+                >
                   <button
-                    onClick={() => move(i, -1)}
-                    disabled={i === 0}
-                    aria-label={`Move ${list.name} up`}
-                    className="grid size-9 place-items-center rounded-lg border border-line text-ink-soft transition-colors hover:border-sun hover:text-sun-deep disabled:opacity-30 disabled:hover:border-line disabled:hover:text-ink-soft"
+                    onPointerDown={(e) => startDrag(e, i)}
+                    onPointerMove={moveDrag}
+                    onPointerUp={endDrag}
+                    onPointerCancel={endDrag}
+                    aria-label={`Drag ${list.name} to reorder`}
+                    className="grid size-9 shrink-0 cursor-grab touch-none place-items-center rounded-lg text-ink-faint hover:bg-paper-deep hover:text-ink active:cursor-grabbing"
                   >
-                    ↑
+                    <GripGlyph />
                   </button>
-                  <button
-                    onClick={() => move(i, 1)}
-                    disabled={i === state.lists.length - 1}
-                    aria-label={`Move ${list.name} down`}
-                    className="grid size-9 place-items-center rounded-lg border border-line text-ink-soft transition-colors hover:border-sun hover:text-sun-deep disabled:opacity-30 disabled:hover:border-line disabled:hover:text-ink-soft"
-                  >
-                    ↓
-                  </button>
-                </span>
-              </li>
-            ))}
+                  <ListMark value={list.emoji} size={22} />
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium">{list.name}</span>
+                  <span className="flex shrink-0 gap-1">
+                    <button
+                      onClick={() => move(i, -1)}
+                      disabled={i === 0 || drag !== null}
+                      aria-label={`Move ${list.name} up`}
+                      className="grid size-8 place-items-center rounded-lg border border-line text-ink-soft transition-colors hover:border-sun hover:text-sun-deep disabled:opacity-30 disabled:hover:border-line disabled:hover:text-ink-soft"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      onClick={() => move(i, 1)}
+                      disabled={i === state.lists.length - 1 || drag !== null}
+                      aria-label={`Move ${list.name} down`}
+                      className="grid size-8 place-items-center rounded-lg border border-line text-ink-soft transition-colors hover:border-sun hover:text-sun-deep disabled:opacity-30 disabled:hover:border-line disabled:hover:text-ink-soft"
+                    >
+                      ↓
+                    </button>
+                  </span>
+                </li>
+              );
+            })}
           </ul>
           <button
             onClick={() => setReordering(false)}
@@ -404,6 +491,19 @@ function Chevron({ open }: { open: boolean }) {
       aria-hidden
     >
       <path d="M3.5 6L8 10.5 12.5 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function GripGlyph() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+      <circle cx="6" cy="4" r="1.3" />
+      <circle cx="10" cy="4" r="1.3" />
+      <circle cx="6" cy="8" r="1.3" />
+      <circle cx="10" cy="8" r="1.3" />
+      <circle cx="6" cy="12" r="1.3" />
+      <circle cx="10" cy="12" r="1.3" />
     </svg>
   );
 }

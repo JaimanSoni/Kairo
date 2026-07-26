@@ -1286,13 +1286,17 @@ export const ARTICLES: Article[] = [
             t: "ol",
             items: [
               "On the Lists page, click **Reorder** in the header.",
-              "Use the ↑ and ↓ buttons to move each list.",
+              "**Drag a list by its grip handle** (the dotted square on the left) to slide it into place — or use the ↑ and ↓ buttons.",
               "Click **Done** when the order looks right.",
             ],
           },
           {
             t: "p",
-            text: "Every move saves immediately, and the order follows you to your other devices. Inbox always sits at the top and Someday at the bottom — they're fixed on purpose, so your captured and parked items always live in the same place.",
+            text: "Dragging works with a finger as well as a mouse, and the other lists shuffle aside as you move. Every change saves immediately, and the order follows you to your other devices. Inbox always sits at the top and Someday at the bottom — they're fixed on purpose, so your captured and parked items always live in the same place.",
+          },
+          {
+            t: "tip",
+            text: "The arrows are there for precision and for keyboard use — you never have to drag if you'd rather not.",
           },
           {
             t: "tip",
