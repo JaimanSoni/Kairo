@@ -12,6 +12,7 @@ import { FocusOverlay } from "./focus";
 import { AppLockGate, AppLockModal, type AppLockMode } from "./app-lock";
 import { CommandPalette } from "./command-palette";
 import { ThemeToggle } from "./theme";
+import { CoffeeButton } from "./coffee";
 import { IconBook, IconCalendar, IconInbox, IconPlus, IconSun, IconX, Kbd, Modal } from "./ui";
 
 const NAV = [
@@ -294,6 +295,8 @@ function ProfileSheet({
           Help &amp; guides
           <span aria-hidden>→</span>
         </Link>
+
+        <CoffeeButton variant="row" />
 
         <form action="/api/auth/signout" method="POST" className="mt-6 border-t border-line pt-4">
           <button

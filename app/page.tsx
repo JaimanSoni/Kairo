@@ -10,6 +10,7 @@ import {
   TodayDemo,
 } from "@/components/landing/demos";
 import { Testimonials } from "@/components/landing/testimonials";
+import { CoffeeButton } from "@/components/coffee";
 
 export const metadata: Metadata = {
   description:
@@ -392,6 +393,8 @@ export default async function Landing({
         <Link href="/support" className="underline underline-offset-2 hover:text-ink-soft">
           Help
         </Link>
+        {" · "}
+        <CoffeeButton />
       </footer>
     </main>
   );

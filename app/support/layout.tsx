@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { SupportSearch, SearchTrigger } from "@/components/support/search";
+import { CoffeeButton } from "@/components/coffee";
 
 export const metadata: Metadata = {
   title: { default: "Kairo Help", template: "%s · Kairo Help" },
@@ -56,6 +57,7 @@ export default function SupportLayout({ children }: { children: React.ReactNode 
             <Link href="/today" className="hover:text-ink-soft">
               Open app
             </Link>
+            <CoffeeButton />
           </span>
         </div>
       </footer>
