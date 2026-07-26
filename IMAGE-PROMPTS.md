@@ -69,9 +69,15 @@ material, palette and camera angle for every icon that follows."*
 | `leaf.png` | a single soft leaf drifting, sage green | Let it go | ✅ |
 | `feather.png` | a light fluffy feather, cream with a coral tip | Capture (landing) | ✅ |
 
+## Tier 4 — support the project — 1 image
+
+| File | Subject | Used for | Status |
+| --- | --- | --- | --- |
+| `coffee.png` | a **western takeaway coffee cup** — tall rounded paper cup with a domed lid and a sip hole, a chunky textured sleeve around the middle, and two soft curls of steam rising. Cream cup, coral sleeve, espresso lid. Think Starbucks-style to-go cup, **not** a chai glass, kulhad, saucer or teacup | Buy me a coffee | ⬜ **still needed** |
+
 ---
 
-**Total: 27 — all done.**
+**Total: 28 — 27 done, 1 outstanding (`coffee.png`).**
 
 ## Status
 
@@ -79,6 +85,7 @@ material, palette and camera angle for every icon that follows."*
 - **Tier 2** — all 8 done. `inbox.png` was regenerated on 2026-07-26 with several coloured
   letters; the first version is kept as `assets-src/img-original/inbox-v1.png`.
 - **Tier 3** — all 7 done (2026-07-26).
+- **Tier 4** — `coffee.png` still needed for the Buy-me-a-coffee modal.
 
 ## Adding a new one
 

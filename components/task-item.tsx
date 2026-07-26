@@ -236,12 +236,12 @@ export function TaskItem({
             <div className="anim-pop absolute right-0 top-8 z-30 w-44 rounded-xl border border-line bg-card p-1.5 shadow-lg">
               {!done && task.plannedFor !== today && (
                 <MenuBtn onClick={() => plan({ plannedFor: today, status: "planned" })}>
-                  ☀️ Do today
+                  <Icon3d name="sun" size={15} /> Do today
                 </MenuBtn>
               )}
               {!done && task.plannedFor !== addDays(today, 1) && (
                 <MenuBtn onClick={() => plan({ plannedFor: addDays(today, 1), status: "planned" })}>
-                  🌤️ Tomorrow
+                  <Icon3d name="sun-cloud" size={15} /> Tomorrow
                 </MenuBtn>
               )}
               {!done && (task.plannedFor || task.status !== "inbox") && (
@@ -255,16 +255,16 @@ export function TaskItem({
                 </MenuBtn>
               )}
               <MenuBtn onClick={() => { setMenuOpen(false); setEditing(task.id); }}>
-                ✏️ Edit details
+                <Icon3d name="pencil" size={15} /> Edit details
               </MenuBtn>
               {!done && !task.id.startsWith("temp-") && (
                 <MenuBtn onClick={() => { setMenuOpen(false); setSendOpen(true); }}>
-                  📤 Send a copy
+                  <Icon3d name="bird" size={15} /> Send a copy
                 </MenuBtn>
               )}
               <div className="my-1 border-t border-line" />
               <MenuBtn onClick={() => { setMenuOpen(false); deleteTask(task.id); }}>
-                🍃 Let it go
+                <Icon3d name="leaf" size={15} /> Let it go
               </MenuBtn>
             </div>
           )}

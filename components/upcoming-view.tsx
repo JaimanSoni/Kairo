@@ -211,7 +211,7 @@ export function UpcomingView() {
               </div>
             ) : (
               <EmptyState
-                emoji="🕊️"
+                icon="bird"
                 title="Inbox zero"
                 body="It happens. Enjoy it."
               />

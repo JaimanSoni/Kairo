@@ -70,7 +70,7 @@ export function LogView() {
 
       {!loading && done.length === 0 && (
         <EmptyState
-          emoji="📖"
+          icon="book"
           title="Nothing here yet"
           body="Finish your first task and it lands here — the start of your evidence pile."
         />

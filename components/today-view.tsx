@@ -206,7 +206,7 @@ export function TodayView() {
 
       {dayWon && (
         <div className="anim-pop mt-6 rounded-2xl border-2 border-moss/40 bg-moss-soft p-6 text-center">
-          <div className="text-4xl">🎉</div>
+          <Icon3d name="party" size={56} className="mx-auto" />
           <div className="font-display mt-1 text-3xl">Day won.</div>
           <p className="mt-1 text-sm text-ink-soft">
             {doneToday.length} {doneToday.length === 1 ? "thing" : "things"} finished. Close the

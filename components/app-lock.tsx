@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useApp } from "./store";
 import { PinPad, MIN_PIN } from "./pin-pad";
 import { Modal } from "./ui";
+import { Icon3d } from "./img3d";
 
 /**
  * Full-screen gate shown while the app is locked. Covers everything
@@ -42,7 +43,7 @@ export function AppLockGate() {
 
   return (
     <div className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-paper px-6">
-      <span className="text-sun text-4xl leading-none" aria-hidden>✱</span>
+      <Icon3d name="lock" size={64} />
       <h1 className="font-display mt-3 text-3xl">Kairo is locked</h1>
       <p className="mt-1 text-sm text-ink-soft">Enter your PIN, {state.user.name.split(" ")[0]}.</p>
 

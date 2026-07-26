@@ -397,7 +397,7 @@ export function ListsView() {
                 onClick={() => setPinTarget({ list, mode: "unlock" })}
                 className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line bg-paper-deep/40 px-4 py-6 text-sm text-ink-soft transition-colors hover:border-sun hover:text-sun-deep"
               >
-                <LockGlyph /> Locked — tap to unlock
+                <Icon3d name="lock" size={22} /> Locked — tap to unlock
               </button>
             ) : (
               <>

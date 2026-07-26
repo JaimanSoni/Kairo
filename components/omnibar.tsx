@@ -181,6 +181,7 @@ export function Omnibar() {
     <Modal onClose={() => setOmnibar(false)}>
       <div className="p-4">
         <div className="flex items-center gap-2">
+          <Icon3d name="feather" size={20} className="shrink-0" />
           <input
             ref={inputRef}
             value={text}
@@ -238,7 +239,7 @@ export function Omnibar() {
           ) : !text.trim() ? (
             <div className="anim-shimmer flex items-center gap-2">
               <span className="inline-flex items-center gap-1 rounded-full bg-sun-soft px-2 py-0.5 text-[11px] font-semibold text-sun-deep">
-                ✨ AI
+                <Icon3d name="sparkle" size={12} /> AI
               </span>
               <span className="text-[12px] leading-snug text-ink-soft">
                 Type or speak anything — the day, time, list and steps get filled in for you.
@@ -247,7 +248,9 @@ export function Omnibar() {
           ) : (
             <>
               {parsed.plannedFor && (
-                <Chip tone="sun">☀️ {friendlyDay(parsed.plannedFor, state.today)}</Chip>
+                <Chip tone="sun">
+                  <Icon3d name="sun" size={13} /> {friendlyDay(parsed.plannedFor, state.today)}
+                </Chip>
               )}
               {parsed.plannedTime && <Chip tone="sun">🕐 {fmtTime12(parsed.plannedTime)}</Chip>}
               {parsed.dueDate && <Chip tone="clay">due {friendlyDay(parsed.dueDate, state.today)}</Chip>}
@@ -261,7 +264,7 @@ export function Omnibar() {
                 </Chip>
               )}
               <span className="inline-flex items-center gap-1 text-[11px] text-ink-faint">
-                <span className="text-sun-deep">✨</span> AI adds the rest after capture
+                <Icon3d name="sparkle" size={12} /> AI adds the rest after capture
               </span>
             </>
           )}

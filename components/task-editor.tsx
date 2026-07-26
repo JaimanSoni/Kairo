@@ -10,7 +10,7 @@ import { Icon3d, ListMark } from "./img3d";
 import { PersonAvatar } from "./person-avatar";
 import { DatePicker } from "./date-picker";
 import { DurationWheel } from "./wheel";
-import { IconCheck, IconPlus, IconTrash, IconX, Modal } from "./ui";
+import { IconCheck, IconPlus, IconX, Modal } from "./ui";
 
 type Member = { id: string; name: string; email: string; picture?: string };
 
@@ -274,7 +274,7 @@ export function TaskEditor({ task }: { task: Task }) {
             active={Boolean(task.plannedFor) || task.status === "someday"}
             open={open === "day"}
             onClick={() => toggleSection("day")}
-            icon="☀️"
+            icon={<Icon3d name="sun" size={18} />}
           />
           {open === "day" && (
             <div className="anim-rise border-b border-line bg-paper px-4 py-4">
@@ -458,7 +458,7 @@ export function TaskEditor({ task }: { task: Task }) {
             active={Boolean(task.estimateMin)}
             open={open === "estimate"}
             onClick={() => toggleSection("estimate")}
-            icon="⏱️"
+            icon={<Icon3d name="timer" size={18} />}
           />
           {open === "estimate" && (
             <div className="anim-rise border-b border-line bg-paper px-4 py-3">
@@ -486,7 +486,7 @@ export function TaskEditor({ task }: { task: Task }) {
             active={Boolean(task.dueDate)}
             open={open === "deadline"}
             onClick={() => toggleSection("deadline")}
-            icon="🚩"
+            icon={<Icon3d name="flag" size={18} />}
           />
           {open === "deadline" && (
             <div className="anim-rise border-b border-line bg-paper px-4 py-4">
@@ -682,7 +682,7 @@ export function TaskEditor({ task }: { task: Task }) {
             }}
             className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-ink-faint hover:bg-clay-soft hover:text-clay"
           >
-            <IconTrash size={14} /> Let it go
+            <Icon3d name="leaf" size={15} /> Let it go
           </button>
           <div className="flex items-center gap-2">
             {task.estimateMin != null && task.status !== "done" && (
