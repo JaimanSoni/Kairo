@@ -64,7 +64,7 @@ export async function aiParseTask(
 ): Promise<AiParsed | null> {
   const apiKey = process.env.OLLAMA_API_KEY;
   if (!apiKey || !text.trim()) return null;
-  const model = process.env.OLLAMA_MODEL || "gpt-oss:20b";
+  const model = process.env.OLLAMA_MODEL || "gemma4:31b";
 
   try {
     const controller = new AbortController();

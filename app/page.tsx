@@ -300,6 +300,10 @@ export default async function Landing({
 
       <footer className="border-t border-line/60 py-8 text-center text-xs text-ink-faint">
         <span className="text-sun" aria-hidden>✱</span> kairo — made for humans with unfinished lists
+        {" · "}
+        <Link href="/support" className="underline underline-offset-2 hover:text-ink-soft">
+          Help
+        </Link>
       </footer>
     </main>
   );

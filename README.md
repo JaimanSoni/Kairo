@@ -13,7 +13,7 @@ infinite lists are #2 and #3.
 | Fake due dates on everything | **Planned day ≠ deadline.** `plannedFor` is a promise to yourself; `dueDate` is a rare, real deadline. |
 | Everything looks equally urgent | **Spotlight** — max 3 must-wins per day. Win those, the day is won. |
 | Capture requires decisions (list? date? priority?) | **Omnibar** (`N`): plain text → inbox. Optional tokens: `tomorrow`, `fri`, `due mon`, `~30m`, `#list`, `!`. Voice capture (Web Speech API) where the browser supports it. |
-| Messy thoughts don't fit token syntax | **AI intent parsing** (Ollama cloud, `gpt-oss:20b`): capture is instant with the local parser, then AI quietly refines title/date/estimate/list/steps in the background. Any AI failure → local parse simply stands. |
+| Messy thoughts don't fit token syntax | **AI intent parsing** (Ollama cloud, `gemma4:31b`): capture is instant with the local parser, then AI quietly refines title/date/estimate/list/steps in the background. Any AI failure → local parse simply stands. |
 | Overplanned days that collapse by noon | **Capacity meter**: estimates roll up to "today holds ~3h — fits ✓" (a suggestion, never a wall). |
 | Streaks & gamification that punish | **The Log** — evidence of what you *did* finish. No streaks, no gaps, no guilt. |
 | Tasks that carry over silently forever | **Carry counter**: after ×3, Kairo gently suggests breaking it down or letting it go. Both count as wins. |
@@ -44,7 +44,7 @@ GOOGLE_CLIENT_ID=...            # see below
 GOOGLE_CLIENT_SECRET=...
 APP_URL=http://localhost:3010
 OLLAMA_API_KEY=...              # optional: enables AI capture parsing (ollama.com)
-OLLAMA_MODEL=gpt-oss:20b        # optional: any Ollama cloud model
+OLLAMA_MODEL=gemma4:31b         # optional: any Ollama cloud model
 DEV_LOGIN=1                     # optional: local-only login bypass at /api/auth/dev
 ```
 

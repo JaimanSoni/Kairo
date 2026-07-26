@@ -137,17 +137,20 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
         <div className="mt-auto space-y-3">
           <ThemeToggle />
-          <div className="flex items-center gap-2.5 rounded-xl px-2 py-2">
+          {/* opens the full settings sheet — notifications, app lock, accounts */}
+          <button
+            onClick={() => setProfileOpen(true)}
+            className="flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-left transition-colors hover:bg-card/60"
+          >
             <Avatar name={state.user.name} picture={state.user.picture} size={8} />
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-semibold">{state.user.name}</div>
-              <form action="/api/auth/signout" method="POST">
-                <button className="text-xs text-ink-faint hover:text-ink" type="submit">
-                  Sign out
-                </button>
-              </form>
-            </div>
-          </div>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-semibold">{state.user.name}</span>
+              <span className="block text-xs text-ink-faint">Settings &amp; accounts</span>
+            </span>
+            <span className="shrink-0 text-ink-faint" aria-hidden>
+              →
+            </span>
+          </button>
         </div>
       </aside>
 
@@ -185,10 +188,13 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <div className="flex justify-center">
           <button
             onClick={() => setOmnibar(true)}
-            aria-label="Capture"
-            className="grid size-12 -translate-y-3 place-items-center rounded-full bg-sun text-on-accent shadow-lg shadow-sun/35 active:scale-95"
+            aria-label="Capture — AI sorts the details"
+            className="grid size-12 -translate-y-3 place-items-center rounded-full bg-gradient-to-br from-sun to-sky text-on-accent shadow-lg shadow-sun/35 transition-transform active:scale-95"
           >
-            <IconPlus size={20} />
+            {/* sparkle — capture is AI-assisted */}
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+              <path d="M12 2c.7 5.2 4.8 9.3 10 10-5.2.7-9.3 4.8-10 10-.7-5.2-4.8-9.3-10-10 5.2-.7 9.3-4.8 10-10z" />
+            </svg>
           </button>
         </div>
         {NAV.slice(2).map(({ href, label, icon: Icon }) => (
@@ -280,6 +286,14 @@ function ProfileSheet({
         <AppLockSettings />
 
         <AccountSwitcher />
+
+        <Link
+          href="/support"
+          className="mt-6 flex items-center justify-between rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:border-sun hover:text-sun-deep"
+        >
+          Help &amp; guides
+          <span aria-hidden>→</span>
+        </Link>
 
         <form action="/api/auth/signout" method="POST" className="mt-6 border-t border-line pt-4">
           <button
