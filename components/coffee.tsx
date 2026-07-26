@@ -3,6 +3,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { COFFEE, coffeeEnabled, upiLink } from "@/lib/coffee";
 import { IconCheck, IconX, Modal } from "./ui";
+import { Icon3d } from "./img3d";
 
 const TOUCH_QUERY = "(hover: none) and (pointer: coarse)";
 
@@ -139,8 +140,8 @@ function CoffeeModal({ onClose }: { onClose: () => void }) {
     <Modal onClose={onClose}>
       <div className="p-6">
         <div className="flex items-start gap-3">
-          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-sun-soft text-xl" aria-hidden>
-            ☕
+          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-sun-soft" aria-hidden>
+            <Icon3d name="coffee" size={26} />
           </span>
           <div className="min-w-0 flex-1">
             <h2 className="text-base font-bold">Buy me a coffee</h2>
@@ -175,7 +176,12 @@ function CoffeeModal({ onClose }: { onClose: () => void }) {
                     : "border-line bg-card text-ink-soft hover:border-sun/50"
                 }`}
               >
-                <span aria-hidden>{"☕".repeat(i + 1)}</span> ₹{a}
+                <span className="mr-0.5 inline-flex align-[-2px]" aria-hidden>
+                  {Array.from({ length: i + 1 }, (_, k) => (
+                    <Icon3d key={k} name="coffee" size={14} className={k ? "-ml-1" : ""} />
+                  ))}
+                </span>
+                ₹{a}
               </button>
             ))}
             <button
@@ -247,7 +253,7 @@ export function CoffeeButton({ variant = "link" }: { variant?: "link" | "row" })
           className="mt-3 flex w-full items-center justify-between rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:border-sun hover:text-sun-deep"
         >
           <span className="flex items-center gap-2">
-            <span aria-hidden>☕</span> Buy me a coffee
+            <Icon3d name="coffee" size={16} /> Buy me a coffee
           </span>
           <span aria-hidden>→</span>
         </button>
@@ -257,7 +263,7 @@ export function CoffeeButton({ variant = "link" }: { variant?: "link" | "row" })
           onClick={() => setOpen(true)}
           className="underline underline-offset-2 transition-colors hover:text-ink-soft"
         >
-          <span aria-hidden>☕</span> Buy me a coffee
+          <Icon3d name="coffee" size={15} /> Buy me a coffee
         </button>
       )}
 

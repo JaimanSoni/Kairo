@@ -34,6 +34,9 @@ export const SYSTEM_ICONS = [
 /** Tier 3 — small property icons for the task editor and menus. */
 export const PROPERTY_ICONS = [
   "sun",
+  "repeat",
+  "bell",
+  "coffee",
   "sun-cloud",
   "timer",
   "flag",

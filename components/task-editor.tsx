@@ -357,7 +357,7 @@ export function TaskEditor({ task }: { task: Task }) {
                     : "border-line bg-card text-ink-soft hover:border-ink-faint"
                 }`}
               >
-                <Icon3d name="moon" size={14} /> Someday — park it, guilt-free
+                <Icon3d name="moon" size={15} /> Someday — park it, guilt-free
               </button>
             </div>
           )}
@@ -368,7 +368,7 @@ export function TaskEditor({ task }: { task: Task }) {
             active={Boolean(task.repeat)}
             open={open === "repeat"}
             onClick={() => toggleSection("repeat")}
-            icon="🔁"
+            icon={<Icon3d name="repeat" size={18} />}
           />
           {open === "repeat" && (
             <div className="anim-rise border-b border-line bg-paper px-4 py-4">
@@ -508,7 +508,7 @@ export function TaskEditor({ task }: { task: Task }) {
             active={Boolean(task.reminderAt)}
             open={open === "reminder"}
             onClick={() => toggleSection("reminder")}
-            icon="🔔"
+            icon={<Icon3d name="bell" size={18} />}
           />
           {open === "reminder" && (
             <div className="anim-rise border-b border-line bg-paper px-4 py-4">

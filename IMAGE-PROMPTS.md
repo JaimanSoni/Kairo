@@ -13,7 +13,7 @@ material, palette and camera angle for every icon that follows."*
 > centered, **fully transparent background, PNG, no text, no floor, no drop shadow on ground**,
 > high resolution.
 
-> **Note (2026-07-26):** ignore the teal palette above. All 27 icons
+> **Note (2026-07-26):** ignore the teal palette above. All 30 icons
 > use the warm coral/cream/espresso palette, and they read as one consistent set. A new
 > icon in teal would be the odd one out — match the existing warm style instead. Switching to
 > teal is only worth doing as a full 27-icon regeneration, never piecemeal.
@@ -22,7 +22,10 @@ material, palette and camera angle for every icon that follows."*
 
 - **Format:** PNG with real transparency (check by previewing on a dark background — if you see a
   white or checkerboard square baked in, ask ChatGPT to "make the background truly transparent")
-- **Size:** 1024×1024 (they'll be shown at 20–120 px, so shapes must be chunky and readable small)
+- **Size:** 1024×1024 (they'll be shown at 14–120 px, so shapes must be chunky and readable small)
+- **Framing:** don't worry about how much of the frame the subject fills — the downscale step
+  below trims the transparent margin and re-pads every icon to a uniform 92%, so they all end up
+  the same optical size no matter how they were generated
 - **Naming:** save with the exact filenames below into `public/img/`
 
 ---
@@ -69,15 +72,17 @@ material, palette and camera angle for every icon that follows."*
 | `leaf.png` | a single soft leaf drifting, sage green | Let it go | ✅ |
 | `feather.png` | a light fluffy feather, cream with a coral tip | Capture (landing) | ✅ |
 
-## Tier 4 — support the project — 1 image
+## Tier 4 — recurring, reminders & support — 3 images
 
 | File | Subject | Used for | Status |
 | --- | --- | --- | --- |
-| `coffee.png` | a **western takeaway coffee cup** — tall rounded paper cup with a domed lid and a sip hole, a chunky textured sleeve around the middle, and two soft curls of steam rising. Cream cup, coral sleeve, espresso lid. Think Starbucks-style to-go cup, **not** a chai glass, kulhad, saucer or teacup | Buy me a coffee | ⬜ **still needed** |
+| `repeat.png` | two chunky rounded arrows chasing each other in a circle, each with a fat triangular arrowhead, coral — a loop, **not** a spiral or a clock | Recurring tasks | ✅ |
+| `bell.png` | a plump rounded notification bell, coral body with a small espresso clapper below and a tiny cream cap on top, tilted slightly as if it just rang | Reminders | ✅ |
+| `coffee.png` | a **western takeaway coffee cup** — tall rounded paper cup with a domed lid and a sip hole, a chunky textured sleeve around the middle, and two soft curls of steam rising. Cream cup, coral sleeve, espresso lid. Think Starbucks-style to-go cup, **not** a chai glass, kulhad, saucer or teacup | Buy me a coffee | ✅ |
 
 ---
 
-**Total: 28 — 27 done, 1 outstanding (`coffee.png`).**
+**Total: 30 — all done.**
 
 ## Status
 
@@ -85,25 +90,22 @@ material, palette and camera angle for every icon that follows."*
 - **Tier 2** — all 8 done. `inbox.png` was regenerated on 2026-07-26 with several coloured
   letters; the first version is kept as `assets-src/img-original/inbox-v1.png`.
 - **Tier 3** — all 7 done (2026-07-26).
-- **Tier 4** — `coffee.png` still needed for the Buy-me-a-coffee modal.
+- **Tier 4** — all 3 done (2026-07-26).
 
 ## Adding a new one
 
-Drop the 1024×1024 PNG straight into `public/img/`, then run the downscale below — the shipped
-files are 256×256 (6–13 KB), with the 1024px masters archived in `assets-src/img-original/`,
-which is gitignored so the repo never carries ~1.4 MB per icon.
+1. Drop the 1024×1024 PNG into `public/img/` with the exact filename above.
+2. Run the pipeline — it archives the master to `assets-src/img-original/` (gitignored, so the
+   repo never carries ~1.4 MB per icon), trims the transparent margin, and re-pads to a uniform
+   92% fill at 256px so every icon has the same optical weight:
 
-```js
-// node -e "..."  — archives the master, then rewrites public/img at 256px
-const sharp = require("sharp"), fs = require("fs");
-const name = "your-icon";
-fs.copyFileSync(`public/img/${name}.png`, `assets-src/img-original/${name}.png`);
-sharp(`assets-src/img-original/${name}.png`)
-  .resize(256, 256, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
-  .png({ compressionLevel: 9, effort: 10 })
-  .toBuffer()
-  .then((b) => fs.writeFileSync(`public/img/${name}.png`, b));
-```
+   ```sh
+   node scripts/process-icons.mjs coffee     # one icon
+   node scripts/process-icons.mjs            # or reprocess all of them
+   ```
 
-Then add the key to `SYSTEM_ICONS` or `PROPERTY_ICONS` in `components/img3d.tsx` — every key
-there must have a matching PNG.
+3. Add the key to `SYSTEM_ICONS` or `PROPERTY_ICONS` in `components/img3d.tsx` — every key
+   there must have a matching PNG.
+
+Then use it with `<Icon3d name="coffee" size={20} />`. Because of the normalisation in step 2,
+`size` is the real rendered size — no need to inflate it to compensate for empty margin.

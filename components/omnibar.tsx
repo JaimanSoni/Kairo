@@ -239,7 +239,7 @@ export function Omnibar() {
           ) : !text.trim() ? (
             <div className="anim-shimmer flex items-center gap-2">
               <span className="inline-flex items-center gap-1 rounded-full bg-sun-soft px-2 py-0.5 text-[11px] font-semibold text-sun-deep">
-                <Icon3d name="sparkle" size={12} /> AI
+                <Icon3d name="sparkle" size={15} /> AI
               </span>
               <span className="text-[12px] leading-snug text-ink-soft">
                 Type or speak anything — the day, time, list and steps get filled in for you.
@@ -249,22 +249,24 @@ export function Omnibar() {
             <>
               {parsed.plannedFor && (
                 <Chip tone="sun">
-                  <Icon3d name="sun" size={13} /> {friendlyDay(parsed.plannedFor, state.today)}
+                  <Icon3d name="sun" size={15} /> {friendlyDay(parsed.plannedFor, state.today)}
                 </Chip>
               )}
               {parsed.plannedTime && <Chip tone="sun">🕐 {fmtTime12(parsed.plannedTime)}</Chip>}
               {parsed.dueDate && <Chip tone="clay">due {friendlyDay(parsed.dueDate, state.today)}</Chip>}
               {parsed.estimateMin != null && <Chip>~{fmtMinutes(parsed.estimateMin)}</Chip>}
               {parsed.listName && <Chip>#{parsed.listName}</Chip>}
-              {parsed.repeat && <Chip tone="sky">↻ {repeatLabel(parsed.repeat)}</Chip>}
+              {parsed.repeat && <Chip tone="sky">
+                  <Icon3d name="repeat" size={15} /> {repeatLabel(parsed.repeat)}
+                </Chip>}
               {parsed.spotlight && <Chip tone="sun">✦ spotlight</Chip>}
               {!parsed.plannedFor && !parsed.dueDate && (
                 <Chip>
-                  <Icon3d name="inbox" size={13} /> inbox — decide later
+                  <Icon3d name="inbox" size={15} /> inbox — decide later
                 </Chip>
               )}
               <span className="inline-flex items-center gap-1 text-[11px] text-ink-faint">
-                <Icon3d name="sparkle" size={12} /> AI adds the rest after capture
+                <Icon3d name="sparkle" size={15} /> AI adds the rest after capture
               </span>
             </>
           )}
