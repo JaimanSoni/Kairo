@@ -6,6 +6,7 @@ import { friendlyDay } from "@/lib/dates";
 import { useApp, type SweepAction } from "./store";
 import { Icon3d } from "./img3d";
 import { Chip, Modal } from "./ui";
+import { CoffeeButton } from "./coffee";
 
 const CHOICES: { value: SweepAction; label: string; hint: string }[] = [
   { value: "today", label: "Today", hint: "I'll do it today" },
@@ -110,6 +111,11 @@ export function FreshStart({ carryover }: { carryover: Task[] }) {
           >
             Start the day →
           </button>
+        </div>
+
+        {/* below the day's actual work, never in front of it */}
+        <div className="mt-4 border-t border-line/70 pt-4">
+          <CoffeeButton variant="inline" />
         </div>
       </div>
     </Modal>

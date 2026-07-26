@@ -20,8 +20,8 @@ export const COFFEE = {
   /** Empty when unset or malformed — never fall back to a guess. */
   upiId: VPA_RE.test(rawId) ? rawId : "",
   payeeName: (process.env.NEXT_PUBLIC_UPI_NAME ?? "").trim() || "Kairo",
-  /** Rupees. `null` means "let them type it in their UPI app". */
-  amounts: [49, 99, 199] as const,
+  /** Rupees. A custom amount sits alongside these in the modal. */
+  amounts: [99, 259, 499] as const,
   note: "Kairo coffee",
 };
 

@@ -12,7 +12,7 @@ import { FocusOverlay } from "./focus";
 import { AppLockGate, AppLockModal, type AppLockMode } from "./app-lock";
 import { CommandPalette } from "./command-palette";
 import { ThemeToggle } from "./theme";
-import { CoffeeButton } from "./coffee";
+import { CoffeeButton, CoffeeNudge } from "./coffee";
 import { IconBook, IconCalendar, IconInbox, IconPlus, IconSun, IconX, Kbd, Modal } from "./ui";
 
 const NAV = [
@@ -80,6 +80,27 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }, [router, setOmnibar, appLocked]);
 
   const editingTask = state.editingId ? state.tasks[state.editingId] : null;
+
+  /* The morning sweep only renders on Today, so it only blocks there. */
+  const sweepPending = useMemo(
+    () =>
+      !state.sweepDismissed &&
+      pathname.startsWith("/today") &&
+      Object.values(state.tasks).some(
+        (t) => t.status === "planned" && t.plannedFor && t.plannedFor < state.today
+      ),
+    [state.tasks, state.sweepDismissed, state.today, pathname]
+  );
+
+  /* Anything the coffee nudge should wait behind rather than interrupt. */
+  const somethingOnScreen =
+    paletteOpen ||
+    profileOpen ||
+    state.omnibarOpen ||
+    state.appLocked ||
+    Boolean(editingTask) ||
+    Boolean(state.focus) ||
+    sweepPending;
 
   return (
     <div className="flex min-h-dvh w-full">
@@ -217,6 +238,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       )}
       <FocusOverlay />
       <AppLockGate />
+      <CoffeeNudge busy={somethingOnScreen} today={state.today} />
 
       {/* toast */}
       {state.toast && (

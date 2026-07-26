@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { COFFEE, coffeeEnabled, upiLink } from "@/lib/coffee";
+import { markAsked, shouldAsk } from "@/lib/coffee-nudge";
 import { IconCheck, IconX, Modal } from "./ui";
 import { Icon3d } from "./img3d";
 
@@ -131,23 +132,50 @@ function CopyableId() {
   );
 }
 
-function CoffeeModal({ onClose }: { onClose: () => void }) {
-  const [amount, setAmount] = useState<number | null>(COFFEE.amounts[1]);
+/** Max a tip jar should ever accept — a typo like 99999 is a typo, not a tip. */
+const MAX_AMOUNT = 20000;
+
+function CoffeeModal({ onClose, earned }: { onClose: () => void; earned?: boolean }) {
+  const [amount, setAmount] = useState<number | null>(COFFEE.amounts[0]);
+  const [custom, setCustom] = useState(false);
+  const [customText, setCustomText] = useState("");
   const isTouch = useIsTouch();
-  const link = upiLink(amount);
+
+  const customAmount = Number.parseInt(customText, 10);
+  const customValid = Number.isFinite(customAmount) && customAmount > 0 && customAmount <= MAX_AMOUNT;
+  const effective = custom ? (customValid ? customAmount : null) : amount;
+  const link = upiLink(effective);
+  const canPay = effective != null;
 
   return (
     <Modal onClose={onClose}>
-      <div className="p-6">
+      {/* text-left: the modal renders where its trigger sits, so without this it
+          inherits text-center from the landing footer and the whole sheet centres */}
+      <div className="p-6 text-left">
         <div className="flex items-start gap-3">
           <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-sun-soft" aria-hidden>
             <Icon3d name="coffee" size={26} />
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="text-base font-bold">Buy me a coffee</h2>
-            <p className="mt-0.5 text-sm leading-snug text-ink-soft">
-              Kairo is free and always will be. If it earned a spot in your day, a coffee keeps it
-              going.
+            <h2 className="font-display text-2xl leading-tight tracking-tight">
+              {earned ? <>Three days in.</> : <>Buy me a coffee</>}
+            </h2>
+            <p className="mt-1 text-sm leading-relaxed text-ink-soft">
+              {earned ? (
+                <>
+                  You&apos;ve opened Kairo three days running. If it&apos;s the thing keeping your
+                  tasks in order — catching what you&apos;d have dropped, nagging you at the right
+                  minute — then <b className="font-semibold text-ink">buy me a coffee</b>. I built
+                  this on my own time. That&apos;s the whole ask.
+                </>
+              ) : (
+                <>
+                  If Kairo is the thing organising your days — catching what you&apos;d have
+                  dropped, nagging you at the right minute — then{" "}
+                  <b className="font-semibold text-ink">buy me a coffee</b>. I built this on my own
+                  time. That&apos;s the whole ask.
+                </>
+              )}
             </p>
           </div>
           <button
@@ -164,39 +192,67 @@ function CoffeeModal({ onClose }: { onClose: () => void }) {
             Amount
           </legend>
           <div className="flex flex-wrap gap-2">
-            {COFFEE.amounts.map((a, i) => (
-              <button
-                key={a}
-                type="button"
-                onClick={() => setAmount(a)}
-                aria-pressed={amount === a}
-                className={`rounded-xl border px-3.5 py-2 text-sm font-semibold transition-colors ${
-                  amount === a
-                    ? "border-sun bg-sun-soft text-sun-deep"
-                    : "border-line bg-card text-ink-soft hover:border-sun/50"
-                }`}
-              >
-                <span className="mr-0.5 inline-flex align-[-2px]" aria-hidden>
-                  {Array.from({ length: i + 1 }, (_, k) => (
-                    <Icon3d key={k} name="coffee" size={14} className={k ? "-ml-1" : ""} />
-                  ))}
-                </span>
-                ₹{a}
-              </button>
-            ))}
+            {COFFEE.amounts.map((a) => {
+              const on = !custom && amount === a;
+              return (
+                <button
+                  key={a}
+                  type="button"
+                  onClick={() => {
+                    setCustom(false);
+                    setAmount(a);
+                  }}
+                  aria-pressed={on}
+                  className={`rounded-xl border px-4 py-2 text-sm font-semibold tabular-nums transition-colors ${
+                    on
+                      ? "border-sun bg-sun-soft text-sun-deep"
+                      : "border-line bg-card text-ink-soft hover:border-sun/50"
+                  }`}
+                >
+                  ₹{a}
+                </button>
+              );
+            })}
             <button
               type="button"
-              onClick={() => setAmount(null)}
-              aria-pressed={amount === null}
-              className={`rounded-xl border px-3.5 py-2 text-sm font-semibold transition-colors ${
-                amount === null
+              onClick={() => setCustom(true)}
+              aria-pressed={custom}
+              className={`rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
+                custom
                   ? "border-sun bg-sun-soft text-sun-deep"
                   : "border-line bg-card text-ink-soft hover:border-sun/50"
               }`}
             >
-              Any amount
+              Custom
             </button>
           </div>
+
+          {custom && (
+            <div className="anim-rise mt-3">
+              <div
+                className={`flex items-center gap-1 rounded-xl border bg-card px-3.5 py-2.5 ${
+                  customText && !customValid ? "border-clay" : "border-line focus-within:border-sun"
+                }`}
+              >
+                <span className="text-sm font-semibold text-ink-faint">₹</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoFocus
+                  value={customText}
+                  onChange={(e) => setCustomText(e.target.value.replace(/[^\d]/g, "").slice(0, 5))}
+                  placeholder="Type an amount"
+                  aria-label="Custom amount in rupees"
+                  className="min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none placeholder:font-normal placeholder:text-ink-faint"
+                />
+              </div>
+              {customText && !customValid && (
+                <p className="mt-1.5 text-xs text-clay">
+                  Enter an amount between ₹1 and ₹{MAX_AMOUNT.toLocaleString("en-IN")}.
+                </p>
+              )}
+            </div>
+          )}
         </fieldset>
 
         {isTouch ? (
@@ -205,7 +261,7 @@ function CoffeeModal({ onClose }: { onClose: () => void }) {
               href={link}
               className="flex w-full items-center justify-center gap-2 rounded-2xl bg-sun px-5 py-3.5 text-base font-semibold text-on-accent shadow-lg shadow-sun/25 transition-transform active:scale-[0.98]"
             >
-              {amount == null ? "Pay with any UPI app" : `Pay ₹${amount}`}
+              {canPay ? `Pay ₹${effective}` : "Pay with any UPI app"}
             </a>
             <p className="mt-2 text-center text-xs text-ink-faint">
               Opens GPay, PhonePe, Paytm — whichever you use. Nothing happened? Copy the ID below.
@@ -218,7 +274,7 @@ function CoffeeModal({ onClose }: { onClose: () => void }) {
             </div>
             <p className="mt-3 text-center text-xs text-ink-faint">
               Scan with any UPI app
-              {amount != null && <> — it&apos;ll prefill ₹{amount}</>}
+              {canPay && <> — it&apos;ll prefill ₹{effective}</>}
             </p>
           </div>
         )}
@@ -228,8 +284,9 @@ function CoffeeModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <p className="mt-4 text-center text-[11px] leading-relaxed text-ink-faint">
-          Goes straight to {COFFEE.payeeName} over UPI. No account, no subscription, nothing
-          unlocks — Kairo works the same either way.
+          {/* one string, not text-around-an-expression: JSX drops the space when a
+              line wrap lands between the two, which silently ate it once already */}
+          {`Goes straight to ${COFFEE.payeeName} over UPI. It's a tip, not a purchase — nothing unlocks, and skipping it changes nothing.`}
         </p>
       </div>
     </Modal>
@@ -240,9 +297,28 @@ function CoffeeModal({ onClose }: { onClose: () => void }) {
  * Trigger + modal. Renders nothing at all when no UPI ID is configured, so a
  * partially-set-up deploy never shows a payment button that goes nowhere.
  */
-export function CoffeeButton({ variant = "link" }: { variant?: "link" | "row" }) {
+export function CoffeeButton({ variant = "link" }: { variant?: "link" | "row" | "inline" }) {
   const [open, setOpen] = useState(false);
   if (!coffeeEnabled) return null;
+
+  if (variant === "inline") {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="flex items-center gap-2 text-sm text-ink-faint transition-colors hover:text-sun-deep"
+        >
+          <Icon3d name="coffee" size={18} />
+          <span>
+            Kairo keeping you on track?{" "}
+            <span className="font-semibold underline underline-offset-2">Buy me a coffee</span>
+          </span>
+        </button>
+        {open && <CoffeeModal onClose={() => setOpen(false)} />}
+      </>
+    );
+  }
 
   return (
     <>
@@ -270,4 +346,37 @@ export function CoffeeButton({ variant = "link" }: { variant?: "link" | "row" })
       {open && <CoffeeModal onClose={() => setOpen(false)} />}
     </>
   );
+}
+
+/**
+ * Asks once, after three separate days of use — see lib/coffee-nudge.
+ *
+ * Deliberately yields to whatever else is on screen: the morning sweep, the
+ * capture bar, an open task, the lock gate, a running timer. Landing on top of
+ * the thing someone actually opened the app to do would make the ask feel like
+ * an ad, and it only gets one chance.
+ */
+export function CoffeeNudge({ busy, today }: { busy: boolean; today: string }) {
+  const [open, setOpen] = useState(false);
+  const [due, setDue] = useState(false);
+
+  useEffect(() => {
+    if (!coffeeEnabled) return;
+    // one tick after mount so the first paint is never delayed by this
+    const t = setTimeout(() => setDue(shouldAsk(today)), 0);
+    return () => clearTimeout(t);
+  }, [today]);
+
+  useEffect(() => {
+    if (!due || busy || open) return;
+    // a short beat after the screen settles, so it reads as considered
+    const t = setTimeout(() => {
+      setOpen(true);
+      markAsked();
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [due, busy, open]);
+
+  if (!open) return null;
+  return <CoffeeModal earned onClose={() => setOpen(false)} />;
 }
