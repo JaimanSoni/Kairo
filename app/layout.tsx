@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { DM_Sans, Fraunces, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Analytics } from "@/components/analytics";
 
 const bodyFont = DM_Sans({
   variable: "--font-body",
@@ -56,6 +57,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         {children}
+        <Analytics />
       </body>
     </html>
   );
