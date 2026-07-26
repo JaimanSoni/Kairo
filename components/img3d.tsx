@@ -1,6 +1,9 @@
 import Image from "next/image";
 
-/** The 3D icon set living in /public/img. Tier 2/3 keys join as they're generated. */
+/**
+ * The 3D icon set living in /public/img. See IMAGE-PROMPTS.md for the
+ * generation spec. Every key here must have a matching 256px PNG.
+ */
 export const LIST_ICONS = [
   "list-folder",
   "list-work",
@@ -16,9 +19,21 @@ export const LIST_ICONS = [
   "list-goals",
 ] as const;
 
-export const SYSTEM_ICONS = ["sunrise", "moon", "inbox"] as const;
+/** Tier 2 — key moments and empty states. */
+export const SYSTEM_ICONS = ["sunrise", "moon", "inbox", "party", "bird", "book", "lock"] as const;
 
-const ALL_ICONS = new Set<string>([...LIST_ICONS, ...SYSTEM_ICONS]);
+/** Tier 3 — small property icons for the task editor and menus. */
+export const PROPERTY_ICONS = [
+  "sun",
+  "sun-cloud",
+  "timer",
+  "flag",
+  "pencil",
+  "leaf",
+  "feather",
+] as const;
+
+const ALL_ICONS = new Set<string>([...LIST_ICONS, ...SYSTEM_ICONS, ...PROPERTY_ICONS]);
 
 /** Legacy lists stored emoji — map them onto the icon set so old data upgrades itself. */
 const EMOJI_TO_ICON: Record<string, string> = {

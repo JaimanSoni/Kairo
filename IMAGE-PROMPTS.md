@@ -13,9 +13,10 @@ material, palette and camera angle for every icon that follows."*
 > centered, **fully transparent background, PNG, no text, no floor, no drop shadow on ground**,
 > high resolution.
 
-> **Note (2026-07-22):** the app's theme is now this teal "tide" palette. The 15 icons already
-> generated use the earlier warm colors — they still work, but regenerating them with this
-> updated block will match the new look. New icons should use this block.
+> **Note (2026-07-26):** ignore the teal palette above for any *remaining* icon. All 26 generated
+> so far use the warm coral/cream/espresso palette, and they read as one consistent set. A new
+> icon in teal would be the odd one out — match the existing warm style instead. Switching to
+> teal is only worth doing as a full 27-icon regeneration, never piecemeal.
 
 ## Specs
 
@@ -45,31 +46,58 @@ material, palette and camera angle for every icon that follows."*
 
 ## Tier 2 — key moments & empty states — 8 images
 
-| File | Subject | Used for |
-| --- | --- | --- |
-| `sunrise.png` | a smiling-free sun rising between two soft cream hills, coral sun with rounded rays | Fresh Start sweep, landing |
-| `moon.png` | a chubby crescent moon with two tiny stars, lilac and cream | Someday |
-| `inbox.png` | an inbox tray with one letter sticking out, cream tray, coral letter | Inbox |
-| `party.png` | a party popper mid-burst with a few chunky confetti pieces, coral/sage/lilac | Day won 🎉 |
-| `bird.png` | a calm little origami paper plane gliding, cream with coral fold lines | Inbox zero |
-| `book.png` | an open book with softly curved pages, cream pages, coral cover | Log empty state |
-| `lock.png` | a friendly rounded padlock, espresso body, coral shackle | Locked lists |
-| `sparkle.png` | a cluster of three chunky four-point sparkle stars, coral + lilac | AI refinements |
+| File | Subject | Used for | Status |
+| --- | --- | --- | --- |
+| `sunrise.png` | a smiling-free sun rising between two soft cream hills, coral sun with rounded rays | Fresh Start sweep, landing | ✅ |
+| `moon.png` | a chubby crescent moon with two tiny stars, lilac and cream | Someday | ✅ |
+| `inbox.png` | an inbox tray with one letter sticking out, cream tray, coral letter | Inbox | ✅ |
+| `party.png` | a party popper mid-burst with a few chunky confetti pieces, coral/sage/lilac | Day won 🎉 | ✅ |
+| `bird.png` | a calm little origami paper plane gliding, cream with coral fold lines | Inbox zero | ✅ |
+| `book.png` | an open book with softly curved pages, cream pages, coral cover | Log empty state | ✅ |
+| `lock.png` | a friendly rounded padlock, espresso body, coral shackle | Locked lists | ✅ |
+| `sparkle.png` | a cluster of three chunky four-point sparkle stars, coral + lilac | AI refinements | ⬜ **still needed** |
 
 ## Tier 3 — small property icons (task editor & menus) — 7 images
 
-| File | Subject | Used for |
-| --- | --- | --- |
-| `sun.png` | a simple round sun with short rounded rays, coral | Planned day / Do today |
-| `sun-cloud.png` | a small sun peeking from behind a puffy cream cloud | Tomorrow |
-| `timer.png` | a rounded stopwatch, cream face, coral button and hand | Estimate |
-| `flag.png` | a small waving flag on a rounded pole, coral flag | Deadline |
-| `pencil.png` | a stubby rounded pencil at a slight angle, coral body, espresso tip | Edit |
-| `leaf.png` | a single soft leaf drifting, sage green | Let it go |
-| `feather.png` | a light fluffy feather, cream with a coral tip | Capture (landing) |
+| File | Subject | Used for | Status |
+| --- | --- | --- | --- |
+| `sun.png` | a simple round sun with short rounded rays, coral | Planned day / Do today | ✅ |
+| `sun-cloud.png` | a small sun peeking from behind a puffy cream cloud | Tomorrow | ✅ |
+| `timer.png` | a rounded stopwatch, cream face, coral button and hand | Estimate | ✅ |
+| `flag.png` | a small waving flag on a rounded pole, coral flag | Deadline | ✅ |
+| `pencil.png` | a stubby rounded pencil at a slight angle, coral body, espresso tip | Edit | ✅ |
+| `leaf.png` | a single soft leaf drifting, sage green | Let it go | ✅ |
+| `feather.png` | a light fluffy feather, cream with a coral tip | Capture (landing) | ✅ |
 
 ---
 
-**Total: 27.** If you want to start smaller, generate Tier 1 + `sunrise.png`, `moon.png`,
-`inbox.png` first (15 images) — that covers ~90% of what's visible daily; I can wire tiers as
-they arrive.
+**Total: 27 — 26 done, 1 outstanding (`sparkle.png`).**
+
+## Status
+
+- **Tier 1** — all 12 done (2026-07-22).
+- **Tier 2** — 7 of 8 done. `sparkle.png` is the only one still missing. `inbox.png` was
+  regenerated on 2026-07-26 with several coloured letters; the first version is kept as
+  `assets-src/img-original/inbox-v1.png`.
+- **Tier 3** — all 7 done (2026-07-26).
+
+## Adding a new one
+
+Drop the 1024×1024 PNG straight into `public/img/`, then run the downscale below — the shipped
+files are 256×256 (6–13 KB), with the 1024px masters archived in `assets-src/img-original/`,
+which is gitignored so the repo never carries ~1.4 MB per icon.
+
+```js
+// node -e "..."  — archives the master, then rewrites public/img at 256px
+const sharp = require("sharp"), fs = require("fs");
+const name = "sparkle";
+fs.copyFileSync(`public/img/${name}.png`, `assets-src/img-original/${name}.png`);
+sharp(`assets-src/img-original/${name}.png`)
+  .resize(256, 256, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+  .png({ compressionLevel: 9, effort: 10 })
+  .toBuffer()
+  .then((b) => fs.writeFileSync(`public/img/${name}.png`, b));
+```
+
+Then add the key to `SYSTEM_ICONS` or `PROPERTY_ICONS` in `components/img3d.tsx` — every key
+there must have a matching PNG.
