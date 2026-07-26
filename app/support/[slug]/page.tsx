@@ -58,7 +58,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
-      <div className="mx-auto max-w-7xl px-5 py-10 sm:py-12">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-5 sm:py-12">
         <div className="grid gap-10 lg:grid-cols-[14rem_minmax(0,1fr)] xl:grid-cols-[14rem_minmax(0,1fr)_12rem]">
           {/* category nav */}
           <aside className="hidden lg:block">
@@ -145,7 +145,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               </div>
             )}
 
-            <div className="mt-8 flex flex-wrap gap-3 border-t border-line pt-6">
+            <div className="mt-8 flex flex-col gap-3 border-t border-line pt-6 sm:flex-row">
               {prev && (
                 <Link
                   href={`/support/${prev.slug}`}
@@ -160,7 +160,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               {next && (
                 <Link
                   href={`/support/${next.slug}`}
-                  className="min-w-0 flex-1 rounded-xl border border-line bg-card px-4 py-3 text-right transition-colors hover:border-ink-faint/60"
+                  className="min-w-0 flex-1 rounded-xl border border-line bg-card px-4 py-3 transition-colors hover:border-ink-faint/60 sm:text-right"
                 >
                   <span className="block text-[10px] uppercase tracking-wide text-ink-faint">
                     Next →

@@ -12,7 +12,7 @@ export function Feedback({ slug, title }: { slug: string; title: string }) {
   const [vote, setVote] = useState<"up" | "down" | null>(null);
 
   return (
-    <div className="mt-12 rounded-2xl border border-line bg-card px-5 py-4">
+    <div className="mt-12 rounded-2xl border border-line bg-card px-4 py-4 sm:px-5">
       {vote === null && (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <span className="text-sm font-medium">Was this page helpful?</span>

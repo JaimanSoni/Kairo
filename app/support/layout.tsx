@@ -12,21 +12,25 @@ export default function SupportLayout({ children }: { children: React.ReactNode 
   return (
     <div className="flex min-h-dvh flex-col bg-paper">
       <header className="sticky top-0 z-40 border-b border-line/80 bg-paper/85 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center gap-4 px-5 py-3.5">
-          <Link href="/support" className="flex items-center gap-2 text-[15px] font-bold tracking-tight">
+        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-5 sm:py-3.5">
+          <Link
+            href="/support"
+            className="flex min-w-0 items-center gap-1.5 text-[15px] font-bold tracking-tight"
+          >
             <span className="text-sun text-lg leading-none" aria-hidden>
               ✱
             </span>
             kairo
             <span className="font-normal text-ink-faint">help</span>
           </Link>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-2">
             <SearchTrigger />
             <Link
               href="/today"
-              className="rounded-full bg-ink px-3.5 py-1.5 text-xs font-semibold text-paper transition-opacity hover:opacity-90"
+              className="whitespace-nowrap rounded-full bg-ink px-3 py-1.5 text-xs font-semibold text-paper transition-opacity hover:opacity-90 sm:px-3.5"
             >
-              Open Kairo
+              Open <span className="hidden sm:inline">Kairo</span>
+              <span className="sm:hidden">app</span>
             </Link>
           </div>
         </div>
@@ -35,7 +39,7 @@ export default function SupportLayout({ children }: { children: React.ReactNode 
       <main className="flex-1">{children}</main>
 
       <footer className="border-t border-line/80 py-8">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-5 text-xs text-ink-faint">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 text-xs text-ink-faint sm:px-5">
           <span>
             <span className="text-sun" aria-hidden>
               ✱

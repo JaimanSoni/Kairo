@@ -125,12 +125,14 @@ export function BlockView({ block }: { block: Block }) {
           {block.rows.map((row, i) => (
             <div
               key={i}
-              className={`flex items-center gap-4 px-4 py-2.5 ${i > 0 ? "border-t border-line" : ""}`}
+              className={`flex items-center gap-3 px-3 py-2.5 sm:gap-4 sm:px-4 ${
+                i > 0 ? "border-t border-line" : ""
+              }`}
             >
-              <kbd className="min-w-16 shrink-0 rounded-md border border-line bg-paper-deep px-2 py-1 text-center font-mono text-[11px] text-ink">
+              <kbd className="shrink-0 rounded-md border border-line bg-paper-deep px-2 py-1 text-center font-mono text-[11px] text-ink sm:min-w-16">
                 {row.k}
               </kbd>
-              <span className="text-sm text-ink-soft">
+              <span className="min-w-0 text-sm leading-6 text-ink-soft">
                 <InlineText text={row.d} />
               </span>
             </div>
@@ -140,8 +142,8 @@ export function BlockView({ block }: { block: Block }) {
 
     case "table":
       return (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[28rem] border-collapse text-left">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+          <table className="w-full min-w-[19rem] border-collapse text-left">
             <thead>
               <tr>
                 {block.head.map((h, i) => (

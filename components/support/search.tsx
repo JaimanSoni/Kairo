@@ -194,13 +194,14 @@ export function SupportSearch() {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-start justify-center bg-ink/25 p-4 pt-[10vh] backdrop-blur-sm"
+      className="fixed inset-0 z-[60] flex justify-center bg-ink/25 backdrop-blur-sm sm:items-start sm:p-4 sm:pt-[10vh]"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) close();
       }}
     >
-      <div className="anim-pop w-full max-w-xl overflow-hidden rounded-2xl border border-line bg-card shadow-2xl">
-        <div className="flex items-center gap-3 border-b border-line px-4 py-3.5">
+      {/* full-screen sheet on phones, floating panel from sm up */}
+      <div className="anim-pop flex h-dvh w-full flex-col overflow-hidden border-line bg-card sm:h-auto sm:max-w-xl sm:rounded-2xl sm:border sm:shadow-2xl">
+        <div className="flex items-center gap-3 border-b border-line px-4 py-3.5 pt-[max(0.875rem,env(safe-area-inset-top))] sm:pt-3.5">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 text-ink-faint">
             <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5" />
             <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -223,16 +224,28 @@ export function SupportSearch() {
                 go(rows[sel].href);
               }
             }}
-            placeholder="Search help — locks, reminders, sharing…"
+            placeholder="Search help…"
             className="w-full bg-transparent text-base outline-none placeholder:text-ink-faint"
             autoFocus
           />
           <kbd className="hidden rounded border border-line bg-paper-deep px-1.5 py-0.5 font-mono text-[10px] text-ink-faint sm:block">
             esc
           </kbd>
+          <button
+            onClick={close}
+            aria-label="Close search"
+            className="shrink-0 rounded-lg p-1 text-ink-faint hover:bg-paper-deep sm:hidden"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          </button>
         </div>
 
-        <div ref={listRef} className="max-h-[55vh] overflow-y-auto overscroll-contain p-2">
+        <div
+          ref={listRef}
+          className="flex-1 overflow-y-auto overscroll-contain p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:max-h-[55vh] sm:flex-none sm:pb-2"
+        >
           {!q.trim() && (
             <div className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
               Popular
@@ -300,29 +313,44 @@ function Kbd({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Compact trigger for the support header. */
+/** Search trigger. `full` is the big hero input; otherwise a header control
+ *  that collapses to an icon-only button on small screens. */
 export function SearchTrigger({ full }: { full?: boolean }) {
+  if (full) {
+    return (
+      <button
+        onClick={() => openSupportSearch()}
+        className="flex w-full items-center gap-3 rounded-2xl border border-line bg-card px-4 py-3.5 text-left text-ink-faint shadow-sm transition-colors hover:border-ink-faint/60"
+      >
+        <SearchGlyph size={18} />
+        <span className="flex-1 text-[15px]">Search help</span>
+        <kbd className="rounded border border-line bg-paper-deep px-1.5 py-0.5 font-mono text-[10px]">
+          /
+        </kbd>
+      </button>
+    );
+  }
+
   return (
     <button
       onClick={() => openSupportSearch()}
-      className={
-        full
-          ? "flex w-full items-center gap-3 rounded-2xl border border-line bg-card px-4 py-3.5 text-left text-ink-faint shadow-sm transition-colors hover:border-ink-faint/60"
-          : "flex items-center gap-2 rounded-full border border-line bg-card px-3 py-1.5 text-xs text-ink-faint transition-colors hover:border-ink-faint/60"
-      }
+      aria-label="Search help"
+      className="flex shrink-0 items-center gap-2 rounded-full border border-line bg-card p-2 text-xs text-ink-faint transition-colors hover:border-ink-faint/60 sm:px-3 sm:py-1.5"
     >
-      <svg width={full ? 18 : 14} height={full ? 18 : 14} viewBox="0 0 16 16" fill="none" className="shrink-0">
-        <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5" />
-        <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      </svg>
-      <span className={full ? "flex-1 text-[15px]" : ""}>Search help</span>
-      <kbd
-        className={`rounded border border-line bg-paper-deep px-1.5 py-0.5 font-mono text-[10px] ${
-          full ? "" : "hidden sm:block"
-        }`}
-      >
+      <SearchGlyph size={14} />
+      <span className="hidden sm:inline">Search help</span>
+      <kbd className="hidden rounded border border-line bg-paper-deep px-1.5 py-0.5 font-mono text-[10px] sm:block">
         /
       </kbd>
     </button>
+  );
+}
+
+function SearchGlyph({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" className="shrink-0">
+      <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
   );
 }

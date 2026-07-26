@@ -24,7 +24,7 @@ export default function SupportIndex() {
 
       {/* hero */}
       <section className="mesh border-b border-line/70">
-        <div className="mx-auto max-w-3xl px-5 py-16 text-center sm:py-20">
+        <div className="mx-auto max-w-3xl px-4 py-12 text-center sm:px-5 sm:py-20">
           <h1 className="font-display text-4xl tracking-tight sm:text-5xl">How can we help?</h1>
           <p className="mx-auto mt-3 max-w-lg text-[15px] leading-7 text-ink-soft">
             {ARTICLES.length} short guides covering every corner of Kairo — from your first capture
@@ -37,7 +37,7 @@ export default function SupportIndex() {
       </section>
 
       {/* quick start */}
-      <section className="mx-auto max-w-6xl px-5 py-12">
+      <section className="mx-auto max-w-6xl px-4 py-10 sm:px-5 sm:py-12">
         <h2 className="mb-4 text-[11px] font-semibold uppercase tracking-wide text-ink-faint">
           Start here
         </h2>
@@ -63,7 +63,7 @@ export default function SupportIndex() {
       </section>
 
       {/* all categories */}
-      <section className="mx-auto max-w-6xl px-5 pb-20">
+      <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-5 sm:pb-20">
         <div className="grid gap-x-10 gap-y-10 md:grid-cols-2">
           {CATEGORIES.map((cat) => {
             const items = ARTICLES.filter((a) => a.categoryId === cat.id);
@@ -98,7 +98,7 @@ export default function SupportIndex() {
           })}
         </div>
 
-        <div className="mt-14 rounded-3xl border border-line bg-card p-8 text-center">
+        <div className="mt-14 rounded-3xl border border-line bg-card p-6 text-center sm:p-8">
           <h2 className="font-display text-2xl tracking-tight">Still stuck?</h2>
           <p className="mx-auto mt-1.5 max-w-md text-sm leading-6 text-ink-soft">
             If an answer isn&apos;t here, it&apos;s our gap to fix. Tell us what you were trying to

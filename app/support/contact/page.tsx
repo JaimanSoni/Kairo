@@ -38,7 +38,7 @@ export default async function ContactPage({
   const mailto = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
   return (
-    <div className="mx-auto max-w-2xl px-5 py-14">
+    <div className="mx-auto max-w-2xl px-4 py-10 sm:px-5 sm:py-14">
       <nav aria-label="Breadcrumb" className="mb-5 flex items-center gap-1.5 text-xs text-ink-faint">
         <Link href="/support" className="hover:text-ink-soft">
           Help
