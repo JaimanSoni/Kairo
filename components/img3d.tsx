@@ -20,7 +20,16 @@ export const LIST_ICONS = [
 ] as const;
 
 /** Tier 2 — key moments and empty states. */
-export const SYSTEM_ICONS = ["sunrise", "moon", "inbox", "party", "bird", "book", "lock"] as const;
+export const SYSTEM_ICONS = [
+  "sunrise",
+  "moon",
+  "inbox",
+  "party",
+  "bird",
+  "book",
+  "lock",
+  "sparkle",
+] as const;
 
 /** Tier 3 — small property icons for the task editor and menus. */
 export const PROPERTY_ICONS = [

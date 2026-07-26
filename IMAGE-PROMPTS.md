@@ -13,8 +13,8 @@ material, palette and camera angle for every icon that follows."*
 > centered, **fully transparent background, PNG, no text, no floor, no drop shadow on ground**,
 > high resolution.
 
-> **Note (2026-07-26):** ignore the teal palette above for any *remaining* icon. All 26 generated
-> so far use the warm coral/cream/espresso palette, and they read as one consistent set. A new
+> **Note (2026-07-26):** ignore the teal palette above. All 27 icons
+> use the warm coral/cream/espresso palette, and they read as one consistent set. A new
 > icon in teal would be the odd one out — match the existing warm style instead. Switching to
 > teal is only worth doing as a full 27-icon regeneration, never piecemeal.
 
@@ -55,7 +55,7 @@ material, palette and camera angle for every icon that follows."*
 | `bird.png` | a calm little origami paper plane gliding, cream with coral fold lines | Inbox zero | ✅ |
 | `book.png` | an open book with softly curved pages, cream pages, coral cover | Log empty state | ✅ |
 | `lock.png` | a friendly rounded padlock, espresso body, coral shackle | Locked lists | ✅ |
-| `sparkle.png` | a cluster of three chunky four-point sparkle stars, coral + lilac | AI refinements | ⬜ **still needed** |
+| `sparkle.png` | a cluster of three chunky four-point sparkle stars, coral + lilac | AI refinements | ✅ |
 
 ## Tier 3 — small property icons (task editor & menus) — 7 images
 
@@ -71,14 +71,13 @@ material, palette and camera angle for every icon that follows."*
 
 ---
 
-**Total: 27 — 26 done, 1 outstanding (`sparkle.png`).**
+**Total: 27 — all done.**
 
 ## Status
 
 - **Tier 1** — all 12 done (2026-07-22).
-- **Tier 2** — 7 of 8 done. `sparkle.png` is the only one still missing. `inbox.png` was
-  regenerated on 2026-07-26 with several coloured letters; the first version is kept as
-  `assets-src/img-original/inbox-v1.png`.
+- **Tier 2** — all 8 done. `inbox.png` was regenerated on 2026-07-26 with several coloured
+  letters; the first version is kept as `assets-src/img-original/inbox-v1.png`.
 - **Tier 3** — all 7 done (2026-07-26).
 
 ## Adding a new one
@@ -90,7 +89,7 @@ which is gitignored so the repo never carries ~1.4 MB per icon.
 ```js
 // node -e "..."  — archives the master, then rewrites public/img at 256px
 const sharp = require("sharp"), fs = require("fs");
-const name = "sparkle";
+const name = "your-icon";
 fs.copyFileSync(`public/img/${name}.png`, `assets-src/img-original/${name}.png`);
 sharp(`assets-src/img-original/${name}.png`)
   .resize(256, 256, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
