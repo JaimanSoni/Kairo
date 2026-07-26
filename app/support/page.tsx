@@ -68,8 +68,10 @@ export default function SupportIndex() {
           {CATEGORIES.map((cat) => {
             const items = ARTICLES.filter((a) => a.categoryId === cat.id);
             if (items.length === 0) return null;
+            // min-w-0: without it a grid item's min-content width wins, and any
+            // non-wrapping child stretches the track past the viewport
             return (
-              <div key={cat.id}>
+              <div key={cat.id} className="min-w-0">
                 <h2 className="font-display text-2xl tracking-tight">{cat.name}</h2>
                 <p className="mb-3 mt-0.5 text-xs text-ink-soft">{cat.description}</p>
                 <ul className="overflow-hidden rounded-2xl border border-line bg-card">
@@ -80,8 +82,12 @@ export default function SupportIndex() {
                         className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-paper-deep/40"
                       >
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium">{a.title}</span>
-                          <span className="block truncate text-xs text-ink-faint">{a.summary}</span>
+                          <span className="block text-sm font-medium leading-snug">{a.title}</span>
+                          {/* no `block` here — it overrides the -webkit-box display
+                              that line-clamp needs, and the clamp silently stops working */}
+                          <span className="mt-0.5 line-clamp-2 text-xs leading-5 text-ink-faint">
+                            {a.summary}
+                          </span>
                         </span>
                         <span
                           className="shrink-0 text-ink-faint transition-transform group-hover:translate-x-0.5 group-hover:text-sun"
