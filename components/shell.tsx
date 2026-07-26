@@ -330,6 +330,18 @@ function ProfileSheet({
             Sign out of this account
           </button>
         </form>
+
+        {/* "/" redirects to /today once you're signed in, so this is the only
+            way back to the landing page without signing out */}
+        <div className="mt-4 text-center">
+          <Link
+            href="/home"
+            onClick={onClose}
+            className="text-xs text-ink-faint underline-offset-2 transition-colors hover:text-ink-soft hover:underline"
+          >
+            View the home page
+          </Link>
+        </div>
       </div>
     </Modal>
   );
