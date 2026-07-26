@@ -1,13 +1,9 @@
 /**
  * Testimonials shown on the landing page.
  *
- * ────────────────────────────────────────────────────────────────────────
- *  THESE ARE PLACEHOLDERS. Replace them with real words from real people
- *  before you launch — publishing invented testimonials is a lie to your
- *  visitors (and illegal advertising in many places). Delete any entry you
- *  can't attribute to something someone actually said.
- *  An empty array simply hides the whole section.
- * ────────────────────────────────────────────────────────────────────────
+ * Only publish words someone actually said. Invented testimonials are a lie to
+ * your visitors and unlawful advertising in most places. An empty array simply
+ * hides the whole section.
  *
  * Three kinds are supported:
  *
@@ -15,11 +11,16 @@
  *                  ("Beta user", "Designer, Bangalore").
  *  2. Attributed — add `name`, optional `role`, optional `avatar`
  *                  (a path under /public, e.g. "/testimonials/asha.jpg").
- *  3. Recorded   — add `video` (or `audio`) pointing at a file in
+ *  3. Recorded   — add `audio` or `video` pointing at a file in
  *                  /public/testimonials/. The quote doubles as the
  *                  transcript, so the words are readable without playing it.
  *
- * Keep `featured: true` for one or two of the strongest — they render larger.
+ * Recordings must be in a format every browser can play: **MP3 for audio**,
+ * **MP4/H.264 for video**. Safari plays neither Ogg nor WebM, so convert
+ * WhatsApp voice notes (.ogg) before adding them:
+ *   ffmpeg -i note.ogg -ac 1 -ar 44100 -b:a 64k public/testimonials/name.mp3
+ *
+ * `featured: true` renders an entry larger — use it for one or two.
  */
 
 export type Testimonial = {
@@ -41,23 +42,11 @@ export type Testimonial = {
 
 export const TESTIMONIALS: Testimonial[] = [
   {
-    id: "placeholder-1",
+    id: "laksha-nahata",
     quote:
-      "Replace this with something a real person actually said about Kairo — the more specific the better. Quotes that name a moment (“the morning sweep”) beat generic praise.",
-    label: "Example — replace before launch",
+      "I like how clean the UI of this app is, and the way you can switch easily between 2 of your accounts and you can lock one account is really helpful. Other than that, the separators that are available that can help you separate between tasks and easily navigate and manage through them is great!",
+    name: "Laksha Nahata",
+    audio: "/testimonials/laksha-nahata.mp3",
     featured: true,
-  },
-  {
-    id: "placeholder-2",
-    quote:
-      "This one shows an anonymous testimonial: no name, just a soft label underneath. Good for people who are happy to be quoted but not identified.",
-    label: "Example — anonymous",
-  },
-  {
-    id: "placeholder-3",
-    quote:
-      "And this one shows an attributed testimonial with a name and role. Add an avatar image under /public to show a face alongside it.",
-    name: "Your customer's name",
-    role: "Their role, City",
   },
 ];

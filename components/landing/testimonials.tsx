@@ -46,9 +46,15 @@ function Card({ t }: { t: Testimonial }) {
       )}
 
       {t.audio && !t.video && (
-        <audio controls preload="metadata" className="mb-4 w-full">
-          <source src={t.audio} />
-        </audio>
+        <div className="mb-4 rounded-2xl bg-paper-deep/60 p-3">
+          <div className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-soft">
+            <span aria-hidden>🎧</span> Hear it in their words
+          </div>
+          <audio controls preload="metadata" className="w-full">
+            <source src={t.audio} type="audio/mpeg" />
+            Your browser can&apos;t play this recording — the transcript is below.
+          </audio>
+        </div>
       )}
 
       <blockquote
@@ -94,11 +100,12 @@ export function Testimonials() {
         In people&apos;s <em className="text-sun">own words</em>
       </h2>
       <p className="mx-auto mt-3 max-w-lg text-center text-[15px] leading-7 text-ink-soft">
-        Written, anonymous, or on camera — real experiences from people who plan their days in
-        Kairo.
+        {TESTIMONIALS.length === 1
+          ? "An early user on what actually stuck — press play, or read it below."
+          : "Written, anonymous, or recorded — real experiences from people who plan their days in Kairo."}
       </p>
 
-      <div className="mt-10 grid gap-4 sm:grid-cols-2">
+      <div className="mx-auto mt-10 grid max-w-3xl gap-4 sm:grid-cols-2">
         {TESTIMONIALS.map((t) => (
           <Card key={t.id} t={t} />
         ))}
