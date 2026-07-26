@@ -167,23 +167,55 @@ export function Modal({
   const backdropRef = useRef<HTMLDivElement>(null);
   const closingRef = useRef(false);
 
-  /* slide the sheet out before unmounting (mobile); instant on desktop */
-  const animatedClose = useCallback(() => {
-    if (closingRef.current) return;
+  /**
+   * Slides the sheet out, then unmounts. `velocity` (px/ms, downward positive)
+   * shortens the exit after a flick so the motion continues your gesture.
+   */
+  const dismiss = useCallback(
+    (velocity = 0) => {
+      if (closingRef.current) return;
+      const panel = panelRef.current;
+      if (!panel || window.innerWidth >= 640) {
+        onClose();
+        return;
+      }
+      closingRef.current = true;
+
+      const current = panel.getBoundingClientRect().top;
+      const remaining = Math.max(1, window.innerHeight - current);
+      // a fast flick exits quickly; a slow release eases out
+      const ms = Math.round(
+        Math.max(150, Math.min(320, velocity > 0.3 ? remaining / velocity / 2 : 300))
+      );
+
+      panel.style.transition = `transform ${ms}ms cubic-bezier(0.32, 0.72, 0.24, 1)`;
+      panel.style.transform = `translate3d(0, ${panel.offsetHeight + 60}px, 0)`;
+      if (backdropRef.current) {
+        backdropRef.current.style.transition = `opacity ${ms}ms ease`;
+        backdropRef.current.style.opacity = "0";
+      }
+      setTimeout(onClose, ms - 20);
+    },
+    [onClose]
+  );
+
+  const animatedClose = useCallback(() => dismiss(0), [dismiss]);
+
+  /**
+   * The entrance keyframes use fill-mode `both`, and CSS animations outrank
+   * inline styles — so until this is cleared, dragging the sheet has no visible
+   * effect. Drop it as soon as the sheet has finished sliding in.
+   */
+  const clearEntranceAnimation = useCallback(() => {
     const panel = panelRef.current;
-    if (!panel || window.innerWidth >= 640) {
-      onClose();
-      return;
-    }
-    closingRef.current = true;
-    panel.style.transition = "transform 0.22s cubic-bezier(0.32, 0.72, 0.24, 1)";
-    panel.style.transform = `translateY(${panel.offsetHeight + 40}px)`;
-    if (backdropRef.current) {
-      backdropRef.current.style.transition = "opacity 0.22s ease";
-      backdropRef.current.style.opacity = "0";
-    }
-    setTimeout(onClose, 210);
-  }, [onClose]);
+    if (panel) panel.style.animation = "none";
+  }, []);
+
+  useEffect(() => {
+    // fallback for reduced-motion, where animationend never fires
+    const t = setTimeout(clearEntranceAnimation, 420);
+    return () => clearTimeout(t);
+  }, [clearEntranceAnimation]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -298,13 +330,11 @@ export function Modal({
         raf = 0;
       }
       const dy = Math.max(0, lastY - startY - grabOffset);
-      if (dy > panel.offsetHeight * 0.3 || (dy > 50 && velocity > 0.4)) {
-        closingRef.current = true;
-        setDrag(panel.offsetHeight + 40, true);
-        if (backdropRef.current) backdropRef.current.style.opacity = "0";
-        setTimeout(onClose, 260);
+      // dismiss on a decisive pull, or on a flick from anywhere
+      if (dy > panel.offsetHeight * 0.28 || (dy > 40 && velocity > 0.35)) {
+        dismiss(velocity);
       } else {
-        setDrag(0, true);
+        setDrag(0, true); // springs back to place
       }
     };
 
@@ -318,7 +348,7 @@ export function Modal({
       panel.removeEventListener("touchend", onEnd);
       panel.removeEventListener("touchcancel", onEnd);
     };
-  }, [onClose]);
+  }, [dismiss]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-start sm:p-4 sm:pt-[12vh]">
@@ -333,6 +363,10 @@ export function Modal({
       <div
         ref={panelRef}
         data-modal-scroll
+        onAnimationEnd={(e) => {
+          // only the panel's own entrance, not animations from children
+          if (e.target === e.currentTarget) clearEntranceAnimation();
+        }}
         className={`anim-modal relative w-full ${wide ? "sm:max-w-2xl" : "sm:max-w-lg"} max-h-[92dvh] overflow-y-auto overscroll-contain rounded-t-3xl border border-line bg-card pb-[env(safe-area-inset-bottom)] shadow-2xl will-change-transform sm:rounded-2xl sm:pb-0`}
         role="dialog"
         aria-modal
