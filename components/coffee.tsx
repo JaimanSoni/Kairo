@@ -158,22 +158,21 @@ function CoffeeModal({ onClose, earned }: { onClose: () => void; earned?: boolea
           </span>
           <div className="min-w-0 flex-1">
             <h2 className="font-display text-2xl leading-tight tracking-tight">
-              {earned ? <>Three days in.</> : <>Buy me a coffee</>}
+              {earned ? <>Thank you for sticking around</> : <>Buy me a coffee</>}
             </h2>
             <p className="mt-1 text-sm leading-relaxed text-ink-soft">
               {earned ? (
                 <>
-                  You&apos;ve opened Kairo three days running. If it&apos;s the thing keeping your
-                  tasks in order — catching what you&apos;d have dropped, nagging you at the right
-                  minute — then <b className="font-semibold text-ink">buy me a coffee</b>. I built
-                  this on my own time. That&apos;s the whole ask.
+                  You&apos;ve used Kairo three days running, and that genuinely means a lot. I
+                  build and look after it on my own time. If it&apos;s been helping your days go a
+                  little smoother, I&apos;d be really grateful for a coffee — and if not, please
+                  just carry on enjoying it.
                 </>
               ) : (
                 <>
-                  If Kairo is the thing organising your days — catching what you&apos;d have
-                  dropped, nagging you at the right minute — then{" "}
-                  <b className="font-semibold text-ink">buy me a coffee</b>. I built this on my own
-                  time. That&apos;s the whole ask.
+                  I build and look after Kairo on my own time, and I love that you&apos;re using
+                  it. If it&apos;s been helping your days go a little smoother, a coffee would
+                  honestly make my week. Only if you&apos;d like to, of course.
                 </>
               )}
             </p>
@@ -264,7 +263,7 @@ function CoffeeModal({ onClose, earned }: { onClose: () => void; earned?: boolea
               {canPay ? `Pay ₹${effective}` : "Pay with any UPI app"}
             </a>
             <p className="mt-2 text-center text-xs text-ink-faint">
-              Opens GPay, PhonePe, Paytm — whichever you use. Nothing happened? Copy the ID below.
+              Opens GPay, PhonePe or Paytm — whichever you prefer. If nothing opens, the ID below works too.
             </p>
           </div>
         ) : (
@@ -286,7 +285,7 @@ function CoffeeModal({ onClose, earned }: { onClose: () => void; earned?: boolea
         <p className="mt-4 text-center text-[11px] leading-relaxed text-ink-faint">
           {/* one string, not text-around-an-expression: JSX drops the space when a
               line wrap lands between the two, which silently ate it once already */}
-          {`Goes straight to ${COFFEE.payeeName} over UPI. It's a tip, not a purchase — nothing unlocks, and skipping it changes nothing.`}
+          {`Goes straight to ${COFFEE.payeeName} over UPI. It's a thank-you, not a purchase — nothing unlocks, and Kairo stays exactly the same either way.`}
         </p>
       </div>
     </Modal>
@@ -311,7 +310,7 @@ export function CoffeeButton({ variant = "link" }: { variant?: "link" | "row" | 
         >
           <Icon3d name="coffee" size={18} />
           <span>
-            Kairo keeping you on track?{" "}
+            Enjoying Kairo?{" "}
             <span className="font-semibold underline underline-offset-2">Buy me a coffee</span>
           </span>
         </button>

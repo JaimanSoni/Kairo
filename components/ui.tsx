@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { Icon3d } from "./img3d";
 
 /* ---------------- icons (inline, 16px grid) ---------------- */
@@ -163,6 +164,12 @@ export function Modal({
   children: React.ReactNode;
   wide?: boolean;
 }) {
+  // portals need a DOM; server render and first hydration pass return null
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
   const panelRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
   const closingRef = useRef(false);
@@ -350,7 +357,17 @@ export function Modal({
     };
   }, [dismiss]);
 
-  return (
+  if (!mounted) return null;
+
+  /**
+   * Rendered into <body>, never in place. The panel below sets
+   * will-change: transform, which makes it a containing block for fixed
+   * descendants — so a modal opened from inside another modal used to
+   * position itself against that panel instead of the viewport, and the
+   * bottom sheet came out broken. Portalling also stops a sheet inheriting
+   * text styles from wherever its trigger happened to sit.
+   */
+  return createPortal(
     // bottom sheet on touch, genuinely centred on desktop — it used to sit at a
     // fixed 12vh from the top, which reads as centred only for the tallest sheets
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
@@ -378,7 +395,8 @@ export function Modal({
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
