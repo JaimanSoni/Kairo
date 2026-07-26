@@ -114,12 +114,12 @@ function Feature({
 }
 
 const EXTRAS = [
-  { icon: "↻", title: "Recurring tasks", body: "Daily, chosen weekdays, or monthly. Miss one and you skip it — the series never dies." },
-  { icon: "🔔", title: "Reminders that arrive", body: "Real push notifications, even with the app closed. They skip themselves if you've already finished." },
-  { icon: "↳", title: "Steps with their own days", body: "Break a big task down, then schedule individual steps onto separate days." },
-  { icon: "⌘", title: "Search everything", body: "One shortcut finds any task, list or action — with keyboard navigation throughout." },
-  { icon: "👥", title: "Multiple accounts", body: "Keep work and personal apart, and switch between them in a tap." },
-  { icon: "🌙", title: "Light, dark, auto", body: "Follows your system, or pick one. Installs to your home screen like a native app." },
+  { icon: "↻", title: "Recurring tasks", body: "Daily, weekly, or monthly. Miss one and it just moves on." },
+  { icon: "🔔", title: "Reminders that arrive", body: "Real notifications, even with the app closed." },
+  { icon: "↳", title: "Steps with their own days", body: "Break a big task up. Give each step its own day." },
+  { icon: "⌘", title: "Search everything", body: "One shortcut finds any task or list." },
+  { icon: "👥", title: "Multiple accounts", body: "Work and personal, a tap apart." },
+  { icon: "🌙", title: "Light, dark, auto", body: "Follows your system. Installs like a real app." },
 ];
 
 export default async function Landing({
@@ -217,11 +217,11 @@ export default async function Landing({
       <Feature
         eyebrow="Capture"
         title={<>Say it. AI files it.</>}
-        body="Tap the mic or press N and talk. Kairo saves it instantly, then AI reads your sentence and fills in the day, time, estimate, list and even the steps — without ever overruling what you typed."
+        body="Talk or type. Kairo saves it straight away, then AI fills in the day, time, list and steps."
         points={[
-          "Voice capture that handles rambling, not just dictation.",
-          "Type shortcuts too: “gym fri 6pm ~45m #health”.",
-          "Nothing is required at capture — deciding comes later.",
+          "Speak how you speak. Rambling is fine.",
+          "Or type it: “gym fri 6pm ~45m #health”.",
+          "Nothing is required. Decide later.",
         ]}
         demo={<CaptureDemo />}
         flip
@@ -230,11 +230,11 @@ export default async function Landing({
       <Feature
         eyebrow="Plan"
         title={<>A day with edges</>}
-        body="Today shows only what you chose for today — never your whole backlog. Star up to three Spotlight must-wins, and watch an honest capacity line tell you when the day is overbooked."
+        body="Today holds only what you picked for today. Never the whole pile."
         points={[
-          "Spotlight holds exactly three. That's the point.",
-          "“Holds ~2h 45m · fits ✓” — before the day falls apart.",
-          "Finish everything and Today says: Day won.",
+          "Pick three that matter. Only three.",
+          "See whether the day actually fits.",
+          "Clear them all and Today says: Day won.",
         ]}
         demo={<TodayDemo />}
       />
@@ -246,11 +246,11 @@ export default async function Landing({
             Nothing ever turns <em className="text-clay">red</em>
           </>
         }
-        body="Other apps pile up overdue items until opening them feels like failure. Kairo sweeps yesterday's leftovers each morning and asks for one decision each — then gets out of the way."
+        body="Yesterday's leftovers come back once, in the morning. One tap each and they're sorted."
         points={[
-          "Today, Later, Someday, Did it, or Let go — one tap each.",
-          "Carried something three times? Kairo suggests breaking it down.",
-          "There is no overdue count anywhere in the app.",
+          "Today, Later, Someday, Did it, or Let go.",
+          "Keeps coming back? Kairo says break it up.",
+          "No overdue count. Anywhere.",
         ]}
         demo={<FreshStartDemo />}
         flip
@@ -259,11 +259,11 @@ export default async function Landing({
       <Feature
         eyebrow="Focus"
         title={<>Start the clock, not another list</>}
-        body="Give a task an estimate and press play. A full-screen countdown keeps you honest, survives reloads, and pings you when time's up — even if the app is closed."
+        body="Add an estimate and press play. The timer keeps running even if you close the app."
         points={[
-          "Pause, reset, or add five minutes mid-session.",
-          "Overtime counts up instead of scolding you.",
-          "Minimise it to a floating pill and keep working.",
+          "Pause, reset, or add five minutes.",
+          "Run over and it counts up, quietly.",
+          "Shrink it to a pill and carry on.",
         ]}
         demo={<FocusDemo />}
       />
@@ -271,11 +271,11 @@ export default async function Landing({
       <Feature
         eyebrow="Together"
         title={<>Share a list. Assign the work.</>}
-        body="Invite someone by email and you both see and edit the same tasks. Put a name on a task and they get a notification — while everyone keeps their own private Today."
+        body="Invite someone by email and you share the list. Your own Today stays yours."
         points={[
-          "Live shared lists for a household, a project, a team.",
-          "Assign tasks to anyone on the list, with avatars on the cards.",
-          "Or send a single task as a copy — a clean handoff.",
+          "Shared lists for home, work, anything.",
+          "Assign a task and they get a ping.",
+          "Or send one task across on its own.",
         ]}
         demo={<ShareDemo />}
         flip
@@ -284,11 +284,11 @@ export default async function Landing({
       <Feature
         eyebrow="Private"
         title={<>Some lists aren&apos;t for the room</>}
-        body="Lock any list — or all of Kairo — behind a numeric PIN. Locked tasks vanish from every view: Today, the calendar, search, even the AI's context."
+        body="Lock a list, or all of Kairo, with a PIN. Locked tasks disappear from everywhere."
         points={[
-          "4–8 digit PIN, verified on the server and never stored as text.",
-          "Shared locked lists use the same PIN for everyone.",
-          "Lock the whole app in one tap when you step away.",
+          "4–8 digits, never stored as plain text.",
+          "Gone from search, calendar and the AI.",
+          "Lock the whole app in one tap.",
         ]}
         demo={<LockDemo />}
       />
@@ -296,11 +296,11 @@ export default async function Landing({
       <Feature
         eyebrow="Perspective"
         title={<>The week and month, in colour</>}
-        body="Sketch the week in a seven-day spread, or step back to a month calendar where every list has its own colour — with each day's load shown before it becomes a problem."
+        body="See the week ahead, or the whole month with a colour for each list."
         points={[
-          "Drag tasks between days to replan.",
-          "Colour-coded dots and a legend that decodes them.",
-          "Heavy days flagged before you get there.",
+          "Drag a task to another day.",
+          "Every list gets its own colour.",
+          "Busy days show up early.",
         ]}
         demo={<CalendarDemo />}
         flip

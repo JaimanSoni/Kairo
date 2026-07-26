@@ -192,7 +192,7 @@ export function ListsView() {
             <button
               onClick={() => setFolded(allFolded ? [] : allSectionIds)}
               title={allFolded ? "Expand every section" : "Collapse every section"}
-              className="flex items-center gap-1.5 rounded-full border border-line bg-card px-3 py-2 text-xs font-medium text-ink-soft hover:border-ink-faint hover:text-ink"
+              className="flex h-9 items-center gap-1.5 rounded-full border border-line bg-card px-3.5 text-xs font-medium text-ink-soft hover:border-ink-faint hover:text-ink"
             >
               <Chevron open={!allFolded} />
               {allFolded ? "Expand all" : "Collapse all"}
@@ -202,7 +202,7 @@ export function ListsView() {
             <button
               onClick={() => setReordering((v) => !v)}
               aria-pressed={reordering}
-              className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition-colors ${
+              className={`flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-xs font-semibold transition-colors ${
                 reordering
                   ? "border-sun bg-sun-soft text-sun-deep"
                   : "border-line bg-card text-ink-soft hover:border-ink-faint hover:text-ink"
@@ -215,7 +215,7 @@ export function ListsView() {
           {!reordering && (
             <button
               onClick={() => setCreating(true)}
-              className="flex items-center gap-1.5 rounded-full border border-line bg-card px-4 py-2 text-sm font-semibold hover:border-sun hover:text-sun-deep"
+              className="flex h-9 items-center gap-1.5 rounded-full border border-line bg-card px-3.5 text-xs font-semibold hover:border-sun hover:text-sun-deep"
             >
               <IconPlus size={14} /> New list
             </button>
@@ -692,10 +692,11 @@ function Section({
             {onDelete && (
               <button
                 onClick={onDelete}
-                className="p-1.5 text-ink-faint hover:text-clay"
+                title="Delete list"
                 aria-label="Delete list"
+                className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-line bg-card text-ink-faint hover:border-clay hover:text-clay"
               >
-                <IconTrash size={14} />
+                <IconTrash size={13} />
               </button>
             )}
           </span>
@@ -738,7 +739,7 @@ function IconTextBtn({
       onClick={onClick}
       title={title}
       aria-label={title}
-      className="flex shrink-0 items-center gap-1 rounded-full border border-line bg-card px-2 py-1 text-xs font-medium text-ink-soft hover:border-ink-faint hover:text-ink sm:px-2.5"
+      className="flex h-7 shrink-0 items-center gap-1 rounded-full border border-line bg-card px-2.5 text-xs font-medium leading-none text-ink-soft hover:border-ink-faint hover:text-ink"
     >
       {icon}
       <span className={keepLabel ? "" : "hidden sm:inline"}>{label}</span>
