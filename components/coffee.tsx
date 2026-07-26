@@ -6,30 +6,39 @@ import { markAsked, shouldAsk } from "@/lib/coffee-nudge";
 import { IconCheck, IconX, Modal } from "./ui";
 import { Icon3d } from "./img3d";
 
-const TOUCH_QUERY = "(hover: none) and (pointer: coarse)";
+/**
+ * Can this device hand off to a UPI app at all?
+ *
+ * This used to ask `(hover: none) and (pointer: coarse)`, which is a question
+ * about the *input*, not about the platform — and real phones do answer it
+ * "no" (a Samsung with an S Pen advertises hover, and some Android builds
+ * report a fine pointer). DevTools emulation fakes those features, so mobile
+ * emulation looked right while actual phones fell through to the QR.
+ *
+ * UPI apps only exist on Android and iOS, so that is the thing to ask about.
+ * A Windows laptop with a touchscreen answers the old query "yes" and still
+ * has nothing to open.
+ */
+function useIsMobile() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => {
+      const ua = navigator.userAgent;
+      // iPadOS 13+ claims to be a Mac; the touch points give it away
+      const iOS =
+        /iPad|iPhone|iPod/.test(ua) ||
+        (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+      return /Android/i.test(ua) || iOS;
+    },
+    () => false
+  );
+}
 
 /** Android, where a bare upi:// link is unreliable and an intent URL isn't. */
 function useIsAndroid() {
   return useSyncExternalStore(
     () => () => {},
     () => /android/i.test(navigator.userAgent),
-    () => false
-  );
-}
-
-/**
- * True on phones and tablets — the only places a `upi://` link resolves to an
- * actual app. Read through useSyncExternalStore so the server snapshot is a
- * stable `false` (desktop) and hydration can't mismatch.
- */
-function useIsTouch() {
-  return useSyncExternalStore(
-    (onChange) => {
-      const mq = window.matchMedia(TOUCH_QUERY);
-      mq.addEventListener("change", onChange);
-      return () => mq.removeEventListener("change", onChange);
-    },
-    () => window.matchMedia(TOUCH_QUERY).matches,
     () => false
   );
 }
@@ -148,7 +157,7 @@ function CoffeeModal({ onClose, earned }: { onClose: () => void; earned?: boolea
   const [amount, setAmount] = useState<number | null>(COFFEE.amounts[0]);
   const [custom, setCustom] = useState(false);
   const [customText, setCustomText] = useState("");
-  const isTouch = useIsTouch();
+  const isMobile = useIsMobile();
   const isAndroid = useIsAndroid();
   const [showQr, setShowQr] = useState(false);
 
@@ -267,7 +276,7 @@ function CoffeeModal({ onClose, earned }: { onClose: () => void; earned?: boolea
           )}
         </fieldset>
 
-        {isTouch ? (
+        {isMobile ? (
           <div className="mt-6">
             <a
               href={tapLink}
@@ -311,6 +320,15 @@ function CoffeeModal({ onClose, earned }: { onClose: () => void; earned?: boolea
               Scan with any UPI app
               {canPay && <> — it&apos;ll prefill ₹{effective}</>}
             </p>
+            {/* Detection is a guess about someone else's device, and this one
+                has been wrong before. If we guessed wrong, the app link is
+                still one tap away rather than unreachable. */}
+            <a
+              href={tapLink}
+              className="mt-2 block text-center text-xs font-medium text-sun-deep underline underline-offset-2"
+            >
+              On a phone? Open your UPI app
+            </a>
           </div>
         )}
 
