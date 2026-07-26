@@ -942,7 +942,7 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "note",
-            text: "Locked lists don't appear in the legend, and their tasks don't appear in the grid. Colours follow each list's position, so deleting a list can shift the colours of the ones below it.",
+            text: "Locked lists don't appear in the legend, and their tasks don't appear in the grid. Colours follow each list's position, so [reordering](/support/lists) or deleting a list can shift the colours of the ones after it.",
           },
         ],
       },
@@ -1216,7 +1216,21 @@ export const ARTICLES: Article[] = [
     summary:
       "Lists hold your backlog: the Inbox for undecided things, Someday for parked ideas, and your own lists for everything else.",
     categoryId: "tasks",
-    keywords: ["lists", "inbox", "someday", "projects", "folders", "organize", "icons"],
+    keywords: [
+      "lists",
+      "inbox",
+      "someday",
+      "projects",
+      "folders",
+      "organize",
+      "icons",
+      "reorder",
+      "collapse",
+      "hide",
+      "expand",
+      "order",
+      "sort",
+    ],
     sections: [
       {
         id: "three-kinds",
@@ -1261,6 +1275,50 @@ export const ARTICLES: Article[] = [
               "In a task, expand **List** and pick one.",
               "Use a list's own add row to create tasks directly there.",
             ],
+          },
+        ],
+      },
+      {
+        id: "reorder",
+        heading: "Put your lists in order",
+        blocks: [
+          {
+            t: "ol",
+            items: [
+              "On the Lists page, click **Reorder** in the header.",
+              "Use the ↑ and ↓ buttons to move each list.",
+              "Click **Done** when the order looks right.",
+            ],
+          },
+          {
+            t: "p",
+            text: "Every move saves immediately, and the order follows you to your other devices. Inbox always sits at the top and Someday at the bottom — they're fixed on purpose, so your captured and parked items always live in the same place.",
+          },
+          {
+            t: "tip",
+            text: "The order is **yours alone**. Rearranging a [shared list](/support/sharing-lists) changes nothing for the people you share it with — everyone keeps their own arrangement.",
+          },
+        ],
+      },
+      {
+        id: "collapse",
+        heading: "Collapse lists you're not using",
+        blocks: [
+          {
+            t: "p",
+            text: "Once you have a lot of lists, the page gets long. Click the small chevron beside any list's name to fold it away — the header stays visible with its count, and the tasks tuck out of sight.",
+          },
+          {
+            t: "ul",
+            items: [
+              "**Collapse all** / **Expand all** in the header folds or unfolds everything at once.",
+              "Inbox and Someday collapse too.",
+              "Kairo remembers which sections you folded, per account, on that device.",
+            ],
+          },
+          {
+            t: "note",
+            text: "Collapsing is only about the view — it doesn't hide anything from Today, search or the calendar. To genuinely hide a list's contents, [lock it with a PIN](/support/locks).",
           },
         ],
       },

@@ -94,6 +94,25 @@ export async function loadUserData(
       .find(listAccessFilter(userId))
       .sort({ order: 1, createdAt: 1 })
       .toArray();
+
+    // Each user keeps their own list order, so reordering never disturbs the
+    // people you share a list with. Unranked lists keep their natural order.
+    const userDoc = await db
+      .collection("users")
+      .findOne({ _id: userId }, { projection: { listOrder: 1 } });
+    const ranks = new Map<string, number>(
+      (Array.isArray(userDoc?.listOrder) ? (userDoc.listOrder as unknown[]) : [])
+        .filter((id): id is string => typeof id === "string")
+        .map((id, i) => [id, i])
+    );
+    if (ranks.size > 0) {
+      listDocs.sort(
+        (a, b) =>
+          (ranks.get(a._id.toHexString()) ?? Infinity) -
+          (ranks.get(b._id.toHexString()) ?? Infinity)
+      );
+    }
+
     const listIds = listDocs.map((d) => d._id);
     const access = { $or: [{ userId }, { listId: { $in: listIds } }] };
 

@@ -156,6 +156,8 @@ type AppContextValue = {
   renameList: (id: string, name: string, emoji: string) => void;
   /** Syncs a server-returned list (e.g. lock state changes) into the store. */
   upsertList: (list: List) => void;
+  /** Persists this user's preferred list order. */
+  reorderLists: (ids: string[]) => void;
   deleteList: (id: string) => void;
   showToast: (toast: Toast) => void;
   setOmnibar: (open: boolean) => void;
@@ -612,6 +614,28 @@ export function AppProvider({
     dispatch({ type: "UPSERT_LIST", list });
   }, []);
 
+  const reorderLists = useCallback(
+    (ids: string[]) => {
+      const prev = stateRef.current.lists;
+      const byId = new Map(prev.map((l) => [l.id, l]));
+      const next = ids.map((id) => byId.get(id)).filter((l): l is List => Boolean(l));
+      if (next.length !== prev.length) return; // stale ids — ignore rather than lose a list
+      dispatch({ type: "REPLACE_ALL", tasks: Object.values(stateRef.current.tasks), lists: next, people: stateRef.current.people });
+
+      api("/api/lists/order", { method: "PUT", body: JSON.stringify({ ids }) }).catch(() =>
+        syncError(() =>
+          dispatch({
+            type: "REPLACE_ALL",
+            tasks: Object.values(stateRef.current.tasks),
+            lists: prev,
+            people: stateRef.current.people,
+          })
+        )
+      );
+    },
+    [syncError]
+  );
+
   const deleteList = useCallback(
     (id: string) => {
       const prev = stateRef.current.lists.find((l) => l.id === id);
@@ -747,6 +771,7 @@ export function AppProvider({
       createList,
       renameList,
       upsertList,
+      reorderLists,
       deleteList,
       showToast,
       setOmnibar,
@@ -764,7 +789,7 @@ export function AppProvider({
     }),
     [
       state, addTask, getTask, updateTask, completeTask, uncompleteTask, deleteTask,
-      reorderTasks, sweep, createList, renameList, upsertList, deleteList, showToast,
+      reorderTasks, sweep, createList, renameList, upsertList, reorderLists, deleteList, showToast,
       setOmnibar, setEditing, dismissSweep, reopenSweep, startFocus, stopFocus, minimizeFocus,
       setListUnlocked, lockApp, unlockApp, setAppLockEnabled, refreshData,
     ]

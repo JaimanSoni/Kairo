@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { List } from "@/lib/types";
 import { byOrder, hiddenListIds, useApp } from "./store";
 import { TaskItem } from "./task-item";
@@ -15,6 +15,7 @@ export function ListsView() {
     state,
     createList,
     renameList,
+    reorderLists,
     deleteList,
     setListUnlocked,
     showToast,
@@ -30,6 +31,48 @@ export function ListsView() {
     mode: PinMode;
   } | null>(null);
   const [shareTarget, setShareTarget] = useState<List | null>(null);
+  const [reordering, setReordering] = useState(false);
+  const [collapsed, setCollapsed] = useState<string[]>([]);
+
+  /* which sections are folded away — remembered per account, on this device */
+  const collapsedKey = `kairo-collapsed:${state.user.id}`;
+  useEffect(() => {
+    queueMicrotask(() => {
+      try {
+        const raw = localStorage.getItem(collapsedKey);
+        if (raw) {
+          const ids = (JSON.parse(raw) as unknown[]).filter(
+            (x): x is string => typeof x === "string"
+          );
+          if (ids.length) setCollapsed(ids);
+        }
+      } catch {}
+    });
+  }, [collapsedKey]);
+
+  const setFolded = (ids: string[]) => {
+    setCollapsed(ids);
+    try {
+      localStorage.setItem(collapsedKey, JSON.stringify(ids));
+    } catch {}
+  };
+
+  const toggleFold = (id: string) =>
+    setFolded(collapsed.includes(id) ? collapsed.filter((x) => x !== id) : [...collapsed, id]);
+
+  const allSectionIds = ["inbox", ...state.lists.map((l) => l.id), "someday"];
+  const allFolded = allSectionIds.every((id) => collapsed.includes(id));
+
+  const move = (index: number, delta: number) => {
+    const ids = state.lists.map((l) => l.id);
+    const to = index + delta;
+    if (to < 0 || to >= ids.length) return;
+    [ids[index], ids[to]] = [ids[to], ids[index]];
+    try {
+      navigator.vibrate?.(6);
+    } catch {}
+    reorderLists(ids);
+  };
 
   const inbox = all
     .filter((t) => t.status === "inbox" && !(t.listId && hidden.has(t.listId)))
@@ -54,12 +97,40 @@ export function ListsView() {
         <div className="min-w-0">
           <h1 className="font-display text-4xl">Lists</h1>
         </div>
-        <button
-          onClick={() => setCreating(true)}
-          className="flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-card px-4 py-2 text-sm font-semibold hover:border-sun hover:text-sun-deep"
-        >
-          <IconPlus size={14} /> New list
-        </button>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {!reordering && allSectionIds.length > 1 && (
+            <button
+              onClick={() => setFolded(allFolded ? [] : allSectionIds)}
+              title={allFolded ? "Expand every section" : "Collapse every section"}
+              className="flex items-center gap-1.5 rounded-full border border-line bg-card px-3 py-2 text-xs font-medium text-ink-soft hover:border-ink-faint hover:text-ink"
+            >
+              <Chevron open={!allFolded} />
+              {allFolded ? "Expand all" : "Collapse all"}
+            </button>
+          )}
+          {state.lists.length > 1 && (
+            <button
+              onClick={() => setReordering((v) => !v)}
+              aria-pressed={reordering}
+              className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition-colors ${
+                reordering
+                  ? "border-sun bg-sun-soft text-sun-deep"
+                  : "border-line bg-card text-ink-soft hover:border-ink-faint hover:text-ink"
+              }`}
+            >
+              <ReorderGlyph />
+              {reordering ? "Done" : "Reorder"}
+            </button>
+          )}
+          {!reordering && (
+            <button
+              onClick={() => setCreating(true)}
+              className="flex items-center gap-1.5 rounded-full border border-line bg-card px-4 py-2 text-sm font-semibold hover:border-sun hover:text-sun-deep"
+            >
+              <IconPlus size={14} /> New list
+            </button>
+          )}
+        </div>
       </header>
 
       {creating && (
@@ -106,21 +177,69 @@ export function ListsView() {
         </div>
       )}
 
+      {/* reorder mode — compact rows, move up/down; works on touch, unlike drag */}
+      {reordering && (
+        <div className="anim-rise">
+          <p className="mb-3 text-xs text-ink-soft">
+            Move your lists into the order you want. Inbox and Someday stay put.
+          </p>
+          <ul className="overflow-hidden rounded-2xl border border-line bg-card">
+            {state.lists.map((list, i) => (
+              <li
+                key={list.id}
+                className={`flex items-center gap-3 px-3 py-2.5 ${i > 0 ? "border-t border-line" : ""}`}
+              >
+                <ListMark value={list.emoji} size={22} />
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">{list.name}</span>
+                <span className="flex shrink-0 gap-1">
+                  <button
+                    onClick={() => move(i, -1)}
+                    disabled={i === 0}
+                    aria-label={`Move ${list.name} up`}
+                    className="grid size-9 place-items-center rounded-lg border border-line text-ink-soft transition-colors hover:border-sun hover:text-sun-deep disabled:opacity-30 disabled:hover:border-line disabled:hover:text-ink-soft"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    onClick={() => move(i, 1)}
+                    disabled={i === state.lists.length - 1}
+                    aria-label={`Move ${list.name} down`}
+                    className="grid size-9 place-items-center rounded-lg border border-line text-ink-soft transition-colors hover:border-sun hover:text-sun-deep disabled:opacity-30 disabled:hover:border-line disabled:hover:text-ink-soft"
+                  >
+                    ↓
+                  </button>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <button
+            onClick={() => setReordering(false)}
+            className="mt-4 w-full rounded-full bg-ink px-4 py-2.5 text-sm font-semibold text-paper"
+          >
+            Done reordering
+          </button>
+        </div>
+      )}
+
       {/* Inbox */}
+      {!reordering && (
       <Section
         mark={<Icon3d name="inbox" size={24} />}
         name="Inbox"
         count={inbox.length}
         hint="Freshly captured, undecided. Triage when you plan — not when you capture."
+        folded={collapsed.includes("inbox")}
+        onToggleFold={() => toggleFold("inbox")}
       >
         {inbox.map((t) => (
           <TaskItem key={t.id} task={t} context="backlog" />
         ))}
         <AddRow placeholder="Capture something…" plannedFor={null} />
       </Section>
+      )}
 
       {/* user lists */}
-      {state.lists.map((list) => {
+      {!reordering && state.lists.map((list) => {
         const isHidden = hidden.has(list.id);
         const isOwner = list.role === "owner";
         const tasks = isHidden
@@ -146,6 +265,8 @@ export function ListsView() {
             }
             onDelete={isHidden || !isOwner ? undefined : () => setConfirmDelete(list.id)}
             onLockAction={(mode) => setPinTarget({ list, mode })}
+            folded={collapsed.includes(list.id)}
+            onToggleFold={() => toggleFold(list.id)}
             onRelock={
               list.locked && !isHidden
                 ? () => {
@@ -203,11 +324,14 @@ export function ListsView() {
       })}
 
       {/* Someday */}
+      {!reordering && (
       <Section
         mark={<Icon3d name="moon" size={24} />}
         name="Someday"
         count={someday.length}
         hint="Parked without guilt. Visit when you're curious, not because you must."
+        folded={collapsed.includes("someday")}
+        onToggleFold={() => toggleFold("someday")}
       >
         {someday.length > 0 ? (
           someday.map((t) => <TaskItem key={t.id} task={t} context="backlog" />)
@@ -219,6 +343,7 @@ export function ListsView() {
           />
         )}
       </Section>
+      )}
 
       {pinTarget && (
         <PinModal
@@ -268,6 +393,29 @@ function LockGlyph({ open }: { open?: boolean }) {
   );
 }
 
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 16 16"
+      fill="none"
+      className={`transition-transform ${open ? "" : "-rotate-90"}`}
+      aria-hidden
+    >
+      <path d="M3.5 6L8 10.5 12.5 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ReorderGlyph() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function Section({
   mark,
   name: sectionName,
@@ -283,6 +431,8 @@ function Section({
   canManage = true,
   peopleCount = 0,
   onShare,
+  folded = false,
+  onToggleFold,
 }: {
   mark: React.ReactNode;
   name: string;
@@ -298,13 +448,25 @@ function Section({
   canManage?: boolean;
   peopleCount?: number;
   onShare?: () => void;
+  folded?: boolean;
+  onToggleFold?: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState("");
 
   return (
-    <section className="group/section mb-8">
+    <section className={`group/section ${folded ? "mb-3" : "mb-8"}`}>
       <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+        {onToggleFold && (
+          <button
+            onClick={onToggleFold}
+            aria-expanded={!folded}
+            aria-label={folded ? `Show ${sectionName}` : `Hide ${sectionName}`}
+            className="-ml-1 grid size-6 shrink-0 place-items-center rounded-md text-ink-faint transition-colors hover:bg-paper-deep hover:text-ink"
+          >
+            <Chevron open={!folded} />
+          </button>
+        )}
         <span className="shrink-0">{mark}</span>
         {editing && onRename ? (
           <input
@@ -409,8 +571,12 @@ function Section({
           </span>
         )}
       </div>
-      {hint && <p className="mb-3 text-xs text-ink-soft">{hint}</p>}
-      <div className="space-y-2">{children}</div>
+      {!folded && (
+        <>
+          {hint && <p className="mb-3 text-xs text-ink-soft">{hint}</p>}
+          <div className="space-y-2">{children}</div>
+        </>
+      )}
     </section>
   );
 }
