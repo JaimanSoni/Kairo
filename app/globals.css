@@ -155,6 +155,143 @@ input,
   }
 }
 
+/* ---------- landing demos: small looping "screen recordings" ---------- */
+
+@keyframes demo-chip {
+  0%,
+  8% {
+    opacity: 0;
+    transform: translateY(4px) scale(0.96);
+  }
+  16%,
+  78% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  88%,
+  100% {
+    opacity: 0;
+    transform: translateY(-2px) scale(0.98);
+  }
+}
+
+@keyframes demo-caret {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes demo-type {
+  0% {
+    width: 0;
+  }
+  45%,
+  100% {
+    width: 100%;
+  }
+}
+
+@keyframes demo-check {
+  0%,
+  30% {
+    background-color: transparent;
+    border-color: var(--color-ink-faint);
+  }
+  40%,
+  100% {
+    background-color: var(--color-moss);
+    border-color: var(--color-moss);
+  }
+}
+
+@keyframes demo-strike {
+  0%,
+  35% {
+    width: 0;
+    opacity: 0;
+  }
+  45% {
+    opacity: 1;
+  }
+  55%,
+  100% {
+    width: 100%;
+    opacity: 1;
+  }
+}
+
+@keyframes demo-ring {
+  0% {
+    stroke-dashoffset: 741;
+  }
+  100% {
+    stroke-dashoffset: 180;
+  }
+}
+
+@keyframes demo-fade-seq {
+  0%,
+  10% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  20%,
+  85% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+@keyframes demo-unlock {
+  0%,
+  40% {
+    filter: blur(5px);
+    opacity: 0.55;
+  }
+  55%,
+  100% {
+    filter: blur(0);
+    opacity: 1;
+  }
+}
+
+.demo-chip {
+  animation: demo-chip 6s ease-in-out infinite;
+}
+.demo-caret {
+  animation: demo-caret 1s step-end infinite;
+}
+.demo-type {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  animation: demo-type 6s ease-in-out infinite;
+}
+.demo-check {
+  animation: demo-check 4s ease-in-out infinite;
+}
+.demo-strike {
+  animation: demo-strike 4s ease-in-out infinite;
+}
+.demo-ring {
+  animation: demo-ring 8s ease-in-out infinite alternate;
+}
+.demo-seq {
+  animation: demo-fade-seq 5s ease-in-out infinite;
+}
+.demo-unlock {
+  animation: demo-unlock 6s ease-in-out infinite;
+}
+
 @keyframes sound-bar {
   0%,
   100% {
@@ -258,8 +395,24 @@ input,
   .anim-pulse,
   .anim-bar,
   .anim-shimmer,
-  .anim-modal {
+  .anim-modal,
+  .demo-chip,
+  .demo-caret,
+  .demo-type,
+  .demo-check,
+  .demo-strike,
+  .demo-ring,
+  .demo-seq,
+  .demo-unlock {
     animation: none;
+  }
+  /* keep reduced-motion demos legible in their finished state */
+  .demo-type {
+    width: 100%;
+  }
+  .demo-unlock {
+    filter: none;
+    opacity: 1;
   }
 }
 

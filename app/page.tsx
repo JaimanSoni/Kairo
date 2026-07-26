@@ -1,18 +1,34 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Icon3d } from "@/components/img3d";
+import {
+  CalendarDemo,
+  CaptureDemo,
+  FocusDemo,
+  FreshStartDemo,
+  LockDemo,
+  ShareDemo,
+  TodayDemo,
+} from "@/components/landing/demos";
+import { Testimonials } from "@/components/landing/testimonials";
 
 export const metadata: Metadata = {
   description:
-    "Kairo is a daily planner that forgives. Plan a day you can actually finish — voice capture, AI sorting, focus timer, and a fresh start every morning. No red badges, no overdue guilt.",
+    "Kairo is a daily planner that forgives. Voice + AI capture, a bounded Today, a guilt-free morning reset, focus timer, shared lists, task assignment and PIN locks. No red badges, no overdue guilt.",
   keywords: [
-    "daily planner", "todo app", "task planner", "task manager",
-    "guilt-free productivity", "focus timer", "AI task planner", "day planner app",
+    "daily planner",
+    "todo app",
+    "task planner",
+    "shared task list",
+    "assign tasks",
+    "private todo list",
+    "focus timer",
+    "AI task capture",
+    "guilt-free productivity",
   ],
   openGraph: {
     title: "Kairo — a daily planner that forgives",
     description:
-      "Plan a day you can actually finish. No red badges, no overdue guilt, no infinite lists.",
+      "Plan a day you can actually finish. Voice + AI capture, a morning reset instead of overdue guilt, focus timer, shared lists, assignments and PIN locks.",
     type: "website",
     siteName: "Kairo",
   },
@@ -28,9 +44,9 @@ const JSON_LD = {
   "@type": "SoftwareApplication",
   name: "Kairo",
   applicationCategory: "ProductivityApplication",
-  operatingSystem: "Web",
+  operatingSystem: "Web, iOS, Android",
   description:
-    "A daily planner that forgives: bounded days, guilt-free fresh starts, voice + AI capture, and a focus timer.",
+    "A daily planner that forgives: bounded days, guilt-free fresh starts, voice and AI capture, focus timer, shared lists with assignments, and PIN-locked privacy.",
   offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
 };
 
@@ -45,53 +61,51 @@ function GoogleMark() {
   );
 }
 
-function CheckDot({ done }: { done?: boolean }) {
-  return (
-    <span
-      className={`grid size-5 shrink-0 place-items-center rounded-full border-2 ${
-        done ? "border-moss bg-moss text-on-accent" : "border-ink-faint/60"
-      }`}
-      aria-hidden
-    >
-      {done && (
-        <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-          <path d="M2 6l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      )}
-    </span>
-  );
-}
-
-function MiniTask({
+/** Alternating feature row: copy on one side, a live demo on the other. */
+function Feature({
+  eyebrow,
   title,
-  done,
-  chip,
-  spotlight,
+  body,
+  points,
+  demo,
+  flip,
 }: {
-  title: string;
-  done?: boolean;
-  chip?: string;
-  spotlight?: boolean;
+  eyebrow: string;
+  title: React.ReactNode;
+  body: string;
+  points: string[];
+  demo: React.ReactNode;
+  flip?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl bg-card/80 px-4 py-3 shadow-sm">
-      <CheckDot done={done} />
-      <span className={`text-sm ${done ? "line-through text-ink-faint" : "text-ink"}`}>{title}</span>
-      {spotlight && <span className="text-sun text-sm" aria-hidden>✦</span>}
-      {chip && (
-        <span className="ml-auto rounded-lg bg-paper-deep/80 px-2 py-0.5 text-xs text-ink-soft">{chip}</span>
-      )}
-    </div>
+    <section className="mx-auto grid max-w-5xl items-center gap-8 px-5 py-12 sm:py-16 lg:grid-cols-2 lg:gap-14">
+      <div className={flip ? "lg:order-2" : ""}>
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-sun-deep">{eyebrow}</p>
+        <h2 className="font-display mt-2 text-3xl leading-tight tracking-tight sm:text-4xl">
+          {title}
+        </h2>
+        <p className="mt-3 text-[15px] leading-7 text-ink-soft">{body}</p>
+        <ul className="mt-5 space-y-2.5">
+          {points.map((p) => (
+            <li key={p} className="flex gap-3 text-[15px] leading-6 text-ink-soft">
+              <span className="mt-[9px] size-1.5 shrink-0 rounded-full bg-sun/70" aria-hidden />
+              <span>{p}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className={flip ? "lg:order-1" : ""}>{demo}</div>
+    </section>
   );
 }
 
-const FEATURE_PILLS = [
-  "🎙 voice capture",
-  "✨ AI sorting",
-  "⏱ focus timer",
-  "↻ recurring tasks",
-  "🔒 private lists",
-  "🌙 dark mode",
+const EXTRAS = [
+  { icon: "↻", title: "Recurring tasks", body: "Daily, chosen weekdays, or monthly. Miss one and you skip it — the series never dies." },
+  { icon: "🔔", title: "Reminders that arrive", body: "Real push notifications, even with the app closed. They skip themselves if you've already finished." },
+  { icon: "↳", title: "Steps with their own days", body: "Break a big task down, then schedule individual steps onto separate days." },
+  { icon: "⌘", title: "Search everything", body: "One shortcut finds any task, list or action — with keyboard navigation throughout." },
+  { icon: "👥", title: "Multiple accounts", body: "Keep work and personal apart, and switch between them in a tap." },
+  { icon: "🌙", title: "Light, dark, auto", body: "Follows your system, or pick one. Installs to your home screen like a native app." },
 ];
 
 export default async function Landing({
@@ -107,16 +121,27 @@ export default async function Landing({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }} />
 
       {/* nav */}
-      <nav aria-label="Main" className="sticky top-4 z-40 mx-auto mt-4 flex w-[min(94%,56rem)] items-center justify-between rounded-full glass px-5 py-2.5 shadow-lg shadow-ink/5">
+      <nav
+        aria-label="Main"
+        className="glass sticky top-4 z-40 mx-auto mt-4 flex w-[min(94%,56rem)] items-center justify-between rounded-full px-4 py-2.5 shadow-lg shadow-ink/5 sm:px-5"
+      >
         <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight">
           <span className="text-sun text-xl leading-none" aria-hidden>✱</span> kairo
         </Link>
-        <a
-          href="/api/auth/google"
-          className="flex items-center gap-2 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-paper transition-all hover:-translate-y-0.5 hover:shadow-md"
-        >
-          <GoogleMark /> Sign in
-        </a>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/support"
+            className="hidden rounded-full px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:text-ink sm:block"
+          >
+            Help
+          </Link>
+          <a
+            href="/api/auth/google"
+            className="flex items-center gap-2 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-paper transition-all hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <GoogleMark /> Sign in
+          </a>
+        </div>
       </nav>
 
       {auth_error && (
@@ -145,101 +170,153 @@ export default async function Landing({
       )}
 
       {/* hero */}
-      <section aria-label="Intro" className="mx-auto max-w-4xl px-6 pb-16 pt-20 text-center sm:pt-28">
-        <p className="mx-auto mb-5 w-max rounded-full glass px-4 py-1.5 text-xs font-medium text-ink-soft">
-          the daily planner that forgives
-        </p>
-        <h1 className="font-display mx-auto max-w-3xl text-5xl leading-[1.04] tracking-tight sm:text-7xl">
-          Your to-do list shouldn&apos;t make you{" "}
-          <em className="bg-gradient-to-r from-sun to-sky bg-clip-text text-transparent">feel bad</em>.
-        </h1>
-        <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-ink-soft">
-          Plan a day you can actually finish. When life happens, start fresh —
-          no red badges, no &ldquo;62 overdue&rdquo;, no shame spiral.
-        </p>
+      <section aria-label="Intro" className="mx-auto max-w-5xl px-5 pb-10 pt-16 sm:pt-24">
+        <div className="mx-auto max-w-3xl text-center">
+          <p className="mx-auto mb-5 w-max rounded-full glass px-4 py-1.5 text-xs font-medium text-ink-soft">
+            the daily planner that forgives
+          </p>
+          <h1 className="font-display mx-auto text-5xl leading-[1.04] tracking-tight sm:text-7xl">
+            Your to-do list shouldn&apos;t make you{" "}
+            <em className="bg-gradient-to-r from-sun to-sky bg-clip-text text-transparent">
+              feel bad
+            </em>
+            .
+          </h1>
+          <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-ink-soft">
+            Speak a thought and AI files it. Plan a day you can actually finish. When life happens,
+            start fresh — no red badges, no &ldquo;62 overdue&rdquo;, no shame spiral.
+          </p>
 
-        <div className="mt-9 flex flex-col items-center gap-3">
-          <a
-            href="/api/auth/google"
-            className="flex items-center gap-3 rounded-full bg-sun px-8 py-4 text-base font-semibold text-on-accent shadow-xl shadow-sun/25 transition-all hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-sun/30 active:translate-y-0"
-          >
-            <GoogleMark /> Continue with Google
-          </a>
-          <span className="text-xs text-ink-faint">Free. Your tasks stay yours.</span>
-        </div>
-
-        {/* app glimpse */}
-        <div className="anim-rise mx-auto mt-16 max-w-md rounded-[2rem] glass p-6 text-left shadow-2xl shadow-ink/10">
-          <div className="mb-1 flex items-baseline justify-between">
-            <span className="font-display text-2xl">Today</span>
-            <span className="text-xs text-ink-soft">holds ~2h 45m · fits ✓</span>
-          </div>
-          <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-sun-deep">
-            ✦ Spotlight
-          </div>
-          <div className="space-y-2">
-            <MiniTask title="Send the proposal" spotlight chip="~45m" />
-            <MiniTask title="Book dentist" chip="#life" />
-            <MiniTask title="Review Maya's PR" chip="~30m" />
-            <MiniTask title="Morning run" done />
-          </div>
-          <div className="mt-4 rounded-2xl bg-paper-deep/50 px-4 py-3 text-sm text-ink-soft">
-            yesterday&apos;s 2 leftovers? <span className="font-semibold text-sun-deep">swept, guilt-free →</span>
+          <div className="mt-9 flex flex-col items-center gap-3">
+            <a
+              href="/api/auth/google"
+              className="flex items-center gap-3 rounded-full bg-sun px-8 py-4 text-base font-semibold text-on-accent shadow-xl shadow-sun/25 transition-all hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-sun/30 active:translate-y-0"
+            >
+              <GoogleMark /> Continue with Google
+            </a>
+            <span className="text-xs text-ink-faint">Free. Your tasks stay yours.</span>
           </div>
         </div>
 
-        {/* feature pills */}
-        <ul className="mx-auto mt-12 flex max-w-xl flex-wrap items-center justify-center gap-2" aria-label="Features">
-          {FEATURE_PILLS.map((f) => (
-            <li key={f} className="rounded-full glass px-3.5 py-1.5 text-xs font-medium text-ink-soft">
-              {f}
-            </li>
-          ))}
-        </ul>
+        <div className="anim-rise mx-auto mt-14 max-w-md">
+          <CaptureDemo />
+        </div>
       </section>
 
-      {/* principles */}
-      <section aria-label="Principles" className="mx-auto max-w-5xl px-6 py-14">
-        <h2 className="font-display text-center text-4xl tracking-tight sm:text-5xl">
-          Built different, <em className="text-sun">on purpose</em>
+      {/* feature walkthrough */}
+      <Feature
+        eyebrow="Capture"
+        title={<>Say it. AI files it.</>}
+        body="Tap the mic or press N and talk. Kairo saves it instantly, then AI reads your sentence and fills in the day, time, estimate, list and even the steps — without ever overruling what you typed."
+        points={[
+          "Voice capture that handles rambling, not just dictation.",
+          "Type shortcuts too: “gym fri 6pm ~45m #health”.",
+          "Nothing is required at capture — deciding comes later.",
+        ]}
+        demo={<CaptureDemo />}
+        flip
+      />
+
+      <Feature
+        eyebrow="Plan"
+        title={<>A day with edges</>}
+        body="Today shows only what you chose for today — never your whole backlog. Star up to three Spotlight must-wins, and watch an honest capacity line tell you when the day is overbooked."
+        points={[
+          "Spotlight holds exactly three. That's the point.",
+          "“Holds ~2h 45m · fits ✓” — before the day falls apart.",
+          "Finish everything and Today says: Day won.",
+        ]}
+        demo={<TodayDemo />}
+      />
+
+      <Feature
+        eyebrow="Forgiveness"
+        title={
+          <>
+            Nothing ever turns <em className="text-clay">red</em>
+          </>
+        }
+        body="Other apps pile up overdue items until opening them feels like failure. Kairo sweeps yesterday's leftovers each morning and asks for one decision each — then gets out of the way."
+        points={[
+          "Today, Later, Someday, Did it, or Let go — one tap each.",
+          "Carried something three times? Kairo suggests breaking it down.",
+          "There is no overdue count anywhere in the app.",
+        ]}
+        demo={<FreshStartDemo />}
+        flip
+      />
+
+      <Feature
+        eyebrow="Focus"
+        title={<>Start the clock, not another list</>}
+        body="Give a task an estimate and press play. A full-screen countdown keeps you honest, survives reloads, and pings you when time's up — even if the app is closed."
+        points={[
+          "Pause, reset, or add five minutes mid-session.",
+          "Overtime counts up instead of scolding you.",
+          "Minimise it to a floating pill and keep working.",
+        ]}
+        demo={<FocusDemo />}
+      />
+
+      <Feature
+        eyebrow="Together"
+        title={<>Share a list. Assign the work.</>}
+        body="Invite someone by email and you both see and edit the same tasks. Put a name on a task and they get a notification — while everyone keeps their own private Today."
+        points={[
+          "Live shared lists for a household, a project, a team.",
+          "Assign tasks to anyone on the list, with avatars on the cards.",
+          "Or send a single task as a copy — a clean handoff.",
+        ]}
+        demo={<ShareDemo />}
+        flip
+      />
+
+      <Feature
+        eyebrow="Private"
+        title={<>Some lists aren&apos;t for the room</>}
+        body="Lock any list — or all of Kairo — behind a numeric PIN. Locked tasks vanish from every view: Today, the calendar, search, even the AI's context."
+        points={[
+          "4–8 digit PIN, verified on the server and never stored as text.",
+          "Shared locked lists use the same PIN for everyone.",
+          "Lock the whole app in one tap when you step away.",
+        ]}
+        demo={<LockDemo />}
+      />
+
+      <Feature
+        eyebrow="Perspective"
+        title={<>The week and month, in colour</>}
+        body="Sketch the week in a seven-day spread, or step back to a month calendar where every list has its own colour — with each day's load shown before it becomes a problem."
+        points={[
+          "Drag tasks between days to replan.",
+          "Colour-coded dots and a legend that decodes them.",
+          "Heavy days flagged before you get there.",
+        ]}
+        demo={<CalendarDemo />}
+        flip
+      />
+
+      {/* everything else */}
+      <section aria-label="More features" className="mx-auto max-w-5xl px-5 py-14">
+        <h2 className="font-display text-center text-3xl tracking-tight sm:text-4xl">
+          And the rest of it
         </h2>
-        <div className="squiggle mx-auto mt-5 w-32" aria-hidden />
-        <div className="mt-12 grid gap-5 md:grid-cols-3">
-          {[
-            {
-              icon: "sunrise",
-              title: "The day is the unit",
-              body:
-                "Kairo opens on Today — a short list you chose, with up to 3 Spotlight must-wins. The infinite backlog stays out of sight until you ask.",
-            },
-            {
-              icon: "inbox",
-              title: "Capture beats forgetting",
-              body:
-                "One keystroke or one breath — speak it, type it, done. “call mom tomorrow ~15m” just works, and AI quietly sorts the details.",
-            },
-            {
-              icon: "moon",
-              title: "Failing is a feature",
-              body:
-                "Didn't finish? Tomorrow morning, sweep leftovers in one tap — reschedule, park, or let go. Carried three times? We'll suggest breaking it down.",
-            },
-          ].map((c) => (
-            <article
-              key={c.title}
-              className="rounded-[2rem] glass p-8 shadow-lg shadow-ink/5 transition-transform hover:-translate-y-1"
-            >
-              <Icon3d name={c.icon} size={56} />
-              <h3 className="mt-4 text-lg font-bold">{c.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-ink-soft">{c.body}</p>
-            </article>
+        <div className="mt-9 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {EXTRAS.map((f) => (
+            <div key={f.title} className="glass rounded-2xl p-5">
+              <div className="text-lg" aria-hidden>
+                {f.icon}
+              </div>
+              <h3 className="mt-2 text-sm font-semibold">{f.title}</h3>
+              <p className="mt-1 text-[13px] leading-6 text-ink-soft">{f.body}</p>
+            </div>
           ))}
         </div>
       </section>
 
       {/* comparison */}
-      <section aria-label="Why Kairo" className="mx-auto max-w-4xl px-6 py-14">
-        <div className="rounded-[2rem] glass p-8 shadow-lg shadow-ink/5 sm:p-10">
+      <section aria-label="Why Kairo" className="mx-auto max-w-4xl px-5 py-10">
+        <div className="glass rounded-[2rem] p-8 shadow-lg shadow-ink/5 sm:p-10">
           <h2 className="font-display text-center text-3xl tracking-tight sm:text-4xl">
             Other apps track tasks. <span className="text-sun">Kairo protects your day.</span>
           </h2>
@@ -282,8 +359,10 @@ export default async function Landing({
         </div>
       </section>
 
+      <Testimonials />
+
       {/* final CTA */}
-      <section aria-label="Get started" className="mx-auto max-w-3xl px-6 py-16 text-center">
+      <section aria-label="Get started" className="mx-auto max-w-3xl px-5 py-16 text-center">
         <h2 className="font-display text-4xl tracking-tight sm:text-5xl">
           Win <em className="text-sun">today</em>. Repeat tomorrow.
         </h2>
