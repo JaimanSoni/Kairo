@@ -9,7 +9,7 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: "*",
         allow: ["/", "/support"],
         // the app itself is private per-user — no value in crawling it
-        disallow: ["/today", "/upcoming", "/lists", "/log", "/api/"],
+        disallow: ["/today", "/upcoming", "/lists", "/log", "/admin", "/api/"],
       },
     ],
     sitemap: `${BASE}/sitemap.xml`,

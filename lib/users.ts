@@ -15,6 +15,80 @@ export type DbUser = {
   appLockSalt?: string;
 };
 
+export type AdminUserRow = {
+  id: string;
+  name: string;
+  email: string;
+  picture?: string;
+  createdAt: string;
+  lastLoginAt: string;
+  appLocked: boolean;
+};
+
+export type AdminUsersSnapshot = {
+  users: AdminUserRow[];
+  activeWeek: number;
+  newWeek: number;
+  /** When the snapshot was taken — the page derives "3d ago" from this, so it
+   *  never has to call Date.now() during render. */
+  now: number;
+};
+
+type AdminUserDoc = Omit<DbUser, "appLockHash" | "appLockSalt"> & { appLocked: boolean };
+
+/**
+ * Every user, newest signup first — for the admin dashboard only.
+ *
+ * The PIN hash and salt are reduced to a boolean inside the aggregation, so
+ * that secret material is never sent over the wire or held in this process.
+ */
+export async function listAllUsers(limit = 500): Promise<AdminUserRow[]> {
+  return withDbRetry(async () => {
+    const db = await getDb();
+    const docs = await db
+      .collection<DbUser>("users")
+      .aggregate<AdminUserDoc>([
+        { $sort: { createdAt: -1 } },
+        { $limit: limit },
+        {
+          $project: {
+            googleId: 1,
+            email: 1,
+            name: 1,
+            picture: 1,
+            createdAt: 1,
+            lastLoginAt: 1,
+            appLocked: { $toBool: { $ifNull: ["$appLockHash", false] } },
+          },
+        },
+      ])
+      .toArray();
+
+    return docs.map((u) => ({
+      id: u._id.toHexString(),
+      name: u.name,
+      email: u.email,
+      picture: u.picture,
+      createdAt: (u.createdAt ?? new Date(0)).toISOString(),
+      lastLoginAt: (u.lastLoginAt ?? u.createdAt ?? new Date(0)).toISOString(),
+      appLocked: u.appLocked,
+    }));
+  });
+}
+
+/** The whole admin user view in one call, including its own "now". */
+export async function loadAdminUsers(limit = 500): Promise<AdminUsersSnapshot> {
+  const users = await listAllUsers(limit);
+  const now = Date.now();
+  const week = 7 * 86_400_000;
+  return {
+    users,
+    activeWeek: users.filter((u) => now - Date.parse(u.lastLoginAt) < week).length,
+    newWeek: users.filter((u) => now - Date.parse(u.createdAt) < week).length,
+    now,
+  };
+}
+
 export async function getUserById(idHex: string): Promise<DbUser | null> {
   return withDbRetry(async () => {
     const db = await getDb();

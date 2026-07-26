@@ -67,4 +67,6 @@ export type UserProfile = {
   picture?: string;
   /** True when an app-wide PIN lock is set for this account. */
   appLockEnabled: boolean;
+  /** Shows the admin entry point. Access itself is enforced server-side. */
+  isAdmin: boolean;
 };

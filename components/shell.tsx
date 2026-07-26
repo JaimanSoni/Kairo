@@ -318,6 +318,8 @@ function ProfileSheet({
           <span aria-hidden>→</span>
         </Link>
 
+        <AdminLink />
+
         <CoffeeButton variant="row" />
 
         <form action="/api/auth/signout" method="POST" className="mt-6 border-t border-line pt-4">
@@ -330,6 +332,30 @@ function ProfileSheet({
         </form>
       </div>
     </Modal>
+  );
+}
+
+/**
+ * Only rendered for admins — but this is convenience, not security. The
+ * /admin segment authorises every request server-side, so hand-typing the URL
+ * gets a 404 for anyone else.
+ */
+function AdminLink() {
+  const { state } = useApp();
+  if (!state.user.isAdmin) return null;
+  return (
+    <Link
+      href="/admin/dashboard"
+      className="mt-3 flex w-full items-center justify-between rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:border-sun hover:text-sun-deep"
+    >
+      <span className="flex items-center gap-2">
+        <span className="rounded-md bg-ink px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-paper">
+          admin
+        </span>
+        Dashboard
+      </span>
+      <span aria-hidden>→</span>
+    </Link>
   );
 }
 

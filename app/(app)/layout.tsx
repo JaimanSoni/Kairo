@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession, getSessionAccounts } from "@/lib/session";
 import { loadUserData } from "@/lib/tasks";
 import { getUserById } from "@/lib/users";
+import { isAdminEmail } from "@/lib/admin";
 import { AppProvider } from "@/components/store";
 import { Shell } from "@/components/shell";
 
@@ -23,6 +24,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         name: session.name,
         picture: session.picture,
         appLockEnabled: Boolean(userDoc?.appLockHash),
+        // from the database record, not the session cookie
+        isAdmin: isAdminEmail(userDoc?.email),
       }}
       accounts={(roster?.accounts ?? []).map((a) => ({
         id: a.userId,
