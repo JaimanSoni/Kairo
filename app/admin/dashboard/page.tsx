@@ -30,8 +30,20 @@ function since(iso: string, now: number): string {
 
 function Initial({ name, picture }: { name: string; picture?: string }) {
   if (picture) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={picture} alt="" width={32} height={32} className="size-8 rounded-full object-cover" />;
+    return (
+      // referrerPolicy is load-bearing: Google rejects lh3.googleusercontent
+      // requests that carry a Referer, and Chrome's opaque-response blocking
+      // then kills the reply outright (ERR_BLOCKED_BY_ORB) — a blank avatar.
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={picture}
+        alt=""
+        width={32}
+        height={32}
+        referrerPolicy="no-referrer"
+        className="size-8 shrink-0 rounded-full bg-paper-deep object-cover"
+      />
+    );
   }
   return (
     <span className="grid size-8 place-items-center rounded-full bg-sun-soft text-xs font-bold text-sun-deep">
@@ -45,7 +57,8 @@ export default async function AdminDashboard() {
   // broken by someone later restructuring the segment
   await requireAdmin();
 
-  const { users, activeWeek, newWeek, now } = await loadAdminUsers();
+  const { users, activeWeek, newWeek, totalTasks, totalTasksDone, totalLists, now } =
+    await loadAdminUsers();
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
@@ -54,17 +67,22 @@ export default async function AdminDashboard() {
         Everyone who has signed in to Kairo. Usage and payments will land here later.
       </p>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {[
-          { label: "Total users", value: users.length },
-          { label: "Signed in this week", value: activeWeek },
+          { label: "Users", value: users.length },
+          { label: "Active this week", value: activeWeek },
           { label: "New this week", value: newWeek },
+          { label: "Tasks", value: totalTasks },
+          { label: "Tasks done", value: totalTasksDone },
+          { label: "Lists", value: totalLists },
         ].map((s) => (
-          <div key={s.label} className="rounded-2xl border border-line bg-card p-5">
+          <div key={s.label} className="rounded-2xl border border-line bg-card p-4">
             <div className="text-[11px] font-semibold uppercase tracking-wide text-ink-faint">
               {s.label}
             </div>
-            <div className="font-display mt-1 text-3xl tabular-nums">{s.value}</div>
+            <div className="font-display mt-1 text-2xl tabular-nums sm:text-3xl">
+              {s.value.toLocaleString("en-IN")}
+            </div>
           </div>
         ))}
       </div>
@@ -91,7 +109,16 @@ export default async function AdminDashboard() {
                     </span>
                   )}
                 </div>
-                <div className="mt-2.5 flex justify-between text-xs text-ink-faint">
+                <div className="mt-2.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-faint">
+                  <span className="font-medium text-ink-soft">
+                    {u.tasks} {u.tasks === 1 ? "task" : "tasks"}
+                    {u.tasks > 0 && <span className="text-ink-faint"> · {u.tasksDone} done</span>}
+                  </span>
+                  <span className="font-medium text-ink-soft">
+                    {u.lists} {u.lists === 1 ? "list" : "lists"}
+                  </span>
+                </div>
+                <div className="mt-1 flex justify-between text-xs text-ink-faint">
                   <span>Joined {fmtDate(u.createdAt)}</span>
                   <span>Seen {since(u.lastLoginAt, now)}</span>
                 </div>
@@ -106,6 +133,9 @@ export default async function AdminDashboard() {
                   <tr>
                     <th className="px-4 py-2.5 font-semibold">User</th>
                     <th className="px-4 py-2.5 font-semibold">Email</th>
+                    <th className="px-4 py-2.5 text-right font-semibold">Tasks</th>
+                    <th className="px-4 py-2.5 text-right font-semibold">Done</th>
+                    <th className="px-4 py-2.5 text-right font-semibold">Lists</th>
                     <th className="px-4 py-2.5 font-semibold">Joined</th>
                     <th className="px-4 py-2.5 font-semibold">Last seen</th>
                     <th className="px-4 py-2.5 font-semibold">Lock</th>
@@ -121,6 +151,11 @@ export default async function AdminDashboard() {
                         </span>
                       </td>
                       <td className="px-4 py-2.5 text-ink-soft">{u.email}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums">{u.tasks}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-ink-soft">
+                        {u.tasksDone}
+                      </td>
+                      <td className="px-4 py-2.5 text-right tabular-nums">{u.lists}</td>
                       <td className="whitespace-nowrap px-4 py-2.5 text-ink-soft">
                         {fmtDate(u.createdAt)}
                       </td>
@@ -131,6 +166,16 @@ export default async function AdminDashboard() {
                     </tr>
                   ))}
                 </tbody>
+                <tfoot className="border-t-2 border-line bg-paper-deep/40 text-xs font-semibold">
+                  <tr>
+                    <td className="px-4 py-2.5">Total</td>
+                    <td className="px-4 py-2.5 text-ink-faint">{users.length} users</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums">{totalTasks}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums">{totalTasksDone}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums">{totalLists}</td>
+                    <td colSpan={3} />
+                  </tr>
+                </tfoot>
               </table>
             </div>
           </div>

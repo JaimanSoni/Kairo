@@ -23,18 +23,31 @@ export type AdminUserRow = {
   createdAt: string;
   lastLoginAt: string;
   appLocked: boolean;
+  /** Tasks this user owns, and how many are done. Shared lists are counted
+   *  against the owner only, so the totals never double-count. */
+  tasks: number;
+  tasksDone: number;
+  lists: number;
 };
 
 export type AdminUsersSnapshot = {
   users: AdminUserRow[];
   activeWeek: number;
   newWeek: number;
+  totalTasks: number;
+  totalTasksDone: number;
+  totalLists: number;
   /** When the snapshot was taken — the page derives "3d ago" from this, so it
    *  never has to call Date.now() during render. */
   now: number;
 };
 
-type AdminUserDoc = Omit<DbUser, "appLockHash" | "appLockSalt"> & { appLocked: boolean };
+type AdminUserDoc = Omit<DbUser, "appLockHash" | "appLockSalt"> & {
+  appLocked: boolean;
+  tasks: number;
+  tasksDone: number;
+  lists: number;
+};
 
 /**
  * Every user, newest signup first — for the admin dashboard only.
@@ -50,15 +63,44 @@ export async function listAllUsers(limit = 500): Promise<AdminUserRow[]> {
       .aggregate<AdminUserDoc>([
         { $sort: { createdAt: -1 } },
         { $limit: limit },
+        // counts come back with the rows rather than as N+1 follow-up queries
+        {
+          $lookup: {
+            from: "tasks",
+            localField: "_id",
+            foreignField: "userId",
+            as: "taskStats",
+            pipeline: [
+              {
+                $group: {
+                  _id: null,
+                  total: { $sum: 1 },
+                  done: { $sum: { $cond: [{ $eq: ["$status", "done"] }, 1, 0] } },
+                },
+              },
+            ],
+          },
+        },
+        {
+          $lookup: {
+            from: "lists",
+            localField: "_id",
+            foreignField: "userId",
+            as: "listStats",
+            pipeline: [{ $count: "total" }],
+          },
+        },
         {
           $project: {
-            googleId: 1,
             email: 1,
             name: 1,
             picture: 1,
             createdAt: 1,
             lastLoginAt: 1,
             appLocked: { $toBool: { $ifNull: ["$appLockHash", false] } },
+            tasks: { $ifNull: [{ $first: "$taskStats.total" }, 0] },
+            tasksDone: { $ifNull: [{ $first: "$taskStats.done" }, 0] },
+            lists: { $ifNull: [{ $first: "$listStats.total" }, 0] },
           },
         },
       ])
@@ -72,6 +114,9 @@ export async function listAllUsers(limit = 500): Promise<AdminUserRow[]> {
       createdAt: (u.createdAt ?? new Date(0)).toISOString(),
       lastLoginAt: (u.lastLoginAt ?? u.createdAt ?? new Date(0)).toISOString(),
       appLocked: u.appLocked,
+      tasks: u.tasks,
+      tasksDone: u.tasksDone,
+      lists: u.lists,
     }));
   });
 }
@@ -85,6 +130,9 @@ export async function loadAdminUsers(limit = 500): Promise<AdminUsersSnapshot> {
     users,
     activeWeek: users.filter((u) => now - Date.parse(u.lastLoginAt) < week).length,
     newWeek: users.filter((u) => now - Date.parse(u.createdAt) < week).length,
+    totalTasks: users.reduce((n, u) => n + u.tasks, 0),
+    totalTasksDone: users.reduce((n, u) => n + u.tasksDone, 0),
+    totalLists: users.reduce((n, u) => n + u.lists, 0),
     now,
   };
 }
