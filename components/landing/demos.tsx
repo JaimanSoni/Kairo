@@ -62,11 +62,11 @@ export function CaptureDemo() {
     <Frame label="Typing a task in Kairo while AI fills in the date, time and list">
       <div className="rounded-2xl bg-card/70 px-3.5 py-3">
         <div className="flex items-center gap-2">
-          <span className="text-[13px] sm:text-sm">
+          <span className="flex min-w-0 flex-1 items-center text-[13px] leading-5 sm:text-sm">
             <span className="demo-type">call mom tomorrow 6pm ~15m</span>
-            <span className="demo-caret ml-px inline-block w-px text-ink">|</span>
+            <span className="demo-caret ml-0.5 h-[1.05em] w-px shrink-0 bg-ink" />
           </span>
-          <span className="ml-auto grid size-7 shrink-0 place-items-center rounded-full bg-gradient-to-br from-sun to-sky text-on-accent">
+          <span className="grid size-7 shrink-0 place-items-center rounded-full bg-gradient-to-br from-sun to-sky text-on-accent">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
               <path d="M12 2c.7 5.2 4.8 9.3 10 10-5.2.7-9.3 4.8-10 10-.7-5.2-4.8-9.3-10-10 5.2-.7 9.3-4.8 10-10z" />
             </svg>

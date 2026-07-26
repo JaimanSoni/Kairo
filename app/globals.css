@@ -186,13 +186,15 @@ input,
   }
 }
 
+/* Reveals by max-width, not width: the box then shrink-wraps the text, so the
+   caret trails the last character instead of parking at the container edge. */
 @keyframes demo-type {
   0% {
-    width: 0;
+    max-width: 0;
   }
   45%,
   100% {
-    width: 100%;
+    max-width: 100%;
   }
 }
 
@@ -271,7 +273,7 @@ input,
   animation: demo-caret 1s step-end infinite;
 }
 .demo-type {
-  display: inline-block;
+  display: block;
   overflow: hidden;
   white-space: nowrap;
   animation: demo-type 6s ease-in-out infinite;
@@ -408,7 +410,7 @@ input,
   }
   /* keep reduced-motion demos legible in their finished state */
   .demo-type {
-    width: 100%;
+    max-width: 100%;
   }
   .demo-unlock {
     filter: none;
