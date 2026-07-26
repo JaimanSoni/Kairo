@@ -83,6 +83,28 @@ export function ListsView() {
     null
   );
 
+  /**
+   * While reordering on touch: stop the page from scrolling or pull-to-
+   * refreshing under the drag. `touch-action` alone isn't enough on Android —
+   * a non-passive touchmove listener is what actually holds the gesture.
+   */
+  useEffect(() => {
+    if (!reordering) return;
+    const body = document.body;
+    const prevOverscroll = body.style.overscrollBehaviorY;
+    body.style.overscrollBehaviorY = "contain";
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (dragRef.current && e.cancelable) e.preventDefault();
+    };
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
+
+    return () => {
+      body.style.overscrollBehaviorY = prevOverscroll;
+      document.removeEventListener("touchmove", onTouchMove);
+    };
+  }, [reordering]);
+
   const startDrag = (e: React.PointerEvent<HTMLButtonElement>, i: number) => {
     const rows = rowsRef.current;
     if (rows && rows.children.length > 1) {
@@ -250,7 +272,8 @@ export function ListsView() {
       {reordering && (
         <div className="anim-rise">
           <p className="mb-3 text-xs text-ink-soft">
-            Drag by the grip, or use the arrows. Inbox and Someday stay put.
+            Drag by the <span className="font-medium text-ink">grip on the left</span>, or use the
+            arrows. Inbox and Someday stay put.
           </p>
           <ul ref={rowsRef} className="space-y-2">
             {state.lists.map((list, i) => {
@@ -259,19 +282,25 @@ export function ListsView() {
                 <li
                   key={list.id}
                   style={{ transform: `translate3d(0, ${shiftFor(i)}px, 0)` }}
-                  className={`flex h-14 select-none items-center gap-2.5 rounded-xl border bg-card px-2.5 ${
+                  className={`flex h-14 select-none items-center gap-2.5 overflow-hidden rounded-xl border bg-card pr-2.5 ${
                     dragging
                       ? "z-10 border-sun shadow-lg shadow-sun/15"
                       : "border-line transition-transform duration-150"
                   }`}
                 >
+                  {/* full-height rail: a big, obvious target for a thumb */}
                   <button
                     onPointerDown={(e) => startDrag(e, i)}
                     onPointerMove={moveDrag}
                     onPointerUp={endDrag}
                     onPointerCancel={endDrag}
+                    onContextMenu={(e) => e.preventDefault()}
                     aria-label={`Drag ${list.name} to reorder`}
-                    className="grid size-9 shrink-0 cursor-grab touch-none place-items-center rounded-lg text-ink-faint hover:bg-paper-deep hover:text-ink active:cursor-grabbing"
+                    className={`flex h-full w-11 shrink-0 cursor-grab touch-none items-center justify-center border-r transition-colors active:cursor-grabbing ${
+                      dragging
+                        ? "border-sun/40 bg-sun-soft text-sun-deep"
+                        : "border-line bg-paper-deep/50 text-ink-faint hover:text-ink"
+                    }`}
                   >
                     <GripGlyph />
                   </button>
