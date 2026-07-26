@@ -351,7 +351,9 @@ export function Modal({
   }, [dismiss]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-start sm:p-4 sm:pt-[12vh]">
+    // bottom sheet on touch, genuinely centred on desktop — it used to sit at a
+    // fixed 12vh from the top, which reads as centred only for the tallest sheets
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
       <div
         ref={backdropRef}
         className="absolute inset-0 bg-ink/30 backdrop-blur-[2px]"
