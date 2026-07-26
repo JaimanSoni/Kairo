@@ -46,6 +46,8 @@ export const TESTIMONIALS: Testimonial[] = [
     quote:
       "I like how clean the UI of this app is, and the way you can switch easily between 2 of your accounts and you can lock one account is really helpful. Other than that, the separators that are available that can help you separate between tasks and easily navigate and manage through them is great!",
     name: "Laksha Nahata",
+    role: "Digital Marketing Executive, AllEvents",
+    avatar: "/testimonials/laksha-nahata.jpg",
     audio: "/testimonials/laksha-nahata.mp3",
     featured: true,
   },
