@@ -585,7 +585,7 @@ function Section({
 
   return (
     <section className={`group/section ${folded ? "mb-3" : "mb-8"}`}>
-      <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+      <div className="mb-1 flex items-center gap-x-2">
         {onToggleFold && (
           <button
             onClick={onToggleFold}
@@ -614,7 +614,7 @@ function Section({
           />
         ) : (
           <h2
-            className={`min-w-0 max-w-full truncate text-lg font-bold ${onRename ? "cursor-pointer hover:text-sun-deep" : ""}`}
+            className={`min-w-0 flex-1 truncate text-lg font-bold ${onRename ? "cursor-pointer hover:text-sun-deep" : ""}`}
             onClick={() => {
               if (!onRename) return;
               setName(sectionName);
@@ -631,7 +631,7 @@ function Section({
           </span>
         )}
         {count !== null && (
-          <span className="text-sm text-ink-faint">{count}</span>
+          <span className="shrink-0 text-sm text-ink-faint">{count}</span>
         )}
 
         {peopleCount > 0 && (
@@ -643,22 +643,22 @@ function Section({
           </span>
         )}
         {onLockAction && (
-          <span className="ml-auto flex flex-wrap items-center justify-end gap-1 opacity-0 transition-opacity group-hover/section:opacity-100 pointer-coarse:opacity-100 max-md:opacity-100">
+          <span className="ml-auto flex shrink-0 items-center justify-end gap-1 opacity-0 transition-opacity group-hover/section:opacity-100 pointer-coarse:opacity-100 max-md:opacity-100">
             {onShare && (
               <IconTextBtn
                 onClick={onShare}
                 title={canManage ? "Share this list" : "See who's on this list"}
-              >
-                👥 {canManage ? "Share" : "Shared"}
-              </IconTextBtn>
+                icon={<span aria-hidden>👥</span>}
+                label={canManage ? "Share" : "Shared"}
+              />
             )}
             {!locked && canManage && (
               <IconTextBtn
                 onClick={() => onLockAction("set")}
                 title="Lock this list with a PIN"
-              >
-                <LockGlyph /> Lock
-              </IconTextBtn>
+                icon={<LockGlyph />}
+                label="Lock"
+              />
             )}
             {locked && !lockedHidden && (
               <>
@@ -666,24 +666,25 @@ function Section({
                   <IconTextBtn
                     onClick={onRelock}
                     title="Hide this list again now"
-                  >
-                    <LockGlyph /> Relock
-                  </IconTextBtn>
+                    icon={<LockGlyph />}
+                    label="Relock"
+                  />
                 )}
                 {canManage && (
                   <>
                     <IconTextBtn
                       onClick={() => onLockAction("change")}
                       title="Change PIN"
-                    >
-                      <LockGlyph /> PIN
-                    </IconTextBtn>
+                      icon={<LockGlyph />}
+                      label="PIN"
+                      keepLabel
+                    />
                     <IconTextBtn
                       onClick={() => onLockAction("remove")}
                       title="Remove the lock"
-                    >
-                      <LockGlyph open /> Remove
-                    </IconTextBtn>
+                      icon={<LockGlyph open />}
+                      label="Remove"
+                    />
                   </>
                 )}
               </>
@@ -710,22 +711,37 @@ function Section({
   );
 }
 
+/**
+ * A list action. Below `sm` the label collapses and only the symbol shows, so
+ * share/lock/delete stay on one line beside the list name on a phone; from
+ * `sm` up there's room for words. `title` doubles as the accessible name,
+ * which is what carries the meaning once the text is hidden.
+ *
+ * `keepLabel` opts out — used where two actions would otherwise collapse to
+ * the same glyph.
+ */
 function IconTextBtn({
-  children,
+  icon,
+  label,
   onClick,
   title,
+  keepLabel,
 }: {
-  children: React.ReactNode;
+  icon: React.ReactNode;
+  label: string;
   onClick: () => void;
   title: string;
+  keepLabel?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
       title={title}
-      className="flex items-center gap-1 rounded-full border border-line bg-card px-2.5 py-1 text-xs font-medium text-ink-soft hover:border-ink-faint hover:text-ink"
+      aria-label={title}
+      className="flex shrink-0 items-center gap-1 rounded-full border border-line bg-card px-2 py-1 text-xs font-medium text-ink-soft hover:border-ink-faint hover:text-ink sm:px-2.5"
     >
-      {children}
+      {icon}
+      <span className={keepLabel ? "" : "hidden sm:inline"}>{label}</span>
     </button>
   );
 }
