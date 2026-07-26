@@ -11,6 +11,7 @@ import {
 } from "@/components/landing/demos";
 import { Testimonials } from "@/components/landing/testimonials";
 import { CoffeeButton } from "@/components/coffee";
+import { getSession } from "@/lib/session";
 
 export const metadata: Metadata = {
   description:
@@ -129,6 +130,10 @@ export default async function Landing({
 }) {
   const { auth_error } = await searchParams;
   const devLogin = process.env.NODE_ENV === "development" && process.env.DEV_LOGIN === "1";
+  // "/" redirects signed-in visitors to /today, so this only ever matters on
+  // /home — where offering "Continue with Google" to someone already signed in
+  // would be nonsense.
+  const signedIn = Boolean(await getSession());
 
   return (
     <main className="mesh flex-1 overflow-x-hidden">
@@ -149,12 +154,21 @@ export default async function Landing({
           >
             Help
           </Link>
-          <a
-            href="/api/auth/google"
-            className="flex items-center gap-2 rounded-full bg-ink py-1.5 pl-1.5 pr-4 text-sm font-semibold text-paper transition-all hover:-translate-y-0.5 hover:shadow-md"
-          >
-            <GoogleBadge size={26} /> Sign in
-          </a>
+          {signedIn ? (
+            <Link
+              href="/today"
+              className="rounded-full bg-ink px-4 py-2 text-sm font-semibold text-paper transition-all hover:-translate-y-0.5 hover:shadow-md"
+            >
+              Open Kairo
+            </Link>
+          ) : (
+            <a
+              href="/api/auth/google"
+              className="flex items-center gap-2 rounded-full bg-ink py-1.5 pl-1.5 pr-4 text-sm font-semibold text-paper transition-all hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <GoogleBadge size={26} /> Sign in
+            </a>
+          )}
         </div>
       </nav>
 
@@ -202,13 +216,24 @@ export default async function Landing({
           </p>
 
           <div className="mt-9 flex flex-col items-center gap-3">
-            <a
-              href="/api/auth/google"
-              className="flex items-center gap-3 rounded-full bg-sun py-2.5 pl-2.5 pr-8 text-base font-semibold text-on-accent shadow-xl shadow-sun/25 transition-all hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-sun/30 active:translate-y-0"
-            >
-              <GoogleBadge size={34} /> Continue with Google
-            </a>
-            <span className="text-xs text-ink-faint">Free. Your tasks stay yours.</span>
+            {signedIn ? (
+              <Link
+                href="/today"
+                className="rounded-full bg-sun px-8 py-4 text-base font-semibold text-on-accent shadow-xl shadow-sun/25 transition-all hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-sun/30 active:translate-y-0"
+              >
+                Open Kairo →
+              </Link>
+            ) : (
+              <a
+                href="/api/auth/google"
+                className="flex items-center gap-3 rounded-full bg-sun py-2.5 pl-2.5 pr-8 text-base font-semibold text-on-accent shadow-xl shadow-sun/25 transition-all hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-sun/30 active:translate-y-0"
+              >
+                <GoogleBadge size={34} /> Continue with Google
+              </a>
+            )}
+            <span className="text-xs text-ink-faint">
+              {signedIn ? "You're signed in." : "Free. Your tasks stay yours."}
+            </span>
           </div>
         </div>
       </section>

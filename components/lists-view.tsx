@@ -8,7 +8,7 @@ import { AddRow } from "./today-view";
 import { PinModal, type PinMode } from "./pin-modal";
 import { ShareListModal } from "./share-modal";
 import { Icon3d, ListMark, LIST_ICONS } from "./img3d";
-import { EmptyState, IconPlus, IconTrash, IconX } from "./ui";
+import { EmptyState, IconDots, IconPlus, IconTrash, IconX } from "./ui";
 
 export function ListsView() {
   const {
@@ -584,8 +584,8 @@ function Section({
   const [name, setName] = useState("");
 
   return (
-    <section className={`group/section ${folded ? "mb-3" : "mb-8"}`}>
-      <div className="mb-1 flex items-center gap-x-2">
+    <section className={`group/section ${folded ? "mb-4 sm:mb-3" : "mb-12 sm:mb-10"}`}>
+      <div className="mb-2 flex min-h-9 items-center gap-x-2">
         {onToggleFold && (
           <button
             onClick={onToggleFold}
@@ -631,7 +631,7 @@ function Section({
           </span>
         )}
         {count !== null && (
-          <span className="shrink-0 text-sm text-ink-faint">{count}</span>
+          <span className="ml-auto shrink-0 text-sm tabular-nums text-ink-faint">{count}</span>
         )}
 
         {peopleCount > 0 && (
@@ -642,65 +642,21 @@ function Section({
             👥 {peopleCount}
           </span>
         )}
-        {onLockAction && (
-          <span className="ml-auto flex shrink-0 items-center justify-end gap-1 opacity-0 transition-opacity group-hover/section:opacity-100 pointer-coarse:opacity-100 max-md:opacity-100">
-            {onShare && (
-              <IconTextBtn
-                onClick={onShare}
-                title={canManage ? "Share this list" : "See who's on this list"}
-                icon={<span aria-hidden>👥</span>}
-                label={canManage ? "Share" : "Shared"}
-              />
-            )}
-            {!locked && canManage && (
-              <IconTextBtn
-                onClick={() => onLockAction("set")}
-                title="Lock this list with a PIN"
-                icon={<LockGlyph />}
-                label="Lock"
-              />
-            )}
-            {locked && !lockedHidden && (
-              <>
-                {onRelock && (
-                  <IconTextBtn
-                    onClick={onRelock}
-                    title="Hide this list again now"
-                    icon={<LockGlyph />}
-                    label="Relock"
-                  />
-                )}
-                {canManage && (
-                  <>
-                    <IconTextBtn
-                      onClick={() => onLockAction("change")}
-                      title="Change PIN"
-                      icon={<LockGlyph />}
-                      label="PIN"
-                      keepLabel
-                    />
-                    <IconTextBtn
-                      onClick={() => onLockAction("remove")}
-                      title="Remove the lock"
-                      icon={<LockGlyph open />}
-                      label="Remove"
-                    />
-                  </>
-                )}
-              </>
-            )}
-            {onDelete && (
-              <button
-                onClick={onDelete}
-                title="Delete list"
-                aria-label="Delete list"
-                className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-line bg-card text-ink-faint hover:border-clay hover:text-clay"
-              >
-                <IconTrash size={13} />
-              </button>
-            )}
-          </span>
-        )}
+        {/* the slot is always here, so a row with no actions (Inbox, Someday)
+            still leaves the count in the same column as every other row */}
+        <span className="grid w-8 shrink-0 place-items-center">
+          {onLockAction && (
+          <SectionMenu
+            canManage={canManage}
+            locked={locked}
+            lockedHidden={lockedHidden}
+            onShare={onShare}
+            onLockAction={onLockAction}
+            onRelock={onRelock}
+            onDelete={onDelete}
+          />
+          )}
+        </span>
       </div>
       {!folded && (
         <>
@@ -721,28 +677,136 @@ function Section({
  * `keepLabel` opts out — used where two actions would otherwise collapse to
  * the same glyph.
  */
-function IconTextBtn({
-  icon,
-  label,
-  onClick,
-  title,
-  keepLabel,
+/**
+ * All of a list's actions behind one dots button. Three cramped icon pills
+ * per row read as noise on a phone and gave no clue what they did; a menu
+ * says the words, and leaves the row with a single control to align.
+ */
+function SectionMenu({
+  canManage,
+  locked,
+  lockedHidden,
+  onShare,
+  onLockAction,
+  onRelock,
+  onDelete,
 }: {
+  canManage: boolean;
+  locked?: boolean;
+  lockedHidden?: boolean;
+  onShare?: () => void;
+  onLockAction: (mode: PinMode) => void;
+  onRelock?: () => void;
+  onDelete?: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onEsc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, [open]);
+
+  const run = (fn?: () => void) => () => {
+    setOpen(false);
+    fn?.();
+  };
+
+  return (
+    <div className="relative shrink-0" ref={ref}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-label="List actions"
+        aria-expanded={open}
+        title="List actions"
+        className={`grid size-8 place-items-center rounded-lg text-ink-faint transition-colors hover:bg-paper-deep hover:text-ink ${
+          open ? "bg-paper-deep text-ink" : ""
+        }`}
+      >
+        <IconDots size={16} />
+      </button>
+
+      {open && (
+        <div className="anim-pop absolute right-0 top-9 z-30 w-52 rounded-xl border border-line bg-card p-1.5 shadow-lg">
+          {onShare && (
+            <SectionMenuBtn onClick={run(onShare)} icon={<span aria-hidden>👥</span>}>
+              {canManage ? "Share this list" : "See who's on it"}
+            </SectionMenuBtn>
+          )}
+          {!locked && canManage && (
+            <SectionMenuBtn onClick={run(() => onLockAction("set"))} icon={<LockGlyph />}>
+              Lock with a PIN
+            </SectionMenuBtn>
+          )}
+          {locked && !lockedHidden && (
+            <>
+              {onRelock && (
+                <SectionMenuBtn onClick={run(onRelock)} icon={<LockGlyph />}>
+                  Hide it again now
+                </SectionMenuBtn>
+              )}
+              {canManage && (
+                <>
+                  <SectionMenuBtn onClick={run(() => onLockAction("change"))} icon={<LockGlyph />}>
+                    Change the PIN
+                  </SectionMenuBtn>
+                  <SectionMenuBtn
+                    onClick={run(() => onLockAction("remove"))}
+                    icon={<LockGlyph open />}
+                  >
+                    Remove the lock
+                  </SectionMenuBtn>
+                </>
+              )}
+            </>
+          )}
+          {onDelete && (
+            <>
+              <div className="my-1 border-t border-line" />
+              <SectionMenuBtn
+                onClick={run(onDelete)}
+                icon={<IconTrash size={14} />}
+                tone="danger"
+              >
+                Delete list
+              </SectionMenuBtn>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SectionMenuBtn({
+  children,
+  icon,
+  onClick,
+  tone,
+}: {
+  children: React.ReactNode;
   icon: React.ReactNode;
-  label: string;
   onClick: () => void;
-  title: string;
-  keepLabel?: boolean;
+  tone?: "danger";
 }) {
   return (
     <button
       onClick={onClick}
-      title={title}
-      aria-label={title}
-      className="flex h-7 shrink-0 items-center gap-1 rounded-full border border-line bg-card px-2.5 text-xs font-medium leading-none text-ink-soft hover:border-ink-faint hover:text-ink"
+      className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+        tone === "danger" ? "text-clay hover:bg-clay-soft" : "hover:bg-paper-deep"
+      }`}
     >
-      {icon}
-      <span className={keepLabel ? "" : "hidden sm:inline"}>{label}</span>
+      <span className="grid w-4 shrink-0 place-items-center">{icon}</span>
+      {children}
     </button>
   );
 }
