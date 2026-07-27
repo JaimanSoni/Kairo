@@ -5,7 +5,13 @@
  * gates the whole product, so it must be readable and testable on its own.
  */
 
-export const TRIAL_DAYS = 3;
+/**
+ * Free days after signup. Overridable so the paywall can be exercised without
+ * waiting three days or editing the database — set TRIAL_DAYS=0 to land on it
+ * immediately. Falls back to 3 for anything unparseable.
+ */
+const configured = Number(process.env.TRIAL_DAYS);
+export const TRIAL_DAYS = Number.isFinite(configured) && configured >= 0 ? configured : 3;
 const DAY_MS = 86_400_000;
 
 /** Razorpay's own subscription states, stored verbatim. */
@@ -21,6 +27,8 @@ export type SubStatus =
 
 export type UserBilling = {
   subscriptionId?: string;
+  /** The one-off order we last opened Checkout for, pending confirmation. */
+  pendingOrderId?: string;
   customerId?: string;
   status?: SubStatus;
   /** Epoch ms the paid period runs to — access survives until then. */

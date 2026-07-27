@@ -18,6 +18,26 @@ In order of precedence:
 5. **Within 3 days of signup** → in, on trial.
 6. Otherwise → the paywall.
 
+## Two charge modes
+
+Razorpay gates **Subscriptions** behind account activation and answers `401` on
+`/plans` and `/subscriptions` until it's granted — an account can be perfectly
+able to take payments while unable to create a subscription.
+
+So the mode is decided by whether `RAZORPAY_PLAN_ID` is set:
+
+| `RAZORPAY_PLAN_ID` | Mode | What happens |
+| --- | --- | --- |
+| set | `subscription` | Mandate taken now, first charge at the end of the trial, auto-renews |
+| unset | `one-off` | A single month charged through Orders; the user pays again to extend |
+
+Both feed the same `resolveAccess` rules — a one-off payment simply pushes
+`currentPeriodEnd` a month forward, which the "paid through" branch already
+honours. Nothing else in the app knows the difference.
+
+To move to real subscriptions later: enable Subscriptions in the Razorpay
+dashboard, create the plan, set `RAZORPAY_PLAN_ID`, redeploy. No code change.
+
 ## Setup
 
 1. **Create a plan** in the Razorpay dashboard (Subscriptions → Plans):
@@ -69,15 +89,31 @@ Two independent paths, and the client is trusted in neither.
   signature), and finds the account by looking the subscription id up in our
   own records — never from the payload's `notes`, which a forger controls.
 
-## Testing with test mode
+## Testing
 
-Razorpay test cards: `4111 1111 1111 1111`, any future expiry, any CVV.
+1. **Turn payments on** in `/admin/dashboard`.
+2. **To land on the paywall immediately**, set `TRIAL_DAYS=0` in `.env.local`
+   and restart. Otherwise you'd have to wait out the trial or edit
+   `createdAt` in the database. Remove it when you're done.
+3. **Pay** with a Razorpay test card: `4111 1111 1111 1111`, any future expiry,
+   any CVV, OTP `1234`. To watch a decline instead, use `4000 0000 0000 0002`.
+4. **Check the dashboard** — Transactions → Payments. The payment appears with
+   the order id, and the `notes` carry the `userId` and email that paid.
+5. **Confirm access** — the app should let you straight in, and the profile
+   sheet shows the period you've paid through.
 
-To exercise the webhook locally, expose the port and point the dashboard at it:
+### Webhooks
+
+Razorpay can't reach `localhost`, so expose the port first:
 
 ```sh
-npx localtunnel --port 3010     # or ngrok http 3010
+npx localtunnel --port 3010     # or: ngrok http 3010
 ```
+
+Then add the public URL as a webhook (Settings → Webhooks), set the same
+secret in `RAZORPAY_WEBHOOK_SECRET`, restart, and use **Send test webhook** in
+the dashboard. An unsigned or wrongly signed request is rejected with 400,
+which is the correct response — it won't fix itself on retry.
 
 ## Managing users
 

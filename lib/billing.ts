@@ -58,6 +58,40 @@ export async function findUserBySubscriptionId(
   });
 }
 
+/**
+ * Extends paid access by a month. Stacks from whichever is later — the end of
+ * the period already bought, or now — so paying twice never loses a month.
+ */
+export async function extendPaidPeriod(userId: string, from = Date.now()): Promise<number> {
+  return withDbRetry(async () => {
+    const db = await getDb();
+    const doc = await db
+      .collection("users")
+      .findOne({ _id: new ObjectId(userId) }, { projection: { billing: 1 } });
+    const current = (doc?.billing?.currentPeriodEnd as number | undefined) ?? 0;
+    const base = Math.max(current, from);
+    const next = new Date(base);
+    next.setMonth(next.getMonth() + 1);
+    const currentPeriodEnd = next.getTime();
+    await db.collection("users").updateOne(
+      { _id: new ObjectId(userId) },
+      { $set: { "billing.currentPeriodEnd": currentPeriodEnd, "billing.status": "active", "billing.updatedAt": new Date() } }
+    );
+    return currentPeriodEnd;
+  });
+}
+
+/** Finds who a one-off order belongs to, from our own record of it. */
+export async function findUserByOrderId(orderId: string): Promise<{ id: string } | null> {
+  return withDbRetry(async () => {
+    const db = await getDb();
+    const doc = await db
+      .collection("users")
+      .findOne({ "billing.pendingOrderId": orderId }, { projection: { _id: 1 } });
+    return doc ? { id: doc._id.toHexString() } : null;
+  });
+}
+
 export async function setComped(
   userId: string,
   comped: boolean,

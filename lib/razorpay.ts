@@ -15,8 +15,30 @@ const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET ?? "";
 const WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET ?? "";
 export const RAZORPAY_PLAN_ID = process.env.RAZORPAY_PLAN_ID ?? "";
 
-/** Payments can only be switched on when every piece is present. */
+/** The monthly price, in the smallest unit (599 = $5.99). */
+export const PRICE_MINOR = Number(process.env.RAZORPAY_PRICE_MINOR ?? 599);
+export const PRICE_CURRENCY = process.env.RAZORPAY_CURRENCY ?? "USD";
+export const PRICE_LABEL = process.env.NEXT_PUBLIC_PRICE_LABEL ?? "$5.99";
+
+/**
+ * Two ways to charge, decided by whether a plan id exists.
+ *
+ * Razorpay gates Subscriptions behind account activation and answers 401 on
+ * /plans until it's granted, so an account can be perfectly able to take
+ * payments while unable to create a subscription. When that's the case we
+ * charge a month at a time through Orders, which every account can do.
+ */
+export type BillingMode = "subscription" | "one-off";
+export function billingMode(): BillingMode {
+  return RAZORPAY_PLAN_ID ? "subscription" : "one-off";
+}
+
+/** Enough to take money at all — the one-off path needs no plan. */
 export function razorpayConfigured(): boolean {
+  return Boolean(RAZORPAY_KEY_ID && KEY_SECRET);
+}
+
+export function subscriptionsConfigured(): boolean {
   return Boolean(RAZORPAY_KEY_ID && KEY_SECRET && RAZORPAY_PLAN_ID);
 }
 
@@ -68,6 +90,61 @@ export type RazorpayPlan = {
   interval: number;
   item: { name: string; amount: number; currency: string };
 };
+
+export type RazorpayOrder = {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  receipt?: string;
+};
+
+export type RazorpayPayment = {
+  id: string;
+  order_id: string | null;
+  status: "created" | "authorized" | "captured" | "refunded" | "failed";
+  amount: number;
+  currency: string;
+};
+
+/** One month's access, charged now. Amount is in the smallest currency unit. */
+export async function createOrder(input: {
+  receipt: string;
+  notes?: Record<string, string>;
+}): Promise<RazorpayOrder> {
+  if (PRICE_MINOR < 100) throw new Error("Amount must be at least 100 minor units");
+  return call<RazorpayOrder>("/orders", {
+    method: "POST",
+    body: JSON.stringify({
+      amount: PRICE_MINOR,
+      currency: PRICE_CURRENCY,
+      receipt: input.receipt.slice(0, 40),
+      ...(input.notes ? { notes: input.notes } : {}),
+    }),
+  });
+}
+
+export async function fetchPayment(id: string): Promise<RazorpayPayment> {
+  return call<RazorpayPayment>(`/payments/${id}`);
+}
+
+/**
+ * Verifies the one-off Checkout handshake.
+ *
+ * The signed payload here is `order_id|payment_id` — the opposite order to the
+ * subscription flow above, which is an easy and silent mistake to make.
+ */
+export function verifyOrderSignature(input: {
+  orderId: string;
+  paymentId: string;
+  signature: string;
+}): boolean {
+  if (!KEY_SECRET) return false;
+  const expected = createHmac("sha256", KEY_SECRET)
+    .update(`${input.orderId}|${input.paymentId}`)
+    .digest("hex");
+  return safeEqualHex(expected, input.signature);
+}
 
 export async function createCustomer(input: {
   name: string;

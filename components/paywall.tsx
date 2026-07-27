@@ -7,15 +7,26 @@ import { Icon3d } from "./img3d";
 
 const CHECKOUT_SRC = "https://checkout.razorpay.com/v1/checkout.js";
 
-type Razorpay = new (options: Record<string, unknown>) => { open: () => void };
+type Razorpay = new (options: Record<string, unknown>) => {
+  open: () => void;
+  on?: (event: string, cb: (payload: never) => void) => void;
+};
 declare global {
   interface Window {
     Razorpay?: Razorpay;
   }
 }
 
-/** Opens Razorpay Checkout for a subscription and reports the outcome back. */
-function useCheckout(user: { name: string; email: string }) {
+type Mode = "subscription" | "one-off";
+
+/**
+ * Opens Razorpay Checkout and reports the outcome back.
+ *
+ * Two shapes, same button: a subscription mandate where the account supports
+ * it, otherwise a single month's charge. The server decides which — the mode
+ * arrives with the page, never from the client.
+ */
+function useCheckout(user: { name: string; email: string }, mode: Mode) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,31 +35,45 @@ function useCheckout(user: { name: string; email: string }) {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/billing/subscribe", { method: "POST" });
-      const data = (await res.json()) as { subscriptionId?: string; keyId?: string; error?: string };
-      if (!res.ok || !data.subscriptionId || !data.keyId) {
-        throw new Error(data.error ?? "Could not start the subscription");
+      const sub = mode === "subscription";
+      const res = await fetch(sub ? "/api/billing/subscribe" : "/api/billing/order", { method: "POST" });
+      const data = (await res.json()) as {
+        subscriptionId?: string; orderId?: string; amount?: number; currency?: string;
+        keyId?: string; error?: string;
+      };
+      if (!res.ok || !data.keyId || (sub ? !data.subscriptionId : !data.orderId)) {
+        throw new Error(data.error ?? "Could not start the payment");
       }
       if (!window.Razorpay) throw new Error("Checkout didn't load — check your connection");
 
       const rzp = new window.Razorpay({
         key: data.keyId,
-        subscription_id: data.subscriptionId,
+        ...(sub
+          ? { subscription_id: data.subscriptionId }
+          : { order_id: data.orderId, amount: data.amount, currency: data.currency }),
         name: "Kairo",
-        description: "Kairo subscription",
+        description: sub ? "Kairo subscription" : "Kairo — one month",
         prefill: { name: user.name, email: user.email },
         theme: { color: "#0c9384" },
         handler: async (response: Record<string, string>) => {
-          // unlock straight away; the webhook confirms it independently
-          const v = await fetch("/api/billing/verify", {
+          const v = await fetch(sub ? "/api/billing/verify" : "/api/billing/verify-order", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(response),
           });
           if (v.ok) window.location.assign("/today");
-          else setError("Payment taken, but confirming it failed. Refresh in a moment.");
+          else {
+            const e = (await v.json().catch(() => ({}))) as { error?: string };
+            setError(e.error ?? "Payment taken, but confirming it failed. Refresh in a moment.");
+            setBusy(false);
+          }
         },
         modal: { ondismiss: () => setBusy(false) },
+      });
+      // a card decline fires this rather than the handler
+      rzp.on?.("payment.failed", (e: { error?: { description?: string } }) => {
+        setError(e?.error?.description ?? "That payment didn't go through. Please try again.");
+        setBusy(false);
       });
       rzp.open();
     } catch (err) {
@@ -60,10 +85,11 @@ function useCheckout(user: { name: string; email: string }) {
   return { start, busy, error };
 }
 
-function PriceLine() {
+function PriceLine({ price, mode }: { price: string; mode: Mode }) {
   return (
     <p className="text-sm text-ink-soft">
-      <b className="font-semibold text-ink">$5.99</b> a month. Cancel whenever you like.
+      <b className="font-semibold text-ink">{price}</b>{" "}
+      {mode === "subscription" ? "a month. Cancel whenever you like." : "for a month. Renew whenever you like — nothing recurring."}
     </p>
   );
 }
@@ -73,8 +99,18 @@ function PriceLine() {
  * it. Deliberately not dismissible — but it never hides anyone's data, and
  * signing out stays reachable.
  */
-export function Paywall({ access, user }: { access: Access; user: { name: string; email: string } }) {
-  const { start, busy, error } = useCheckout(user);
+export function Paywall({
+  access,
+  user,
+  mode,
+  price,
+}: {
+  access: Access;
+  user: { name: string; email: string };
+  mode: Mode;
+  price: string;
+}) {
+  const { start, busy, error } = useCheckout(user, mode);
 
   return (
     <>
@@ -91,13 +127,13 @@ export function Paywall({ access, user }: { access: Access; user: { name: string
           </p>
 
           <div className="mt-6 rounded-2xl border border-line bg-card p-6">
-            <PriceLine />
+            <PriceLine price={price} mode={mode} />
             <button
               onClick={start}
               disabled={busy}
               className="mt-4 w-full rounded-2xl bg-sun px-6 py-3.5 text-base font-semibold text-on-accent shadow-lg shadow-sun/25 transition-transform active:scale-[0.99] disabled:opacity-60"
             >
-              {busy ? "Opening checkout…" : "Subscribe"}
+              {busy ? "Opening checkout…" : mode === "subscription" ? "Subscribe" : `Pay ${price}`}
             </button>
             {error && <p className="mt-3 text-sm text-clay">{error}</p>}
             <p className="mt-3 text-xs text-ink-faint">
@@ -120,8 +156,18 @@ export function Paywall({ access, user }: { access: Access; user: { name: string
  * A quiet strip during the trial, and while a subscription is in trouble.
  * Silent when there's nothing worth saying — nobody needs a banner every day.
  */
-export function TrialBanner({ access, user }: { access: Access; user: { name: string; email: string } }) {
-  const { start, busy } = useCheckout(user);
+export function TrialBanner({
+  access,
+  user,
+  mode,
+  price,
+}: {
+  access: Access;
+  user: { name: string; email: string };
+  mode: Mode;
+  price: string;
+}) {
+  const { start, busy } = useCheckout(user, mode);
   const [dismissed, setDismissed] = useState(false);
 
   const failing = access.status === "halted" || access.status === "pending";
@@ -149,7 +195,7 @@ export function TrialBanner({ access, user }: { access: Access; user: { name: st
           disabled={busy}
           className="font-semibold underline underline-offset-2 disabled:opacity-60"
         >
-          {failing ? "Fix payment" : "Subscribe — $5.99/mo"}
+          {failing ? "Fix payment" : mode === "subscription" ? `Subscribe — ${price}/mo` : `Pay ${price} for a month`}
         </button>
         {!failing && (
           <button

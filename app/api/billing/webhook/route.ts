@@ -1,6 +1,17 @@
 import { NextResponse } from "next/server";
-import { findUserBySubscriptionId, updateUserBilling, type SubStatus } from "@/lib/billing";
-import { verifyWebhookSignature, webhookConfigured } from "@/lib/razorpay";
+import {
+  extendPaidPeriod,
+  findUserByOrderId,
+  findUserBySubscriptionId,
+  updateUserBilling,
+  type SubStatus,
+} from "@/lib/billing";
+import {
+  PRICE_CURRENCY,
+  PRICE_MINOR,
+  verifyWebhookSignature,
+  webhookConfigured,
+} from "@/lib/razorpay";
 
 /**
  * Razorpay's subscription webhook — the authority on what someone has paid for.
@@ -29,9 +40,16 @@ const HANDLED = new Set([
   "subscription.updated",
 ]);
 
+/** One-off payments: the safety net when the browser never confirms. */
+const PAID = new Set(["order.paid", "payment.captured"]);
+
 type Payload = {
   event?: string;
   payload?: {
+    payment?: {
+      entity?: { id?: string; order_id?: string | null; amount?: number; currency?: string; status?: string };
+    };
+    order?: { entity?: { id?: string; amount?: number; currency?: string } };
     subscription?: {
       entity?: {
         id?: string;
@@ -65,6 +83,35 @@ export async function POST(request: Request) {
   }
 
   const event = body.event ?? "";
+
+  if (PAID.has(event)) {
+    const pay = body.payload?.payment?.entity;
+    const orderId = pay?.order_id ?? body.payload?.order?.entity?.id;
+    if (!orderId) return NextResponse.json({ ok: true, ignored: event });
+
+    const payer = await findUserByOrderId(orderId);
+    if (!payer) return NextResponse.json({ ok: true, unknown: true });
+
+    // the signature proves Razorpay sent this; this proves it's our price
+    const amount = pay?.amount ?? body.payload?.order?.entity?.amount;
+    const currency = pay?.currency ?? body.payload?.order?.entity?.currency;
+    if (amount !== PRICE_MINOR || currency !== PRICE_CURRENCY) {
+      console.warn("[billing] webhook amount mismatch", { amount, currency });
+      return NextResponse.json({ ok: true, mismatch: true });
+    }
+
+    try {
+      const until = await extendPaidPeriod(payer.id);
+      // clearing it makes this idempotent: a retry finds no owner and stops
+      await updateUserBilling(payer.id, { pendingOrderId: "" });
+      console.info("[billing] %s -> user %s paid through %s", event, payer.id, new Date(until).toISOString());
+    } catch (err) {
+      console.error("[billing] webhook payment write failed", err);
+      return NextResponse.json({ error: "Write failed" }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
   const entity = body.payload?.subscription?.entity;
   if (!HANDLED.has(event) || !entity?.id) {
     // acknowledge anything else so Razorpay stops retrying it

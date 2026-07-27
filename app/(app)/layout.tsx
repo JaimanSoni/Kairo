@@ -5,6 +5,7 @@ import { getUserById } from "@/lib/users";
 import { isAdminEmail } from "@/lib/admin";
 import { getBillingSettings, resolveAccess, type UserBilling } from "@/lib/billing";
 import { Paywall, TrialBanner } from "@/components/paywall";
+import { PRICE_LABEL, billingMode } from "@/lib/razorpay";
 import { AppProvider } from "@/components/store";
 import { Shell } from "@/components/shell";
 
@@ -27,8 +28,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     settings: billingSettings,
   });
   const identity = { name: session.name, email: session.email };
+  // the charge shape is a server fact; the client is only told which to render
+  const mode = billingMode();
 
-  if (!access.allowed) return <Paywall access={access} user={identity} />;
+  if (!access.allowed) return <Paywall access={access} user={identity} mode={mode} price={PRICE_LABEL} />;
 
   return (
     <AppProvider
@@ -51,7 +54,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       initialLists={lists}
       initialPeople={people}
     >
-      <TrialBanner access={access} user={identity} />
+      <TrialBanner access={access} user={identity} mode={mode} price={PRICE_LABEL} />
       <Shell>{children}</Shell>
     </AppProvider>
   );
