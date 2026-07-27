@@ -15,10 +15,28 @@ const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET ?? "";
 const WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET ?? "";
 export const RAZORPAY_PLAN_ID = process.env.RAZORPAY_PLAN_ID ?? "";
 
-/** The monthly price, in the smallest unit (599 = $5.99). */
-export const PRICE_MINOR = Number(process.env.RAZORPAY_PRICE_MINOR ?? 599);
-export const PRICE_CURRENCY = process.env.RAZORPAY_CURRENCY ?? "USD";
-export const PRICE_LABEL = process.env.NEXT_PUBLIC_PRICE_LABEL ?? "$5.99";
+/**
+ * The monthly price, in the smallest currency unit (29900 = ₹299.00).
+ *
+ * INR by default. Razorpay will happily *create* a USD order on an account
+ * without international payments enabled, then refuse the card at Checkout
+ * with "International cards are not supported" — so the currency has to match
+ * what the account can actually collect, not what we'd like to charge.
+ */
+export const PRICE_MINOR = Number(process.env.RAZORPAY_PRICE_MINOR ?? 29900);
+export const PRICE_CURRENCY = process.env.RAZORPAY_CURRENCY ?? "INR";
+
+/**
+ * Derived, never configured separately — a price label that disagrees with the
+ * amount actually charged is the kind of mistake nobody notices until someone
+ * is billed differently from what they were shown.
+ */
+export const PRICE_LABEL = new Intl.NumberFormat("en-IN", {
+  style: "currency",
+  currency: PRICE_CURRENCY,
+  minimumFractionDigits: PRICE_MINOR % 100 === 0 ? 0 : 2,
+  maximumFractionDigits: 2,
+}).format(PRICE_MINOR / 100);
 
 /**
  * Two ways to charge, decided by whether a plan id exists.

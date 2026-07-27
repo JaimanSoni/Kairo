@@ -40,13 +40,15 @@ dashboard, create the plan, set `RAZORPAY_PLAN_ID`, redeploy. No code change.
 
 ## Setup
 
-1. **Create a plan** in the Razorpay dashboard (Subscriptions → Plans):
-   monthly, $5.99. Copy the plan id (`plan_...`).
+1. **The price** is ₹299/month, set by `RAZORPAY_PRICE_MINOR` (in paise) and
+   `RAZORPAY_CURRENCY`. The label shown to users is *derived* from those two —
+   there's no separate label to forget to update, so what's displayed can
+   never disagree with what's charged.
 
-   > Razorpay only allows non-INR plans once international payments are
-   > enabled on the account. If USD is refused, create the plan in INR — the
-   > code takes its amount from the plan, so only the label in
-   > `components/paywall.tsx` needs changing.
+   > Charging in USD needs international payments enabled on the account.
+   > Razorpay will let you *create* a USD order without it and only refuse at
+   > Checkout, with "International cards are not supported" — so the currency
+   > has to match what the account can actually collect.
 
 2. **Add the keys.** Locally in `.env.local`, and on Vercel under Settings →
    Environment Variables:
