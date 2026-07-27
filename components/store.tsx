@@ -147,6 +147,8 @@ type AppContextValue = {
   /** Reads the latest version of a task (safe inside async callbacks). */
   getTask: (id: string) => Task | undefined;
   updateTask: (id: string, patch: Partial<Task>) => void;
+  /** Marks a task as being worked on now, or stops it. Only one at a time. */
+  toggleStarted: (id: string) => void;
   completeTask: (id: string) => void;
   uncompleteTask: (id: string) => void;
   deleteTask: (id: string, opts?: { silent?: boolean }) => void;
@@ -310,6 +312,7 @@ export function AppProvider({
         carryCount: 0,
         repeat: input.repeat ?? null,
         reminderAt: null,
+        startedAt: null,
         assigneeId: null,
         subtasks: [],
         completedAt: null,
@@ -365,7 +368,7 @@ export function AppProvider({
       const body: Record<string, unknown> = {};
       const fields: (keyof Task)[] = [
         "title", "note", "status", "plannedFor", "plannedTime", "dueDate", "spotlight", "listId",
-        "estimateMin", "order", "carryCount", "repeat", "reminderAt", "assigneeId", "subtasks",
+        "estimateMin", "order", "carryCount", "repeat", "reminderAt", "startedAt", "assigneeId", "subtasks",
       ];
       for (const f of fields) {
         if (f in patch) body[f] = patch[f];
@@ -381,6 +384,30 @@ export function AppProvider({
    * Completing a repeating task logs a finished copy (for Today/Log) and
    * advances the card to its next occurrence — the series is one document.
    */
+  /**
+   * Starting work on something stops whatever else was running.
+   *
+   * You can only actually be doing one thing, and a list of six "in progress"
+   * tasks is the same lie as a to-do list with sixty items on it — which is
+   * the thing this app exists to avoid.
+   */
+  const toggleStarted = useCallback(
+    (id: string) => {
+      const t = stateRef.current.tasks[id];
+      if (!t || t.status === "done") return;
+
+      if (t.startedAt) {
+        updateTask(id, { startedAt: null });
+        return;
+      }
+      for (const other of Object.values(stateRef.current.tasks)) {
+        if (other.id !== id && other.startedAt) updateTask(other.id, { startedAt: null });
+      }
+      updateTask(id, { startedAt: new Date().toISOString() });
+    },
+    [updateTask]
+  );
+
   const completeTask = useCallback(
     (id: string) => {
       const t = stateRef.current.tasks[id];
@@ -430,6 +457,7 @@ export function AppProvider({
           spotlight: false,
           carryCount: 0,
           reminderAt: null,
+          startedAt: null,
           // a fresh occurrence starts with a fresh checklist
           subtasks: t.subtasks.map((s) => ({ ...s, done: false, plannedFor: null })),
         });
@@ -437,7 +465,11 @@ export function AppProvider({
         return;
       }
 
-      updateTask(id, { status: "done", ...(t.reminderAt ? { reminderAt: null } : {}) });
+      updateTask(id, {
+        status: "done",
+        ...(t.reminderAt ? { reminderAt: null } : {}),
+        ...(t.startedAt ? { startedAt: null } : {}),
+      });
     },
     [updateTask, showToast, syncError]
   );
@@ -763,6 +795,7 @@ export function AppProvider({
       addTask,
       getTask,
       updateTask,
+      toggleStarted,
       completeTask,
       uncompleteTask,
       deleteTask,
@@ -788,7 +821,7 @@ export function AppProvider({
       refreshData,
     }),
     [
-      state, addTask, getTask, updateTask, completeTask, uncompleteTask, deleteTask,
+      state, addTask, getTask, updateTask, toggleStarted, completeTask, uncompleteTask, deleteTask,
       reorderTasks, sweep, createList, renameList, upsertList, reorderLists, deleteList, showToast,
       setOmnibar, setEditing, dismissSweep, reopenSweep, startFocus, stopFocus, minimizeFocus,
       setListUnlocked, lockApp, unlockApp, setAppLockEnabled, refreshData,

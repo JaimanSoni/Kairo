@@ -31,6 +31,9 @@ export type Task = {
   carryCount: number;
   /** Recurrence rule. A repeating task is one card that advances on completion. */
   repeat: Repeat | null;
+  /** When work actually began, ISO, or null. Truthy means "in progress" —
+   *  a timestamp rather than a flag so the card can say how long it's been. */
+  startedAt: string | null;
   /** One-off "remind me" push, epoch ms. Cleared when it fires or the task completes. */
   reminderAt: number | null;
   /** In a shared list, the member this task is assigned to (their user id) or null. */

@@ -16,6 +16,16 @@ export function isTimeString(v: unknown): v is string {
   return typeof v === "string" && TIME_RE.test(v);
 }
 
+/** An ISO instant we'd be willing to store — parseable, and not absurd. */
+export function isIsoDateTime(v: unknown): v is string {
+  if (typeof v !== "string" || v.length > 40) return false;
+  const t = Date.parse(v);
+  if (!Number.isFinite(t)) return false;
+  // a decade either side of now: enough for clock skew, not enough for junk
+  const decade = 10 * 365 * 86_400_000;
+  return Math.abs(t - Date.now()) < decade;
+}
+
 export function toTask(doc: WithId<Document>): Task {
   return {
     id: doc._id.toHexString(),
@@ -31,6 +41,7 @@ export function toTask(doc: WithId<Document>): Task {
     order: typeof doc.order === "number" ? doc.order : 0,
     carryCount: typeof doc.carryCount === "number" ? doc.carryCount : 0,
     repeat: doc.repeat ? (sanitizeRepeat(doc.repeat) ?? null) : null,
+    startedAt: doc.startedAt ? (doc.startedAt as Date).toISOString() : null,
     reminderAt: typeof doc.reminderAt === "number" ? doc.reminderAt : null,
     assigneeId: doc.assigneeId ? (doc.assigneeId as ObjectId).toHexString() : null,
     subtasks: Array.isArray(doc.subtasks) ? (doc.subtasks as Subtask[]) : [],
@@ -176,6 +187,7 @@ type TaskPatch = {
   carryCount?: number;
   repeat?: Repeat | null;
   reminderAt?: number | null;
+  startedAt?: string | null;
   assigneeId?: string | null;
   subtasks?: Subtask[];
 };
@@ -215,6 +227,10 @@ export function sanitizeTaskPatch(body: Record<string, unknown>): TaskPatch | nu
   if ("listId" in body) {
     if (body.listId !== null && (typeof body.listId !== "string" || !ObjectId.isValid(body.listId))) return null;
     patch.listId = body.listId as string | null;
+  }
+  if ("startedAt" in body) {
+    if (body.startedAt !== null && !isIsoDateTime(body.startedAt)) return null;
+    patch.startedAt = body.startedAt as string | null;
   }
   if ("estimateMin" in body) {
     if (body.estimateMin !== null && (typeof body.estimateMin !== "number" || body.estimateMin < 0 || body.estimateMin > 24 * 60)) return null;
@@ -274,6 +290,9 @@ export function sanitizeTaskPatch(body: Record<string, unknown>): TaskPatch | nu
 /** Builds the Mongo $set/$unset update from a sanitized patch, handling done transitions. */
 export function buildTaskUpdate(patch: TaskPatch): Document {
   const set: Document = { ...patch, updatedAt: new Date() };
+  if (patch.startedAt !== undefined) {
+    set.startedAt = patch.startedAt === null ? null : new Date(patch.startedAt);
+  }
   if (patch.listId !== undefined) {
     set.listId = patch.listId === null ? null : new ObjectId(patch.listId);
   }
@@ -285,6 +304,8 @@ export function buildTaskUpdate(patch: TaskPatch): Document {
   if (patch.status === "done") {
     set.completedAt = new Date();
     set.spotlight = false;
+    // finishing ends the work — nothing stays "in progress" once it's done
+    set.startedAt = null;
   } else if (patch.status) {
     set.completedAt = null;
   }

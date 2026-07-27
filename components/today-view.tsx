@@ -147,11 +147,8 @@ export function TodayView() {
         <DraggableList tasks={restTasks} context="today" />
       )}
 
-      {/* add row */}
-      <AddRow
-        placeholder={todayTasks.length ? "Add to today…" : "What would make today good?"}
-        plannedFor={today}
-      />
+      {/* add row — today, or straight to the inbox to decide later */}
+      <TodayCapture today={today} hasTasks={todayTasks.length > 0} />
 
       {/* steps planned onto today from bigger tasks */}
       {plannedSteps.length > 0 && (
@@ -232,6 +229,52 @@ export function TodayView() {
   );
 }
 
+/**
+ * One capture box, two destinations.
+ *
+ * Not everything you think of on a Tuesday morning belongs in Tuesday. The
+ * switch lets a thought go to the inbox without leaving Today or committing
+ * to a day — which is the whole point of having an inbox.
+ */
+function TodayCapture({ today, hasTasks }: { today: string; hasTasks: boolean }) {
+  const [dest, setDest] = useState<"today" | "inbox">("today");
+  const toInbox = dest === "inbox";
+
+  return (
+    <AddRow
+      // remount on switch so the draft can't be submitted to the wrong place
+      key={dest}
+      placeholder={
+        toInbox
+          ? "Capture it — decide the day later…"
+          : hasTasks
+            ? "Add to today…"
+            : "What would make today good?"
+      }
+      plannedFor={toInbox ? null : today}
+      status={toInbox ? "inbox" : undefined}
+      trailing={
+        <span className="flex shrink-0 items-center rounded-full bg-paper-deep p-0.5 text-[11px] font-semibold">
+          {(["today", "inbox"] as const).map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => setDest(d)}
+              aria-pressed={dest === d}
+              title={d === "today" ? "Add to today" : "Add to the inbox, undated"}
+              className={`rounded-full px-2.5 py-1 capitalize transition-colors ${
+                dest === d ? "bg-card text-ink shadow-sm" : "text-ink-faint hover:text-ink-soft"
+              }`}
+            >
+              {d}
+            </button>
+          ))}
+        </span>
+      }
+    />
+  );
+}
+
 /* ---------- drag-to-reorder list ---------- */
 
 export function DraggableList({ tasks, context }: { tasks: Task[]; context: "today" | "upcoming" | "backlog" }) {
@@ -298,11 +341,14 @@ export function AddRow({
   plannedFor,
   listId,
   status,
+  trailing,
 }: {
   placeholder: string;
   plannedFor?: string | null;
   listId?: string | null;
   status?: Task["status"];
+  /** Rendered inside the row, after the input — e.g. a destination switch. */
+  trailing?: React.ReactNode;
 }) {
   const { state, addTask } = useApp();
   const [text, setText] = useState("");
@@ -324,8 +370,9 @@ export function AddRow({
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && submit()}
         placeholder={placeholder}
-        className="w-full bg-transparent text-base outline-none placeholder:text-ink-faint sm:text-[15px]"
+        className="w-full min-w-0 bg-transparent text-base outline-none placeholder:text-ink-faint sm:text-[15px]"
       />
+      {trailing}
     </div>
   );
 }

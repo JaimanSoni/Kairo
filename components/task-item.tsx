@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { Task } from "@/lib/types";
 import { addDays, friendlyDay, fmtMinutes, fmtReminder, fmtTime12 } from "@/lib/dates";
 import { repeatLabel } from "@/lib/repeat";
@@ -11,6 +11,34 @@ import { SendTaskModal } from "./share-modal";
 import { Icon3d, ListMark } from "./img3d";
 import { PersonAvatar } from "./person-avatar";
 import { Chip, IconCheck, IconDots, IconStar } from "./ui";
+
+/**
+ * Whole minutes since `startedAt`, re-rendering about twice a minute.
+ *
+ * Reading the clock during render is impure, so the tick comes through
+ * useSyncExternalStore: the snapshot is the current minute since the epoch,
+ * which is stable between ticks. Nothing is subscribed when nothing is running.
+ */
+function useElapsedMinutes(startedAt: string | null): number {
+  const nowMinute = useSyncExternalStore(
+    (onChange) => {
+      if (!startedAt) return () => {};
+      const id = setInterval(onChange, 30_000);
+      return () => clearInterval(id);
+    },
+    () => (startedAt ? Math.floor(Date.now() / 60_000) : 0),
+    () => 0
+  );
+  if (!startedAt) return 0;
+  return Math.max(0, nowMinute - Math.floor(Date.parse(startedAt) / 60_000));
+}
+
+function elapsedLabel(minutes: number): string {
+  if (minutes < 1) return "just started";
+  if (minutes < 60) return `${minutes}m`;
+  const h = Math.floor(minutes / 60);
+  return `${h}h ${String(minutes % 60).padStart(2, "0")}m`;
+}
 
 export function TaskItem({
   task,
@@ -30,7 +58,7 @@ export function TaskItem({
   onDrop?: (e: React.DragEvent) => void;
   dropIndicator?: "above" | "below" | null;
 }) {
-  const { state, completeTask, uncompleteTask, updateTask, deleteTask, setEditing, showToast, startFocus } = useApp();
+  const { state, completeTask, uncompleteTask, updateTask, toggleStarted, deleteTask, setEditing, showToast, startFocus } = useApp();
   const toggleStep = useStepToggle();
   const [checking, setChecking] = useState(false);
   const [stepsOpen, setStepsOpen] = useState(false);
@@ -38,6 +66,8 @@ export function TaskItem({
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const done = task.status === "done";
+  const running = Boolean(task.startedAt) && !done;
+  const elapsed = useElapsedMinutes(running ? task.startedAt : null);
   const list = task.listId ? state.lists.find((l) => l.id === task.listId) : null;
   const today = state.today;
 
@@ -78,7 +108,7 @@ export function TaskItem({
     <div
       className={`group relative select-none rounded-xl border bg-card px-3.5 py-3 transition-[transform,box-shadow] duration-150 hover:shadow-sm ${
         checking ? "anim-out" : ""
-      } ${task.spotlight && !done ? "border-sun/60" : "border-line"}`}
+      } ${running ? "border-sky/70 bg-sky-soft/25" : task.spotlight && !done ? "border-sun/60" : "border-line"}`}
       draggable={draggable}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
@@ -105,6 +135,31 @@ export function TaskItem({
         <IconCheck size={12} />
       </button>
 
+      {!done && context !== "log" && (
+        <button
+          onClick={() => toggleStarted(task.id)}
+          aria-pressed={running}
+          aria-label={running ? "Stop working on this" : "Start working on this"}
+          title={running ? "Stop working on this" : "Start working on this"}
+          className={`grid size-6 shrink-0 place-items-center rounded-full transition-colors ${
+            running
+              ? "bg-sky text-on-accent"
+              : "text-ink-faint opacity-0 hover:bg-sky-soft hover:text-sky group-hover:opacity-100 pointer-coarse:opacity-100 max-md:opacity-100"
+          }`}
+        >
+          {running ? (
+            <svg width="9" height="9" viewBox="0 0 12 12" fill="currentColor" aria-hidden>
+              <rect x="2" y="2" width="3" height="8" rx="1" />
+              <rect x="7" y="2" width="3" height="8" rx="1" />
+            </svg>
+          ) : (
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor" aria-hidden>
+              <path d="M3 1.8v8.4a.6.6 0 00.92.5l6.3-4.2a.6.6 0 000-1L3.92 1.3a.6.6 0 00-.92.5z" />
+            </svg>
+          )}
+        </button>
+      )}
+
       <button
         className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left"
         onClick={() => setEditing(task.id)}
@@ -112,8 +167,13 @@ export function TaskItem({
         <span className={`w-full truncate text-[15px] leading-snug ${done ? "strike-done" : ""}`}>
           {task.title}
         </span>
-        {(list || assignee || task.plannedTime || task.estimateMin || task.dueDate || task.repeat || task.reminderAt || task.carryCount >= 2 || task.subtasks.length > 0 || task.note) && (
+        {(running || list || assignee || task.plannedTime || task.estimateMin || task.dueDate || task.repeat || task.reminderAt || task.carryCount >= 2 || task.subtasks.length > 0 || task.note) && (
           <span className="flex flex-wrap items-center gap-1.5">
+            {running && (
+              <Chip tone="sky" title="In progress">
+                <span className="anim-pulse" aria-hidden>●</span> {elapsedLabel(elapsed)}
+              </Chip>
+            )}
             {task.plannedTime && !done && (
               <Chip tone="sun" title="Planned time">
                 🕐 {fmtTime12(task.plannedTime)}
