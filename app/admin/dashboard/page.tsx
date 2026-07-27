@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/admin";
 import { loadAdminUsers } from "@/lib/users";
+import { getBillingSettings, resolveAccess, TRIAL_DAYS } from "@/lib/billing";
+import { razorpayConfigured, webhookConfigured } from "@/lib/razorpay";
+import { CompToggle, PaymentsToggle } from "@/components/admin-billing";
 
 export const metadata: Metadata = {
   title: "Users · Admin",
@@ -52,22 +55,66 @@ function Initial({ name, picture }: { name: string; picture?: string }) {
   );
 }
 
+/** What this account is currently paying (or not) — at a glance. */
+function BillingState({
+  row,
+  now,
+  enabled,
+}: {
+  row: { comped: boolean; subStatus: string | null; currentPeriodEnd: number | null; createdAt: string };
+  now: number;
+  enabled: boolean;
+}) {
+  if (!enabled) return <span className="text-[11px] text-ink-faint">payments off</span>;
+  if (row.comped) return <span className="text-[11px] text-moss">free forever</span>;
+
+  const access = resolveAccess({
+    createdAt: new Date(row.createdAt),
+    billing: { status: (row.subStatus ?? undefined) as never, currentPeriodEnd: row.currentPeriodEnd ?? undefined },
+    settings: { paymentsEnabled: true },
+    now,
+  });
+
+  const tone =
+    access.reason === "subscribed" ? "text-moss"
+    : access.reason === "trial" ? "text-sun-deep"
+    : access.allowed ? "text-ink-soft"
+    : "text-clay";
+  const label =
+    access.reason === "subscribed" ? row.subStatus
+    : access.reason === "trial" ? `trial · ${access.trialDaysLeft}/${TRIAL_DAYS}d`
+    : access.reason === "grace" ? "paid through"
+    : access.reason === "expired" ? (row.subStatus ?? "lapsed")
+    : "no access";
+  return <span className={`text-[11px] ${tone}`}>{label}</span>;
+}
+
 export default async function AdminDashboard() {
   // the layout already gated this, but a page that authorises itself can't be
   // broken by someone later restructuring the segment
   await requireAdmin();
 
-  const { users, activeWeek, newWeek, totalTasks, totalTasksDone, totalLists, now } =
-    await loadAdminUsers();
+  const [{ users, activeWeek, newWeek, totalTasks, totalTasksDone, totalLists, now }, settings] =
+    await Promise.all([loadAdminUsers(), getBillingSettings()]);
+  const compedCount = users.filter((u) => u.comped).length;
+  const payingCount = users.filter((u) => u.subStatus === "active" || u.subStatus === "authenticated").length;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
       <h1 className="font-display text-3xl tracking-tight sm:text-4xl">Users</h1>
       <p className="mt-1 text-sm text-ink-soft">
-        Everyone who has signed in to Kairo. Usage and payments will land here later.
+        Everyone who has signed in to Kairo.
       </p>
 
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="mt-6">
+        <PaymentsToggle
+          enabled={settings.paymentsEnabled}
+          configured={razorpayConfigured()}
+          webhookReady={webhookConfigured()}
+        />
+      </div>
+
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           { label: "Users", value: users.length },
           { label: "Active this week", value: activeWeek },
@@ -75,6 +122,8 @@ export default async function AdminDashboard() {
           { label: "Tasks", value: totalTasks },
           { label: "Tasks done", value: totalTasksDone },
           { label: "Lists", value: totalLists },
+          { label: "Paying", value: payingCount },
+          { label: "Free list", value: compedCount },
         ].map((s) => (
           <div key={s.label} className="rounded-2xl border border-line bg-card p-4">
             <div className="text-[11px] font-semibold uppercase tracking-wide text-ink-faint">
@@ -118,7 +167,11 @@ export default async function AdminDashboard() {
                     {u.lists} {u.lists === 1 ? "list" : "lists"}
                   </span>
                 </div>
-                <div className="mt-1 flex justify-between text-xs text-ink-faint">
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <CompToggle userId={u.id} comped={u.comped} email={u.email} />
+                  <BillingState row={u} now={now} enabled={settings.paymentsEnabled} />
+                </div>
+                <div className="mt-2 flex justify-between text-xs text-ink-faint">
                   <span>Joined {fmtDate(u.createdAt)}</span>
                   <span>Seen {since(u.lastLoginAt, now)}</span>
                 </div>
@@ -138,6 +191,7 @@ export default async function AdminDashboard() {
                     <th className="px-4 py-2.5 text-right font-semibold">Lists</th>
                     <th className="px-4 py-2.5 font-semibold">Joined</th>
                     <th className="px-4 py-2.5 font-semibold">Last seen</th>
+                    <th className="px-4 py-2.5 font-semibold">Billing</th>
                     <th className="px-4 py-2.5 font-semibold">Lock</th>
                   </tr>
                 </thead>
@@ -162,6 +216,12 @@ export default async function AdminDashboard() {
                       <td className="whitespace-nowrap px-4 py-2.5 text-ink-soft">
                         {since(u.lastLoginAt, now)}
                       </td>
+                      <td className="px-4 py-2.5">
+                        <span className="flex items-center gap-2">
+                          <CompToggle userId={u.id} comped={u.comped} email={u.email} />
+                          <BillingState row={u} now={now} enabled={settings.paymentsEnabled} />
+                        </span>
+                      </td>
                       <td className="px-4 py-2.5 text-ink-faint">{u.appLocked ? "PIN" : "—"}</td>
                     </tr>
                   ))}
@@ -173,7 +233,7 @@ export default async function AdminDashboard() {
                     <td className="px-4 py-2.5 text-right tabular-nums">{totalTasks}</td>
                     <td className="px-4 py-2.5 text-right tabular-nums">{totalTasksDone}</td>
                     <td className="px-4 py-2.5 text-right tabular-nums">{totalLists}</td>
-                    <td colSpan={3} />
+                    <td colSpan={4} />
                   </tr>
                 </tfoot>
               </table>

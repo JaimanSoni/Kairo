@@ -23,6 +23,11 @@ export type AdminUserRow = {
   createdAt: string;
   lastLoginAt: string;
   appLocked: boolean;
+  /** Billing, flattened for the admin table. */
+  comped: boolean;
+  compedNote: string;
+  subStatus: string | null;
+  currentPeriodEnd: number | null;
   /** Tasks this user owns, and how many are done. Shared lists are counted
    *  against the owner only, so the totals never double-count. */
   tasks: number;
@@ -44,6 +49,10 @@ export type AdminUsersSnapshot = {
 
 type AdminUserDoc = Omit<DbUser, "appLockHash" | "appLockSalt"> & {
   appLocked: boolean;
+  comped?: boolean;
+  compedNote?: string;
+  subStatus?: string | null;
+  currentPeriodEnd?: number | null;
   tasks: number;
   tasksDone: number;
   lists: number;
@@ -98,6 +107,10 @@ export async function listAllUsers(limit = 500): Promise<AdminUserRow[]> {
             createdAt: 1,
             lastLoginAt: 1,
             appLocked: { $toBool: { $ifNull: ["$appLockHash", false] } },
+            comped: { $toBool: { $ifNull: ["$billing.comped", false] } },
+            compedNote: { $ifNull: ["$billing.compedNote", ""] },
+            subStatus: { $ifNull: ["$billing.status", null] },
+            currentPeriodEnd: { $ifNull: ["$billing.currentPeriodEnd", null] },
             tasks: { $ifNull: [{ $first: "$taskStats.total" }, 0] },
             tasksDone: { $ifNull: [{ $first: "$taskStats.done" }, 0] },
             lists: { $ifNull: [{ $first: "$listStats.total" }, 0] },
@@ -114,6 +127,10 @@ export async function listAllUsers(limit = 500): Promise<AdminUserRow[]> {
       createdAt: (u.createdAt ?? new Date(0)).toISOString(),
       lastLoginAt: (u.lastLoginAt ?? u.createdAt ?? new Date(0)).toISOString(),
       appLocked: u.appLocked,
+      comped: Boolean(u.comped),
+      compedNote: u.compedNote ?? "",
+      subStatus: u.subStatus ?? null,
+      currentPeriodEnd: u.currentPeriodEnd ?? null,
       tasks: u.tasks,
       tasksDone: u.tasksDone,
       lists: u.lists,

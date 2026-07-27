@@ -13,6 +13,7 @@ import { AppLockGate, AppLockModal, type AppLockMode } from "./app-lock";
 import { CommandPalette } from "./command-palette";
 import { ThemeToggle } from "./theme";
 import { CoffeeButton, CoffeeNudge } from "./coffee";
+import { SubscriptionSettings } from "./subscription-settings";
 import { IconBook, IconCalendar, IconInbox, IconPlus, IconSun, IconX, Kbd, Modal } from "./ui";
 
 const NAV = [
@@ -307,6 +308,8 @@ function ProfileSheet({
         <NotificationSettings />
 
         <AppLockSettings />
+
+        <SubscriptionSettings />
 
         <AccountSwitcher />
 
