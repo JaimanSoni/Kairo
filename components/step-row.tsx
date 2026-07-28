@@ -20,7 +20,11 @@ export function useStepToggle() {
       const task = getTask(taskId);
       if (!task) return;
       const updated = task.subtasks.map((s) =>
-        s.id === stepId ? { ...s, done: !s.done } : s
+        s.id === stepId
+          // stamped on the way in, cleared on the way out — a step that isn't
+          // done has no completion time
+          ? { ...s, done: !s.done, doneAt: !s.done ? new Date().toISOString() : null }
+          : s
       );
       const turnedOn = updated.find((s) => s.id === stepId)?.done;
       if (turnedOn) playComplete();

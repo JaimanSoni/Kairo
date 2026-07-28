@@ -275,6 +275,10 @@ export function sanitizeTaskPatch(body: Record<string, unknown>): TaskPatch | nu
       const st = s as Record<string, unknown>;
       if (typeof st.id !== "string" || typeof st.title !== "string" || st.title.length > 500 || typeof st.done !== "boolean") return null;
       const sub: Subtask = { id: st.id, title: st.title, done: st.done };
+      if (st.done && "doneAt" in st && st.doneAt !== undefined && st.doneAt !== null) {
+        if (!isIsoDateTime(st.doneAt)) return null;
+        sub.doneAt = st.doneAt as string;
+      }
       if ("plannedFor" in st && st.plannedFor !== undefined) {
         if (st.plannedFor !== null && !isDateString(st.plannedFor)) return null;
         sub.plannedFor = st.plannedFor as string | null;

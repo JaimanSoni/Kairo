@@ -6,6 +6,9 @@ export type Subtask = {
   id: string;
   title: string;
   done: boolean;
+  /** When it was ticked, ISO. Without this a finished step has no place in
+   *  time, so the Log can't show it on the day it was actually done. */
+  doneAt?: string | null;
   /** Steps can be planned onto days of their own: "YYYY-MM-DD" or null/absent. */
   plannedFor?: string | null;
 };
