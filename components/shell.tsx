@@ -285,7 +285,7 @@ function ProfileSheet({
   onClose: () => void;
 }) {
   return (
-    <Modal onClose={onClose}>
+    <Modal onClose={onClose} hideScrollbar>
       <div className="p-6">
         <div className="flex items-center gap-3">
           <Avatar name={name} picture={picture} size={12} />

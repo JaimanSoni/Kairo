@@ -177,14 +177,12 @@ export function TodayView() {
         </div>
       )}
 
+      {/* Quiet on purpose: no green card, no count. What's finished is listed
+          right below, so the popper and two words are the whole celebration. */}
       {dayWon && (
-        <div className="anim-pop mt-6 rounded-2xl border-2 border-moss/40 bg-moss-soft p-6 text-center">
-          <Icon3d name="party" size={56} className="mx-auto" />
-          <div className="font-display mt-1 text-3xl">Day won.</div>
-          <p className="mt-1 text-sm text-ink-soft">
-            {doneToday.length} {doneToday.length === 1 ? "thing" : "things"} finished. Close the
-            laptop — tomorrow is planned tomorrow.
-          </p>
+        <div className="anim-rise mt-8 text-center">
+          <Icon3d name="party" size={52} className="mx-auto" />
+          <div className="font-display mt-2 text-3xl">Day won.</div>
         </div>
       )}
 
