@@ -10,7 +10,7 @@ import { Icon3d } from "./img3d";
 import { FreshStart } from "./fresh-start";
 import { StepRow } from "./step-row";
 import { TaskItem } from "./task-item";
-import { EmptyState, IconPlus, IconStar } from "./ui";
+import { EmptyState, IconPlus } from "./ui";
 
 const DAY_CAPACITY_MIN = 6 * 60; // soft cap — a suggestion, never a wall
 
@@ -48,8 +48,6 @@ export function TodayView() {
     () => all.filter((t) => t.plannedFor === today && t.status === "planned").sort(byOrder),
     [all, today]
   );
-  const spotlightTasks = todayTasks.filter((t) => t.spotlight);
-  const restTasks = todayTasks.filter((t) => !t.spotlight);
 
   const doneToday = useMemo(
     () =>
@@ -120,32 +118,10 @@ export function TodayView() {
         </div>
       </header>
 
-      {/* spotlight */}
-      {(spotlightTasks.length > 0 || restTasks.length > 0) && (
-        <section className="mb-6">
-          <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-sun-deep">
-            <IconStar size={12} filled /> Spotlight
-            <span className="font-normal normal-case text-ink-faint">— win these 3, the day is won</span>
-          </div>
-          {spotlightTasks.length > 0 ? (
-            <div className="space-y-2">
-              {spotlightTasks.map((t) => (
-                <TaskItem key={t.id} task={t} context="today" />
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-xl border border-dashed border-line px-4 py-3 text-sm text-ink-faint">
-              Star up to 3 must-wins <IconStar size={12} className="inline text-sun" /> — everything
-              else is bonus.
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* main list */}
-      {restTasks.length > 0 && (
-        <DraggableList tasks={restTasks} context="today" />
-      )}
+      {/* One list, in the order you put it in. Starred tasks stay in place
+          rather than being hoisted, so dragging a card somewhere actually
+          keeps it there — the star is a marker on the card, not a sort. */}
+      {todayTasks.length > 0 && <DraggableList tasks={todayTasks} context="today" />}
 
       {/* add row — today, or straight to the inbox to decide later */}
       <TodayCapture today={today} hasTasks={todayTasks.length > 0} />
