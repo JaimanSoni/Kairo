@@ -67,7 +67,9 @@ function reducer(state: State, action: Action): State {
     case "REPLACE_TASK": {
       const tasks = { ...state.tasks };
       delete tasks[action.tempId];
-      tasks[action.task.id] = action.task;
+      // keep the key the row is rendered under, so React updates it in place
+      // instead of throwing the node away and building a new one
+      tasks[action.task.id] = { ...action.task, clientId: action.tempId };
       return { ...state, tasks };
     }
     case "REMOVE_TASK": {
@@ -299,6 +301,7 @@ export function AppProvider({
       const now = new Date().toISOString();
       const task: Task = {
         id: tempId,
+        clientId: tempId,
         title: input.title,
         note: "",
         status,

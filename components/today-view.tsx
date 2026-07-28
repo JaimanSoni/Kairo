@@ -151,7 +151,7 @@ export function TodayView() {
               </p>
               <div className="space-y-2">
                 {inboxPreview.map((t) => (
-                  <div key={t.id} className="flex items-center gap-2">
+                  <div key={t.clientId ?? t.id} className="flex items-center gap-2">
                     <div className="min-w-0 flex-1">
                       <TaskItem task={t} context="backlog" />
                     </div>
@@ -194,7 +194,7 @@ export function TodayView() {
           </div>
           <div className="space-y-2 opacity-80">
             {doneToday.map((t) => (
-              <TaskItem key={t.id} task={t} context="today" />
+              <TaskItem key={t.clientId ?? t.id} task={t} context="today" />
             ))}
           </div>
         </section>
@@ -272,7 +272,7 @@ export function DraggableList({ tasks, context }: { tasks: Task[]; context: "tod
     <div className="space-y-2" onDragLeave={() => setOverIndex(null)}>
       {tasks.map((t, i) => (
         <TaskItem
-          key={t.id}
+          key={t.clientId ?? t.id}
           task={t}
           context={context}
           draggable

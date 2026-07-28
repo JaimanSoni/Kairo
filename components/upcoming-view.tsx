@@ -143,7 +143,7 @@ export function UpcomingView() {
                   <div className="space-y-2">
                     {tasks.map((t) => (
                       <TaskItem
-                        key={t.id}
+                        key={t.clientId ?? t.id}
                         task={t}
                         context="upcoming"
                         draggable
@@ -178,7 +178,7 @@ export function UpcomingView() {
               </h2>
               <div className="space-y-2">
                 {later.map((t) => (
-                  <TaskItem key={t.id} task={t} context="upcoming" />
+                  <TaskItem key={t.clientId ?? t.id} task={t} context="upcoming" />
                 ))}
               </div>
             </section>
@@ -198,7 +198,7 @@ export function UpcomingView() {
               <div className="max-h-[60vh] space-y-2 overflow-y-auto pr-1">
                 {inbox.map((t) => (
                   <TaskItem
-                    key={t.id}
+                    key={t.clientId ?? t.id}
                     task={t}
                     context="backlog"
                     draggable

@@ -137,10 +137,28 @@ export function TaskItem({
 
       {!done && context !== "log" && (
         <button
-          onClick={() => toggleStarted(task.id)}
+          onClick={() => {
+            // An estimate exists to be counted down, so starting a task that
+            // has one runs the clock straight away rather than making you ask
+            // for it twice. startFocus marks the task started as well.
+            if (!running && task.estimateMin != null) startFocus(task.id);
+            else toggleStarted(task.id);
+          }}
           aria-pressed={running}
-          aria-label={running ? "Stop working on this" : "Start working on this"}
-          title={running ? "Stop working on this" : "Start working on this"}
+          aria-label={
+            running
+              ? "Stop working on this"
+              : task.estimateMin != null
+                ? "Start working on this and run the timer"
+                : "Start working on this"
+          }
+          title={
+            running
+              ? "Stop working on this"
+              : task.estimateMin != null
+                ? `Start — focus for ~${fmtMinutes(task.estimateMin)}`
+                : "Start working on this"
+          }
           className={`grid size-6 shrink-0 place-items-center rounded-full transition-colors ${
             running
               ? "bg-sky text-on-accent"

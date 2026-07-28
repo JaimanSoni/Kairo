@@ -381,7 +381,7 @@ export function CalendarView() {
                     const color = colorForList(t.listId, state.lists);
                     return (
                       <div
-                        key={t.id}
+                        key={t.clientId ?? t.id}
                         draggable={t.status !== "done"}
                         onDragStart={(e) => {
                           e.stopPropagation();
@@ -425,7 +425,7 @@ export function CalendarView() {
                     const color = colorForList(t.listId, state.lists);
                     return (
                       <span
-                        key={t.id}
+                        key={t.clientId ?? t.id}
                         className={`size-1.5 rounded-full ${
                           t.status === "done" ? "bg-moss" : color ? "" : "bg-ink-faint"
                         }`}
@@ -532,7 +532,7 @@ function DayPanel({
 
       <div className="space-y-2">
         {tasks.map((t) => (
-          <TaskItem key={t.id} task={t} context="upcoming" />
+          <TaskItem key={t.clientId ?? t.id} task={t} context="upcoming" />
         ))}
         {daySteps.map(({ task, step }) => (
           <StepRow key={`${task.id}:${step.id}`} task={task} step={step} />
@@ -545,7 +545,7 @@ function DayPanel({
             Done · {doneTasks.length}
           </div>
           {doneTasks.map((t) => (
-            <TaskItem key={t.id} task={t} context="upcoming" />
+            <TaskItem key={t.clientId ?? t.id} task={t} context="upcoming" />
           ))}
         </div>
       )}

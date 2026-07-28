@@ -15,6 +15,13 @@ export type Subtask = {
 
 export type Task = {
   id: string;
+  /**
+   * Stable across the optimistic-insert -> saved swap, and used as the React
+   * key. `id` changes from a temp value to the real one when the save lands,
+   * which would otherwise unmount and rebuild the row mid-glance.
+   * Absent on tasks that arrived from the server already saved.
+   */
+  clientId?: string;
   title: string;
   note: string;
   status: TaskStatus;

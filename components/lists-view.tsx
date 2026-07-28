@@ -348,7 +348,7 @@ export function ListsView() {
         onToggleFold={() => toggleFold("inbox")}
       >
         {inbox.map((t) => (
-          <TaskItem key={t.id} task={t} context="backlog" />
+          <TaskItem key={t.clientId ?? t.id} task={t} context="backlog" />
         ))}
         <AddRow placeholder="Capture something…" plannedFor={null} />
       </Section>
@@ -402,7 +402,7 @@ export function ListsView() {
             ) : (
               <>
                 {tasks.map((t) => (
-                  <TaskItem key={t.id} task={t} context="backlog" />
+                  <TaskItem key={t.clientId ?? t.id} task={t} context="backlog" />
                 ))}
                 <AddRow
                   placeholder={`Add to ${list.name}…`}
@@ -450,7 +450,7 @@ export function ListsView() {
         onToggleFold={() => toggleFold("someday")}
       >
         {someday.length > 0 ? (
-          someday.map((t) => <TaskItem key={t.id} task={t} context="backlog" />)
+          someday.map((t) => <TaskItem key={t.clientId ?? t.id} task={t} context="backlog" />)
         ) : (
           <EmptyState
             icon="moon"
