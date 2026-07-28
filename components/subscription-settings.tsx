@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import type { Access } from "@/lib/access";
 
 type Status = Access & { comped: boolean; canCancel: boolean };
@@ -17,7 +18,6 @@ function fmt(ms?: number): string {
  */
 export function SubscriptionSettings() {
   const [status, setStatus] = useState<Status | null>(null);
-  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -34,21 +34,6 @@ export function SubscriptionSettings() {
 
   if (!status || !status.paymentsEnabled) return null;
 
-  const cancel = async () => {
-    if (!confirm("Cancel your subscription? You'll keep access until the end of the period you've paid for.")) return;
-    setBusy(true);
-    try {
-      const res = await fetch("/api/billing/cancel", { method: "POST" });
-      if (!res.ok) throw new Error();
-      const fresh = await fetch("/api/billing/status");
-      if (fresh.ok) setStatus((await fresh.json()) as Status);
-    } catch {
-      alert("Could not cancel. Please try again.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const line =
     status.comped ? "Free access, on the house."
     : status.reason === "subscribed" ? `Subscribed${status.currentPeriodEnd ? ` · renews ${fmt(status.currentPeriodEnd)}` : ""}`
@@ -61,18 +46,13 @@ export function SubscriptionSettings() {
       <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">
         Subscription
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-card px-4 py-2.5">
+      <Link
+        href="/billing"
+        className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-card px-4 py-2.5 transition-colors hover:border-sun"
+      >
         <span className="text-sm text-ink-soft">{line}</span>
-        {status.canCancel && (
-          <button
-            onClick={cancel}
-            disabled={busy}
-            className="shrink-0 text-xs font-medium text-ink-faint underline underline-offset-2 hover:text-clay disabled:opacity-50"
-          >
-            {busy ? "Cancelling…" : "Cancel"}
-          </button>
-        )}
-      </div>
+        <span className="shrink-0 text-xs font-semibold text-sun-deep">Manage →</span>
+      </Link>
     </div>
   );
 }

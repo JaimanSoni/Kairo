@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireSession, badRequest, unauthorized } from "@/lib/api-auth";
-import { extendPaidPeriod, updateUserBilling } from "@/lib/billing";
+import { extendPaidPeriod, recordPayment, updateUserBilling } from "@/lib/billing";
 import { PRICE_CURRENCY, PRICE_MINOR, fetchPayment, verifyOrderSignature } from "@/lib/razorpay";
 
 /**
@@ -55,6 +55,13 @@ export async function POST(request: Request) {
     }
 
     const until = await extendPaidPeriod(session.userId);
+    await recordPayment(session.userId, {
+      paymentId: payment.id,
+      orderId: payment.order_id,
+      amount: payment.amount,
+      currency: payment.currency,
+      coversUntil: until,
+    });
     await updateUserBilling(session.userId, { pendingOrderId: "" });
     console.info("[billing] %s paid %s %s, access to %s", session.email, payment.amount, payment.currency, new Date(until).toISOString());
     return NextResponse.json({ ok: true, currentPeriodEnd: until });

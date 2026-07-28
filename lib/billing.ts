@@ -3,6 +3,8 @@ import { getDb, withDbRetry } from "./db";
 import { razorpayConfigured } from "./razorpay";
 import type { BillingSettings, UserBilling } from "./access";
 
+import { resolveAccess } from "./access";
+
 export { TRIAL_DAYS, resolveAccess } from "./access";
 export type { Access, BillingSettings, SubStatus, UserBilling } from "./access";
 
@@ -90,6 +92,77 @@ export async function findUserByOrderId(orderId: string): Promise<{ id: string }
       .findOne({ "billing.pendingOrderId": orderId }, { projection: { _id: 1 } });
     return doc ? { id: doc._id.toHexString() } : null;
   });
+}
+
+export type PaymentRecord = {
+  paymentId: string;
+  orderId: string | null;
+  amount: number;
+  currency: string;
+  paidAt: string;
+  coversUntil: number | null;
+};
+
+/**
+ * Records a successful payment, keyed on Razorpay's payment id.
+ *
+ * Both the browser callback and the webhook report the same payment, so this
+ * upserts rather than inserts — whichever arrives first writes it, the other
+ * is a no-op, and the receipt is never duplicated.
+ */
+export async function recordPayment(
+  userId: string,
+  p: { paymentId: string; orderId?: string | null; amount: number; currency: string; coversUntil?: number | null }
+): Promise<void> {
+  await withDbRetry(async () => {
+    const db = await getDb();
+    await db.collection("payments").updateOne(
+      { paymentId: p.paymentId },
+      {
+        $set: { coversUntil: p.coversUntil ?? null },
+        $setOnInsert: {
+          paymentId: p.paymentId,
+          userId: new ObjectId(userId),
+          orderId: p.orderId ?? null,
+          amount: p.amount,
+          currency: p.currency,
+          paidAt: new Date(),
+        },
+      },
+      { upsert: true }
+    );
+  });
+}
+
+/** This account's receipts, newest first. */
+export async function listPayments(userId: string, limit = 24): Promise<PaymentRecord[]> {
+  return withDbRetry(async () => {
+    const db = await getDb();
+    const docs = await db
+      .collection("payments")
+      .find({ userId: new ObjectId(userId) })
+      .sort({ paidAt: -1 })
+      .limit(limit)
+      .toArray();
+    return docs.map((d) => ({
+      paymentId: String(d.paymentId),
+      orderId: d.orderId ? String(d.orderId) : null,
+      amount: Number(d.amount ?? 0),
+      currency: String(d.currency ?? "INR"),
+      paidAt: (d.paidAt instanceof Date ? d.paidAt : new Date(0)).toISOString(),
+      coversUntil: typeof d.coversUntil === "number" ? d.coversUntil : null,
+    }));
+  });
+}
+
+/**
+ * Everything the billing page renders, including its own "now" — reading the
+ * clock during render is impure, so the snapshot carries its own timestamp.
+ */
+export async function loadBillingView(userId: string, createdAt?: Date | null, billing?: UserBilling | null) {
+  const [settings, payments] = await Promise.all([getBillingSettings(), listPayments(userId)]);
+  const now = Date.now();
+  return { settings, payments, now, access: resolveAccess({ createdAt, billing, settings, now }) };
 }
 
 export async function setComped(

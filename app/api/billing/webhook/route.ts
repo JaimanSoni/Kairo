@@ -3,6 +3,7 @@ import {
   extendPaidPeriod,
   findUserByOrderId,
   findUserBySubscriptionId,
+  recordPayment,
   updateUserBilling,
   type SubStatus,
 } from "@/lib/billing";
@@ -102,6 +103,15 @@ export async function POST(request: Request) {
 
     try {
       const until = await extendPaidPeriod(payer.id);
+      if (pay?.id) {
+        await recordPayment(payer.id, {
+          paymentId: pay.id,
+          orderId: orderId,
+          amount: amount ?? 0,
+          currency: currency ?? PRICE_CURRENCY,
+          coversUntil: until,
+        });
+      }
       // clearing it makes this idempotent: a retry finds no owner and stops
       await updateUserBilling(payer.id, { pendingOrderId: "" });
       console.info("[billing] %s -> user %s paid through %s", event, payer.id, new Date(until).toISOString());

@@ -26,7 +26,7 @@ type Mode = "subscription" | "one-off";
  * it, otherwise a single month's charge. The server decides which — the mode
  * arrives with the page, never from the client.
  */
-function useCheckout(user: { name: string; email: string }, mode: Mode) {
+export function useCheckout(user: { name: string; email: string }, mode: Mode) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -141,11 +141,19 @@ export function Paywall({
             </p>
           </div>
 
-          <form action="/api/auth/signout" method="POST" className="mt-6">
-            <button type="submit" className="text-xs text-ink-faint underline underline-offset-2 hover:text-ink-soft">
-              Sign out
-            </button>
-          </form>
+          <p className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-ink-faint">
+            <a href="/billing" className="underline underline-offset-2 hover:text-ink-soft">
+              Billing &amp; receipts
+            </a>
+            <a href="/refunds" className="underline underline-offset-2 hover:text-ink-soft">
+              Refunds
+            </a>
+            <form action="/api/auth/signout" method="POST" className="inline">
+              <button type="submit" className="underline underline-offset-2 hover:text-ink-soft">
+                Sign out
+              </button>
+            </form>
+          </p>
         </div>
       </div>
     </>
