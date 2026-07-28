@@ -144,13 +144,12 @@ export function TaskItem({
           className={`grid size-6 shrink-0 place-items-center rounded-full transition-colors ${
             running
               ? "bg-sky text-on-accent"
-              : "text-ink-faint opacity-0 hover:bg-sky-soft hover:text-sky group-hover:opacity-100 pointer-coarse:opacity-100 max-md:opacity-100"
+              : "text-ink-faint hover:bg-sky-soft hover:text-sky"
           }`}
         >
           {running ? (
             <svg width="9" height="9" viewBox="0 0 12 12" fill="currentColor" aria-hidden>
-              <rect x="2" y="2" width="3" height="8" rx="1" />
-              <rect x="7" y="2" width="3" height="8" rx="1" />
+              <rect x="2.5" y="2.5" width="7" height="7" rx="1.5" />
             </svg>
           ) : (
             <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor" aria-hidden>
@@ -173,6 +172,27 @@ export function TaskItem({
               <Chip tone="sky" title="In progress">
                 <span className="anim-pulse" aria-hidden>●</span> {elapsedLabel(elapsed)}
               </Chip>
+            )}
+            {running && task.estimateMin != null && state.focus?.taskId !== task.id && (
+              <span
+                role="button"
+                tabIndex={0}
+                title={`Focus for ~${fmtMinutes(task.estimateMin)}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  startFocus(task.id);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    startFocus(task.id);
+                  }
+                }}
+                className="cursor-pointer"
+              >
+                <Chip tone="sun">⏱ Focus</Chip>
+              </span>
             )}
             {task.plannedTime && !done && (
               <Chip tone="sun" title="Planned time">
@@ -241,19 +261,6 @@ export function TaskItem({
           </span>
         )}
       </button>
-
-      {!done && context !== "log" && task.estimateMin != null && (
-        <button
-          onClick={() => startFocus(task.id)}
-          aria-label="Start focus timer"
-          title={`Focus for ~${fmtMinutes(task.estimateMin)}`}
-          className="grid size-7 shrink-0 place-items-center rounded-full text-ink-faint transition-colors hover:bg-sun-soft hover:text-sun-deep"
-        >
-          <svg width="13" height="13" viewBox="0 0 12 12" fill="currentColor">
-            <path d="M3 1.8v8.4a.6.6 0 00.92.5l6.3-4.2a.6.6 0 000-1L3.92 1.3a.6.6 0 00-.92.5z" />
-          </svg>
-        </button>
-      )}
 
       {!done && context !== "log" && (
         <button

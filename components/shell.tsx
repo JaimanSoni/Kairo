@@ -135,6 +135,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <Kbd>⌘K</Kbd>
         </button>
 
+        <WorkingOn className="mt-4" />
+
         <nav className="mt-6 space-y-1">
           {NAV.map(({ href, label, icon: Icon }) => {
             const active = pathname.startsWith(href);
@@ -200,6 +202,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </button>
           </span>
         </div>
+
+        {/* on a phone the sidebar isn't there to hold it */}
+        <WorkingOn className="mx-4 mt-2 md:hidden" />
+
         {children}
       </main>
 
@@ -375,6 +381,52 @@ function AdminLink() {
 }
 
 /** The tip jar, hidden from anyone who already pays for Kairo. */
+/**
+ * What you're working on, from anywhere.
+ *
+ * The state was previously invisible the moment you left the page holding the
+ * task, which made starting one pointless — you had to remember what you'd
+ * started. This is the thread back to it.
+ */
+function WorkingOn({ className = "" }: { className?: string }) {
+  const { state, setEditing, toggleStarted } = useApp();
+  const task = useMemo(
+    () => Object.values(state.tasks).find((t) => t.startedAt && t.status !== "done"),
+    [state.tasks]
+  );
+  if (!task) return null;
+
+  return (
+    <div
+      className={`flex items-center gap-2 rounded-xl border border-sky/40 bg-sky-soft/50 px-3 py-2 ${className}`}
+    >
+      <span className="anim-pulse shrink-0 text-sky" aria-hidden>
+        ●
+      </span>
+      <button
+        onClick={() => setEditing(task.id)}
+        className="min-w-0 flex-1 text-left"
+        title="Open this task"
+      >
+        <span className="block text-[10px] font-semibold uppercase tracking-wide text-sky">
+          Working on
+        </span>
+        <span className="block truncate text-xs font-medium text-ink">{task.title}</span>
+      </button>
+      <button
+        onClick={() => toggleStarted(task.id)}
+        aria-label="Stop working on this"
+        title="Stop working on this"
+        className="grid size-6 shrink-0 place-items-center rounded-full text-sky transition-colors hover:bg-sky hover:text-on-accent"
+      >
+        <svg width="9" height="9" viewBox="0 0 12 12" fill="currentColor" aria-hidden>
+          <rect x="2.5" y="2.5" width="7" height="7" rx="1.5" />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
 function CoffeeRow() {
   const { state } = useApp();
   if (state.user.isPaying) return null;

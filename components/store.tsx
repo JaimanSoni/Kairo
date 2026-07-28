@@ -391,6 +391,17 @@ export function AppProvider({
    * tasks is the same lie as a to-do list with sixty items on it — which is
    * the thing this app exists to avoid.
    */
+  /** Starts one task and stops every other — see toggleStarted. */
+  const markStarted = useCallback(
+    (id: string) => {
+      for (const other of Object.values(stateRef.current.tasks)) {
+        if (other.id !== id && other.startedAt) updateTask(other.id, { startedAt: null });
+      }
+      updateTask(id, { startedAt: new Date().toISOString() });
+    },
+    [updateTask]
+  );
+
   const toggleStarted = useCallback(
     (id: string) => {
       const t = stateRef.current.tasks[id];
@@ -398,14 +409,13 @@ export function AppProvider({
 
       if (t.startedAt) {
         updateTask(id, { startedAt: null });
+        // stopping work stops the clock measuring it
+        if (stateRef.current.focus?.taskId === id) dispatch({ type: "SET_FOCUS", focus: null });
         return;
       }
-      for (const other of Object.values(stateRef.current.tasks)) {
-        if (other.id !== id && other.startedAt) updateTask(other.id, { startedAt: null });
-      }
-      updateTask(id, { startedAt: new Date().toISOString() });
+      markStarted(id);
     },
-    [updateTask]
+    [updateTask, markStarted]
   );
 
   const completeTask = useCallback(
@@ -695,9 +705,18 @@ export function AppProvider({
     () => dispatch({ type: "SET_SWEEP_DISMISSED", dismissed: false }),
     []
   );
+  /**
+   * The timer is something you use *while* working on a task, so starting it
+   * puts the task in progress too. Keeping these separate let a task be timed
+   * without being "in progress", which is two answers to one question.
+   */
   const startFocus = useCallback(
-    (taskId: string) => dispatch({ type: "SET_FOCUS", focus: { taskId, minimized: false } }),
-    []
+    (taskId: string) => {
+      const t = stateRef.current.tasks[taskId];
+      if (t && !t.startedAt && t.status !== "done") markStarted(taskId);
+      dispatch({ type: "SET_FOCUS", focus: { taskId, minimized: false } });
+    },
+    [markStarted]
   );
   const stopFocus = useCallback(() => dispatch({ type: "SET_FOCUS", focus: null }), []);
   const minimizeFocus = useCallback((minimized: boolean) => {
