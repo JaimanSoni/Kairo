@@ -721,7 +721,19 @@ export function AppProvider({
     },
     [markStarted]
   );
-  const stopFocus = useCallback(() => dispatch({ type: "SET_FOCUS", focus: null }), []);
+  /**
+   * Closing the timer means you've stopped working, so the task stops too.
+   * Minimising goes through minimizeFocus and never lands here — hiding the
+   * clock isn't the same as putting the work down.
+   */
+  const stopFocus = useCallback(() => {
+    const cur = stateRef.current.focus;
+    if (cur) {
+      const t = stateRef.current.tasks[cur.taskId];
+      if (t?.startedAt && t.status !== "done") updateTask(cur.taskId, { startedAt: null });
+    }
+    dispatch({ type: "SET_FOCUS", focus: null });
+  }, [updateTask]);
   const minimizeFocus = useCallback((minimized: boolean) => {
     const cur = stateRef.current.focus;
     if (cur) dispatch({ type: "SET_FOCUS", focus: { ...cur, minimized } });
