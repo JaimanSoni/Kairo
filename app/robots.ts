@@ -7,7 +7,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/support"],
+        allow: ["/", "/support", "/pricing", "/terms", "/privacy", "/refunds"],
         // the app itself is private per-user — no value in crawling it
         disallow: ["/today", "/upcoming", "/lists", "/log", "/admin", "/api/"],
       },

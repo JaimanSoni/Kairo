@@ -54,6 +54,15 @@ export default function SupportLayout({ children }: { children: React.ReactNode 
             <Link href="/support/contact" className="hover:text-ink-soft">
               Contact
             </Link>
+            <Link href="/pricing" className="hover:text-ink-soft">
+              Pricing
+            </Link>
+            <Link href="/terms" className="hover:text-ink-soft">
+              Terms
+            </Link>
+            <Link href="/privacy" className="hover:text-ink-soft">
+              Privacy
+            </Link>
             <Link href="/today" className="hover:text-ink-soft">
               Open app
             </Link>

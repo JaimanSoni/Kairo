@@ -49,7 +49,7 @@ const JSON_LD = {
   operatingSystem: "Web, iOS, Android",
   description:
     "A daily planner that forgives: bounded days, guilt-free fresh starts, voice and AI capture, focus timer, shared lists with assignments, and PIN-locked privacy.",
-  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  offers: { "@type": "Offer", price: "299", priceCurrency: "INR" },
 };
 
 /** On a coloured button the logo needs its own white surface — Google's green
@@ -417,6 +417,22 @@ export default async function Landing({
         {" · "}
         <Link href="/support" className="underline underline-offset-2 hover:text-ink-soft">
           Help
+        </Link>
+        {" · "}
+        <Link href="/pricing" className="underline underline-offset-2 hover:text-ink-soft">
+          Pricing
+        </Link>
+        {" · "}
+        <Link href="/terms" className="underline underline-offset-2 hover:text-ink-soft">
+          Terms
+        </Link>
+        {" · "}
+        <Link href="/privacy" className="underline underline-offset-2 hover:text-ink-soft">
+          Privacy
+        </Link>
+        {" · "}
+        <Link href="/refunds" className="underline underline-offset-2 hover:text-ink-soft">
+          Refunds
         </Link>
         {" · "}
         <CoffeeButton />
