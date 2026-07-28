@@ -337,8 +337,23 @@ export function AddRow({
   };
 
   return (
-    <div className="mt-2 flex items-center gap-3 rounded-xl border border-dashed border-ink-faint/70 bg-card/50 px-3.5 py-2.5 transition-colors focus-within:border-sun">
-      <IconPlus size={16} className="shrink-0 text-ink-faint" />
+    <div className="mt-2 flex items-center gap-2 rounded-xl border border-dashed border-ink-faint/70 bg-card/50 py-2 pl-2.5 pr-3.5 transition-colors focus-within:border-sun">
+      {/* onMouseDown preventDefault keeps the caret in the input, so clicking
+          the plus submits and leaves you ready to type the next one */}
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={submit}
+        aria-label="Add task"
+        title="Add task"
+        className={`grid size-7 shrink-0 place-items-center rounded-lg transition-colors ${
+          text.trim()
+            ? "text-sun-deep hover:bg-sun-soft"
+            : "text-ink-faint hover:bg-paper-deep hover:text-ink-soft"
+        }`}
+      >
+        <IconPlus size={16} />
+      </button>
       <input
         value={text}
         onChange={(e) => setText(e.target.value)}
