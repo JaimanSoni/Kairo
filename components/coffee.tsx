@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { COFFEE, coffeeEnabled, upiIntentLink, upiLink } from "@/lib/coffee";
 import { markAsked, shouldAsk } from "@/lib/coffee-nudge";
 import { IconCheck, IconX, Modal } from "./ui";
@@ -412,6 +412,15 @@ export function CoffeeButton({ variant = "link" }: { variant?: "link" | "row" | 
 export function CoffeeNudge({ busy, today }: { busy: boolean; today: string }) {
   const [open, setOpen] = useState(false);
   const [due, setDue] = useState(false);
+  /**
+   * Latches the moment we ask, and never unlatches.
+   *
+   * Without it, closing the sheet put `open` back to false, which re-ran the
+   * effect below, found `due` still true, and scheduled the whole thing again
+   * — so dismissing it just delayed it by a second. markAsked() stops it
+   * coming back tomorrow; this stops it coming back immediately.
+   */
+  const askedRef = useRef(false);
 
   useEffect(() => {
     if (!coffeeEnabled) return;
@@ -421,14 +430,15 @@ export function CoffeeNudge({ busy, today }: { busy: boolean; today: string }) {
   }, [today]);
 
   useEffect(() => {
-    if (!due || busy || open) return;
+    if (!due || busy || askedRef.current) return;
     // a short beat after the screen settles, so it reads as considered
     const t = setTimeout(() => {
-      setOpen(true);
+      askedRef.current = true;
       markAsked();
+      setOpen(true);
     }, 1200);
     return () => clearTimeout(t);
-  }, [due, busy, open]);
+  }, [due, busy]);
 
   if (!open) return null;
   return <CoffeeModal earned onClose={() => setOpen(false)} />;

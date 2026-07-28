@@ -113,10 +113,13 @@ export function FreshStart({ carryover }: { carryover: Task[] }) {
           </button>
         </div>
 
-        {/* below the day's actual work, never in front of it */}
-        <div className="mt-4 border-t border-line/70 pt-4">
-          <CoffeeButton variant="inline" />
-        </div>
+        {/* below the day's actual work, never in front of it — and not at all
+            for someone who already pays for Kairo */}
+        {!state.user.isPaying && (
+          <div className="mt-4 border-t border-line/70 pt-4">
+            <CoffeeButton variant="inline" />
+          </div>
+        )}
       </div>
     </Modal>
   );

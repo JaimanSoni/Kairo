@@ -43,6 +43,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         appLockEnabled: Boolean(userDoc?.appLockHash),
         // from the database record, not the session cookie
         isAdmin: isAdminEmail(userDoc?.email),
+        // money has actually changed hands: a live subscription, or a period
+        // already paid for. Trial and comped accounts are not paying.
+        isPaying: access.reason === "subscribed" || access.reason === "grace",
       }}
       accounts={(roster?.accounts ?? []).map((a) => ({
         id: a.userId,

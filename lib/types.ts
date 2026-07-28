@@ -75,4 +75,7 @@ export type UserProfile = {
   appLockEnabled: boolean;
   /** Shows the admin entry point. Access itself is enforced server-side. */
   isAdmin: boolean;
+  /** True when this account is actually paying us. Suppresses the tip jar —
+   *  asking a paying customer for a coffee is asking twice. */
+  isPaying: boolean;
 };

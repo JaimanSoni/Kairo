@@ -239,7 +239,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       )}
       <FocusOverlay />
       <AppLockGate />
-      <CoffeeNudge busy={somethingOnScreen} today={state.today} />
+      {!state.user.isPaying && <CoffeeNudge busy={somethingOnScreen} today={state.today} />}
 
       {/* toast */}
       {state.toast && (
@@ -323,7 +323,7 @@ function ProfileSheet({
 
         <AdminLink />
 
-        <CoffeeButton variant="row" />
+        <CoffeeRow />
 
         <form action="/api/auth/signout" method="POST" className="mt-6 border-t border-line pt-4">
           <button
@@ -372,6 +372,13 @@ function AdminLink() {
       <span aria-hidden>→</span>
     </Link>
   );
+}
+
+/** The tip jar, hidden from anyone who already pays for Kairo. */
+function CoffeeRow() {
+  const { state } = useApp();
+  if (state.user.isPaying) return null;
+  return <CoffeeButton variant="row" />;
 }
 
 function NotificationSettings() {
