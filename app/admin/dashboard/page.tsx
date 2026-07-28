@@ -1,8 +1,14 @@
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/admin";
 import { loadAdminUsers } from "@/lib/users";
-import { getBillingSettings, resolveAccess, TRIAL_DAYS } from "@/lib/billing";
-import { razorpayConfigured, webhookConfigured } from "@/lib/razorpay";
+import { getBillingSettings, loadRevenue, resolveAccess, TRIAL_DAYS } from "@/lib/billing";
+import {
+  billingMode,
+  PRICE_LABEL,
+  razorpayConfigured,
+  razorpayKeyMode,
+  webhookConfigured,
+} from "@/lib/razorpay";
 import { CompToggle, PaymentsToggle } from "@/components/admin-billing";
 
 export const metadata: Metadata = {
@@ -55,6 +61,14 @@ function Initial({ name, picture }: { name: string; picture?: string }) {
   );
 }
 
+function money(minor: number, currency: string): string {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: minor % 100 === 0 ? 0 : 2,
+  }).format(minor / 100);
+}
+
 /** What this account is currently paying (or not) — at a glance. */
 function BillingState({
   row,
@@ -94,8 +108,8 @@ export default async function AdminDashboard() {
   // broken by someone later restructuring the segment
   await requireAdmin();
 
-  const [{ users, activeWeek, newWeek, totalTasks, totalTasksDone, totalLists, now }, settings] =
-    await Promise.all([loadAdminUsers(), getBillingSettings()]);
+  const [{ users, activeWeek, newWeek, totalTasks, totalTasksDone, totalLists, now }, settings, revenue] =
+    await Promise.all([loadAdminUsers(), getBillingSettings(), loadRevenue()]);
   const compedCount = users.filter((u) => u.comped).length;
   const payingCount = users.filter((u) => u.subStatus === "active" || u.subStatus === "authenticated").length;
 
@@ -111,6 +125,10 @@ export default async function AdminDashboard() {
           enabled={settings.paymentsEnabled}
           configured={razorpayConfigured()}
           webhookReady={webhookConfigured()}
+          price={PRICE_LABEL}
+          trialDays={TRIAL_DAYS}
+          mode={billingMode()}
+          keyMode={razorpayKeyMode()}
         />
       </div>
 
@@ -241,6 +259,75 @@ export default async function AdminDashboard() {
           </div>
         </>
       )}
+
+      {/* payments */}
+      <section className="mt-10">
+        <h2 className="font-display text-2xl tracking-tight">Payments</h2>
+        <p className="mt-1 text-sm text-ink-soft">
+          Every payment Kairo has taken. Figures come from our own records, written when a payment
+          is confirmed — Razorpay&apos;s dashboard remains the final word.
+        </p>
+
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { label: "Revenue", value: money(revenue.totalMinor, revenue.currency) },
+            { label: "This month", value: money(revenue.monthMinor, revenue.currency) },
+            { label: "Payments", value: String(revenue.payments.length) },
+            { label: "Have paid", value: String(revenue.payingUsers) },
+          ].map((s) => (
+            <div key={s.label} className="rounded-2xl border border-line bg-card p-4">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-ink-faint">
+                {s.label}
+              </div>
+              <div className="font-display mt-1 text-2xl tabular-nums">{s.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {revenue.payments.length === 0 ? (
+          <p className="mt-4 rounded-2xl border border-dashed border-line px-6 py-10 text-center text-sm text-ink-soft">
+            No payments yet.
+          </p>
+        ) : (
+          <div className="mt-4 overflow-hidden rounded-2xl border border-line bg-card">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-line bg-paper-deep/40 text-[11px] uppercase tracking-wide text-ink-faint">
+                  <tr>
+                    <th className="px-4 py-2.5 font-semibold">Who</th>
+                    <th className="px-4 py-2.5 font-semibold">Paid</th>
+                    <th className="px-4 py-2.5 font-semibold">Covers until</th>
+                    <th className="px-4 py-2.5 font-semibold">Payment id</th>
+                    <th className="px-4 py-2.5 text-right font-semibold">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {revenue.payments.map((p) => (
+                    <tr key={p.paymentId} className="border-t border-line/70">
+                      <td className="px-4 py-2.5">
+                        <span className="block truncate font-medium">{p.name || "—"}</span>
+                        <span className="block truncate text-xs text-ink-faint">{p.email}</span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-2.5 text-ink-soft">
+                        {fmtDate(p.paidAt)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-2.5 text-ink-soft">
+                        {p.coversUntil ? fmtDate(new Date(p.coversUntil).toISOString()) : "—"}
+                      </td>
+                      <td className="px-4 py-2.5 font-mono text-[11px] text-ink-faint">
+                        {p.paymentId}
+                      </td>
+                      <td className="px-4 py-2.5 text-right font-semibold tabular-nums">
+                        {money(p.amount, p.currency)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

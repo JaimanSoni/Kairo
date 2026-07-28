@@ -64,6 +64,17 @@ export function webhookConfigured(): boolean {
   return Boolean(WEBHOOK_SECRET);
 }
 
+/**
+ * Test keys take fake cards and refuse real ones. Arming the paywall with them
+ * shows real users a wall they cannot pay through, and nothing in the checkout
+ * flow says so — the failure is only visible at the moment a customer's card is
+ * declined. So the mode is surfaced in the admin UI instead.
+ */
+export function razorpayKeyMode(): "test" | "live" | "unset" {
+  if (!RAZORPAY_KEY_ID) return "unset";
+  return RAZORPAY_KEY_ID.startsWith("rzp_live_") ? "live" : "test";
+}
+
 function authHeader(): string {
   return `Basic ${Buffer.from(`${RAZORPAY_KEY_ID}:${KEY_SECRET}`).toString("base64")}`;
 }

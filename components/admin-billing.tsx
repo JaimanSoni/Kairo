@@ -12,19 +12,38 @@ export function PaymentsToggle({
   enabled,
   configured,
   webhookReady,
+  price,
+  trialDays,
+  mode,
+  keyMode,
 }: {
   enabled: boolean;
   configured: boolean;
   webhookReady: boolean;
+  price: string;
+  trialDays: number;
+  mode: "subscription" | "one-off";
+  keyMode: "test" | "live" | "unset";
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const terms =
+    mode === "subscription"
+      ? `${price}/month after a ${trialDays}-day trial`
+      : `${price} a month after a ${trialDays}-day trial, paid one month at a time`;
+
   const set = async (next: boolean) => {
     if (busy) return;
-    if (next && !confirm("Turn payments on? Users past their 3-day trial will need to subscribe.")) {
-      return;
+    if (next) {
+      const warning =
+        keyMode === "test"
+          ? "\n\nWARNING: these are TEST keys. Real cards will be declined — everyone past the trial would be locked out with no way to pay."
+          : "";
+      if (!confirm(`Turn payments on? Anyone past their ${trialDays}-day trial will have to pay ${price}.${warning}`)) {
+        return;
+      }
     }
     setBusy(true);
     setError(null);
@@ -51,8 +70,8 @@ export function PaymentsToggle({
           <h2 className="text-sm font-semibold">Payments</h2>
           <p className="mt-0.5 text-xs text-ink-soft">
             {enabled
-              ? "On — a 3-day trial, then $5.99/month. Comped accounts are unaffected."
-              : "Off — everyone uses Kairo free. Trials and subscriptions are ignored."}
+              ? `On — ${terms}. Comped accounts are unaffected.`
+              : "Off — everyone uses Kairo free. Trials and payments are ignored."}
           </p>
         </div>
         <button
@@ -71,15 +90,26 @@ export function PaymentsToggle({
 
       {!configured && (
         <p className="mt-3 rounded-lg bg-paper-deep px-3 py-2 text-xs text-ink-soft">
-          Razorpay keys or plan id are missing, so payments can&apos;t be switched on. Set
-          <code className="mx-1">RAZORPAY_KEY_ID</code>,<code className="mx-1">RAZORPAY_KEY_SECRET</code>
-          and <code className="mx-1">RAZORPAY_PLAN_ID</code>.
+          Razorpay keys are missing, so payments can&apos;t be switched on. Set
+          <code className="mx-1">RAZORPAY_KEY_ID</code> and
+          <code className="mx-1">RAZORPAY_KEY_SECRET</code>. A plan id is only needed for
+          recurring subscriptions; without one Kairo charges a month at a time.
+        </p>
+      )}
+      {configured && keyMode === "test" && (
+        <p className="mt-3 rounded-lg bg-clay-soft px-3 py-2 text-xs text-clay">
+          <b>These are test keys.</b> Only Razorpay&apos;s fake cards work — a real customer&apos;s
+          card is declined. Swap <code className="mx-1">RAZORPAY_KEY_ID</code>/
+          <code className="mx-1">RAZORPAY_KEY_SECRET</code> for <code className="mx-1">rzp_live_…</code>
+          keys before charging anyone.
         </p>
       )}
       {configured && !webhookReady && (
         <p className="mt-3 rounded-lg bg-clay-soft px-3 py-2 text-xs text-clay">
-          <b>RAZORPAY_WEBHOOK_SECRET is unset.</b> Checkout will work, but renewals, failures and
-          cancellations won&apos;t reach us — subscription states would silently go stale.
+          <b>RAZORPAY_WEBHOOK_SECRET is unset.</b>{" "}
+          {mode === "subscription"
+            ? "Checkout will work, but renewals, failures and cancellations won't reach us — subscription states would silently go stale."
+            : "Checkout will work, but only while the browser stays open to confirm it. If a customer's tab closes or their network drops after paying, the money arrives and their access doesn't."}
         </p>
       )}
       {error && <p className="mt-3 text-xs text-clay">{error}</p>}

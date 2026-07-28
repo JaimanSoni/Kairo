@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import {
-  extendPaidPeriod,
+  creditOneMonth,
   findUserByOrderId,
   findUserBySubscriptionId,
-  recordPayment,
   updateUserBilling,
   type SubStatus,
 } from "@/lib/billing";
@@ -101,20 +100,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, mismatch: true });
     }
 
+    // Razorpay sends both `payment.captured` and `order.paid` for one payment,
+    // and the browser confirms it too — so the credit must be keyed on the
+    // payment id rather than simply applied.
+    if (!pay?.id) return NextResponse.json({ ok: true, ignored: event });
+
     try {
-      const until = await extendPaidPeriod(payer.id);
-      if (pay?.id) {
-        await recordPayment(payer.id, {
-          paymentId: pay.id,
-          orderId: orderId,
-          amount: amount ?? 0,
-          currency: currency ?? PRICE_CURRENCY,
-          coversUntil: until,
-        });
-      }
-      // clearing it makes this idempotent: a retry finds no owner and stops
-      await updateUserBilling(payer.id, { pendingOrderId: "" });
-      console.info("[billing] %s -> user %s paid through %s", event, payer.id, new Date(until).toISOString());
+      const { coversUntil, credited } = await creditOneMonth(payer.id, {
+        paymentId: pay.id,
+        orderId,
+        amount: amount ?? 0,
+        currency: currency ?? PRICE_CURRENCY,
+      });
+      console.info(
+        "[billing] %s -> user %s %s through %s",
+        event,
+        payer.id,
+        credited ? "paid" : "already covered",
+        new Date(coversUntil).toISOString()
+      );
     } catch (err) {
       console.error("[billing] webhook payment write failed", err);
       return NextResponse.json({ error: "Write failed" }, { status: 500 });

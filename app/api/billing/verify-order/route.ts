@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireSession, badRequest, unauthorized } from "@/lib/api-auth";
-import { extendPaidPeriod, recordPayment, updateUserBilling } from "@/lib/billing";
+import { creditOneMonth } from "@/lib/billing";
 import { PRICE_CURRENCY, PRICE_MINOR, fetchPayment, verifyOrderSignature } from "@/lib/razorpay";
 
 /**
@@ -13,6 +13,9 @@ import { PRICE_CURRENCY, PRICE_MINOR, fetchPayment, verifyOrderSignature } from 
  *      captured, and must belong to the order we were given.
  *   3. The amount and currency must match what we charge, so a payment made
  *      for some other, cheaper order can't be replayed here.
+ *
+ * The credit itself is keyed on the payment id, so re-posting the same signed
+ * fields — which stay valid indefinitely — grants nothing the second time.
  */
 export async function POST(request: Request) {
   const session = await requireSession();
@@ -54,17 +57,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unexpected amount" }, { status: 400 });
     }
 
-    const until = await extendPaidPeriod(session.userId);
-    await recordPayment(session.userId, {
+    const { coversUntil, credited } = await creditOneMonth(session.userId, {
       paymentId: payment.id,
       orderId: payment.order_id,
       amount: payment.amount,
       currency: payment.currency,
-      coversUntil: until,
     });
-    await updateUserBilling(session.userId, { pendingOrderId: "" });
-    console.info("[billing] %s paid %s %s, access to %s", session.email, payment.amount, payment.currency, new Date(until).toISOString());
-    return NextResponse.json({ ok: true, currentPeriodEnd: until });
+    if (credited) {
+      console.info("[billing] %s paid %s %s, access to %s", session.email, payment.amount, payment.currency, new Date(coversUntil).toISOString());
+    } else {
+      // A webhook beat us to it, or this is a replay. Either way the answer is
+      // the same and no second month is granted.
+      console.info("[billing] %s re-confirmed %s, already covered to %s", session.email, payment.id, new Date(coversUntil).toISOString());
+    }
+    return NextResponse.json({ ok: true, currentPeriodEnd: coversUntil });
   } catch (err) {
     console.error("[billing] verify order failed", err);
     return NextResponse.json({ error: "Could not confirm the payment" }, { status: 502 });
