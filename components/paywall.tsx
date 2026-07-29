@@ -119,11 +119,16 @@ export function Paywall({
         <div className="w-full max-w-md text-center">
           <Icon3d name="sunrise" size={64} className="mx-auto" />
           <h1 className="font-display mt-4 text-3xl tracking-tight">
-            {access.reason === "expired" ? "Your subscription has lapsed" : "Your free trial is over"}
+            {access.reason !== "expired"
+              ? "Your free trial is over"
+              : mode === "subscription"
+                ? "Your subscription has lapsed"
+                : "Your paid month is up"}
           </h1>
           <p className="mt-2 text-[15px] leading-relaxed text-ink-soft">
             Thanks for giving Kairo a proper go. Everything you&apos;ve added is safe and waiting —
-            subscribe to pick up exactly where you left off.
+            {mode === "subscription" ? " subscribe" : " pay for a month"} to pick up exactly where
+            you left off.
           </p>
 
           <div className="mt-6 rounded-2xl border border-line bg-card p-6">
@@ -141,7 +146,9 @@ export function Paywall({
             </p>
           </div>
 
-          <p className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-ink-faint">
+          {/* a div, not a p: the sign-out form below is flow content, and the
+              parser hoists it out of a paragraph — which breaks hydration */}
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-ink-faint">
             <a href="/billing" className="underline underline-offset-2 hover:text-ink-soft">
               Billing &amp; receipts
             </a>
@@ -153,7 +160,7 @@ export function Paywall({
                 Sign out
               </button>
             </form>
-          </p>
+          </div>
         </div>
       </div>
     </>
