@@ -15,6 +15,7 @@ import { CommandPalette } from "./command-palette";
 import { ThemeToggle } from "./theme";
 import { CoffeeButton, CoffeeNudge } from "./coffee";
 import { SubscriptionSettings } from "./subscription-settings";
+import { ShareKairoRow } from "./share-kairo";
 import { IconBook, IconCalendar, IconInbox, IconPlus, IconSun, IconX, Kbd, Modal } from "./ui";
 
 const NAV = [
@@ -327,6 +328,8 @@ function ProfileSheet({
           Help &amp; guides
           <span aria-hidden>→</span>
         </Link>
+
+        <ShareKairoRow />
 
         <AdminLink />
 
