@@ -26,6 +26,8 @@ export const metadata: Metadata = {
   // paths — a canonical tag is meant to be absolute, and Open Graph images are
   // required to be.
   metadataBase: new URL(SITE_URL),
+  // Search Console ownership — renders the google-site-verification meta tag
+  verification: { google: "ZtLYr13WzGlwe7RYE0jWONSTmu4ZVUbmv7T4h94Y2Rk" },
   title: `${SITE_NAME} — ${SITE_TAGLINE}`,
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
