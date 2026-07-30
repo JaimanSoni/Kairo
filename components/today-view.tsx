@@ -11,6 +11,7 @@ import { FreshStart } from "./fresh-start";
 import { StepRow } from "./step-row";
 import { TaskItem } from "./task-item";
 import { EmptyState, IconPlus } from "./ui";
+import { BestieNudge, ShareWithBestie } from "./bestie-share";
 
 const DAY_CAPACITY_MIN = 6 * 60; // soft cap — a suggestion, never a wall
 
@@ -81,6 +82,25 @@ export function TodayView() {
 
   const dayWon = todayTasks.length === 0 && plannedSteps.length === 0 && doneToday.length > 0;
 
+  /*
+   * What may appear on a shared card.
+   *
+   * Stricter than the rest of Today: `doneToday` hides locked lists that are
+   * still locked, but unlocking one to work on it is not consent to put it in
+   * an image someone sends to a friend. Locked means locked here, unlock state
+   * or not — and the count of what was withheld is surfaced so the omission is
+   * never silent.
+   */
+  const shareable = useMemo(() => {
+    const lockedIds = new Set(state.lists.filter((l) => l.locked).map((l) => l.id));
+    const open = doneToday.filter((t) => !(t.listId && lockedIds.has(t.listId)));
+    return {
+      titles: open.map((t) => t.title),
+      count: open.length,
+      withheld: doneToday.length - open.length,
+    };
+  }, [doneToday, state.lists]);
+
   return (
     <div className="mx-auto w-full max-w-2xl px-4 pb-32 pt-8 sm:px-6">
       {carryover.length > 0 && !state.sweepDismissed && <FreshStart carryover={carryover} />}
@@ -140,6 +160,12 @@ export function TodayView() {
         </section>
       )}
 
+      {/* Sits under the day's work, not above it — a reason to finish, offered
+          once the list has been read rather than before it. */}
+      {todayTasks.length > 0 && (
+        <BestieNudge remaining={todayTasks.length} done={doneToday.length} />
+      )}
+
       {/* empty / celebration states */}
       {todayTasks.length === 0 && !dayWon && (
         <div className="mt-6">
@@ -183,6 +209,15 @@ export function TodayView() {
         <div className="anim-rise mt-8 text-center">
           <Icon3d name="party" size={52} className="mx-auto" />
           <div className="font-display mt-2 text-3xl">Day won.</div>
+          {shareable.count > 0 && (
+            <ShareWithBestie
+              done={shareable.titles}
+              doneCount={shareable.count}
+              dateLabel={fullDate(today)}
+              name={state.user.name?.split(" ")[0] || "Someone"}
+              hiddenCount={shareable.withheld}
+            />
+          )}
         </div>
       )}
 
