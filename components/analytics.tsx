@@ -4,13 +4,14 @@ import Script from "next/script";
 import { usePathname } from "next/navigation";
 
 /**
- * Microsoft Clarity — heatmaps and session replay.
+ * Microsoft Clarity (heatmaps, session replay) and Google Analytics (traffic).
  *
- * Configurable via NEXT_PUBLIC_CLARITY_ID, with the real project id as the
- * default so it works on a deploy with no dashboard setup. Set the variable to
- * an empty string to switch it off for an environment.
+ * Both configurable via env, with the real ids as defaults so a deploy works
+ * with no dashboard setup. Set either variable to an empty string to switch
+ * that tracker off for an environment.
  */
 const CLARITY_ID = process.env.NEXT_PUBLIC_CLARITY_ID ?? "xskcn2ndap";
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID ?? "G-TSZF6PXBK2";
 
 /** Clarity's own loader, unchanged apart from the id being injected. */
 const loader = (id: string) => `(function(c,l,a,r,i,t,y){
@@ -24,16 +25,33 @@ export function Analytics() {
 
   // Local runs would otherwise fill the recordings with development noise.
   if (process.env.NODE_ENV !== "production") return null;
-  if (!CLARITY_ID) return null;
 
-  // The admin dashboard lists every user's name and email. Replaying that into
-  // a third-party recorder would hand over other people's data, so it is the
+  // The admin dashboard lists every user's name and email. Sending that to a
+  // third-party recorder would hand over other people's data, so it is the
   // one place analytics must not run.
   if (pathname.startsWith("/admin")) return null;
 
   return (
-    <Script id="ms-clarity" strategy="afterInteractive">
-      {loader(CLARITY_ID)}
-    </Script>
+    <>
+      {CLARITY_ID && (
+        <Script id="ms-clarity" strategy="afterInteractive">
+          {loader(CLARITY_ID)}
+        </Script>
+      )}
+      {GA_ID && (
+        <>
+          <Script
+            src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+            strategy="afterInteractive"
+          />
+          <Script id="ga-init" strategy="afterInteractive">
+            {`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '${GA_ID}');`}
+          </Script>
+        </>
+      )}
+    </>
   );
 }

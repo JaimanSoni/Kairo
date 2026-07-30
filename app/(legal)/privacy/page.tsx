@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/privacy" },
 };
 
-const UPDATED = "28 July 2026";
+const UPDATED = "31 July 2026";
 
 export default function PrivacyPage() {
   return (
@@ -54,7 +54,7 @@ export default function PrivacyPage() {
 
       <H2>What leaves our servers</H2>
       <P>
-        Four third parties are involved, and only these four. None of them is paid for your data,
+        Five third parties are involved, and only these five. None of them is paid for your data,
         and none of it is sold or used for advertising.
       </P>
       <UL>
@@ -72,6 +72,12 @@ export default function PrivacyPage() {
         <LI>
           <B>Razorpay</B> — payments. They receive your name and email to attach to the payment,
           and handle the card themselves.
+        </LI>
+        <LI>
+          <B>Google Analytics</B> — anonymous traffic measurement: which public pages are visited,
+          roughly where from, and on what kind of device. It does not receive your tasks, your
+          email, or anything you type. Most tracker-blocking extensions stop it, and Kairo works
+          exactly the same without it.
         </LI>
         <LI>
           <B>Microsoft Clarity</B> — anonymous analytics and session replay, used to see where the
