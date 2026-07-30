@@ -58,13 +58,33 @@ export function TaskItem({
   onDrop?: (e: React.DragEvent) => void;
   dropIndicator?: "above" | "below" | null;
 }) {
-  const { state, completeTask, uncompleteTask, updateTask, toggleStarted, deleteTask, setEditing, showToast, startFocus } = useApp();
+  const { state, completeTask, uncompleteTask, updateTask, duplicateTask, deleteTask, setEditing, showToast, startFocus, stopFocus } = useApp();
   const toggleStep = useStepToggle();
   const [checking, setChecking] = useState(false);
   const [stepsOpen, setStepsOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [askEstimate, setAskEstimate] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const askRef = useRef<HTMLDivElement>(null);
+
+  const [customMin, setCustomMin] = useState("");
+  const startWith = (m: number) => {
+    updateTask(task.id, { estimateMin: m });
+    startFocus(task.id);
+    setAskEstimate(false);
+    setCustomMin("");
+  };
+
+  /* the estimate ask closes like the menu does — click anywhere else */
+  useEffect(() => {
+    if (!askEstimate) return;
+    const close = (e: MouseEvent) => {
+      if (askRef.current && !askRef.current.contains(e.target as Node)) setAskEstimate(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [askEstimate]);
   const done = task.status === "done";
   const running = Boolean(task.startedAt) && !done;
   const elapsed = useElapsedMinutes(running ? task.startedAt : null);
@@ -138,26 +158,23 @@ export function TaskItem({
       {!done && context !== "log" && (
         <button
           onClick={() => {
-            // An estimate exists to be counted down, so starting a task that
-            // has one runs the clock straight away rather than making you ask
-            // for it twice. startFocus marks the task started as well.
-            if (!running && task.estimateMin != null) startFocus(task.id);
-            else toggleStarted(task.id);
+            // Starting always means the timer. A task with an estimate starts
+            // at once; one without gets asked for a duration first — there is
+            // no "in progress" without a clock any more, because a state that
+            // says "working" while measuring nothing answered one question
+            // two ways.
+            if (running) stopFocus();
+            else if (task.estimateMin != null) startFocus(task.id);
+            else setAskEstimate(true);
           }}
           aria-pressed={running}
-          aria-label={
-            running
-              ? "Stop working on this"
-              : task.estimateMin != null
-                ? "Start working on this and run the timer"
-                : "Start working on this"
-          }
+          aria-label={running ? "Stop working on this" : "Start working on this"}
           title={
             running
               ? "Stop working on this"
               : task.estimateMin != null
                 ? `Start — focus for ~${fmtMinutes(task.estimateMin)}`
-                : "Start working on this"
+                : "Start — pick how long first"
           }
           className={`grid size-6 shrink-0 place-items-center rounded-full transition-colors ${
             running
@@ -175,6 +192,50 @@ export function TaskItem({
             </svg>
           )}
         </button>
+      )}
+
+      {askEstimate && (
+        <div
+          ref={askRef}
+          className="anim-pop absolute left-8 top-11 z-30 w-60 rounded-xl border border-line bg-card p-3 shadow-lg"
+        >
+          <div className="mb-2 text-xs font-semibold text-ink">How long will this take?</div>
+          <div className="flex flex-wrap gap-1.5">
+            {[15, 30, 45, 60, 90, 120].map((m) => (
+              <button
+                key={m}
+                onClick={() => startWith(m)}
+                className="rounded-full border border-line bg-paper px-2.5 py-1 text-xs font-medium text-ink-soft transition-colors hover:border-sky hover:text-sky"
+              >
+                {fmtMinutes(m)}
+              </button>
+            ))}
+          </div>
+          <form
+            className="mt-2 flex items-center gap-1.5"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const m = Number(customMin);
+              if (Number.isFinite(m) && m >= 1) startWith(Math.round(m));
+            }}
+          >
+            <input
+              value={customMin}
+              onChange={(e) => setCustomMin(e.target.value.replace(/[^0-9]/g, ""))}
+              inputMode="numeric"
+              placeholder="minutes"
+              aria-label="Custom minutes"
+              className="w-20 rounded-lg border border-line bg-paper px-2 py-1 text-xs"
+            />
+            <button
+              type="submit"
+              disabled={!customMin}
+              className="rounded-full bg-sky px-3 py-1 text-xs font-semibold text-on-accent disabled:opacity-40"
+            >
+              Start
+            </button>
+          </form>
+        </div>
       )}
 
       <button
@@ -342,6 +403,17 @@ export function TaskItem({
               <MenuBtn onClick={() => { setMenuOpen(false); setEditing(task.id); }}>
                 <Icon3d name="pencil" size={15} /> Edit details
               </MenuBtn>
+              {!task.id.startsWith("temp-") && (
+                <MenuBtn
+                  onClick={() => {
+                    setMenuOpen(false);
+                    duplicateTask(task.id);
+                    showToast({ message: "Duplicated — it's right below the original" });
+                  }}
+                >
+                  <Icon3d name="sparkle" size={15} /> Duplicate
+                </MenuBtn>
+              )}
               {!done && !task.id.startsWith("temp-") && (
                 <MenuBtn onClick={() => { setMenuOpen(false); setSendOpen(true); }}>
                   <Icon3d name="bird" size={15} /> Send a copy

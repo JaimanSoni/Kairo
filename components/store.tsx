@@ -151,6 +151,7 @@ type AppContextValue = {
   updateTask: (id: string, patch: Partial<Task>) => void;
   /** Marks a task as being worked on now, or stops it. Only one at a time. */
   toggleStarted: (id: string) => void;
+  duplicateTask: (id: string) => void;
   completeTask: (id: string) => void;
   uncompleteTask: (id: string) => void;
   deleteTask: (id: string, opts?: { silent?: boolean }) => void;
@@ -394,6 +395,73 @@ export function AppProvider({
    * tasks is the same lie as a to-do list with sixty items on it — which is
    * the thing this app exists to avoid.
    */
+  /**
+   * A fresh copy of a task, sitting right under the original.
+   *
+   * Copies what describes the work — title, note, steps, list, estimate, day,
+   * deadline, repeat — and drops what records progress on the original: steps
+   * come back unticked, nothing is started or completed. Spotlight is not
+   * copied (three is a cap, and a copy silently claiming a slot would break
+   * it), and neither is the assignee — duplicating must never hand someone
+   * work they didn't agree to.
+   */
+  const duplicateTask = useCallback(
+    (id: string) => {
+      const src = stateRef.current.tasks[id];
+      if (!src) return;
+      const tempId = `temp-${crypto.randomUUID()}`;
+      const now = new Date().toISOString();
+      const subtasks = src.subtasks.map((st) => ({
+        id: crypto.randomUUID(),
+        title: st.title,
+        done: false,
+        plannedFor: st.plannedFor ?? null,
+      }));
+      const task: Task = {
+        ...src,
+        id: tempId,
+        clientId: tempId,
+        status: src.plannedFor ? "planned" : src.status === "done" ? "inbox" : src.status,
+        spotlight: false,
+        assigneeId: null,
+        subtasks,
+        // +1 keeps the copy adjacent to the original instead of at the end
+        order: src.order + 1,
+        startedAt: null,
+        reminderAt: null,
+        completedAt: null,
+        createdAt: now,
+      };
+      dispatch({ type: "UPSERT_TASK", task });
+
+      api<{ task: Task }>("/api/tasks", {
+        method: "POST",
+        body: JSON.stringify({
+          title: task.title,
+          note: task.note,
+          status: task.status,
+          plannedFor: task.plannedFor,
+          plannedTime: task.plannedTime,
+          dueDate: task.dueDate,
+          spotlight: false,
+          listId: task.listId,
+          estimateMin: task.estimateMin,
+          order: task.order,
+          repeat: task.repeat,
+          subtasks,
+        }),
+      })
+        .then(({ task: saved }) => {
+          dispatch({ type: "REPLACE_TASK", tempId, task: saved });
+        })
+        .catch(() => {
+          dispatch({ type: "REMOVE_TASK", id: tempId });
+          showToast({ message: "Couldn't duplicate that — try again" });
+        });
+    },
+    [showToast]
+  );
+
   /** Starts one task and stops every other — see toggleStarted. */
   const markStarted = useCallback(
     (id: string) => {
@@ -830,6 +898,7 @@ export function AppProvider({
       getTask,
       updateTask,
       toggleStarted,
+      duplicateTask,
       completeTask,
       uncompleteTask,
       deleteTask,
@@ -855,7 +924,7 @@ export function AppProvider({
       refreshData,
     }),
     [
-      state, addTask, getTask, updateTask, toggleStarted, completeTask, uncompleteTask, deleteTask,
+      state, addTask, getTask, updateTask, toggleStarted, duplicateTask, completeTask, uncompleteTask, deleteTask,
       reorderTasks, sweep, createList, renameList, upsertList, reorderLists, deleteList, showToast,
       setOmnibar, setEditing, dismissSweep, reopenSweep, startFocus, stopFocus, minimizeFocus,
       setListUnlocked, lockApp, unlockApp, setAppLockEnabled, refreshData,
