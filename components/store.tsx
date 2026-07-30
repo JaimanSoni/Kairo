@@ -276,7 +276,7 @@ export function AppProvider({
   const syncError = useCallback(
     (rollback?: () => void) => {
       rollback?.();
-      showToast({ message: "Couldn't save — check your connection" });
+      showToast({ message: "Couldn't save that. It's still here. Try again in a moment." });
     },
     [showToast]
   );
@@ -456,7 +456,7 @@ export function AppProvider({
         })
         .catch(() => {
           dispatch({ type: "REMOVE_TASK", id: tempId });
-          showToast({ message: "Couldn't duplicate that — try again" });
+          showToast({ message: "Couldn't duplicate that. Try again." });
         });
     },
     [showToast]

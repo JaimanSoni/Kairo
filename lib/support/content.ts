@@ -48,7 +48,7 @@ export const QUICK_START = ["philosophy", "capture", "today", "notifications"];
  * sitemap is only worth sending if it's true, and a date that moves on every
  * deploy teaches crawlers to ignore it.
  */
-export const DOCS_UPDATED = "2026-07-26";
+export const DOCS_UPDATED = "2026-07-31";
 
 export const ARTICLES: Article[] = [
   /* ---------------------------------------------------------------- basics */
@@ -2082,7 +2082,7 @@ export const ARTICLES: Article[] = [
     sections: [
       {
         id: "couldnt-save",
-        heading: "“Couldn't save — check your connection”",
+        heading: "“Couldn't save that. It's still here. Try again in a moment.”",
         blocks: [
           {
             t: "p",

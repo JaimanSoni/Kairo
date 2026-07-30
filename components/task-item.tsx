@@ -408,7 +408,7 @@ export function TaskItem({
                   onClick={() => {
                     setMenuOpen(false);
                     duplicateTask(task.id);
-                    showToast({ message: "Duplicated — it's right below the original" });
+                    showToast({ message: "Duplicated. It's right below the original." });
                   }}
                 >
                   <Icon3d name="sparkle" size={15} /> Duplicate

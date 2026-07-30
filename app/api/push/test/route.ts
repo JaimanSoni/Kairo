@@ -17,8 +17,8 @@ export async function POST() {
 
   ensureTicker();
   await sendToUser(userId, {
-    title: "✅ Notifications are working",
-    body: "This is your Kairo test ping.",
+    title: "That's the sound of it working",
+    body: "Reminders will arrive just like this.",
     tag: "kairo-test",
     url: "/today",
   });

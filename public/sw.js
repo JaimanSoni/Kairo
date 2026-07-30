@@ -15,7 +15,7 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     (async () => {
       await self.registration.showNotification(title, {
-        body: data.body || "",
+        body: data.body || "Something needs your attention.",
         icon: "/img/sunrise.png",
         tag: data.tag || "kairo",
         renotify: true,

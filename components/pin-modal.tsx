@@ -72,7 +72,7 @@ export function PinModal({ list, mode, onClose }: { list: List; mode: PinMode; o
       setFirstPin("");
       setStep(1);
       fail();
-      showToast({ message: "PINs didn't match — try again" });
+      showToast({ message: "Those didn't match. One more time, slowly." });
       return;
     }
 
@@ -126,7 +126,7 @@ export function PinModal({ list, mode, onClose }: { list: List; mode: PinMode; o
         onClose();
       }
     } catch {
-      showToast({ message: "Couldn't reach the server — try again" });
+      showToast({ message: "You're offline, or we are. Nothing was lost." });
     } finally {
       setBusy(false);
     }

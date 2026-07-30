@@ -96,7 +96,7 @@ export function TaskEditor({ task }: { task: Task }) {
       return;
     }
     if (fireAt <= Date.now() + 30_000) {
-      showToast({ message: "Pick a time in the future" });
+      showToast({ message: "That time’s already gone. Pick one still ahead." });
       return;
     }
     let ok = await pushEnabled();
@@ -120,8 +120,8 @@ export function TaskEditor({ task }: { task: Task }) {
     updateTask(task.id, { reminderAt: fireAt });
     schedulePush({
       fireAt,
-      title: `🔔 ${task.title}`,
-      body: "A reminder you set in Kairo.",
+      title: task.title,
+      body: "You asked to be nudged about this now.",
       tag: `remind-${task.id}`,
       url: "/today",
       taskId: task.id,

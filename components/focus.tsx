@@ -82,8 +82,8 @@ export function FocusOverlay() {
         if (!ok || endAt <= Date.now()) return;
         schedulePush({
           fireAt: endAt,
-          title: "⏱ Time's up",
-          body: `“${title}” — nice work. Finish it, or go overtime.`,
+          title,
+          body: "Time's up. Tick it off, or keep going. Overtime counts up quietly.",
           tag: `focus-${taskId}`,
           url: "/today",
         });

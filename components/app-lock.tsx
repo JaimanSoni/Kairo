@@ -142,7 +142,7 @@ export function AppLockModal({ mode, onClose }: { mode: AppLockMode; onClose: ()
       setFirstPin("");
       setStep(1);
       fail();
-      showToast({ message: "PINs didn't match — try again" });
+      showToast({ message: "Those didn't match. One more time, slowly." });
       return;
     }
 
@@ -182,7 +182,7 @@ export function AppLockModal({ mode, onClose }: { mode: AppLockMode; onClose: ()
         onClose();
       }
     } catch {
-      showToast({ message: "Couldn't reach the server — try again" });
+      showToast({ message: "You're offline, or we are. Nothing was lost." });
     } finally {
       setBusy(false);
     }

@@ -69,9 +69,18 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/tasks/[id]
   if (!result) return notFound();
 
   if (notifyAssignee) {
+    // the list names where the task landed; skipped rather than failed if gone
+    let where = "";
+    if (result.listId) {
+      const list = await (await listsCollection()).findOne(
+        { _id: result.listId as ObjectId },
+        { projection: { name: 1 } }
+      );
+      if (list?.name) where = ` · in ${String(list.name)}`;
+    }
     void sendToUser(notifyAssignee, {
-      title: `📋 ${session.name} assigned you a task`,
-      body: String(result.title ?? "A task"),
+      title: `${session.name} sent this your way`,
+      body: `${String(result.title ?? "A task")}${where}`,
       tag: `assign-${id}`,
       url: "/today",
     });
