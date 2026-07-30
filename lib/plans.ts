@@ -1,6 +1,7 @@
 import { ObjectId, type Document } from "mongodb";
 import { getDb, withDbRetry } from "./db";
 import { FEATURE_KEYS, sanitiseFeatures, type FeatureKey } from "./features";
+import { microCache } from "./micro-cache";
 
 /**
  * Sellable plans, editable from the admin.
@@ -103,22 +104,37 @@ function ensureSeeded(): Promise<void> {
   return seeded;
 }
 
-export async function listPlans(): Promise<Plan[]> {
-  return withDbRetry(async () => {
+/**
+ * Plans are read on virtually every request — the paywall, the access rules,
+ * the landing page, every gated API — and change only when an admin edits
+ * them. Cached for a minute; the admin's writes bust it, so the instance that
+ * made a change serves it immediately and the rest converge within the TTL.
+ *
+ * The money path deliberately reads through this same cache: an order is
+ * created at the cached price and later validated against the cached price,
+ * which keeps a charge consistent with what the paywall showed even while an
+ * edit is propagating.
+ */
+const plansCache = microCache<Plan[]>("plans", 60_000, () =>
+  withDbRetry(async () => {
     await ensureSeeded();
     const db = await getDb();
     const docs = await db.collection("plans").find({}).sort({ order: 1, priceMinor: 1 }).toArray();
     return docs.map(toPlan);
-  });
+  })
+);
+
+export async function listPlans(opts?: { fresh?: boolean }): Promise<Plan[]> {
+  return plansCache.get(opts);
 }
 
 /** Only what a visitor may actually buy. */
-export async function listSellablePlans(): Promise<Plan[]> {
-  return (await listPlans()).filter((p) => p.active);
+export async function listSellablePlans(opts?: { fresh?: boolean }): Promise<Plan[]> {
+  return (await listPlans(opts)).filter((p) => p.active);
 }
 
-export async function getPlan(key: string): Promise<Plan | null> {
-  return (await listPlans()).find((p) => p.key === key) ?? null;
+export async function getPlan(key: string, opts?: { fresh?: boolean }): Promise<Plan | null> {
+  return (await listPlans(opts)).find((p) => p.key === key) ?? null;
 }
 
 /** key → features, the shape the pure access rules take. */
@@ -159,6 +175,7 @@ export async function createPlan(input: PlanInput): Promise<Plan> {
       createdAt: new Date(),
     };
     const { insertedId } = await db.collection("plans").insertOne(doc);
+    plansCache.bust();
     return toPlan({ ...doc, _id: insertedId });
   });
 }
@@ -176,6 +193,7 @@ export async function updatePlan(id: string, patch: Partial<PlanInput>): Promise
     if (patch.order !== undefined) set.order = Number(patch.order);
     // `key` is deliberately absent: users point at it.
     await db.collection("plans").updateOne({ _id: new ObjectId(id) }, { $set: set });
+    plansCache.bust();
   });
 }
 
@@ -194,9 +212,11 @@ export async function deletePlan(id: string): Promise<{ deleted: boolean; holder
       await db
         .collection("plans")
         .updateOne({ _id: new ObjectId(id) }, { $set: { active: false, updatedAt: new Date() } });
+      plansCache.bust();
       return { deleted: false, holders };
     }
     await db.collection("plans").deleteOne({ _id: new ObjectId(id) });
+    plansCache.bust();
     return { deleted: true, holders: 0 };
   });
 }

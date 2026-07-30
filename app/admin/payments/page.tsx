@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminPayments() {
   await requireAdmin();
 
-  const [revenue, plans] = await Promise.all([loadRevenue(), listPlans()]);
+  const [revenue, plans] = await Promise.all([loadRevenue(), listPlans({ fresh: true })]);
   const planName = (key?: string) => (key ? plans.find((p) => p.key === key)?.name ?? key : "—");
 
   return (

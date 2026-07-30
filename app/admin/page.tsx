@@ -46,9 +46,9 @@ export default async function AdminOverview() {
 
   const [snapshot, settings, revenue, plans] = await Promise.all([
     loadAdminUsers(),
-    getBillingSettings(),
+    getBillingSettings({ fresh: true }),
     loadRevenue(),
-    listPlans(),
+    listPlans({ fresh: true }),
   ]);
   const { users, activeWeek, newWeek, totalTasks, totalTasksDone, totalLists } = snapshot;
   const sellable = plans.filter((p) => p.active);

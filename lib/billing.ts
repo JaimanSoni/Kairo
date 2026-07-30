@@ -1,6 +1,7 @@
 import { ObjectId } from "mongodb";
 import { getDb, withDbRetry } from "./db";
 import { razorpayConfigured } from "./razorpay";
+import { microCache } from "./micro-cache";
 import type { BillingSettings, UserBilling } from "./access";
 
 import { resolveAccess } from "./access";
@@ -32,12 +33,22 @@ export async function accessFor(input: {
   return resolveAccess({ ...input, settings, planFeatures });
 }
 
-export async function getBillingSettings(): Promise<BillingSettings> {
-  return withDbRetry(async () => {
+/**
+ * One tiny document, read by every page and gated API. Cached for 30 seconds —
+ * shorter than the plans, because this is the emergency lever: flipping
+ * payments off must reach every instance fast. The instance that flips it sees
+ * the change immediately via the bust below.
+ */
+const settingsCache = microCache<BillingSettings>("billing-settings", 30_000, () =>
+  withDbRetry(async () => {
     const db = await getDb();
     const doc = await db.collection("settings").findOne({ _id: SETTINGS_ID as never });
     return { paymentsEnabled: Boolean(doc?.paymentsEnabled), updatedAt: doc?.updatedAt, updatedBy: doc?.updatedBy };
-  });
+  })
+);
+
+export async function getBillingSettings(opts?: { fresh?: boolean }): Promise<BillingSettings> {
+  return settingsCache.get(opts);
 }
 
 export async function setPaymentsEnabled(enabled: boolean, by: string): Promise<BillingSettings> {
@@ -54,6 +65,7 @@ export async function setPaymentsEnabled(enabled: boolean, by: string): Promise<
       { $set: { paymentsEnabled: enabled, updatedAt, updatedBy: by } },
       { upsert: true }
     );
+    settingsCache.bust();
     return { paymentsEnabled: enabled, updatedAt, updatedBy: by };
   });
 }

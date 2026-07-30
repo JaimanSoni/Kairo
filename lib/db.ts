@@ -7,10 +7,18 @@ declare global {
   var _mongoClientPromise: Promise<MongoClient> | undefined;
 }
 
+/**
+ * Set DB_TRACE=1 to log every command the driver sends. This is how the
+ * cache work was measured — guesses about "how many reads does a page cost"
+ * were wrong every time; the driver's own event stream is not.
+ */
+const TRACE = process.env.DB_TRACE === "1";
+const TRACED = new Set(["find", "aggregate", "findAndModify", "update", "insert", "delete", "count"]);
+
 function getClientPromise(): Promise<MongoClient> {
   if (!uri) throw new Error("MONGODB_URI is not set");
   if (!global._mongoClientPromise) {
-    global._mongoClientPromise = new MongoClient(uri, {
+    const client = new MongoClient(uri, {
       serverSelectionTimeoutMS: 8000,
       connectTimeoutMS: 8000,
       // modest pool — Atlas M0 caps total connections, and force-killed dev
@@ -19,7 +27,16 @@ function getClientPromise(): Promise<MongoClient> {
       maxIdleTimeMS: 60_000,
       retryReads: true,
       retryWrites: true,
-    })
+      monitorCommands: TRACE,
+    });
+    if (TRACE) {
+      client.on("commandStarted", (e) => {
+        if (TRACED.has(e.commandName)) {
+          console.log(`[db] ${e.commandName} ${String(e.command[e.commandName])}`);
+        }
+      });
+    }
+    global._mongoClientPromise = client
       .connect()
       .catch((err) => {
         // never cache a failed connection — the next request must retry fresh

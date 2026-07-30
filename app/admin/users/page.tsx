@@ -60,7 +60,7 @@ export default async function AdminUsers() {
   const [{ users, now }, settings, plans] = await Promise.all([
     loadAdminUsers(),
     getBillingSettings(),
-    listPlans(),
+    listPlans({ fresh: true }),
   ]);
   const planOptions = plans.map((p) => ({ key: p.key, name: p.name }));
   const planName = (key: string) => plans.find((p) => p.key === key)?.name ?? null;

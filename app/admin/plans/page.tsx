@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminPlans() {
   await requireAdmin();
 
-  const [plans, { users }] = await Promise.all([listPlans(), loadAdminUsers()]);
+  const [plans, { users }] = await Promise.all([listPlans({ fresh: true }), loadAdminUsers()]);
 
   // how many accounts sit on each plan, so retiring one isn't a guess
   const holders = new Map<string, number>();

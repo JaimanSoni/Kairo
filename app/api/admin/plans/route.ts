@@ -14,7 +14,7 @@ import { createPlan, deletePlan, listPlans, updatePlan } from "@/lib/plans";
 export async function GET() {
   const gate = await requireAdminApi();
   if (!gate.ok) return gate.response;
-  return NextResponse.json({ plans: await listPlans() });
+  return NextResponse.json({ plans: await listPlans({ fresh: true }) });
 }
 
 export async function POST(request: Request) {

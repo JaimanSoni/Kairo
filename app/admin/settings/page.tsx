@@ -30,7 +30,7 @@ function Row({ label, value, tone }: { label: string; value: string; tone?: stri
 export default async function AdminSettings() {
   await requireAdmin();
 
-  const [settings, sellable] = await Promise.all([getBillingSettings(), listSellablePlans()]);
+  const [settings, sellable] = await Promise.all([getBillingSettings({ fresh: true }), listSellablePlans({ fresh: true })]);
   const keyMode = razorpayKeyMode();
   const cheapest = sellable[0];
   const dearest = sellable[sellable.length - 1];

@@ -175,23 +175,66 @@ export async function getUserById(idHex: string): Promise<DbUser | null> {
 }
 
 /**
+ * The disabled flag runs on every authenticated API call, so it is the one
+ * per-user read worth caching. Sixty seconds per user: deactivating via the
+ * admin takes effect instantly on the instance that did it (write-through
+ * below) and within a minute everywhere else — against removing one query
+ * from every single request the app serves.
+ *
+ * On globalThis for the same reason as the Mongo client: Next bundles lib/
+ * per route, and a module-scope map would fragment into per-route copies.
+ */
+const DISABLED_TTL_MS = 60_000;
+const DISABLED_MAX_ENTRIES = 1_000;
+
+declare global {
+  var _kairoDisabledCache: Map<string, { at: number; disabled: boolean }> | undefined;
+}
+
+function disabledCache(): Map<string, { at: number; disabled: boolean }> {
+  global._kairoDisabledCache ??= new Map();
+  return global._kairoDisabledCache;
+}
+
+/**
  * Whether an admin has switched this account off.
  *
- * Its own projected query rather than a full `getUserById`, because it runs on
- * every authenticated API call: a session cookie stays valid for weeks, so
- * checking only at sign-in would leave a deactivated account working until its
- * cookie happened to expire.
+ * A projected query rather than a full `getUserById`, and cached, because it
+ * runs on every authenticated API call: a session cookie stays valid for
+ * weeks, so checking only at sign-in would leave a deactivated account
+ * working until its cookie happened to expire.
+ *
+ * If the database is unreachable and nothing is cached, this fails OPEN.
+ * Deactivation is an administrative control, not a security boundary — the
+ * paywall and feature gates do their own reads — and an Atlas blip must not
+ * sign every user out of the app.
  */
 export async function isUserDisabled(idHex: string): Promise<boolean> {
-  return withDbRetry(async () => {
-    const db = await getDb();
-    const doc = await db
-      .collection("users")
-      .findOne({ _id: new ObjectId(idHex) }, { projection: { disabled: 1 } });
-    // A missing user is treated as disabled — a cookie for a deleted account
-    // should not keep working either.
-    return !doc || doc.disabled === true;
-  });
+  const cache = disabledCache();
+  const hit = cache.get(idHex);
+  const useCache = process.env.KAIRO_CACHE_OFF !== "1";
+
+  if (useCache && hit && Date.now() - hit.at < DISABLED_TTL_MS) return hit.disabled;
+
+  try {
+    const disabled = await withDbRetry(async () => {
+      const db = await getDb();
+      const doc = await db
+        .collection("users")
+        .findOne({ _id: new ObjectId(idHex) }, { projection: { disabled: 1 } });
+      // A missing user is treated as disabled — a cookie for a deleted account
+      // should not keep working either.
+      return !doc || doc.disabled === true;
+    });
+    // crude bound; at this scale the map never gets near it
+    if (cache.size >= DISABLED_MAX_ENTRIES) cache.clear();
+    cache.set(idHex, { at: Date.now(), disabled });
+    return disabled;
+  } catch (err) {
+    if (hit) return hit.disabled; // stale beats a lie in either direction
+    console.error("[users] disabled check failed with no cache — failing open", err);
+    return false;
+  }
 }
 
 /** Switches an account off (or back on). Nothing is deleted either way. */
@@ -208,6 +251,8 @@ export async function setUserDisabled(
         ? { $set: { disabled: true, disabledAt: new Date(), disabledReason: reason.slice(0, 200) } }
         : { $unset: { disabled: "", disabledAt: "", disabledReason: "" } }
     );
+    // write-through: the admin's own instance must see the change immediately
+    disabledCache().set(idHex, { at: Date.now(), disabled });
   });
 }
 

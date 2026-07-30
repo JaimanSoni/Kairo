@@ -44,7 +44,7 @@ export async function PATCH(request: Request) {
     if (body.planKey === "") {
       await updateUserBilling(userId, { planKey: "" });
     } else {
-      const plan = await getPlan(body.planKey);
+      const plan = await getPlan(body.planKey, { fresh: true });
       if (!plan) return NextResponse.json({ error: "No such plan" }, { status: 400 });
       await updateUserBilling(userId, { planKey: plan.key });
     }

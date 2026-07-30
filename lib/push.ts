@@ -90,19 +90,73 @@ export async function processDuePushes(): Promise<void> {
   }
 }
 
-/* One ticker per server process. globalThis keeps it single across reloads. */
+/* One ticker per server process. globalThis keeps it single across reloads,
+   and keeps the watermark shared even if Next duplicates this module per
+   route bundle. */
 declare global {
   var _kairoPushTicker: ReturnType<typeof setInterval> | undefined;
+  var _kairoPushWatch: { nextFireAt: number; lastScanAt: number } | undefined;
+}
+
+function watch(): { nextFireAt: number; lastScanAt: number } {
+  global._kairoPushWatch ??= { nextFireAt: 0, lastScanAt: 0 };
+  return global._kairoPushWatch;
+}
+
+/** How long a quiet instance may go between looks at the schedule. */
+const QUIET_SCAN_MS = 60_000;
+/** Inside this window before a known push, ticks check every time. */
+const DUE_WINDOW_MS = 90_000;
+
+/**
+ * The ticker's beat. The old version opened with findOneAndDelete — a write —
+ * every five seconds, due or not: ~17,000 operations a day per warm instance
+ * spent discovering there was nothing to do, most of this database's free-tier
+ * budget. Now a tick is free until either a known push is imminent or a
+ * minute has passed since the schedule was last looked at; the look itself is
+ * one projected read, and the claim loop only runs when it saw something due.
+ *
+ * On-the-second delivery never depended on this sweep — armPrecise sets an
+ * exact timer when a push is scheduled. The sweep is the safety net for
+ * pushes stranded by a died instance, and the price of the cheap tick is
+ * that this rescue can now lag up to a minute. A timer that survives a
+ * server crash and arrives sixty seconds late is the right trade against
+ * burning the operation budget around the clock.
+ */
+async function tick(): Promise<void> {
+  const w = watch();
+  const now = Date.now();
+  const dueSoon = w.nextFireAt > 0 && w.nextFireAt - now < DUE_WINDOW_MS;
+  if (!dueSoon && now - w.lastScanAt < QUIET_SCAN_MS) return;
+
+  w.lastScanAt = now;
+  const scheduled = await scheduledCollection();
+  const soonest = await scheduled
+    .find({}, { projection: { fireAt: 1 }, sort: { fireAt: 1 }, limit: 1 })
+    .toArray();
+  if (soonest.length === 0) {
+    w.nextFireAt = 0;
+    return;
+  }
+  w.nextFireAt = Number(soonest[0].fireAt);
+  if (w.nextFireAt <= now + 2000) {
+    await processDuePushes();
+    // the claim loop drained everything due; find out what's next
+    const next = await scheduled
+      .find({}, { projection: { fireAt: 1 }, sort: { fireAt: 1 }, limit: 1 })
+      .toArray();
+    w.nextFireAt = next.length > 0 ? Number(next[0].fireAt) : 0;
+  }
 }
 
 export function ensureTicker(): void {
   if (global._kairoPushTicker) return;
   global._kairoPushTicker = setInterval(() => {
-    processDuePushes().catch(() => {});
+    tick().catch(() => {});
   }, 5_000);
   global._kairoPushTicker.unref?.();
   // catch up anything stranded the moment the process starts
-  processDuePushes().catch(() => {});
+  tick().catch(() => {});
 }
 
 /**
@@ -111,6 +165,11 @@ export function ensureTicker(): void {
  * interval sweep stays as the safety net (restarts, far-future pushes).
  */
 export function armPrecise(fireAt: number): void {
+  // the sweep's watermark learns about this push either way, so a lost
+  // timeout degrades to at-most-a-minute-late instead of never
+  const w = watch();
+  if (w.nextFireAt === 0 || fireAt < w.nextFireAt) w.nextFireAt = fireAt;
+
   const delay = fireAt - Date.now();
   if (delay > 60 * 60 * 1000) return; // far future — the sweep will handle it
   const t = setTimeout(() => {
