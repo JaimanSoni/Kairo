@@ -266,8 +266,11 @@ input,
   }
 }
 
+/* `backwards` matters wherever a delay is used: without it the element holds
+   its own styles until the delay elapses, so a staggered set flashes fully
+   visible on load and only then animates in — backwards, and all at once. */
 .demo-chip {
-  animation: demo-chip 6s ease-in-out infinite;
+  animation: demo-chip 6s ease-in-out infinite backwards;
 }
 .demo-caret {
   animation: demo-caret 1s step-end infinite;
@@ -288,7 +291,7 @@ input,
   animation: demo-ring 8s ease-in-out infinite alternate;
 }
 .demo-seq {
-  animation: demo-fade-seq 5s ease-in-out infinite;
+  animation: demo-fade-seq 5s ease-in-out infinite backwards;
 }
 .demo-unlock {
   animation: demo-unlock 6s ease-in-out infinite;
