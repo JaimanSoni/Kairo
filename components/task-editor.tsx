@@ -689,7 +689,7 @@ export function TaskEditor({ task }: { task: Task }) {
               <button
                 onClick={() => {
                   close();
-                  startFocus(task.id);
+                  startFocus(task.id, { minutes: task.estimateMin });
                 }}
                 className="flex items-center gap-1.5 rounded-full border border-sun bg-sun-soft px-4 py-2 text-sm font-semibold text-sun-deep transition-transform hover:-translate-y-0.5"
               >

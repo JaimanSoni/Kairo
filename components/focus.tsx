@@ -103,11 +103,20 @@ export function FocusOverlay() {
       save(state.user.id, null);
       return;
     }
-    startFocus(saved.taskId);
-    minimizeFocus(true);
-  }, [focus, getTask, startFocus, minimizeFocus, state.user.id]);
+    // restored quietly, as the pill — a reload should not take over the screen
+    startFocus(saved.taskId, { adopt: true, minimized: true });
+  }, [focus, getTask, startFocus, state.user.id]);
 
-  /* init / adopt timer when the focused task changes */
+  /*
+   * Init when the focused task changes.
+   *
+   * A saved timer is adopted ONLY on the reload-restore path (focus.adopt).
+   * Everything else starts fresh, with the duration the session was started
+   * with. The old behaviour adopted any saved timer for the same task, so a
+   * stale 25-minute session from an earlier attempt would hijack the 50 you
+   * had just picked — and look healed after a reload, once the stale save
+   * was finally gone.
+   */
   useEffect(() => {
     let cancelled = false;
     const apply = (t: SavedTimer | null) => {
@@ -119,7 +128,8 @@ export function FocusOverlay() {
         return;
       }
       const saved = load(state.user.id);
-      if (saved && saved.taskId === focus.taskId) {
+
+      if (focus.adopt && saved && saved.taskId === focus.taskId) {
         zeroFired.current = (saved.running ? saved.endAt - Date.now() : saved.remainingMs) <= 0;
         if (saved.running && saved.endAt > Date.now()) {
           scheduleEndPush(saved.endAt, focus.taskId, task.title);
@@ -127,7 +137,13 @@ export function FocusOverlay() {
         apply(saved);
         return;
       }
-      const totalMs = (task.estimateMin ?? 25) * 60 * 1000;
+
+      // a leftover timer for another task still has a push scheduled — a
+      // "time's up" for work you put down would be a phantom
+      if (saved && saved.taskId !== focus.taskId) cancelPush(`focus-${saved.taskId}`);
+
+      const minutes = focus.minutes ?? task.estimateMin ?? 25;
+      const totalMs = minutes * 60 * 1000;
       const fresh: SavedTimer = {
         taskId: focus.taskId,
         totalMs,
@@ -165,6 +181,29 @@ export function FocusOverlay() {
       stopFocus();
     }
   }, [focus, task, stopFocus, state.user.id]);
+
+  /*
+   * Stopped from outside the overlay — the card's stop button, the sidebar's.
+   * The session is over, so the saved timer and its pending push go too.
+   * Without this, the next start adopted the corpse of this one, which is
+   * exactly the stale-duration bug.
+   */
+  useEffect(() => {
+    if (!focus && timer) {
+      const taskId = timer.taskId;
+      let cancelled = false;
+      queueMicrotask(() => {
+        if (cancelled) return;
+        cancelPush(`focus-${taskId}`);
+        save(state.user.id, null);
+        zeroFired.current = false;
+        setTimer(null);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
+  }, [focus, timer, state.user.id]);
 
   const remaining = timer
     ? timer.running && now > 0

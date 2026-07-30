@@ -70,8 +70,10 @@ export function TaskItem({
 
   const [customMin, setCustomMin] = useState("");
   const startWith = (m: number) => {
+    // The estimate write is background bookkeeping for next time; the session
+    // takes the minutes directly, so the timer can never race the save.
     updateTask(task.id, { estimateMin: m });
-    startFocus(task.id);
+    startFocus(task.id, { minutes: m });
     setAskEstimate(false);
     setCustomMin("");
   };
@@ -164,7 +166,7 @@ export function TaskItem({
             // says "working" while measuring nothing answered one question
             // two ways.
             if (running) stopFocus();
-            else if (task.estimateMin != null) startFocus(task.id);
+            else if (task.estimateMin != null) startFocus(task.id, { minutes: task.estimateMin });
             else setAskEstimate(true);
           }}
           aria-pressed={running}
@@ -259,13 +261,13 @@ export function TaskItem({
                 title={`Focus for ~${fmtMinutes(task.estimateMin)}`}
                 onClick={(e) => {
                   e.stopPropagation();
-                  startFocus(task.id);
+                  startFocus(task.id, { minutes: task.estimateMin });
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
                     e.stopPropagation();
-                    startFocus(task.id);
+                    startFocus(task.id, { minutes: task.estimateMin });
                   }
                 }}
                 className="cursor-pointer"

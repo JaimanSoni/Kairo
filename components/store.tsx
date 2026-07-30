@@ -35,7 +35,14 @@ type State = {
   omnibarOpen: boolean;
   editingId: string | null;
   sweepDismissed: boolean;
-  focus: { taskId: string; minimized: boolean } | null;
+  /**
+   * The live focus session. `minutes` is the duration this session was
+   * started with — the timer's single source of truth, so what you picked is
+   * what runs regardless of when the task's estimate write lands. `adopt` is
+   * set only by the reload-restore path, and is the one case where a timer
+   * saved in localStorage may be resumed instead of started fresh.
+   */
+  focus: { taskId: string; minimized: boolean; minutes: number | null; adopt: boolean } | null;
   /** List ids unlocked for this browser session. */
   unlockedLists: string[];
   /** App-wide PIN gate. Starts locked when enabled; session unlock lifts it. */
@@ -169,7 +176,7 @@ type AppContextValue = {
   setEditing: (id: string | null) => void;
   dismissSweep: () => void;
   reopenSweep: () => void;
-  startFocus: (taskId: string) => void;
+  startFocus: (taskId: string, opts?: { minutes?: number | null; adopt?: boolean; minimized?: boolean }) => void;
   stopFocus: () => void;
   minimizeFocus: (minimized: boolean) => void;
   setListUnlocked: (listId: string, unlocked: boolean) => void;
@@ -782,10 +789,20 @@ export function AppProvider({
    * without being "in progress", which is two answers to one question.
    */
   const startFocus = useCallback(
-    (taskId: string) => {
+    (taskId: string, opts?: { minutes?: number | null; adopt?: boolean; minimized?: boolean }) => {
       const t = stateRef.current.tasks[taskId];
       if (t && !t.startedAt && t.status !== "done") markStarted(taskId);
-      dispatch({ type: "SET_FOCUS", focus: { taskId, minimized: false } });
+      // minimized rides along in the same dispatch: a follow-up minimizeFocus
+      // call would read stateRef before this commit lands and quietly no-op
+      dispatch({
+        type: "SET_FOCUS",
+        focus: {
+          taskId,
+          minimized: opts?.minimized ?? false,
+          minutes: opts?.minutes ?? null,
+          adopt: opts?.adopt ?? false,
+        },
+      });
     },
     [markStarted]
   );
