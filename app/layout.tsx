@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { DM_Sans, Fraunces, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@/components/analytics";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/site";
 
 const bodyFont = DM_Sans({
   variable: "--font-body",
@@ -21,13 +22,29 @@ const displayFont = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Kairo",
-  description:
-    "A daily planner that forgives. Plan a day you can actually finish — no red badges, no overdue guilt, no infinite lists.",
+  // Without this, the per-page `alternates.canonical` values resolve to bare
+  // paths — a canonical tag is meant to be absolute, and Open Graph images are
+  // required to be.
+  metadataBase: new URL(SITE_URL),
+  title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
+    url: "/",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Kairo",
+    title: SITE_NAME,
   },
 };
 

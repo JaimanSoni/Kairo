@@ -10,10 +10,16 @@ import {
   TodayDemo,
 } from "@/components/landing/demos";
 import { Testimonials } from "@/components/landing/testimonials";
+import { Pricing } from "@/components/landing/pricing";
 import { CoffeeButton } from "@/components/coffee";
 import { getSession } from "@/lib/session";
+import { PRICE_CURRENCY, PRICE_MINOR } from "@/lib/razorpay";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
+  // /home renders this same page and declares its own canonical back to "/",
+  // so the pair can never be read as two pages.
+  alternates: { canonical: "/" },
   description:
     "Kairo is a daily planner that forgives. Voice + AI capture, a bounded Today, a guilt-free morning reset, focus timer, shared lists, task assignment and PIN locks. No red badges, no overdue guilt.",
   keywords: [
@@ -41,15 +47,26 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * The price here is generated from the same constants that charge the card —
+ * structured data that disagrees with the checkout is the kind of thing Google
+ * flags and customers screenshot.
+ */
 const JSON_LD = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "Kairo",
+  name: SITE_NAME,
+  url: SITE_URL,
   applicationCategory: "ProductivityApplication",
   operatingSystem: "Web, iOS, Android",
   description:
     "A daily planner that forgives: bounded days, guilt-free fresh starts, voice and AI capture, focus timer, shared lists with assignments, and PIN-locked privacy.",
-  offers: { "@type": "Offer", price: "299", priceCurrency: "INR" },
+  offers: {
+    "@type": "Offer",
+    price: (PRICE_MINOR / 100).toFixed(2),
+    priceCurrency: PRICE_CURRENCY,
+    category: "SaaS",
+  },
 };
 
 /** On a coloured button the logo needs its own white surface — Google's green
@@ -395,6 +412,8 @@ export default async function Landing({
       </section>
 
       <Testimonials />
+
+      <Pricing signedIn={signedIn} />
 
       {/* final CTA */}
       <section aria-label="Get started" className="mx-auto max-w-3xl px-5 py-16 text-center">

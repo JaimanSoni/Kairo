@@ -23,7 +23,12 @@ export async function generateMetadata({
     title: article.title,
     description: article.summary,
     keywords: article.keywords,
-    alternates: { canonical: `/support/${article.slug}` },
+    alternates: {
+      canonical: `/support/${article.slug}`,
+      // advertises the plain-text twin, so an agent reading the page can fetch
+      // the markdown instead of scraping the HTML
+      types: { "text/markdown": `/support/${article.slug}.md` },
+    },
     openGraph: {
       title: `${article.title} · Kairo Help`,
       description: article.summary,

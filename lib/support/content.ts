@@ -41,6 +41,15 @@ export const CATEGORIES: Category[] = [
 /** Shown as the numbered "Start here" row on the help home page. */
 export const QUICK_START = ["philosophy", "capture", "today", "notifications"];
 
+/**
+ * When the articles below were last revised — bump it when you change them.
+ *
+ * Hand-maintained rather than taken from the build clock: `lastmod` in the
+ * sitemap is only worth sending if it's true, and a date that moves on every
+ * deploy teaches crawlers to ignore it.
+ */
+export const DOCS_UPDATED = "2026-07-26";
+
 export const ARTICLES: Article[] = [
   /* ---------------------------------------------------------------- basics */
   {
