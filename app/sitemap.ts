@@ -14,13 +14,15 @@ import { SITE_URL } from "@/lib/site";
  * on every deploy is worse than none: crawlers learn to distrust it.
  */
 
-const LEGAL_UPDATED = "2026-07-28";
-const LANDING_UPDATED = "2026-07-28";
+const LANDING_UPDATED = "2026-07-31"; // pricing section, drawn mark
+const PRICING_UPDATED = "2026-07-30"; // two plans
+const PRIVACY_UPDATED = "2026-07-31"; // Google Analytics added
+const LEGAL_UPDATED = "2026-07-28"; // terms, refunds
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     { url: `${SITE_URL}/`, lastModified: LANDING_UPDATED, changeFrequency: "monthly", priority: 1 },
-    { url: `${SITE_URL}/pricing`, lastModified: LEGAL_UPDATED, changeFrequency: "monthly", priority: 0.9 },
+    { url: `${SITE_URL}/pricing`, lastModified: PRICING_UPDATED, changeFrequency: "monthly", priority: 0.9 },
     { url: `${SITE_URL}/support`, lastModified: DOCS_UPDATED, changeFrequency: "weekly", priority: 0.8 },
     { url: `${SITE_URL}/support/contact`, lastModified: DOCS_UPDATED, changeFrequency: "yearly", priority: 0.5 },
     ...ARTICLES.map((a) => ({
@@ -30,7 +32,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.6,
     })),
     { url: `${SITE_URL}/terms`, lastModified: LEGAL_UPDATED, changeFrequency: "yearly", priority: 0.3 },
-    { url: `${SITE_URL}/privacy`, lastModified: LEGAL_UPDATED, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${SITE_URL}/privacy`, lastModified: PRIVACY_UPDATED, changeFrequency: "yearly", priority: 0.3 },
     { url: `${SITE_URL}/refunds`, lastModified: LEGAL_UPDATED, changeFrequency: "yearly", priority: 0.3 },
   ];
 }

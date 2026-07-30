@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ARTICLES, CATEGORIES } from "@/lib/support/content";
+import { ARTICLES, CATEGORIES, DOCS_UPDATED } from "@/lib/support/content";
+import { SITE_URL } from "@/lib/site";
 import { BlockView } from "@/components/support/prose";
 import { Toc } from "@/components/support/toc";
 import { SupportSidebar } from "@/components/support/sidebar";
@@ -33,6 +34,7 @@ export async function generateMetadata({
       title: `${article.title} · Kairo Help`,
       description: article.summary,
       type: "article",
+      images: [{ url: "/og.png", width: 1200, height: 630, alt: "Kairo — a daily planner that forgives" }],
     },
   };
 }
@@ -57,11 +59,29 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     description: article.summary,
     articleSection: category?.name,
     keywords: article.keywords.join(", "),
+    dateModified: DOCS_UPDATED,
+    mainEntityOfPage: `${SITE_URL}/support/${article.slug}`,
+    image: `${SITE_URL}/og.png`,
+    publisher: {
+      "@type": "Organization",
+      name: "Kairo",
+      logo: { "@type": "ImageObject", url: `${SITE_URL}/icon.svg` },
+    },
+  };
+
+  const breadcrumbs = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Kairo Help", item: `${SITE_URL}/support` },
+      { "@type": "ListItem", position: 2, name: article.title, item: `${SITE_URL}/support/${article.slug}` },
+    ],
   };
 
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }} />
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-5 sm:py-12">
         <div className="grid gap-10 lg:grid-cols-[14rem_minmax(0,1fr)] xl:grid-cols-[14rem_minmax(0,1fr)_12rem]">

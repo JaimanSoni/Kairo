@@ -40,11 +40,13 @@ export const metadata: Metadata = {
       "Plan a day you can actually finish. Voice + AI capture, a morning reset instead of overdue guilt, focus timer, shared lists, assignments and PIN locks.",
     type: "website",
     siteName: "Kairo",
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "Kairo — a daily planner that forgives" }],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "Kairo — a daily planner that forgives",
     description: "Plan a day you can actually finish. No red badges, no overdue guilt.",
+    images: ["/og.png"],
   },
 };
 
