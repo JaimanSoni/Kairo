@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireSession, badRequest, unauthorized } from "@/lib/api-auth";
 import { creditOneMonth } from "@/lib/billing";
-import { PRICE_CURRENCY, PRICE_MINOR, fetchPayment, verifyOrderSignature } from "@/lib/razorpay";
+import { fetchPayment, verifyOrderSignature } from "@/lib/razorpay";
+import { planForPendingPayment } from "@/lib/pending-plan";
 
 /**
  * Confirms a one-off payment and extends access by a month.
@@ -52,8 +53,18 @@ export async function POST(request: Request) {
     if (payment.status !== "captured" && payment.status !== "authorized") {
       return NextResponse.json({ error: `Payment is ${payment.status}` }, { status: 400 });
     }
-    if (payment.amount !== PRICE_MINOR || payment.currency !== PRICE_CURRENCY) {
-      console.warn("[billing] amount mismatch", { paid: payment.amount, expected: PRICE_MINOR });
+    // Checked against the plan this order was opened for, not a global price —
+    // plans set their own, and the cheaper one must not buy the dearer.
+    const plan = await planForPendingPayment(session.userId);
+    if (!plan) {
+      return NextResponse.json({ error: "No plan to credit this against" }, { status: 500 });
+    }
+    if (payment.amount !== plan.priceMinor || payment.currency !== plan.currency) {
+      console.warn("[billing] amount mismatch", {
+        paid: payment.amount,
+        expected: plan.priceMinor,
+        plan: plan.key,
+      });
       return NextResponse.json({ error: "Unexpected amount" }, { status: 400 });
     }
 
@@ -62,6 +73,7 @@ export async function POST(request: Request) {
       orderId: payment.order_id,
       amount: payment.amount,
       currency: payment.currency,
+      planKey: plan.key,
     });
     if (credited) {
       console.info("[billing] %s paid %s %s, access to %s", session.email, payment.amount, payment.currency, new Date(coversUntil).toISOString());

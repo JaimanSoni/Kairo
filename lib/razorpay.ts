@@ -136,17 +136,27 @@ export type RazorpayPayment = {
   currency: string;
 };
 
-/** One month's access, charged now. Amount is in the smallest currency unit. */
+/**
+ * One month's access, charged now. Amount is in the smallest currency unit.
+ *
+ * The amount is passed in because plans set their own prices, but it always
+ * comes from a plan read out of the database on the server — never from the
+ * request, or a client would name its own price.
+ */
 export async function createOrder(input: {
   receipt: string;
+  amountMinor: number;
+  currency: string;
   notes?: Record<string, string>;
 }): Promise<RazorpayOrder> {
-  if (PRICE_MINOR < 100) throw new Error("Amount must be at least 100 minor units");
+  if (!Number.isInteger(input.amountMinor) || input.amountMinor < 100) {
+    throw new Error("Amount must be a whole number of at least 100 minor units");
+  }
   return call<RazorpayOrder>("/orders", {
     method: "POST",
     body: JSON.stringify({
-      amount: PRICE_MINOR,
-      currency: PRICE_CURRENCY,
+      amount: input.amountMinor,
+      currency: input.currency,
       receipt: input.receipt.slice(0, 40),
       ...(input.notes ? { notes: input.notes } : {}),
     }),

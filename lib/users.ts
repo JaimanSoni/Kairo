@@ -13,6 +13,10 @@ export type DbUser = {
   /** App-wide PIN lock (hash + salt live server-side only). */
   appLockHash?: string;
   appLockSalt?: string;
+  /** Blocked by an admin. Nothing is deleted; sign-in is refused. */
+  disabled?: boolean;
+  disabledAt?: Date;
+  disabledReason?: string;
 };
 
 export type AdminUserRow = {
@@ -28,6 +32,10 @@ export type AdminUserRow = {
   compedNote: string;
   subStatus: string | null;
   currentPeriodEnd: number | null;
+  /** Which plan the current paid period bought, if any. */
+  planKey: string;
+  /** Switched off by an admin. */
+  disabled: boolean;
   /** Tasks this user owns, and how many are done. Shared lists are counted
    *  against the owner only, so the totals never double-count. */
   tasks: number;
@@ -53,6 +61,7 @@ type AdminUserDoc = Omit<DbUser, "appLockHash" | "appLockSalt"> & {
   compedNote?: string;
   subStatus?: string | null;
   currentPeriodEnd?: number | null;
+  planKey?: string;
   tasks: number;
   tasksDone: number;
   lists: number;
@@ -111,6 +120,8 @@ export async function listAllUsers(limit = 500): Promise<AdminUserRow[]> {
             compedNote: { $ifNull: ["$billing.compedNote", ""] },
             subStatus: { $ifNull: ["$billing.status", null] },
             currentPeriodEnd: { $ifNull: ["$billing.currentPeriodEnd", null] },
+            planKey: { $ifNull: ["$billing.planKey", ""] },
+            disabled: { $toBool: { $ifNull: ["$disabled", false] } },
             tasks: { $ifNull: [{ $first: "$taskStats.total" }, 0] },
             tasksDone: { $ifNull: [{ $first: "$taskStats.done" }, 0] },
             lists: { $ifNull: [{ $first: "$listStats.total" }, 0] },
@@ -131,6 +142,8 @@ export async function listAllUsers(limit = 500): Promise<AdminUserRow[]> {
       compedNote: u.compedNote ?? "",
       subStatus: u.subStatus ?? null,
       currentPeriodEnd: u.currentPeriodEnd ?? null,
+      planKey: u.planKey ?? "",
+      disabled: Boolean(u.disabled),
       tasks: u.tasks,
       tasksDone: u.tasksDone,
       lists: u.lists,
@@ -158,6 +171,43 @@ export async function getUserById(idHex: string): Promise<DbUser | null> {
   return withDbRetry(async () => {
     const db = await getDb();
     return db.collection<DbUser>("users").findOne({ _id: new ObjectId(idHex) });
+  });
+}
+
+/**
+ * Whether an admin has switched this account off.
+ *
+ * Its own projected query rather than a full `getUserById`, because it runs on
+ * every authenticated API call: a session cookie stays valid for weeks, so
+ * checking only at sign-in would leave a deactivated account working until its
+ * cookie happened to expire.
+ */
+export async function isUserDisabled(idHex: string): Promise<boolean> {
+  return withDbRetry(async () => {
+    const db = await getDb();
+    const doc = await db
+      .collection("users")
+      .findOne({ _id: new ObjectId(idHex) }, { projection: { disabled: 1 } });
+    // A missing user is treated as disabled — a cookie for a deleted account
+    // should not keep working either.
+    return !doc || doc.disabled === true;
+  });
+}
+
+/** Switches an account off (or back on). Nothing is deleted either way. */
+export async function setUserDisabled(
+  idHex: string,
+  disabled: boolean,
+  reason = ""
+): Promise<void> {
+  await withDbRetry(async () => {
+    const db = await getDb();
+    await db.collection("users").updateOne(
+      { _id: new ObjectId(idHex) },
+      disabled
+        ? { $set: { disabled: true, disabledAt: new Date(), disabledReason: reason.slice(0, 200) } }
+        : { $unset: { disabled: "", disabledAt: "", disabledReason: "" } }
+    );
   });
 }
 

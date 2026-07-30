@@ -4,6 +4,7 @@ import { requireSession, unauthorized, badRequest } from "@/lib/api-auth";
 import { getDb } from "@/lib/db";
 import { getUserById } from "@/lib/users";
 import { PIN_RE, hashPin, makeSalt, verifyPin } from "@/lib/pin";
+import { requireFeature } from "@/lib/entitlements";
 
 const FAIL_DELAY_MS = 400;
 
@@ -11,6 +12,13 @@ const FAIL_DELAY_MS = 400;
 export async function POST(request: Request) {
   const session = await requireSession();
   if (!session) return unauthorized();
+
+  // Only setting a whole-app PIN is gated. Locking an individual list is on
+  // every plan, and an existing app lock keeps working — see DELETE below,
+  // which stays open so nobody can be locked out of their own app by a
+  // downgrade.
+  const gate = await requireFeature(session.userId, "app-lock");
+  if (gate) return gate;
 
   let body: { pin?: unknown; currentPin?: unknown };
   try {

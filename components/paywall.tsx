@@ -4,6 +4,7 @@ import { useState } from "react";
 import Script from "next/script";
 import type { Access } from "@/lib/billing";
 import { Icon3d } from "./img3d";
+import { PlanCards, type FeatureLabel, type PublicPlan } from "./plan-cards";
 
 const CHECKOUT_SRC = "https://checkout.razorpay.com/v1/checkout.js";
 
@@ -27,16 +28,24 @@ type Mode = "subscription" | "one-off";
  * arrives with the page, never from the client.
  */
 export function useCheckout(user: { name: string; email: string }, mode: Mode) {
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const start = async () => {
+  /**
+   * `plan` names what to buy. The price is never sent — the server reads it from
+   * that plan, so a client can choose what it wants and never what it costs.
+   */
+  const start = async (plan?: string) => {
     if (busy) return;
-    setBusy(true);
+    setBusy(plan ?? "default");
     setError(null);
     try {
       const sub = mode === "subscription";
-      const res = await fetch(sub ? "/api/billing/subscribe" : "/api/billing/order", { method: "POST" });
+      const res = await fetch(sub ? "/api/billing/subscribe" : "/api/billing/order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: plan ?? "" }),
+      });
       const data = (await res.json()) as {
         subscriptionId?: string; orderId?: string; amount?: number; currency?: string;
         keyId?: string; error?: string;
@@ -65,33 +74,24 @@ export function useCheckout(user: { name: string; email: string }, mode: Mode) {
           else {
             const e = (await v.json().catch(() => ({}))) as { error?: string };
             setError(e.error ?? "Payment taken, but confirming it failed. Refresh in a moment.");
-            setBusy(false);
+            setBusy(null);
           }
         },
-        modal: { ondismiss: () => setBusy(false) },
+        modal: { ondismiss: () => setBusy(null) },
       });
       // a card decline fires this rather than the handler
       rzp.on?.("payment.failed", (e: { error?: { description?: string } }) => {
         setError(e?.error?.description ?? "That payment didn't go through. Please try again.");
-        setBusy(false);
+        setBusy(null);
       });
       rzp.open();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
-      setBusy(false);
+      setBusy(null);
     }
   };
 
   return { start, busy, error };
-}
-
-function PriceLine({ price, mode }: { price: string; mode: Mode }) {
-  return (
-    <p className="text-sm text-ink-soft">
-      <b className="font-semibold text-ink">{price}</b>{" "}
-      {mode === "subscription" ? "a month. Cancel whenever you like." : "for a month. Renew whenever you like — nothing recurring."}
-    </p>
-  );
 }
 
 /**
@@ -103,20 +103,19 @@ export function Paywall({
   access,
   user,
   mode,
-  price,
+  plans,
+  features,
 }: {
   access: Access;
   user: { name: string; email: string };
   mode: Mode;
-  price: string;
+  plans: PublicPlan[];
+  features: FeatureLabel[];
 }) {
-  const { start, busy, error } = useCheckout(user, mode);
-
   return (
-    <>
-      <Script src={CHECKOUT_SRC} strategy="afterInteractive" />
-      <div className="fixed inset-0 z-[60] grid place-items-center overflow-y-auto bg-paper px-5 py-10">
-        <div className="w-full max-w-md text-center">
+    <div className="fixed inset-0 z-[60] overflow-y-auto bg-paper px-5 py-10">
+      <div className="mx-auto w-full max-w-2xl">
+        <div className="text-center">
           <Icon3d name="sunrise" size={64} className="mx-auto" />
           <h1 className="font-display mt-4 text-3xl tracking-tight">
             {access.reason !== "expired"
@@ -125,45 +124,39 @@ export function Paywall({
                 ? "Your subscription has lapsed"
                 : "Your paid month is up"}
           </h1>
-          <p className="mt-2 text-[15px] leading-relaxed text-ink-soft">
+          <p className="mx-auto mt-2 max-w-md text-[15px] leading-relaxed text-ink-soft">
             Thanks for giving Kairo a proper go. Everything you&apos;ve added is safe and waiting —
-            {mode === "subscription" ? " subscribe" : " pay for a month"} to pick up exactly where
-            you left off.
+            pick a plan to carry on exactly where you left off.
           </p>
+        </div>
 
-          <div className="mt-6 rounded-2xl border border-line bg-card p-6">
-            <PriceLine price={price} mode={mode} />
-            <button
-              onClick={start}
-              disabled={busy}
-              className="mt-4 w-full rounded-2xl bg-sun px-6 py-3.5 text-base font-semibold text-on-accent shadow-lg shadow-sun/25 transition-transform active:scale-[0.99] disabled:opacity-60"
-            >
-              {busy ? "Opening checkout…" : mode === "subscription" ? "Subscribe" : `Pay ${price}`}
+        <div className="mt-7">
+          <PlanCards
+            plans={plans}
+            features={features}
+            user={user}
+            mode={mode}
+            currentPlanKey={access.planKey}
+          />
+        </div>
+
+        {/* a div, not a p: the sign-out form below is flow content, and the
+            parser hoists it out of a paragraph — which breaks hydration */}
+        <div className="mt-7 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-ink-faint">
+          <a href="/billing" className="underline underline-offset-2 hover:text-ink-soft">
+            Billing &amp; receipts
+          </a>
+          <a href="/refunds" className="underline underline-offset-2 hover:text-ink-soft">
+            Refunds
+          </a>
+          <form action="/api/auth/signout" method="POST" className="inline">
+            <button type="submit" className="underline underline-offset-2 hover:text-ink-soft">
+              Sign out
             </button>
-            {error && <p className="mt-3 text-sm text-clay">{error}</p>}
-            <p className="mt-3 text-xs text-ink-faint">
-              Secure checkout by Razorpay. Card details never touch Kairo.
-            </p>
-          </div>
-
-          {/* a div, not a p: the sign-out form below is flow content, and the
-              parser hoists it out of a paragraph — which breaks hydration */}
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-ink-faint">
-            <a href="/billing" className="underline underline-offset-2 hover:text-ink-soft">
-              Billing &amp; receipts
-            </a>
-            <a href="/refunds" className="underline underline-offset-2 hover:text-ink-soft">
-              Refunds
-            </a>
-            <form action="/api/auth/signout" method="POST" className="inline">
-              <button type="submit" className="underline underline-offset-2 hover:text-ink-soft">
-                Sign out
-              </button>
-            </form>
-          </div>
+          </form>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -206,8 +199,8 @@ export function TrialBanner({
               : `${access.trialDaysLeft} ${access.trialDaysLeft === 1 ? "day" : "days"} left of your free trial.`}
         </span>
         <button
-          onClick={start}
-          disabled={busy}
+          onClick={() => start()}
+          disabled={Boolean(busy)}
           className="font-semibold underline underline-offset-2 disabled:opacity-60"
         >
           {failing ? "Fix payment" : mode === "subscription" ? `Subscribe — ${price}/mo` : `Pay ${price} for a month`}

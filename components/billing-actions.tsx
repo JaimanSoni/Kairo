@@ -13,11 +13,14 @@ import { useCheckout } from "./paywall";
 export function BillingActions({
   mode,
   price,
+  planKey,
   user,
   canCancel,
 }: {
   mode: "subscription" | "one-off";
   price: string;
+  /** Which plan to renew. Empty renews whatever the server picks as default. */
+  planKey?: string;
   user: { name: string; email: string };
   canCancel: boolean;
 }) {
@@ -42,8 +45,8 @@ export function BillingActions({
   return (
     <div className="mt-5 flex flex-wrap items-center gap-3">
       <button
-        onClick={start}
-        disabled={busy}
+        onClick={() => start(planKey)}
+        disabled={Boolean(busy)}
         className="rounded-full bg-sun px-5 py-2.5 text-sm font-semibold text-on-accent shadow-lg shadow-sun/25 transition-transform active:scale-[0.99] disabled:opacity-60"
       >
         {busy

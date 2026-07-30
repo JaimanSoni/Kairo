@@ -86,6 +86,11 @@ async function writeData(data: SessionData): Promise<void> {
 }
 
 /** The active account — the identity every API route acts as. */
+/** The whole roster, for the few callers that need more than the active one. */
+export async function getSessionData(): Promise<SessionData | null> {
+  return readData();
+}
+
 export async function getSession(): Promise<SessionPayload | null> {
   const data = await readData();
   return data ? data.accounts[data.active] : null;

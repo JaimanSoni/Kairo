@@ -4,11 +4,33 @@ import { razorpayConfigured } from "./razorpay";
 import type { BillingSettings, UserBilling } from "./access";
 
 import { resolveAccess } from "./access";
+import { planFeatureMap } from "./plans";
+import type { Access } from "./access";
 
-export { TRIAL_DAYS, resolveAccess } from "./access";
+export { TRIAL_DAYS, resolveAccess, can } from "./access";
 export type { Access, BillingSettings, SubStatus, UserBilling } from "./access";
 
 const SETTINGS_ID = "billing";
+
+/**
+ * `resolveAccess` with the plans fetched for you.
+ *
+ * The rules stay pure and this does the I/O, so there is still exactly one
+ * place that decides what an account may use — and no call site can forget to
+ * pass the plans and silently grant everything.
+ */
+export async function accessFor(input: {
+  createdAt?: Date | null;
+  billing?: UserBilling | null;
+  settings?: BillingSettings;
+  now?: number;
+}): Promise<Access> {
+  const [settings, planFeatures] = await Promise.all([
+    input.settings ? Promise.resolve(input.settings) : getBillingSettings(),
+    planFeatureMap(),
+  ]);
+  return resolveAccess({ ...input, settings, planFeatures });
+}
 
 export async function getBillingSettings(): Promise<BillingSettings> {
   return withDbRetry(async () => {
@@ -147,7 +169,14 @@ function isDuplicateKey(err: unknown): boolean {
  */
 export async function creditOneMonth(
   userId: string,
-  p: { paymentId: string; orderId?: string | null; amount: number; currency: string }
+  p: {
+    paymentId: string;
+    orderId?: string | null;
+    amount: number;
+    currency: string;
+    /** Which plan this month bought. Recorded on the account and the receipt. */
+    planKey: string;
+  }
 ): Promise<{ coversUntil: number; credited: boolean }> {
   return withDbRetry(async () => {
     const db = await getDb();
@@ -166,6 +195,7 @@ export async function creditOneMonth(
         orderId: p.orderId ?? null,
         amount: p.amount,
         currency: p.currency,
+        planKey: p.planKey,
         paidAt: new Date(),
         coversUntil: null,
       });
@@ -188,13 +218,16 @@ export async function creditOneMonth(
     await db
       .collection("payments")
       .updateOne({ paymentId: p.paymentId }, { $set: { coversUntil } });
-    await updateUserBilling(userId, { pendingOrderId: "" });
+    // planKey is set from the payment, so an upgrade takes effect on the same
+    // write that extends the period — never one without the other.
+    await updateUserBilling(userId, { pendingOrderId: "", pendingPlanKey: "", planKey: p.planKey });
     return { coversUntil, credited: true };
   });
 }
 
 export type PaymentRecord = {
   paymentId: string;
+  planKey?: string;
   orderId: string | null;
   amount: number;
   currency: string;
@@ -214,6 +247,7 @@ export async function listPayments(userId: string, limit = 24): Promise<PaymentR
       .toArray();
     return docs.map((d) => ({
       paymentId: String(d.paymentId),
+      planKey: d.planKey ? String(d.planKey) : undefined,
       orderId: d.orderId ? String(d.orderId) : null,
       amount: Number(d.amount ?? 0),
       currency: String(d.currency ?? "INR"),
@@ -230,7 +264,7 @@ export async function listPayments(userId: string, limit = 24): Promise<PaymentR
 export async function loadBillingView(userId: string, createdAt?: Date | null, billing?: UserBilling | null) {
   const [settings, payments] = await Promise.all([getBillingSettings(), listPayments(userId)]);
   const now = Date.now();
-  return { settings, payments, now, access: resolveAccess({ createdAt, billing, settings, now }) };
+  return { settings, payments, now, access: await accessFor({ createdAt, billing, settings, now }) };
 }
 
 export type AdminPaymentRow = PaymentRecord & { email: string; name: string };

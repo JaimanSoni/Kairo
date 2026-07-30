@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { hiddenListIds, useApp } from "./store";
+import { upgradeHref, useCan } from "./entitlements";
 import { registerServiceWorker } from "@/lib/push-client";
 import { playNotify } from "@/lib/sound";
 import { Omnibar } from "./omnibar";
@@ -540,8 +541,12 @@ function NotificationSettings() {
 
 function AppLockSettings() {
   const { state, lockApp } = useApp();
+  const can = useCan();
   const [modal, setModal] = useState<AppLockMode | null>(null);
   const enabled = state.user.appLockEnabled;
+  // An existing lock stays fully usable after a downgrade — including removing
+  // it. Only setting a new one is gated, which is also how the API behaves.
+  const canSetUp = can("app-lock");
 
   return (
     <div className="mt-6">
@@ -574,13 +579,29 @@ function AppLockSettings() {
         </div>
       ) : (
         <div className="flex items-center justify-between gap-3">
-          <p className="text-sm text-ink-soft">Lock Kairo behind a numeric PIN.</p>
-          <button
-            onClick={() => setModal("set")}
-            className="shrink-0 rounded-full border border-line bg-card px-4 py-1.5 text-xs font-semibold text-ink-soft hover:border-sun hover:text-sun-deep"
-          >
-            Set up
-          </button>
+          <p className="text-sm text-ink-soft">
+            Lock Kairo behind a numeric PIN.
+            {!canSetUp && (
+              <span className="block text-xs text-ink-faint">
+                Locking individual lists stays available on every plan.
+              </span>
+            )}
+          </p>
+          {canSetUp ? (
+            <button
+              onClick={() => setModal("set")}
+              className="shrink-0 rounded-full border border-line bg-card px-4 py-1.5 text-xs font-semibold text-ink-soft hover:border-sun hover:text-sun-deep"
+            >
+              Set up
+            </button>
+          ) : (
+            <Link
+              href={upgradeHref("app-lock")}
+              className="shrink-0 rounded-full border border-sun/50 bg-sun-soft px-4 py-1.5 text-xs font-semibold text-sun-deep"
+            >
+              Upgrade
+            </Link>
+          )}
         </div>
       )}
       {modal && <AppLockModal mode={modal} onClose={() => setModal(null)} />}
@@ -590,6 +611,8 @@ function AppLockSettings() {
 
 function AccountSwitcher() {
   const { state } = useApp();
+  const can = useCan();
+  const canMultiAccount = can("multi-account");
   const [busy, setBusy] = useState<string | null>(null);
 
   const switchTo = async (userId: string) => {
@@ -645,11 +668,20 @@ function AccountSwitcher() {
           );
         })}
       </div>
+      {/* Still offered when the plan doesn't include it, but it goes to the
+          upgrade page instead of the sign-in flow — a control that vanishes is
+          harder to understand than one that explains itself. The sign-in
+          callback refuses the second account regardless. */}
       <a
-        href="/api/auth/google"
-        className="mt-2 block w-full rounded-xl border border-dashed border-line px-3 py-2 text-center text-sm font-medium text-ink-soft transition-colors hover:border-sun hover:text-sun-deep"
+        href={canMultiAccount ? "/api/auth/google" : upgradeHref("multi-account")}
+        className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line px-3 py-2 text-center text-sm font-medium text-ink-soft transition-colors hover:border-sun hover:text-sun-deep"
       >
         + Add another account
+        {!canMultiAccount && (
+          <span className="rounded-full bg-sun-soft px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sun-deep">
+            Upgrade
+          </span>
+        )}
       </a>
     </div>
   );

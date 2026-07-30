@@ -14,7 +14,7 @@ import { Pricing } from "@/components/landing/pricing";
 import { CoffeeButton } from "@/components/coffee";
 import { getSession } from "@/lib/session";
 import { PRICE_CURRENCY, PRICE_MINOR } from "@/lib/razorpay";
-import { SITE_NAME, SITE_URL } from "@/lib/site";
+import { SITE_NAME, SITE_URL, SUPPORT_EMAIL } from "@/lib/site";
 
 export const metadata: Metadata = {
   // /home renders this same page and declares its own canonical back to "/",
@@ -206,6 +206,18 @@ export default async function Landing({
                     .
                   </>
                 )}
+              </>
+            ) : auth_error === "deactivated" ? (
+              <>
+                <b>This account has been deactivated.</b> Nothing has been deleted — everything
+                you&apos;ve written is still there. Email{" "}
+                <a
+                  href={`mailto:${SUPPORT_EMAIL}`}
+                  className="font-semibold underline underline-offset-2"
+                >
+                  {SUPPORT_EMAIL}
+                </a>{" "}
+                and we&apos;ll sort it out.
               </>
             ) : (
               <>Sign-in didn&apos;t go through. Please try again.</>

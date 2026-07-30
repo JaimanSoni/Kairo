@@ -3,6 +3,7 @@ import { ObjectId } from "mongodb";
 import { requireSession, unauthorized, badRequest } from "@/lib/api-auth";
 import { listsCollection, listAccessFilter, toList, isDateString } from "@/lib/tasks";
 import { aiParseTask } from "@/lib/ai";
+import { requireFeature } from "@/lib/entitlements";
 
 /**
  * AI-assisted capture parsing via Ollama cloud.
@@ -11,6 +12,11 @@ import { aiParseTask } from "@/lib/ai";
 export async function POST(request: Request) {
   const session = await requireSession();
   if (!session) return unauthorized();
+
+  // Not on every plan. The client already falls back to the local parser on a
+  // non-200, so a Lite account still captures — it just doesn't get the tidying.
+  const gate = await requireFeature(session.userId, "ai-capture");
+  if (gate) return gate;
 
   let body: { text?: unknown; today?: unknown };
   try {

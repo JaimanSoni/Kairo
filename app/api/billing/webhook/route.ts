@@ -6,12 +6,8 @@ import {
   updateUserBilling,
   type SubStatus,
 } from "@/lib/billing";
-import {
-  PRICE_CURRENCY,
-  PRICE_MINOR,
-  verifyWebhookSignature,
-  webhookConfigured,
-} from "@/lib/razorpay";
+import { verifyWebhookSignature, webhookConfigured } from "@/lib/razorpay";
+import { planForPendingPayment } from "@/lib/pending-plan";
 
 /**
  * Razorpay's subscription webhook — the authority on what someone has paid for.
@@ -92,11 +88,17 @@ export async function POST(request: Request) {
     const payer = await findUserByOrderId(orderId);
     if (!payer) return NextResponse.json({ ok: true, unknown: true });
 
-    // the signature proves Razorpay sent this; this proves it's our price
+    // The signature proves Razorpay sent this; this proves it is the price of
+    // the plan the payer actually opened checkout for.
     const amount = pay?.amount ?? body.payload?.order?.entity?.amount;
     const currency = pay?.currency ?? body.payload?.order?.entity?.currency;
-    if (amount !== PRICE_MINOR || currency !== PRICE_CURRENCY) {
-      console.warn("[billing] webhook amount mismatch", { amount, currency });
+    const plan = await planForPendingPayment(payer.id);
+    if (!plan) {
+      console.error("[billing] webhook with no plan to credit", { event, orderId });
+      return NextResponse.json({ error: "No plan" }, { status: 500 });
+    }
+    if (amount !== plan.priceMinor || currency !== plan.currency) {
+      console.warn("[billing] webhook amount mismatch", { amount, currency, plan: plan.key });
       return NextResponse.json({ ok: true, mismatch: true });
     }
 
@@ -110,7 +112,8 @@ export async function POST(request: Request) {
         paymentId: pay.id,
         orderId,
         amount: amount ?? 0,
-        currency: currency ?? PRICE_CURRENCY,
+        currency: currency ?? plan.currency,
+        planKey: plan.key,
       });
       console.info(
         "[billing] %s -> user %s %s through %s",

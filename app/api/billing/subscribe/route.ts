@@ -4,7 +4,7 @@ import { getUserById } from "@/lib/users";
 import {
   TRIAL_DAYS,
   getBillingSettings,
-  resolveAccess,
+  accessFor,
   updateUserBilling,
   type UserBilling,
 } from "@/lib/billing";
@@ -49,7 +49,7 @@ export async function POST() {
   }
 
   const settings = await getBillingSettings();
-  const access = resolveAccess({ createdAt: user.createdAt, billing, settings });
+  const access = await accessFor({ createdAt: user.createdAt, billing, settings });
 
   try {
     const customerId =

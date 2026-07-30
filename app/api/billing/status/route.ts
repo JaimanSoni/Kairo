@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireSession, unauthorized } from "@/lib/api-auth";
 import { getUserById } from "@/lib/users";
-import { getBillingSettings, resolveAccess, type UserBilling } from "@/lib/billing";
+import { accessFor, getBillingSettings, type UserBilling } from "@/lib/billing";
 
 /** This account's billing state, for the settings sheet. */
 export async function GET() {
@@ -12,7 +12,7 @@ export async function GET() {
   if (!user) return unauthorized();
 
   const billing = (user as { billing?: UserBilling }).billing ?? {};
-  const access = resolveAccess({ createdAt: user.createdAt, billing, settings });
+  const access = await accessFor({ createdAt: user.createdAt, billing, settings });
   return NextResponse.json({
     ...access,
     comped: Boolean(billing.comped),
