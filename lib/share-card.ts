@@ -51,6 +51,30 @@ function roundRect(
   ctx.closePath();
 }
 
+/** The Kairo mark: three rounded bars, the same geometry as the app icon. */
+function drawMark(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  size: number,
+  color: string
+) {
+  const h = size;
+  const w = (size * 54) / 288;
+  ctx.save();
+  ctx.fillStyle = color;
+  for (const deg of [0, 60, 120]) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate((deg * Math.PI) / 180);
+    ctx.beginPath();
+    ctx.roundRect(-w / 2, -h / 2, w, h, w / 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
 /** Trims to fit, with an ellipsis, so a long task can't run off the card. */
 function fit(ctx: CanvasRenderingContext2D, text: string, max: number): string {
   if (ctx.measureText(text).width <= max) return text;
@@ -91,12 +115,11 @@ export async function drawShareCard(input: CardInput): Promise<HTMLCanvasElement
 
   /* -------------------------------------------------------------- header */
   ctx.textBaseline = "alphabetic";
-  ctx.fillStyle = "#0c9384";
-  ctx.font = `600 44px ${body}`;
-  ctx.fillText("✱", 84, 132);
+  // the drawn mark, not the ✱ glyph — the same three bars as the app icon
+  drawMark(ctx, 106, 112, 42, "#0c9384");
   ctx.fillStyle = "#1c2320";
   ctx.font = `700 38px ${body}`;
-  ctx.fillText("kairo", 132, 130);
+  ctx.fillText("kairo", 138, 126);
 
   /* --------------------------------------------------------------- title */
   ctx.fillStyle = "#1c2320";

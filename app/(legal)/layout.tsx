@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Mark } from "@/components/mark";
 
 /**
  * Chrome for the public policy pages.
@@ -12,9 +13,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
       <header className="border-b border-line/80">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-5 py-4">
           <Link href="/" className="flex items-center gap-2 text-[15px] font-bold tracking-tight">
-            <span className="text-sun text-lg leading-none" aria-hidden>
-              ✱
-            </span>
+            <Mark size={17} className="text-sun" />
             kairo
           </Link>
           <nav className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-soft">
@@ -31,7 +30,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
 
       <footer className="border-t border-line/80 py-8">
         <div className="mx-auto max-w-3xl px-5 text-xs text-ink-faint">
-          <span className="text-sun" aria-hidden>✱</span> Kairo — operated by Jaiman Soni.{" "}
+          <Mark size={12} className="inline text-sun" /> Kairo — operated by Jaiman Soni.{" "}
           <a href="mailto:jaimansoni@gmail.com" className="underline underline-offset-2 hover:text-ink-soft">
             jaimansoni@gmail.com
           </a>

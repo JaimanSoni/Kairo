@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { SupportSearch, SearchTrigger } from "@/components/support/search";
 import { CoffeeButton } from "@/components/coffee";
+import { Mark } from "@/components/mark";
 
 export const metadata: Metadata = {
   title: { default: "Kairo Help", template: "%s · Kairo Help" },
@@ -18,9 +19,7 @@ export default function SupportLayout({ children }: { children: React.ReactNode 
             href="/support"
             className="flex min-w-0 items-center gap-1.5 text-[15px] font-bold tracking-tight"
           >
-            <span className="text-sun text-lg leading-none" aria-hidden>
-              ✱
-            </span>
+            <Mark size={17} className="text-sun" />
             kairo
             <span className="font-normal text-ink-faint">help</span>
           </Link>
@@ -42,10 +41,7 @@ export default function SupportLayout({ children }: { children: React.ReactNode 
       <footer className="border-t border-line/80 py-8">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 text-xs text-ink-faint sm:px-5">
           <span>
-            <span className="text-sun" aria-hidden>
-              ✱
-            </span>{" "}
-            kairo — a daily planner that forgives
+            <Mark size={12} className="inline text-sun" /> kairo — a daily planner that forgives
           </span>
           <span className="flex gap-4">
             <Link href="/support" className="hover:text-ink-soft">

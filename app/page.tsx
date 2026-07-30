@@ -12,6 +12,7 @@ import {
 import { Testimonials } from "@/components/landing/testimonials";
 import { Pricing } from "@/components/landing/pricing";
 import { CoffeeButton } from "@/components/coffee";
+import { Mark } from "@/components/mark";
 import { getSession } from "@/lib/session";
 import { PRICE_CURRENCY, PRICE_MINOR } from "@/lib/razorpay";
 import { SITE_NAME, SITE_URL, SUPPORT_EMAIL } from "@/lib/site";
@@ -162,7 +163,7 @@ export default async function Landing({
         className="glass sticky top-4 z-40 mx-auto mt-4 flex w-[min(94%,56rem)] items-center justify-between rounded-full px-4 py-2.5 shadow-lg shadow-ink/5 sm:px-5"
       >
         <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight">
-          <span className="text-sun text-xl leading-none" aria-hidden>✱</span> kairo
+          <Mark size={20} className="text-sun" /> kairo
         </Link>
         <div className="flex items-center gap-2">
           <Link
@@ -444,7 +445,7 @@ export default async function Landing({
       </section>
 
       <footer className="border-t border-line/60 py-8 text-center text-xs text-ink-faint">
-        <span className="text-sun" aria-hidden>✱</span> kairo — made for humans with unfinished lists
+        <Mark size={12} className="inline text-sun" /> kairo — made for humans with unfinished lists
         {" · "}
         <Link href="/support" className="underline underline-offset-2 hover:text-ink-soft">
           Help

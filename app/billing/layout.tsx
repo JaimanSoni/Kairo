@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Mark } from "@/components/mark";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 
@@ -18,7 +19,7 @@ export default async function BillingLayout({ children }: { children: React.Reac
       <header className="border-b border-line/80">
         <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <Link href="/today" className="flex items-center gap-2 text-[15px] font-bold tracking-tight">
-            <span className="text-sun text-lg leading-none" aria-hidden>✱</span> kairo
+            <Mark size={17} className="text-sun" /> kairo
           </Link>
           <nav className="flex items-center gap-4 text-xs text-ink-soft">
             <Link href="/pricing" className="hover:text-ink">Pricing</Link>

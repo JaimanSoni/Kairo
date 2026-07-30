@@ -16,6 +16,7 @@ import { ThemeToggle } from "./theme";
 import { CoffeeButton, CoffeeNudge } from "./coffee";
 import { SubscriptionSettings } from "./subscription-settings";
 import { ShareKairoRow } from "./share-kairo";
+import { Mark } from "./mark";
 import { IconBook, IconCalendar, IconInbox, IconPlus, IconSun, IconX, Kbd, Modal } from "./ui";
 
 const NAV = [
@@ -110,7 +111,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       {/* sidebar — desktop */}
       <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-line bg-paper-deep/40 px-4 py-6 md:flex">
         <Link href="/today" className="flex items-center gap-2 px-2 text-lg font-bold tracking-tight">
-          <span className="text-sun text-xl leading-none">✱</span> kairo
+          <Mark size={20} className="text-sun" /> kairo
         </Link>
 
         <button
@@ -186,7 +187,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         {/* top bar — mobile only */}
         <div className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-paper/90 px-4 pb-2 pt-[max(0.6rem,env(safe-area-inset-top))] backdrop-blur md:hidden">
           <Link href="/today" className="flex items-center gap-1.5 text-base font-bold tracking-tight">
-            <span className="text-sun text-lg leading-none">✱</span> kairo
+            <Mark size={17} className="text-sun" /> kairo
           </Link>
           <span className="flex items-center gap-3">
             <button

@@ -5,6 +5,7 @@ import { useApp } from "./store";
 import { PinPad, MIN_PIN } from "./pin-pad";
 import { Modal } from "./ui";
 import { Icon3d } from "./img3d";
+import { Mark } from "./mark";
 
 /**
  * Full-screen gate shown while the app is locked. Covers everything
@@ -190,7 +191,7 @@ export function AppLockModal({ mode, onClose }: { mode: AppLockMode; onClose: ()
   return (
     <Modal onClose={onClose}>
       <div className="flex flex-col items-center p-6">
-        <span className="text-sun text-3xl leading-none" aria-hidden>✱</span>
+        <Mark size={30} className="text-sun" />
         <h2 className="font-display mt-1 text-2xl">App lock</h2>
         <p className="mt-1 text-sm font-medium text-ink-soft">{heading}</p>
         {mode === "set" && step === 1 && (
