@@ -198,6 +198,52 @@ export function taskSentEmail(input: {
   };
 }
 
+/**
+ * A share sent to an address with no Kairo account. The account already
+ * exists by the time this is read (created right after the send was
+ * accepted), so the magic link is a plain sign-in, nothing to set up.
+ */
+export function inviteEmail(input: {
+  inviterName: string;
+  kind: "task" | "list";
+  itemName: string;
+  /** "1 August at 20:00" when a task copy travelled with its plan. */
+  when?: string | null;
+  email: string;
+  magicUrl: string;
+}): Rendered {
+  const isTask = input.kind === "task";
+  const reason = `You received this because ${h(input.inviterName)} shared something with this address on Kairo.`;
+  const what = isTask
+    ? `${strong(h(input.itemName))} is waiting for you on Kairo, a calm daily planner.${
+        input.when ? ` It is planned for ${strong(h(input.when))}, and it is your copy to move.` : ""
+      }`
+    : `${strong(h(input.itemName))} is waiting for you on Kairo, a calm daily planner. Everyone on the list sees the same tasks.`;
+  const whatText = isTask
+    ? `"${input.itemName}" is waiting for you on Kairo, a calm daily planner.${
+        input.when ? ` It is planned for ${input.when}, and it is your copy to move.` : ""
+      }`
+    : `"${input.itemName}" is waiting for you on Kairo, a calm daily planner. Everyone on the list sees the same tasks.`;
+  return {
+    subject: isTask
+      ? `${input.inviterName} sent you a task: ${input.itemName}`
+      : `${input.inviterName} shared a list with you: ${input.itemName}`,
+    html: shell(
+      heading(isTask ? `${h(input.inviterName)} sent you a task.` : `${h(input.inviterName)} shared a list with you.`) +
+        para(what) +
+        para(
+          `An account is already set up for ${strong(h(input.email))}. One click below signs you in, nothing to create.`
+        ) +
+        button("Open Kairo", input.magicUrl) +
+        para(
+          `<span style="font-size:12px;color:${FAINT};">The link works for 14 days. After that, signing in with Google on the same address opens the same account. Not expecting this? Ignore this email and nothing happens.</span>`
+        ),
+      reason
+    ),
+    text: `${input.inviterName} ${isTask ? "sent you a task" : "shared a list with you"}.\n\n${whatText}\n\nAn account is already set up for ${input.email}. This link signs you in:\n${input.magicUrl}\n\nThe link works for 14 days. After that, signing in with Google on the same address opens the same account. Not expecting this? Ignore this email and nothing happens.${footerText(reason)}`,
+  };
+}
+
 export function welcomeEmail(input: { name: string; trialDays: number }): Rendered {
   const first = input.name.split(" ")[0] || "there";
   const reason = "You received this because you just created a Kairo account.";

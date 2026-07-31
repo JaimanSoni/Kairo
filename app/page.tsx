@@ -210,6 +210,11 @@ export default async function Landing({
                   </>
                 )}
               </>
+            ) : auth_error === "link_expired" ? (
+              <>
+                <b>That sign-in link has expired.</b> Signing in with Google using the same email
+                address opens the same account — everything shared with you is still there.
+              </>
             ) : auth_error === "deactivated" ? (
               <>
                 <b>This account has been deactivated.</b> Nothing has been deleted — everything

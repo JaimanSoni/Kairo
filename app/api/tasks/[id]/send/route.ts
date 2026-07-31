@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { sendEmail } from "@/lib/email";
 import { taskSentEmail } from "@/lib/email-templates";
+import { inviteUserByEmail } from "@/lib/invites";
 import { ObjectId } from "mongodb";
 import { requireSession, unauthorized, badRequest, notFound } from "@/lib/api-auth";
 import { tasksCollection, taskAccessFilter } from "@/lib/tasks";
 import { getDb } from "@/lib/db";
+import type { DbUser } from "@/lib/users";
 
 /**
  * Sends a COPY of a task to another user — a handoff, not a live share.
@@ -15,6 +17,10 @@ import { getDb } from "@/lib/db";
  * meant. What never travels is the sender's progress or claims on the
  * recipient's attention: steps arrive unticked, nothing is started, spotlight
  * stays unclaimed, and reminders stay personal.
+ *
+ * An address with no account is not an error: the invite email goes out with
+ * a magic sign-in link, and only if it lands is the account created and the
+ * copy placed in it — waiting there before the recipient ever clicks.
  */
 export async function POST(request: Request, ctx: RouteContext<"/api/tasks/[id]/send">) {
   const session = await requireSession();
@@ -42,21 +48,39 @@ export async function POST(request: Request, ctx: RouteContext<"/api/tasks/[id]/
   });
   if (!task) return notFound();
 
-  const db = await getDb();
-  const recipient = await db.collection("users").findOne({ email });
-  if (!recipient) {
-    return NextResponse.json(
-      { error: "No Kairo account with that email — they need to sign in once first" },
-      { status: 404 }
-    );
-  }
-
   const now = new Date();
-  const attribution = `↪ from ${session.name}`;
   // a plan in the past is stale, not a gift — those copies arrive in the inbox
   const today = now.toLocaleDateString("en-CA");
   const plannedFor =
     typeof task.plannedFor === "string" && task.plannedFor >= today ? task.plannedFor : null;
+  const when = plannedFor
+    ? `${new Date(plannedFor + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long" })}${
+        task.plannedTime ? ` at ${String(task.plannedTime)}` : ""
+      }`
+    : null;
+
+  const db = await getDb();
+  const found = await db.collection<DbUser>("users").findOne({ email });
+
+  // No account, or an invited one that has never been opened: the invite
+  // (with its magic link) is the email for this send, and it goes out first —
+  // if the address refuses it, nothing is created.
+  let recipient = found;
+  let invited = false;
+  if (!recipient || recipient.pending) {
+    const invite = await inviteUserByEmail({
+      email,
+      inviterId: session.userId,
+      inviterName: session.name,
+      emailKey: `invite-task:${id}:${email}`,
+      invite: { kind: "task", itemName: String(task.title), when },
+    });
+    if (!invite.ok) return badRequest(invite.error);
+    recipient = invite.user;
+    invited = true;
+  }
+
+  const attribution = `↪ from ${session.name}`;
   await tasks.insertOne({
     userId: recipient._id,
     title: task.title,
@@ -86,12 +110,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/tasks/[id]/
     updatedAt: now,
   });
 
-  {
-    const when = plannedFor
-      ? `${new Date(plannedFor + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long" })}${
-          task.plannedTime ? ` at ${String(task.plannedTime)}` : ""
-        }`
-      : null;
+  if (!invited) {
     const mail = taskSentEmail({ senderName: session.name, taskTitle: String(task.title), when });
     void sendEmail({
       key: `sent:${id}:${recipient._id.toHexString()}`,

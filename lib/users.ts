@@ -7,7 +7,8 @@ import { welcomeEmail } from "./email-templates";
 
 export type DbUser = {
   _id: ObjectId;
-  googleId: string;
+  /** Absent on accounts created by an invite that Google has never claimed. */
+  googleId?: string;
   email: string;
   name: string;
   picture?: string;
@@ -20,6 +21,15 @@ export type DbUser = {
   disabled?: boolean;
   disabledAt?: Date;
   disabledReason?: string;
+  /**
+   * Created by a share to an address that had no account, and not signed in
+   * yet. Cleared on first real sign-in (magic link or Google), which is also
+   * when the trial clock starts — an invite sitting unread in an inbox for a
+   * week must not burn the free days.
+   */
+  pending?: boolean;
+  invitedAt?: Date;
+  invitedBy?: ObjectId;
 };
 
 export type AdminUserRow = {
@@ -263,11 +273,77 @@ export async function upsertGoogleUser(profile: GoogleProfile): Promise<DbUser> 
   return withDbRetry(() => upsertGoogleUserOnce(profile));
 }
 
+/**
+ * First real arrival of an invited account: the trial clock starts now, the
+ * pending flag comes off, and the welcome goes out. The `pending: true` filter
+ * makes this once-only even if two sign-ins race — createdAt can never be
+ * reset twice, so signing in again is not a way to a fresh trial.
+ */
+export async function activatePendingUser(user: DbUser): Promise<DbUser> {
+  const db = await getDb();
+  const now = new Date();
+  const activated = await db
+    .collection<DbUser>("users")
+    .findOneAndUpdate(
+      { _id: user._id, pending: true },
+      { $set: { createdAt: now, lastLoginAt: now }, $unset: { pending: "" } },
+      { returnDocument: "after" }
+    );
+  if (activated) sendWelcome(activated);
+  return activated ?? user;
+}
+
+/** Fire-and-forget, keyed once-per-account for life. */
+function sendWelcome(user: DbUser): void {
+  void (async () => {
+    const mail = welcomeEmail({ name: user.name, trialDays: TRIAL_DAYS });
+    await sendEmail({ key: `welcome:${user._id.toHexString()}`, to: user.email, ...mail });
+  })().catch((err) => console.error("[email] welcome failed", err));
+}
+
 async function upsertGoogleUserOnce(profile: GoogleProfile): Promise<DbUser> {
   const db = await getDb();
   const users = db.collection<DbUser>("users");
   const now = new Date();
 
+  // The usual case: this Google account has signed in before.
+  const known = await users.findOneAndUpdate(
+    { googleId: profile.sub },
+    {
+      $set: {
+        email: profile.email,
+        name: profile.name,
+        picture: profile.picture,
+        lastLoginAt: now,
+      },
+    },
+    { returnDocument: "after" }
+  );
+  if (known) return known;
+
+  // An account under this address that Google has never claimed — one created
+  // by an invite. Link it rather than insert a duplicate: the shares it
+  // already holds are the whole point, and from here on both the magic link
+  // and Google land in the same place.
+  const claimed = await users.findOneAndUpdate(
+    { email: profile.email, googleId: { $exists: false } },
+    {
+      $set: {
+        googleId: profile.sub,
+        name: profile.name,
+        picture: profile.picture,
+        lastLoginAt: now,
+      },
+    },
+    { returnDocument: "after" }
+  );
+  if (claimed) {
+    return claimed.pending ? activatePendingUser(claimed) : claimed;
+  }
+
+  // First sign-in ever. Upsert on googleId so two racing first requests write
+  // one account; on insert, createdAt is the exact `now` this call wrote —
+  // that is what marks the welcome, a side effect and never a dependency.
   const result = await users.findOneAndUpdate(
     { googleId: profile.sub },
     {
@@ -286,16 +362,7 @@ async function upsertGoogleUserOnce(profile: GoogleProfile): Promise<DbUser> {
   );
   if (!result) throw new Error("Failed to upsert user");
 
-  // First sign-in ever: on insert, createdAt is the exact `now` this call
-  // wrote; every later login only moves lastLoginAt. The welcome is a side
-  // effect, never a dependency, and the key makes it once-per-account even if
-  // two first requests race.
-  if (result.createdAt?.getTime?.() === now.getTime()) {
-    void (async () => {
-      const mail = welcomeEmail({ name: result.name, trialDays: TRIAL_DAYS });
-      await sendEmail({ key: `welcome:${result._id.toHexString()}`, to: result.email, ...mail });
-    })().catch((err) => console.error("[email] welcome failed", err));
-  }
+  if (result.createdAt?.getTime?.() === now.getTime()) sendWelcome(result);
 
   return result;
 }

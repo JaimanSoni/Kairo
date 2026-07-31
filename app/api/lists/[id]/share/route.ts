@@ -5,6 +5,8 @@ import { listsCollection, listAccessFilter, toList } from "@/lib/tasks";
 import { getDb } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
 import { listSharedEmail } from "@/lib/email-templates";
+import { inviteUserByEmail } from "@/lib/invites";
+import type { DbUser } from "@/lib/users";
 
 type MemberInfo = { id: string; name: string; email: string; picture?: string; role: "owner" | "member" };
 
@@ -42,7 +44,12 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/lists/[id]/
   return NextResponse.json({ members });
 }
 
-/** Owner shares the list with another Kairo user by email. */
+/**
+ * Owner shares the list with someone by email. An address with no Kairo
+ * account is not an error: the invite email goes out with a magic sign-in
+ * link, and only if it lands is the account created and put on the list —
+ * membership is waiting before the recipient ever clicks.
+ */
 export async function POST(request: Request, ctx: RouteContext<"/api/lists/[id]/share">) {
   const session = await requireSession();
   if (!session) return unauthorized();
@@ -62,18 +69,34 @@ export async function POST(request: Request, ctx: RouteContext<"/api/lists/[id]/
   const email = body.email.trim().toLowerCase();
   if (email === session.email.toLowerCase()) return badRequest("That's you already");
 
+  // ownership is settled before any email leaves the building
+  const lists = await listsCollection();
+  const owned = await lists.findOne({
+    _id: new ObjectId(id),
+    userId: new ObjectId(session.userId),
+  });
+  if (!owned) return notFound();
+
   const db = await getDb();
-  const recipient = await db.collection("users").findOne({ email });
-  if (!recipient) {
-    return NextResponse.json(
-      { error: "No Kairo account with that email — they need to sign in once first" },
-      { status: 404 }
-    );
+  const found = await db.collection<DbUser>("users").findOne({ email });
+
+  let recipient = found;
+  let invited = false;
+  if (!recipient || recipient.pending) {
+    const invite = await inviteUserByEmail({
+      email,
+      inviterId: session.userId,
+      inviterName: session.name,
+      emailKey: `invite-list:${id}:${email}`,
+      invite: { kind: "list", itemName: String(owned.name) },
+    });
+    if (!invite.ok) return badRequest(invite.error);
+    recipient = invite.user;
+    invited = true;
   }
 
-  const lists = await listsCollection();
   const updated = await lists.findOneAndUpdate(
-    { _id: new ObjectId(id), userId: new ObjectId(session.userId) }, // owner only
+    { _id: owned._id, userId: new ObjectId(session.userId) },
     { $addToSet: { memberIds: recipient._id } },
     { returnDocument: "after" }
   );
@@ -81,7 +104,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/lists/[id]/
 
   // keyed per list+member: re-inviting someone removed and added back tells
   // them again, but a double-click does not
-  {
+  if (!invited) {
     const mail = listSharedEmail({ inviterName: session.name, listName: String(updated.name) });
     void sendEmail({
       key: `share:${id}:${recipient._id.toHexString()}`,
