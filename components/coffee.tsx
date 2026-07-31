@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { COFFEE, coffeeEnabled, upiIntentLink, upiLink } from "@/lib/coffee";
 import { markAsked, shouldAsk } from "@/lib/coffee-nudge";
-import { IconCheck, IconX, Modal } from "./ui";
+import { IconX, Modal } from "./ui";
 import { Icon3d } from "./img3d";
 
 /**
@@ -99,54 +99,11 @@ function QrCode({ value }: { value: string }) {
       className="aspect-square w-full rounded-2xl"
       shapeRendering="crispEdges"
       role="img"
-      aria-label={`UPI QR code for ${COFFEE.upiId}`}
+      aria-label="UPI payment QR code for Kairo"
     >
       <rect x={-pad} y={-pad} width={span} height={span} fill="#ffffff" />
       <path d={qr.d} fill="#0f1413" />
     </svg>
-  );
-}
-
-function CopyableId() {
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    if (!copied) return;
-    const t = setTimeout(() => setCopied(false), 1600);
-    return () => clearTimeout(t);
-  }, [copied]);
-
-  return (
-    <button
-      type="button"
-      onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(COFFEE.upiId);
-          setCopied(true);
-        } catch {
-          /* clipboard blocked — the ID is on screen to type manually */
-        }
-      }}
-      className="flex w-full items-center justify-between gap-3 rounded-xl border border-line bg-card px-3.5 py-2.5 text-left transition-colors hover:border-sun"
-    >
-      <span className="min-w-0">
-        <span className="block text-[11px] font-semibold uppercase tracking-wide text-ink-faint">
-          UPI ID
-        </span>
-        <span className="block truncate font-mono text-sm">{COFFEE.upiId}</span>
-      </span>
-      <span
-        className={`shrink-0 text-xs font-semibold ${copied ? "text-moss" : "text-sun-deep"}`}
-      >
-        {copied ? (
-          <span className="flex items-center gap-1">
-            <IconCheck size={13} /> Copied
-          </span>
-        ) : (
-          "Copy"
-        )}
-      </span>
-    </button>
   );
 }
 
@@ -331,10 +288,6 @@ function CoffeeModal({ onClose, earned }: { onClose: () => void; earned?: boolea
             </a>
           </div>
         )}
-
-        <div className="mt-4">
-          <CopyableId />
-        </div>
 
         <p className="mt-4 text-center text-[11px] leading-relaxed text-ink-faint">
           {/* one string, not text-around-an-expression: JSX drops the space when a
