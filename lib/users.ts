@@ -1,6 +1,9 @@
 import { ObjectId } from "mongodb";
 import { getDb, withDbRetry } from "./db";
 import type { GoogleProfile } from "./google";
+import { TRIAL_DAYS } from "./access";
+import { sendEmail } from "./email";
+import { welcomeEmail } from "./email-templates";
 
 export type DbUser = {
   _id: ObjectId;
@@ -282,5 +285,17 @@ async function upsertGoogleUserOnce(profile: GoogleProfile): Promise<DbUser> {
     { upsert: true, returnDocument: "after" }
   );
   if (!result) throw new Error("Failed to upsert user");
+
+  // First sign-in ever: on insert, createdAt is the exact `now` this call
+  // wrote; every later login only moves lastLoginAt. The welcome is a side
+  // effect, never a dependency, and the key makes it once-per-account even if
+  // two first requests race.
+  if (result.createdAt?.getTime?.() === now.getTime()) {
+    void (async () => {
+      const mail = welcomeEmail({ name: result.name, trialDays: TRIAL_DAYS });
+      await sendEmail({ key: `welcome:${result._id.toHexString()}`, to: result.email, ...mail });
+    })().catch((err) => console.error("[email] welcome failed", err));
+  }
+
   return result;
 }

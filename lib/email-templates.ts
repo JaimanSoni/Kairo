@@ -31,7 +31,7 @@ function shell(bodyHtml: string, reason: string): string {
   return `<!doctype html><html><body style="margin:0;padding:0;background:${PAPER};">
 <div style="max-width:520px;margin:0 auto;padding:32px 20px;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${INK};">
   <div style="font-size:20px;font-weight:700;letter-spacing:-0.02em;margin-bottom:20px;">
-    <span style="color:${TEAL};">&#10033;</span> kairo
+    <img src="${SITE_URL}/email-mark.png" width="20" height="20" alt="" style="vertical-align:-3px;border:0;"/> kairo
   </div>
   <div style="background:#ffffff;border:1px solid ${LINE};border-radius:16px;padding:28px 24px;">
     ${bodyHtml}
@@ -186,6 +186,32 @@ export function taskSentEmail(input: { senderName: string; taskTitle: string }):
       reason
     ),
     text: `${input.senderName} sent you a task.\n\n"${input.taskTitle}" is waiting in your inbox. It is your copy now.\n\nOpen it: ${SITE_URL}/lists${footerText(reason)}`,
+  };
+}
+
+export function welcomeEmail(input: { name: string; trialDays: number }): Rendered {
+  const first = input.name.split(" ")[0] || "there";
+  const reason = "You received this because you just created a Kairo account.";
+  return {
+    subject: "Welcome to Kairo",
+    html: shell(
+      heading(`Hello, ${h(first)}.`) +
+        para(
+          `Kairo is built on one idea: a to-do list should never make you feel bad. Nothing ever turns red, nothing counts how far behind you are, and every morning starts clean.`
+        ) +
+        para(
+          `Your first ${strong(String(input.trialDays) + " days")} are free with everything unlocked. Two things worth doing today: capture your first thought by pressing ${strong("N")}, and install Kairo to your home screen so it opens like a real app.`
+        ) +
+        button("Open Kairo", `${SITE_URL}/today`),
+      reason
+    ),
+    text: `Hello, ${first}.
+
+Kairo is built on one idea: a to-do list should never make you feel bad. Nothing ever turns red, and every morning starts clean.
+
+Your first ${input.trialDays} days are free with everything unlocked. Capture your first thought by pressing N, and install Kairo to your home screen.
+
+Open Kairo: ${SITE_URL}/today${footerText(reason)}`,
   };
 }
 

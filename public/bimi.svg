@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.2" baseProfile="tiny-ps" viewBox="0 0 512 512">
+<title>Kairo</title>
+<rect width="512" height="512" fill="#f4f7f6"/>
+<g fill="#0c9384">
+<rect x="229" y="112" width="54" height="288" rx="27"/>
+<rect x="229" y="112" width="54" height="288" rx="27" transform="rotate(60 256 256)"/>
+<rect x="229" y="112" width="54" height="288" rx="27" transform="rotate(120 256 256)"/>
+</g></svg>
