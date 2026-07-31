@@ -51,7 +51,7 @@ export function TaskItem({
 }: {
   task: Task;
   /** where this row is rendered — controls which chips/actions show */
-  context: "today" | "upcoming" | "backlog" | "log";
+  context: "today" | "calendar" | "backlog" | "log";
   draggable?: boolean;
   onDragStart?: (e: React.DragEvent) => void;
   onDragOver?: (e: React.DragEvent) => void;

@@ -63,7 +63,7 @@ Until then, `DEV_LOGIN=1` + `NODE_ENV=development` enables a local test login at
 ```
 app/
   page.tsx            landing page (public)
-  (app)/              authed app — today / upcoming / lists / log
+  (app)/              authed app — today / calendar / lists / log
   api/                auth + tasks/lists/log route handlers
 components/           store (optimistic state), shell, views, task UI
 lib/                  db, session, google oauth, task repo, nlp parser, dates

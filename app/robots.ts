@@ -15,7 +15,7 @@ import { SITE_URL } from "@/lib/site";
  */
 
 /** Per-user or privileged. Nothing here renders the same twice. */
-const PRIVATE = ["/today", "/upcoming", "/lists", "/log", "/billing", "/admin", "/api/"];
+const PRIVATE = ["/today", "/calendar", "/upcoming", "/lists", "/log", "/billing", "/admin", "/api/"];
 
 /**
  * Assistants and their training crawlers, listed explicitly.

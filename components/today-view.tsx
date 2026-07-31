@@ -286,7 +286,7 @@ function TodayCapture({ today, hasTasks }: { today: string; hasTasks: boolean })
 
 /* ---------- drag-to-reorder list ---------- */
 
-export function DraggableList({ tasks, context }: { tasks: Task[]; context: "today" | "upcoming" | "backlog" }) {
+export function DraggableList({ tasks, context }: { tasks: Task[]; context: "today" | "calendar" | "backlog" }) {
   const { reorderTasks } = useApp();
   const [dragId, setDragId] = useState<string | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);

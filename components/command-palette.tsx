@@ -39,7 +39,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
     const base: { id: string; label: string; hint?: string; run: () => void }[] = [
       { id: "capture", label: "Capture a task", hint: "N", run: () => setOmnibar(true) },
       { id: "go-today", label: "Go to Today", hint: "1", run: () => router.push("/today") },
-      { id: "go-upcoming", label: "Go to Upcoming", hint: "2", run: () => router.push("/upcoming") },
+      { id: "go-calendar", label: "Go to Calendar", hint: "2", run: () => router.push("/calendar") },
       { id: "go-lists", label: "Go to Lists", hint: "3", run: () => router.push("/lists") },
       { id: "go-log", label: "Go to Log", hint: "4", run: () => router.push("/log") },
       ...(state.user.appLockEnabled

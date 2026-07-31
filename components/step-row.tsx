@@ -42,7 +42,7 @@ export function useStepToggle() {
 }
 
 /**
- * A step scheduled onto a day, shown on Today/Upcoming as a compact row
+ * A step scheduled onto a day, shown on Today/Calendar as a compact row
  * under its own power — linked back to the parent task.
  */
 export function StepRow({ task, step }: { task: Task; step: Subtask }) {

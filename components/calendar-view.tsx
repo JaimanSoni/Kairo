@@ -180,7 +180,7 @@ function colorForList(listId: string | null, lists: List[]): string | null {
 }
 
 /**
- * Month calendar for Upcoming: grid for overview, a day panel for detail.
+ * Month grid for the Calendar section: grid for overview, a day panel for detail.
  * Desktop shows task chips per cell and a side panel; mobile shows dots and
  * opens the day as a draggable sheet — the Google Calendar month-view model,
  * plus Kairo's capacity honesty per day.
@@ -532,7 +532,7 @@ function DayPanel({
 
       <div className="space-y-2">
         {tasks.map((t) => (
-          <TaskItem key={t.clientId ?? t.id} task={t} context="upcoming" />
+          <TaskItem key={t.clientId ?? t.id} task={t} context="calendar" />
         ))}
         {daySteps.map(({ task, step }) => (
           <StepRow key={`${task.id}:${step.id}`} task={task} step={step} />
@@ -545,7 +545,7 @@ function DayPanel({
             Done · {doneTasks.length}
           </div>
           {doneTasks.map((t) => (
-            <TaskItem key={t.clientId ?? t.id} task={t} context="upcoming" />
+            <TaskItem key={t.clientId ?? t.id} task={t} context="calendar" />
           ))}
         </div>
       )}

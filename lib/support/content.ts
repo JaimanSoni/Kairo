@@ -199,7 +199,7 @@ export const ARTICLES: Article[] = [
               { k: "N", d: "Open capture. `C` does the same thing." },
               { k: "⌘K / Ctrl K", d: "Open the search palette — find any task, list, or action." },
               { k: "1", d: "Go to Today" },
-              { k: "2", d: "Go to Upcoming" },
+              { k: "2", d: "Go to Calendar" },
               { k: "3", d: "Go to Lists" },
               { k: "4", d: "Go to Log" },
             ],
@@ -306,7 +306,7 @@ export const ARTICLES: Article[] = [
             t: "ul",
             items: [
               "**No date** → your Inbox, waiting to be planned.",
-              "**A day** (`today`, `fri`, `next week`) → planned for that day, so it shows up on [Today](/support/today) or [Upcoming](/support/upcoming).",
+              "**A day** (`today`, `fri`, `next week`) → planned for that day, so it shows up on [Today](/support/today) or the [Calendar](/support/calendar).",
               "**A time but no day** → today, at that time.",
               "**A repeat but no day** → the rule's first occurrence.",
             ],
@@ -323,7 +323,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Every list, every day in Upcoming, and Today itself have their own inline add row. They understand the same syntax, but default to that context — typing in Thursday's row plans it for Thursday, and typing in a list files it there.",
+            text: "Every list, every day in the Calendar's week view, and Today itself have their own inline add row. They understand the same syntax, but default to that context — typing in Thursday's row plans it for Thursday, and typing in a list files it there.",
           },
           {
             t: "note",
@@ -636,7 +636,7 @@ export const ARTICLES: Article[] = [
             items: [
               "Type into the add row at the bottom of the list — it plans straight to today.",
               "Or use the **Plan today from your inbox** panel that appears when today is empty, and tap **+ Today** on anything you want.",
-              "Or drag tasks onto today in [Upcoming](/support/upcoming).",
+              "Or drag tasks onto today in the [Calendar](/support/calendar).",
             ],
           },
         ],
@@ -893,20 +893,39 @@ export const ARTICLES: Article[] = [
     ],
   },
   {
-    slug: "upcoming",
+    slug: "calendar",
     title: "Plan the week and month",
     summary:
-      "Upcoming has two views: a seven-day spread for sketching the week, and a month calendar for the bigger picture.",
+      "The Calendar has two views: a month grid for the bigger picture, and a seven-day spread for sketching the week.",
     categoryId: "planning",
-    keywords: ["upcoming", "week", "calendar", "month", "drag", "schedule", "legend", "colors"],
+    keywords: ["calendar", "upcoming", "week", "month", "drag", "schedule", "legend", "colors"],
     sections: [
+      {
+        id: "month",
+        heading: "Month view",
+        blocks: [
+          {
+            t: "p",
+            text: "The Calendar opens on a full month grid, Monday-first, with today circled.",
+          },
+          {
+            t: "ul",
+            items: [
+              "**Desktop:** each day shows up to three task chips, plus `+2 more` when there are extras.",
+              "**Mobile:** each day shows coloured dots instead, so the grid stays readable.",
+              "**Click any day** to open its detail panel — the full task list, planned steps, what's done, and an add row for that date.",
+              "**Drag chips** between days to reschedule.",
+            ],
+          },
+        ],
+      },
       {
         id: "week",
         heading: "Week view",
         blocks: [
           {
             t: "p",
-            text: "The default view lists the next seven days, each with its own tasks, load estimate and add row. Your Inbox sits alongside so you can pull work into days.",
+            text: "Switch to **Week** with the toggle in the header — Kairo remembers your choice. It lists the next seven days, each with its own tasks, load estimate and add row. Your Inbox sits alongside so you can pull work into days.",
           },
           {
             t: "ul",
@@ -919,25 +938,6 @@ export const ARTICLES: Article[] = [
           {
             t: "note",
             text: "Drag-and-drop is a mouse feature. On a phone, use a task's ⋯ menu — **Do today**, **Tomorrow**, or open it and pick a date.",
-          },
-        ],
-      },
-      {
-        id: "month",
-        heading: "Month view",
-        blocks: [
-          {
-            t: "p",
-            text: "Switch to **Month** with the toggle in the header — Kairo remembers your choice. You get a full month grid, Monday-first, with today circled.",
-          },
-          {
-            t: "ul",
-            items: [
-              "**Desktop:** each day shows up to three task chips, plus `+2 more` when there are extras.",
-              "**Mobile:** each day shows coloured dots instead, so the grid stays readable.",
-              "**Click any day** to open its detail panel — the full task list, planned steps, what's done, and an add row for that date.",
-              "**Drag chips** between days to reschedule.",
-            ],
           },
         ],
       },
@@ -1015,7 +1015,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "This is what makes steps more than a checklist. Each step row has a **+ day** button — pick a day and that single step appears on [Today](/support/today) under **Steps today**, and inside that day in Upcoming.",
+            text: "This is what makes steps more than a checklist. Each step row has a **+ day** button — pick a day and that single step appears on [Today](/support/today) under **Steps today**, and inside that day in the Calendar.",
           },
           {
             t: "p",
@@ -1269,7 +1269,7 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "p",
-            text: "Click a list's name to rename it. Its colour in the [calendar](/support/upcoming) is assigned automatically.",
+            text: "Click a list's name to rename it. Its colour in the [calendar](/support/calendar) is assigned automatically.",
           },
         ],
       },
@@ -1609,7 +1609,7 @@ export const ARTICLES: Article[] = [
               "Both of you see the same tasks in that list, and either can add, edit, or complete them.",
               "The list shows a **👥** badge with the number of people on it.",
               "Tasks in a shared list can be [assigned](/support/assigning) to a specific person.",
-              "Everyone's own Today, Upcoming and Log stay personal — only the list's contents are shared.",
+              "Everyone's own Today, Calendar and Log stay personal — only the list's contents are shared.",
             ],
           },
         ],
@@ -1798,7 +1798,7 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "p",
-            text: "Its tasks now disappear from **everywhere** — Today, Upcoming, the calendar, the Log, search, the inbox count, even the AI's context. The list itself shows only its name and a *Locked — tap to unlock* panel.",
+            text: "Its tasks now disappear from **everywhere** — Today, the Calendar, the Log, search, the inbox count, even the AI's context. The list itself shows only its name and a *Locked — tap to unlock* panel.",
           },
           {
             t: "note",
@@ -1960,7 +1960,7 @@ export const ARTICLES: Article[] = [
             items: [
               "Task titles **and** notes.",
               "List names.",
-              "Actions: capture a task, jump to Today / Upcoming / Lists / Log, and lock Kairo.",
+              "Actions: capture a task, jump to Today / Calendar / Lists / Log, and lock Kairo.",
             ],
           },
           {
@@ -2037,7 +2037,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Your theme choice, which view you last used in Upcoming, running focus timers, and which locks you've unlocked this session are all stored locally in your browser — never on the server.",
+            text: "Your theme choice, which view you last used in the Calendar, running focus timers, and which locks you've unlocked this session are all stored locally in your browser — never on the server.",
           },
         ],
       },

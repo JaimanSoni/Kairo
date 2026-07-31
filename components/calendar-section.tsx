@@ -10,13 +10,14 @@ import { AddRow } from "./today-view";
 import { Icon3d } from "./img3d";
 import { EmptyState } from "./ui";
 
-type UpcomingViewMode = "week" | "month";
+type CalendarSectionMode = "week" | "month";
 
 /**
- * The week as a calm spread: 7 day-rows you can drop tasks onto,
- * with the inbox alongside for pulling work into days.
+ * The Calendar section. Month view by default for the bigger picture, with
+ * the week as a calm spread of 7 day-rows you can drop tasks onto and the
+ * inbox alongside for pulling work into days.
  */
-export function UpcomingView() {
+export function CalendarSection() {
   const { state, updateTask } = useApp();
   const today = state.today;
   const hidden = useMemo(() => hiddenListIds(state), [state]);
@@ -28,22 +29,22 @@ export function UpcomingView() {
     [state.tasks, hidden],
   );
   const [dragOverDay, setDragOverDay] = useState<string | null>(null);
-  const [view, setView] = useState<UpcomingViewMode>("week");
+  const [view, setView] = useState<CalendarSectionMode>("month");
 
   /* remembered preference — read after mount so SSR and hydration agree */
   useEffect(() => {
     queueMicrotask(() => {
       try {
-        const saved = localStorage.getItem("kairo-upcoming-view");
-        if (saved === "month") setView("month");
+        const saved = localStorage.getItem("kairo-calendar-view");
+        if (saved === "week") setView("week");
       } catch {}
     });
   }, []);
 
-  const pickView = (v: UpcomingViewMode) => {
+  const pickView = (v: CalendarSectionMode) => {
     setView(v);
     try {
-      localStorage.setItem("kairo-upcoming-view", v);
+      localStorage.setItem("kairo-calendar-view", v);
     } catch {}
   };
 
@@ -82,9 +83,9 @@ export function UpcomingView() {
   return (
     <div className="mx-auto w-full max-w-5xl px-4 pb-32 pt-8 sm:px-6">
       <header className="anim-rise mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-4xl">Upcoming</h1>
+        <h1 className="font-display text-4xl">Calendar</h1>
         <div className="flex rounded-full border border-line bg-paper-deep p-0.5">
-          {(["week", "month"] as const).map((v) => (
+          {(["month", "week"] as const).map((v) => (
             <button
               key={v}
               onClick={() => pickView(v)}
@@ -145,7 +146,7 @@ export function UpcomingView() {
                       <TaskItem
                         key={t.clientId ?? t.id}
                         task={t}
-                        context="upcoming"
+                        context="calendar"
                         draggable
                         onDragStart={(e) => {
                           e.dataTransfer.effectAllowed = "move";
@@ -178,7 +179,7 @@ export function UpcomingView() {
               </h2>
               <div className="space-y-2">
                 {later.map((t) => (
-                  <TaskItem key={t.clientId ?? t.id} task={t} context="upcoming" />
+                  <TaskItem key={t.clientId ?? t.id} task={t} context="calendar" />
                 ))}
               </div>
             </section>

@@ -21,7 +21,7 @@ import { IconBook, IconCalendar, IconInbox, IconPlus, IconSun, IconX, Kbd, Modal
 
 const NAV = [
   { href: "/today", label: "Today", icon: IconSun, key: "1" },
-  { href: "/upcoming", label: "Upcoming", icon: IconCalendar, key: "2" },
+  { href: "/calendar", label: "Calendar", icon: IconCalendar, key: "2" },
   { href: "/lists", label: "Lists", icon: IconInbox, key: "3" },
   { href: "/log", label: "Log", icon: IconBook, key: "4" },
 ];
