@@ -10,6 +10,9 @@ import {
   taskAccessFilter,
 } from "@/lib/tasks";
 import { sendToUser } from "@/lib/push";
+import { getUserById } from "@/lib/users";
+import { sendEmail } from "@/lib/email";
+import { taskAssignedEmail } from "@/lib/email-templates";
 
 export async function PATCH(request: Request, ctx: RouteContext<"/api/tasks/[id]">) {
   const session = await requireSession();
@@ -84,6 +87,22 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/tasks/[id]
       tag: `assign-${id}`,
       url: "/today",
     });
+    // push reaches subscribed devices; email reaches the person. Keyed per
+    // task+assignee so a reassignment ping-pong cannot spam anyone.
+    void (async () => {
+      const assignee = await getUserById(notifyAssignee.toHexString());
+      if (!assignee?.email) return;
+      const mail = taskAssignedEmail({
+        assignerName: session.name,
+        taskTitle: String(result.title ?? "A task"),
+        listName: where ? where.replace(" \u00b7 in ", "") : "a shared list",
+      });
+      await sendEmail({
+        key: `assign:${id}:${notifyAssignee.toHexString()}`,
+        to: assignee.email,
+        ...mail,
+      });
+    })().catch((err) => console.error("[email] assignment failed", err));
   }
 
   return NextResponse.json({ task: toTask(result) });

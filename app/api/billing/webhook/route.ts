@@ -8,6 +8,8 @@ import {
 } from "@/lib/billing";
 import { verifyWebhookSignature, webhookConfigured } from "@/lib/razorpay";
 import { planForPendingPayment } from "@/lib/pending-plan";
+import { sendEmail } from "@/lib/email";
+import { ADMIN_EMAIL, adminMismatchEmail } from "@/lib/email-templates";
 
 /**
  * Razorpay's subscription webhook — the authority on what someone has paid for.
@@ -99,6 +101,19 @@ export async function POST(request: Request) {
     }
     if (amount !== plan.priceMinor || currency !== plan.currency) {
       console.warn("[billing] webhook amount mismatch", { amount, currency, plan: plan.key });
+      // this is the paid-but-not-credited case. A console.warn on a
+      // serverless function is invisible; an email to the admin is not.
+      if (pay?.id) {
+        const mail = adminMismatchEmail({
+          paymentId: pay.id,
+          orderId,
+          amount,
+          currency,
+          expectedMinor: plan.priceMinor,
+          expectedCurrency: plan.currency,
+        });
+        void sendEmail({ key: `mismatch:${pay.id}`, to: ADMIN_EMAIL, ...mail }).catch(() => {});
+      }
       return NextResponse.json({ ok: true, mismatch: true });
     }
 

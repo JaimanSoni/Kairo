@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { sendEmail } from "@/lib/email";
+import { taskSentEmail } from "@/lib/email-templates";
 import { ObjectId } from "mongodb";
 import { requireSession, unauthorized, badRequest, notFound } from "@/lib/api-auth";
 import { tasksCollection, taskAccessFilter } from "@/lib/tasks";
@@ -68,6 +70,15 @@ export async function POST(request: Request, ctx: RouteContext<"/api/tasks/[id]/
     createdAt: now,
     updatedAt: now,
   });
+
+  {
+    const mail = taskSentEmail({ senderName: session.name, taskTitle: String(task.title) });
+    void sendEmail({
+      key: `sent:${id}:${recipient._id.toHexString()}`,
+      to: String(recipient.email),
+      ...mail,
+    }).catch((err) => console.error("[email] task-sent failed", err));
+  }
 
   return NextResponse.json({ ok: true, to: recipient.name || recipient.email });
 }

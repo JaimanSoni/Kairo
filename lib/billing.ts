@@ -2,10 +2,12 @@ import { ObjectId } from "mongodb";
 import { getDb, withDbRetry } from "./db";
 import { razorpayConfigured } from "./razorpay";
 import { microCache } from "./micro-cache";
+import { sendEmail } from "./email";
+import { receiptEmail } from "./email-templates";
 import type { BillingSettings, UserBilling } from "./access";
 
 import { resolveAccess } from "./access";
-import { planFeatureMap } from "./plans";
+import { getPlan, planFeatureMap } from "./plans";
 import type { Access } from "./access";
 
 export { TRIAL_DAYS, resolveAccess, can } from "./access";
@@ -233,8 +235,45 @@ export async function creditOneMonth(
     // planKey is set from the payment, so an upgrade takes effect on the same
     // write that extends the period — never one without the other.
     await updateUserBilling(userId, { pendingOrderId: "", pendingPlanKey: "", planKey: p.planKey });
+    // the receipt is a side effect, never a dependency: a mail failure must
+    // not fail the credit, and the key makes the racing confirmers send once
+    void sendReceipt(userId, p, coversUntil).catch((err) =>
+      console.error("[email] receipt failed", err)
+    );
     return { coversUntil, credited: true };
   });
+}
+
+/** Fire-and-forget receipt. Keyed on the payment id, like the credit itself. */
+async function sendReceipt(
+  userId: string,
+  p: { paymentId: string; amount: number; currency: string; planKey: string },
+  coversUntil: number
+): Promise<void> {
+  const db = await getDb();
+  const user = await db
+    .collection("users")
+    .findOne({ _id: new ObjectId(userId) }, { projection: { email: 1, name: 1 } });
+  if (!user?.email) return;
+  const plan = await getPlan(p.planKey);
+  const amountLabel = new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: p.currency,
+    minimumFractionDigits: p.amount % 100 === 0 ? 0 : 2,
+  }).format(p.amount / 100);
+  const covers = new Date(coversUntil).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const mail = receiptEmail({
+    name: String(user.name ?? ""),
+    amountLabel,
+    planName: plan?.name ?? p.planKey,
+    coversUntil: covers,
+    paymentId: p.paymentId,
+  });
+  await sendEmail({ key: `receipt:${p.paymentId}`, to: String(user.email), ...mail });
 }
 
 export type PaymentRecord = {

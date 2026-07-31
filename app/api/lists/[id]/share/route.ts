@@ -3,6 +3,8 @@ import { ObjectId } from "mongodb";
 import { requireSession, unauthorized, badRequest, notFound } from "@/lib/api-auth";
 import { listsCollection, listAccessFilter, toList } from "@/lib/tasks";
 import { getDb } from "@/lib/db";
+import { sendEmail } from "@/lib/email";
+import { listSharedEmail } from "@/lib/email-templates";
 
 type MemberInfo = { id: string; name: string; email: string; picture?: string; role: "owner" | "member" };
 
@@ -76,6 +78,17 @@ export async function POST(request: Request, ctx: RouteContext<"/api/lists/[id]/
     { returnDocument: "after" }
   );
   if (!updated) return notFound();
+
+  // keyed per list+member: re-inviting someone removed and added back tells
+  // them again, but a double-click does not
+  {
+    const mail = listSharedEmail({ inviterName: session.name, listName: String(updated.name) });
+    void sendEmail({
+      key: `share:${id}:${recipient._id.toHexString()}`,
+      to: String(recipient.email),
+      ...mail,
+    }).catch((err) => console.error("[email] share invite failed", err));
+  }
 
   return NextResponse.json({
     list: toList(updated, session.userId),
