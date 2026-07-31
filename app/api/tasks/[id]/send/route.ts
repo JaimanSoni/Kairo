@@ -6,7 +6,16 @@ import { requireSession, unauthorized, badRequest, notFound } from "@/lib/api-au
 import { tasksCollection, taskAccessFilter } from "@/lib/tasks";
 import { getDb } from "@/lib/db";
 
-/** Sends a COPY of a task to another user's inbox — a handoff, not a live share. */
+/**
+ * Sends a COPY of a task to another user — a handoff, not a live share.
+ *
+ * The copy keeps its shape: planned day and time, estimate, deadline, repeat
+ * and steps all travel with it, because "do this at 8pm, it takes 10 minutes"
+ * IS the task — a copy stripped to a bare title hands over less than was
+ * meant. What never travels is the sender's progress or claims on the
+ * recipient's attention: steps arrive unticked, nothing is started, spotlight
+ * stays unclaimed, and reminders stay personal.
+ */
 export async function POST(request: Request, ctx: RouteContext<"/api/tasks/[id]/send">) {
   const session = await requireSession();
   if (!session) return unauthorized();
@@ -44,26 +53,32 @@ export async function POST(request: Request, ctx: RouteContext<"/api/tasks/[id]/
 
   const now = new Date();
   const attribution = `↪ from ${session.name}`;
+  // a plan in the past is stale, not a gift — those copies arrive in the inbox
+  const today = now.toLocaleDateString("en-CA");
+  const plannedFor =
+    typeof task.plannedFor === "string" && task.plannedFor >= today ? task.plannedFor : null;
   await tasks.insertOne({
     userId: recipient._id,
     title: task.title,
     note: task.note ? `${attribution}\n${task.note}` : attribution,
-    status: "inbox",
-    plannedFor: null,
+    status: plannedFor ? "planned" : task.status === "someday" ? "someday" : "inbox",
+    plannedFor,
+    plannedTime: plannedFor ? (task.plannedTime ?? null) : null,
     dueDate: task.dueDate ?? null,
     spotlight: false,
     listId: null,
     estimateMin: task.estimateMin ?? null,
     order: now.getTime(),
     carryCount: 0,
-    repeat: null,
+    repeat: task.repeat ?? null,
     reminderAt: null,
+    assigneeId: null,
     subtasks: Array.isArray(task.subtasks)
-      ? task.subtasks.map((s: { id: string; title: string }) => ({
+      ? task.subtasks.map((s: { id: string; title: string; plannedFor?: string | null }) => ({
           id: s.id,
           title: s.title,
           done: false,
-          plannedFor: null,
+          plannedFor: typeof s.plannedFor === "string" && s.plannedFor >= today ? s.plannedFor : null,
         }))
       : [],
     completedAt: null,
@@ -72,7 +87,12 @@ export async function POST(request: Request, ctx: RouteContext<"/api/tasks/[id]/
   });
 
   {
-    const mail = taskSentEmail({ senderName: session.name, taskTitle: String(task.title) });
+    const when = plannedFor
+      ? `${new Date(plannedFor + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long" })}${
+          task.plannedTime ? ` at ${String(task.plannedTime)}` : ""
+        }`
+      : null;
+    const mail = taskSentEmail({ senderName: session.name, taskTitle: String(task.title), when });
     void sendEmail({
       key: `sent:${id}:${recipient._id.toHexString()}`,
       to: String(recipient.email),

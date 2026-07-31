@@ -173,19 +173,28 @@ export function taskAssignedEmail(input: {
   };
 }
 
-export function taskSentEmail(input: { senderName: string; taskTitle: string }): Rendered {
+export function taskSentEmail(input: {
+  senderName: string;
+  taskTitle: string;
+  /** "1 August at 20:00" when the copy travelled with its plan, else null. */
+  when?: string | null;
+}): Rendered {
   const reason = `You received this because ${h(input.senderName)} sent a task to your Kairo account.`;
+  const landing = input.when
+    ? `${strong(h(input.taskTitle))} arrived with its plan intact: ${strong(h(input.when))}. It is your copy now, move it if that does not suit.`
+    : `${strong(h(input.taskTitle))} is waiting in your inbox. It is your copy now, plan it whenever it suits you.`;
+  const landingText = input.when
+    ? `"${input.taskTitle}" arrived with its plan intact: ${input.when}. It is your copy now, move it if that does not suit.`
+    : `"${input.taskTitle}" is waiting in your inbox. It is your copy now.`;
   return {
     subject: `${input.senderName} sent you a task: ${input.taskTitle}`,
     html: shell(
       heading(`${h(input.senderName)} sent you a task.`) +
-        para(
-          `${strong(h(input.taskTitle))} is waiting in your inbox. It is your copy now, plan it whenever it suits you.`
-        ) +
-        button("Open your inbox", `${SITE_URL}/lists`),
+        para(landing) +
+        button(input.when ? "See it in Kairo" : "Open your inbox", `${SITE_URL}${input.when ? "/today" : "/lists"}`),
       reason
     ),
-    text: `${input.senderName} sent you a task.\n\n"${input.taskTitle}" is waiting in your inbox. It is your copy now.\n\nOpen it: ${SITE_URL}/lists${footerText(reason)}`,
+    text: `${input.senderName} sent you a task.\n\n${landingText}\n\nOpen it: ${SITE_URL}${input.when ? "/today" : "/lists"}${footerText(reason)}`,
   };
 }
 
