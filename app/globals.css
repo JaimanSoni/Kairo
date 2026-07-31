@@ -487,3 +487,27 @@ button {
 .no-scrollbar {
   scrollbar-width: none;
 }
+
+/* ---------- macOS-style cursor ----------
+   The black arrow and pointing hand, drawn to match macOS, applied only where
+   a real mouse exists. Text fields keep the native I-beam (it is nearly
+   identical across platforms), disabled controls keep the arrow, and Safari
+   ignores SVG cursors entirely — which is fine, because on a Mac the native
+   cursor already is this one. */
+@media (pointer: fine) {
+  body {
+    cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2724%27%20height%3D%2724%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cpath%20d%3D%27M5.5%202.2%20L5.5%2020.2%20L9.9%2015.95%20L12.6%2022.1%20L15.5%2020.85%20L12.8%2014.75%20L19.1%2014.75%20Z%27%20fill%3D%27black%27%20stroke%3D%27white%27%20stroke-width%3D%271.5%27%20stroke-linejoin%3D%27round%27%20style%3D%27paint-order%3Astroke%27%2F%3E%3C%2Fsvg%3E") 5 2, default;
+  }
+  a,
+  button:not(:disabled),
+  [role='button'],
+  select,
+  summary,
+  label:has(> input[type='checkbox']),
+  input[type='checkbox'],
+  input[type='radio'],
+  input[type='range'],
+  .cursor-pointer {
+    cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2724%27%20height%3D%2724%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cpath%20d%3D%27M9.2%203.5%20C9.2%202.55%209.95%201.8%2010.9%201.8%20C11.85%201.8%2012.6%202.55%2012.6%203.5%20L12.6%209.9%20L13.4%2010%20L13.4%208.3%20C13.4%207.45%2014.1%206.75%2014.95%206.75%20C15.8%206.75%2016.5%207.45%2016.5%208.3%20L16.5%2010.5%20L17.3%2010.65%20L17.3%209.6%20C17.3%208.8%2017.95%208.15%2018.75%208.15%20C19.55%208.15%2020.2%208.8%2020.2%209.6%20L20.2%2012%20L20.6%2012.1%20C21.5%2012.4%2022.05%2013.3%2021.9%2014.25%20L21.3%2018.4%20C21.05%2019.9%2019.75%2021%2018.25%2021%20L12.3%2021%20C11.35%2021%2010.45%2020.55%209.9%2019.8%20L6.2%2014.9%20C5.7%2014.2%205.8%2013.25%206.45%2012.7%20C7.05%2012.15%207.98%2012.17%208.56%2012.74%20L9.2%2013.35%20Z%27%20fill%3D%27black%27%20stroke%3D%27white%27%20stroke-width%3D%271.4%27%20stroke-linejoin%3D%27round%27%20style%3D%27paint-order%3Astroke%27%2F%3E%3C%2Fsvg%3E") 10 2, pointer;
+  }
+}
