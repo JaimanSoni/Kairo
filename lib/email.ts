@@ -1,5 +1,4 @@
 import { getDb, withDbRetry } from "./db";
-import { SUPPORT_EMAIL } from "./site";
 
 /**
  * Email, over Resend's REST API — no SDK, one endpoint, same reasoning as
@@ -25,7 +24,12 @@ import { SUPPORT_EMAIL } from "./site";
 const RESEND_API = "https://api.resend.com/emails";
 const API_KEY = process.env.RESEND_API_KEY ?? "";
 const FROM = process.env.EMAIL_FROM ?? "Kairo <hello@kairo.jaimansoni.com>";
-const REPLY_TO = process.env.EMAIL_REPLY_TO ?? SUPPORT_EMAIL;
+/**
+ * Deliberately unset by default: the automated emails are one-way. The footer
+ * gives people the real support address instead of inviting replies into an
+ * unmonitored inbox.
+ */
+const REPLY_TO = process.env.EMAIL_REPLY_TO ?? "";
 const DRY = () => process.env.EMAIL_DRY === "1";
 
 export function emailConfigured(): boolean {
@@ -96,7 +100,7 @@ export async function sendEmail(input: {
     body: JSON.stringify({
       from: FROM,
       to: [input.to],
-      reply_to: REPLY_TO,
+      ...(REPLY_TO ? { reply_to: REPLY_TO } : {}),
       subject: input.subject,
       html: input.html,
       text: input.text,

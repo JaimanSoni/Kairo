@@ -1,6 +1,12 @@
 import { SITE_URL, SUPPORT_EMAIL } from "./site";
 
 /**
+ * Where a human should write. The sender address is not monitored and carries
+ * no reply-to on purpose, so every email says this address out loud instead.
+ */
+const SUPPORT_INBOX = "kairo.support@jaimansoni.com";
+
+/**
  * The emails, written as plain HTML with inline styles — email clients load no
  * stylesheets and Gmail strips SVG, so the mark is the ✱ character in brand
  * teal and every style rides on the element itself. Each template returns a
@@ -31,7 +37,7 @@ function shell(bodyHtml: string, reason: string): string {
     ${bodyHtml}
   </div>
   <p style="font-size:12px;line-height:18px;color:${FAINT};margin:20px 4px 0;">
-    ${reason} Questions? Just reply, a human reads this inbox.
+    ${reason} Questions? Write to <a href="mailto:${SUPPORT_INBOX}" style="color:${FAINT};">${SUPPORT_INBOX}</a>.
     <br/>Kairo &middot; <a href="${SITE_URL}" style="color:${FAINT};">kairo.jaimansoni.com</a>
   </p>
 </div>
@@ -50,7 +56,7 @@ const button = (label: string, href: string) =>
   `<a href="${href}" style="display:inline-block;background:${TEAL};color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:11px 22px;border-radius:999px;margin-top:6px;">${label}</a>`;
 
 const footerText = (reason: string) =>
-  `\n\n${reason} Questions? Just reply, a human reads this inbox.\nKairo · ${SITE_URL}`;
+  `\n\n${reason} Questions? Write to ${SUPPORT_INBOX}.\nKairo · ${SITE_URL}`;
 
 /* ------------------------------------------------------------------ money */
 
