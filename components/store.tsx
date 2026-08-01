@@ -709,13 +709,32 @@ export function AppProvider({
 
   const createList = useCallback(
     async (name: string, emoji: string) => {
-      const { list } = await api<{ list: List }>("/api/lists", {
-        method: "POST",
-        body: JSON.stringify({ name, emoji }),
+      // The list exists on screen the moment it is named; the server's only
+      // contribution is the real id, swapped in when it arrives. Until then
+      // the row is marked pending so nothing sends the temp id anywhere.
+      const tempId = `temp-list-${Math.random().toString(36).slice(2, 10)}`;
+      const maxOrder = stateRef.current.lists.reduce((m, l) => Math.max(m, l.order), 0);
+      dispatch({
+        type: "UPSERT_LIST",
+        list: { id: tempId, name, emoji, order: maxOrder + 1, locked: false, role: "owner", memberCount: 0, pending: true },
       });
-      dispatch({ type: "UPSERT_LIST", list });
+      let list: List;
+      try {
+        ({ list } = await api<{ list: List }>("/api/lists", {
+          method: "POST",
+          body: JSON.stringify({ name, emoji }),
+        }));
+      } catch {
+        const lists = stateRef.current.lists.filter((l) => l.id !== tempId);
+        syncError(() =>
+          dispatch({ type: "REPLACE_ALL", tasks: Object.values(stateRef.current.tasks), lists, people: stateRef.current.people })
+        );
+        return;
+      }
+      const lists = stateRef.current.lists.map((l) => (l.id === tempId ? list : l));
+      dispatch({ type: "REPLACE_ALL", tasks: Object.values(stateRef.current.tasks), lists, people: stateRef.current.people });
     },
-    []
+    [syncError]
   );
 
   const renameList = useCallback(

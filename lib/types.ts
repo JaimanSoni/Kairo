@@ -64,6 +64,9 @@ export type List = {
   role: "owner" | "member";
   /** Number of people the list is shared with (excluding the owner). */
   memberCount: number;
+  /** Client-only: created optimistically, still waiting for its real id.
+   *  Anything that would send this id to the server stays off until then. */
+  pending?: boolean;
 };
 
 export type AccountInfo = {

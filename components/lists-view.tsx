@@ -173,9 +173,11 @@ export function ListsView() {
     )
     .sort(byOrder);
 
-  const submitCreate = async () => {
+  const submitCreate = () => {
     if (!newName.trim()) return;
-    await createList(newName.trim(), newEmoji);
+    // no await: the store puts the list on screen immediately and swaps in
+    // the server's id when it arrives — waiting here just froze this form
+    void createList(newName.trim(), newEmoji);
     setNewName("");
     setNewEmoji("list-folder");
     setCreating(false);
@@ -246,7 +248,7 @@ export function ListsView() {
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && submitCreate()}
-              placeholder="List name — Work, Home, Errands…"
+              placeholder="List name, Work, Home, Errands…"
               className="flex-1 rounded-xl border border-line bg-paper px-3 py-2 text-base outline-none focus:border-sun sm:text-sm"
               autoFocus
             />
@@ -343,7 +345,7 @@ export function ListsView() {
         mark={<Icon3d name="inbox" size={24} />}
         name="Inbox"
         count={inbox.length}
-        hint="Freshly captured, undecided. Triage when you plan — not when you capture."
+        hint="Freshly captured, undecided. Triage when you plan, not when you capture."
         folded={collapsed.includes("inbox")}
         onToggleFold={() => toggleFold("inbox")}
       >
@@ -357,7 +359,9 @@ export function ListsView() {
       {/* user lists */}
       {!reordering && state.lists.map((list) => {
         const isHidden = hidden.has(list.id);
-        const isOwner = list.role === "owner";
+        // a pending list is real on screen but its id is not: management and
+        // adding wait the moment it takes the server to answer
+        const isOwner = list.role === "owner" && !list.pending;
         const tasks = isHidden
           ? []
           : all
@@ -380,7 +384,7 @@ export function ListsView() {
                 : (name) => renameList(list.id, name, list.emoji)
             }
             onDelete={isHidden || !isOwner ? undefined : () => setConfirmDelete(list.id)}
-            onLockAction={(mode) => setPinTarget({ list, mode })}
+            onLockAction={list.pending ? undefined : (mode) => setPinTarget({ list, mode })}
             folded={collapsed.includes(list.id)}
             onToggleFold={() => toggleFold(list.id)}
             onRelock={
@@ -397,18 +401,24 @@ export function ListsView() {
                 onClick={() => setPinTarget({ list, mode: "unlock" })}
                 className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line bg-paper-deep/40 px-4 py-6 text-sm text-ink-soft transition-colors hover:border-sun hover:text-sun-deep"
               >
-                <Icon3d name="lock" size={22} /> Locked — tap to unlock
+                <Icon3d name="lock" size={22} /> Locked. Tap to unlock
               </button>
             ) : (
               <>
                 {tasks.map((t) => (
                   <TaskItem key={t.clientId ?? t.id} task={t} context="backlog" />
                 ))}
-                <AddRow
-                  placeholder={`Add to ${list.name}…`}
-                  plannedFor={null}
-                  listId={list.id}
-                />
+                {list.pending ? (
+                  <div className="mt-2 rounded-xl border border-dashed border-line/80 px-3.5 py-2.5 text-xs text-ink-faint">
+                    Setting up…
+                  </div>
+                ) : (
+                  <AddRow
+                    placeholder={`Add to ${list.name}…`}
+                    plannedFor={null}
+                    listId={list.id}
+                  />
+                )}
                 {confirmDelete === list.id && (
                   <div className="anim-pop mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-clay/50 bg-clay-soft px-4 py-3 text-sm">
                     <span className="min-w-0 break-words">
@@ -455,7 +465,7 @@ export function ListsView() {
           <EmptyState
             icon="moon"
             title="Nothing parked"
-            body="Someday holds ideas you're not ready for — a kindness, not a graveyard."
+            body="Someday holds ideas you're not ready for. A kindness, not a graveyard."
           />
         )}
       </Section>
