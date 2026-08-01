@@ -237,16 +237,18 @@ export function Omnibar() {
                 ))}
               </span>
               <span className="text-sm text-ink-soft">
-                Listening, just talk. <b className="font-medium text-ink">AI turns it into a task.</b>
+                Just talk. <b className="font-medium text-ink">AI does the rest.</b>
               </span>
             </div>
           ) : !text.trim() ? (
             <div className="anim-shimmer flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 rounded-full bg-sun-soft px-2 py-0.5 text-[11px] font-semibold text-sun-deep">
+              {/* shrink-0 is the fix: without it flex crushed this pill and
+                  the sparkle spilled out of its own background */}
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-sun-soft px-2 py-0.5 text-[11px] font-semibold text-sun-deep">
                 <Icon3d name="sparkle" size={15} /> AI
               </span>
               <span className="text-[12px] leading-snug text-ink-soft">
-                Type or speak anything, the day, time, list and steps get filled in for you.
+                Say anything. The details fill themselves in.
               </span>
             </div>
           ) : (
@@ -269,8 +271,8 @@ export function Omnibar() {
                   <Icon3d name="inbox" size={15} /> inbox, decide later
                 </Chip>
               )}
-              <span className="inline-flex items-center gap-1 text-[11px] text-ink-faint">
-                <Icon3d name="sparkle" size={15} /> AI adds the rest after capture
+              <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-ink-faint">
+                <Icon3d name="sparkle" size={15} /> AI tidies the rest
               </span>
             </>
           )}
@@ -278,9 +280,9 @@ export function Omnibar() {
 
         <div className="mt-3 hidden items-center justify-between border-t border-line pt-3 text-xs text-ink-faint sm:flex">
           <span>
-            <Kbd>enter</Kbd> capture · <Kbd>shift+enter</Kbd> keep capturing
+            <Kbd>enter</Kbd> capture · <Kbd>shift+enter</Kbd> more
           </span>
-          <span>today · tomorrow · fri · due mon · ~30m · #list · !</span>
+          <span>try: pay rent fri 6pm ~15m #life</span>
         </div>
       </div>
     </Modal>
