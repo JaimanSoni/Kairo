@@ -1,13 +1,14 @@
+import { type Db, MongoClient } from "mongodb";
 import { getDb, withDbRetry } from "./db";
 
 /**
- * First-party events, in the database Kairo already has.
+ * First-party events, on their own Atlas cluster.
  *
- * At Kairo's scale this is the right sink: no second vendor, no keys, no
- * paused free tiers, and the TTL index caps what it can ever cost the M0
- * cluster. The day traffic outgrows it (thousands of events a day, months of
- * retention wanted), the ingest route swaps its insert for a call to a real
- * event store and nothing else changes.
+ * Analytics is the one workload whose volume grows with traffic rather than
+ * with users, so it gets its own free cluster (ANALYTICS_MONGODB_URI, the
+ * `kairo` database) and can never crowd the product's storage or ops budget.
+ * When the variable is unset, events fall back into the main database, so a
+ * missing env var degrades to the old behaviour instead of dropping data.
  *
  * What is deliberately NOT stored: IP addresses, full user agents, or
  * anything a visitor typed. An event is a name, a path, anonymous ids, and
@@ -15,6 +16,26 @@ import { getDb, withDbRetry } from "./db";
  */
 
 const TTL_DAYS = 120;
+
+declare global {
+  var _kairoAnalyticsClient: Promise<MongoClient> | undefined;
+}
+
+async function analyticsDb(): Promise<Db> {
+  const uri = process.env.ANALYTICS_MONGODB_URI;
+  if (!uri) return getDb();
+  global._kairoAnalyticsClient ??= new MongoClient(uri, { maxPoolSize: 5 })
+    .connect()
+    .catch((err) => {
+      // a failed connect must not be cached forever
+      global._kairoAnalyticsClient = undefined;
+      throw err;
+    });
+  const client = await global._kairoAnalyticsClient;
+  // the db name rides in the URI path; "kairo" is this cluster's convention
+  const fromPath = new URL(uri).pathname.replace(/^\//, "");
+  return client.db(fromPath || "kairo");
+}
 
 export type IngestEvent = {
   event: string;
@@ -31,7 +52,7 @@ export type IngestEvent = {
 };
 
 let indexReady: Promise<unknown> | null = null;
-function ensureIndexes(db: Awaited<ReturnType<typeof getDb>>): Promise<unknown> {
+function ensureIndexes(db: Db): Promise<unknown> {
   indexReady ??= Promise.all([
     db.collection("events").createIndex({ at: 1 }, { expireAfterSeconds: TTL_DAYS * 86_400, name: "events_ttl" }),
     db.collection("events").createIndex({ event: 1, at: -1 }, { name: "events_by_name" }),
@@ -43,7 +64,7 @@ function ensureIndexes(db: Awaited<ReturnType<typeof getDb>>): Promise<unknown> 
 }
 
 export async function recordEvent(e: IngestEvent): Promise<void> {
-  const db = await withDbRetry(getDb);
+  const db = await withDbRetry(analyticsDb);
   try {
     await ensureIndexes(db);
   } catch (err) {
@@ -77,7 +98,7 @@ const named = (rows: Bucket[]) =>
 
 export async function loadAnalytics(days = 30): Promise<AnalyticsSnapshot> {
   return withDbRetry(async () => {
-    const db = await getDb();
+    const db = await analyticsDb();
     const since = new Date(Date.now() - days * 86_400_000);
 
     const [facets] = await db
