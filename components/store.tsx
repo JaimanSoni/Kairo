@@ -14,6 +14,7 @@ import { friendlyDay, todayStr } from "@/lib/dates";
 import { nextOccurrence } from "@/lib/repeat";
 import { cancelPush } from "@/lib/push-client";
 import type { ParsedInput } from "@/lib/nlp";
+import { avatarChoiceUrl } from "@/lib/avatars";
 
 /* ---------------- state ---------------- */
 
@@ -64,6 +65,7 @@ type Action =
   | { type: "SET_UNLOCKED"; ids: string[] }
   | { type: "SET_APP_LOCKED"; locked: boolean }
   | { type: "SET_APPLOCK_ENABLED"; enabled: boolean }
+  | { type: "SET_USER_PICTURE"; picture: string | undefined }
   | { type: "REPLACE_ALL"; tasks: Task[]; lists: List[]; people: AccountInfo[] }
   | { type: "BULK_UPSERT"; tasks: Task[] };
 
@@ -129,6 +131,8 @@ function reducer(state: State, action: Action): State {
         user: { ...state.user, appLockEnabled: action.enabled },
         appLocked: action.enabled ? state.appLocked : false,
       };
+    case "SET_USER_PICTURE":
+      return { ...state, user: { ...state.user, picture: action.picture } };
     default:
       return state;
   }
@@ -183,6 +187,8 @@ type AppContextValue = {
   lockApp: () => void;
   unlockApp: () => void;
   setAppLockEnabled: (enabled: boolean) => void;
+  /** Wears a different face: an animal, or back to the Google photo. */
+  setAvatarChoice: (choice: string) => void;
   /** Re-pulls tasks+lists from the server (shared lists change under you). */
   refreshData: () => Promise<void>;
 };
@@ -900,6 +906,18 @@ export function AppProvider({
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [refreshData]);
 
+  const setAvatarChoice = useCallback(
+    (choice: string) => {
+      const prev = stateRef.current.user.picture;
+      const next = avatarChoiceUrl(choice) ?? stateRef.current.user.googlePicture;
+      dispatch({ type: "SET_USER_PICTURE", picture: next });
+      api("/api/profile/avatar", { method: "POST", body: JSON.stringify({ choice }) }).catch(() =>
+        syncError(() => dispatch({ type: "SET_USER_PICTURE", picture: prev }))
+      );
+    },
+    [syncError]
+  );
+
   const setAppLockEnabled = useCallback(
     (enabled: boolean) => {
       dispatch({ type: "SET_APPLOCK_ENABLED", enabled });
@@ -957,13 +975,14 @@ export function AppProvider({
       lockApp,
       unlockApp,
       setAppLockEnabled,
+      setAvatarChoice,
       refreshData,
     }),
     [
       state, addTask, getTask, updateTask, toggleStarted, duplicateTask, completeTask, uncompleteTask, deleteTask,
       reorderTasks, sweep, createList, renameList, upsertList, reorderLists, deleteList, showToast,
       setOmnibar, setEditing, dismissSweep, reopenSweep, startFocus, stopFocus, minimizeFocus,
-      setListUnlocked, lockApp, unlockApp, setAppLockEnabled, refreshData,
+      setListUnlocked, lockApp, unlockApp, setAppLockEnabled, setAvatarChoice, refreshData,
     ]
   );
 

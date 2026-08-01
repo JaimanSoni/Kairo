@@ -309,11 +309,35 @@ function ProfileSheet({
   picture?: string;
   onClose: () => void;
 }) {
+  const { state, setAvatarChoice } = useApp();
+  const [picking, setPicking] = useState(false);
+
+  // which option is currently worn, read straight off the picture itself
+  const current = /\/avatars\/avatar-([1-6])\.png$/.exec(state.user.picture ?? "")?.[1];
+
   return (
     <Modal onClose={onClose}>
       <div className="p-6">
         <div className="flex items-center gap-3">
-          <Avatar name={name} picture={picture} size={12} />
+          <span className="relative shrink-0">
+            <Avatar name={name} picture={picture} size={12} />
+            <button
+              onClick={() => setPicking((v) => !v)}
+              aria-label="Change avatar"
+              data-tip="Change avatar"
+              className="absolute -bottom-0.5 -right-0.5 grid size-5 place-items-center rounded-full bg-ink text-paper shadow-md transition-transform hover:scale-110"
+            >
+              <svg width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden>
+                <path
+                  d="M9.8 2.8l3.4 3.4L5.6 13.8l-3.9.5.5-3.9 7.6-7.6zM11.4 1.2l3.4 3.4"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          </span>
           <div className="min-w-0 flex-1">
             <div className="truncate text-base font-bold">{name}</div>
             <div className="truncate text-sm text-ink-soft">{email}</div>
@@ -322,6 +346,46 @@ function ProfileSheet({
             <IconX />
           </button>
         </div>
+
+        {picking && (
+          <div className="anim-pop mt-4 rounded-2xl border border-line bg-paper-deep/50 p-3">
+            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">
+              Pick your face
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setAvatarChoice("google")}
+                aria-label="Use your Google photo"
+                data-tip="Your Google photo"
+                className={`grid size-11 place-items-center overflow-hidden rounded-full transition-transform hover:scale-105 ${
+                  !current ? "ring-2 ring-sun ring-offset-2 ring-offset-paper-deep" : ""
+                }`}
+              >
+                {state.user.googlePicture ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={state.user.googlePicture} alt="" className="size-full rounded-full object-cover" referrerPolicy="no-referrer" />
+                ) : (
+                  <span className="grid size-full place-items-center rounded-full bg-sun-soft font-bold text-sun-deep">
+                    {name.charAt(0).toUpperCase()}
+                  </span>
+                )}
+              </button>
+              {["1", "2", "3", "4", "5", "6"].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setAvatarChoice(`animal-${n}`)}
+                  aria-label={`Use animal avatar ${n}`}
+                  className={`grid size-11 place-items-center overflow-hidden rounded-full bg-sun-soft transition-transform hover:scale-105 ${
+                    current === n ? "ring-2 ring-sun ring-offset-2 ring-offset-paper-deep" : ""
+                  }`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={`/avatars/avatar-${n}.png`} alt="" className="size-full object-contain p-[6%]" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="mt-6">
           <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">

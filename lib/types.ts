@@ -80,7 +80,10 @@ export type UserProfile = {
   id: string;
   email: string;
   name: string;
+  /** The face currently worn: chosen animal, or the Google photo. */
   picture?: string;
+  /** The Google photo itself, kept for the avatar picker. */
+  googlePicture?: string;
   /** True when an app-wide PIN lock is set for this account. */
   appLockEnabled: boolean;
   /** Shows the admin entry point. Access itself is enforced server-side. */

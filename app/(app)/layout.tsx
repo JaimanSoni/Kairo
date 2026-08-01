@@ -9,6 +9,7 @@ import { billingMode } from "@/lib/razorpay";
 import { listSellablePlans } from "@/lib/plans";
 import { FEATURES, FEATURE_KEYS } from "@/lib/features";
 import { AppProvider } from "@/components/store";
+import { resolveAvatar } from "@/lib/avatars";
 import { EntitlementsProvider } from "@/components/entitlements";
 import { Shell } from "@/components/shell";
 
@@ -70,7 +71,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         id: session.userId,
         email: session.email,
         name: session.name,
-        picture: session.picture,
+        // what they chose to wear; the Google photo rides along for the picker
+        picture: resolveAvatar(userDoc.avatarChoice, session.picture),
+        googlePicture: session.picture,
         appLockEnabled: Boolean(userDoc?.appLockHash),
         // from the database record, not the session cookie
         isAdmin: isAdminEmail(userDoc?.email),

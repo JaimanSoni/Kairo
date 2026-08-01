@@ -6,6 +6,7 @@ import { getDb } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
 import { listSharedEmail } from "@/lib/email-templates";
 import { inviteUserByEmail } from "@/lib/invites";
+import { resolveAvatar } from "@/lib/avatars";
 import type { DbUser } from "@/lib/users";
 
 type MemberInfo = { id: string; name: string; email: string; picture?: string; role: "owner" | "member" };
@@ -30,14 +31,17 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/lists/[id]/
   const users = await db
     .collection("users")
     .find({ _id: { $in: [list.userId as ObjectId, ...memberIds] } })
-    .project({ name: 1, email: 1, picture: 1 })
+    .project({ name: 1, email: 1, picture: 1, avatarChoice: 1 })
     .toArray();
 
   const members: MemberInfo[] = users.map((u) => ({
     id: u._id.toHexString(),
     name: String(u.name ?? ""),
     email: String(u.email ?? ""),
-    picture: typeof u.picture === "string" ? u.picture : undefined,
+    picture: resolveAvatar(
+      typeof u.avatarChoice === "string" ? u.avatarChoice : undefined,
+      typeof u.picture === "string" ? u.picture : undefined
+    ),
     role: u._id.equals(list.userId as ObjectId) ? "owner" : "member",
   }));
 

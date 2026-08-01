@@ -17,6 +17,8 @@ export type DbUser = {
   /** App-wide PIN lock (hash + salt live server-side only). */
   appLockHash?: string;
   appLockSalt?: string;
+  /** "animal-N" when they chose a house animal over the Google photo. */
+  avatarChoice?: string;
   /** Blocked by an admin. Nothing is deleted; sign-in is refused. */
   disabled?: boolean;
   disabledAt?: Date;

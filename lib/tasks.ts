@@ -1,6 +1,7 @@
 import { ObjectId, type Document, type WithId } from "mongodb";
 import { getDb, withDbRetry } from "./db";
 import { sanitizeRepeat, type Repeat } from "./repeat";
+import { resolveAvatar } from "./avatars";
 import type { AccountInfo, List, Subtask, Task, TaskStatus } from "./types";
 
 export const TASK_STATUSES: TaskStatus[] = ["inbox", "planned", "done", "someday"];
@@ -150,7 +151,7 @@ export async function loadUserData(
         ? db
             .collection("users")
             .find({ _id: { $in: [...peopleIds.values()] } })
-            .project({ name: 1, email: 1, picture: 1 })
+            .project({ name: 1, email: 1, picture: 1, avatarChoice: 1 })
             .toArray()
         : Promise.resolve([]),
     ]);
@@ -162,7 +163,10 @@ export async function loadUserData(
         id: u._id.toHexString(),
         name: String(u.name ?? ""),
         email: String(u.email ?? ""),
-        picture: typeof u.picture === "string" ? u.picture : undefined,
+        picture: resolveAvatar(
+          typeof u.avatarChoice === "string" ? u.avatarChoice : undefined,
+          typeof u.picture === "string" ? u.picture : undefined
+        ),
       })),
     };
   });
