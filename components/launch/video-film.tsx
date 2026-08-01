@@ -10,47 +10,37 @@ import {
 import { Mark } from "@/components/mark";
 
 /**
- * The kinetic launch film, at /video-launch.
+ * The launch film, at /video-launch.
  *
- * A different cut from the /launch product film: minimal motion graphics —
- * soft neumorphic rings breathing on paper, sentences that build word by
- * word, product cards on springs, a gentle camera, a teal flood for the
- * offer. Under fifty seconds, made for feeds.
+ * Built on the grammar every good product launch video shares:
  *
- * Two rules keep it smooth and calm:
+ * - Chaos first: three seconds of the pain (a badge counting overdue tasks)
+ *   before the product is allowed to appear.
+ * - Arrive fast, then FREEZE. Every element enters on an expo curve that
+ *   spends its speed in the first 150ms, lands, and then holds perfectly
+ *   still. The stillness is what reads as confidence; constant idle motion
+ *   is what reads as amateur.
+ * - Scene changes are full-bleed colour slabs that wipe across and become
+ *   the next background. No crossfades.
+ * - One idea per frame, five words or fewer, concrete over clever.
  *
- * 1. Nothing animates layout or paint. Every moving thing moves by transform
- *    and opacity only — the ring shadows are painted once and scaled on the
- *    GPU — and there are no per-frame blur filters, which is what made the
- *    first cut stutter in live playback.
- * 2. Nothing is drawn with a hard line. Emphasis lands as a soft radial glow,
- *    never a stroked circle.
- *
- * Same contract as the other film: every visible property is a function of
- * one number, the current time. In a browser it free-runs on a loop as its
- * own preview; the recorder's first __seek takes the wheel permanently and
- * from then on nothing reads the wall clock.
+ * Same contract as the /launch film: every visible property is a function
+ * of one number, the current time. In a browser it free-runs on a loop as
+ * its own preview; the recorder's first __seek takes the wheel permanently
+ * and from then on nothing reads the wall clock.
  */
 
 /* ----------------------------------------------------------------- easing */
 
 const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
 const lerp = (a: number, b: number, x: number) => a + (b - a) * x;
+/** The whip: nearly all of the travel happens in the first fifth. */
+const expoOut = (x: number) => (x >= 1 ? 1 : x <= 0 ? 0 : 1 - Math.pow(2, -10 * x));
 const easeOut = (x: number) => 1 - Math.pow(1 - x, 3);
 const easeInOut = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
-/** A mild spring: overshoots ~4% and settles. Softer than classic backOut. */
-function softOut(x: number): number {
-  x = clamp01(x);
-  return 1 + 2.2 * Math.pow(x - 1, 3) + 1.2 * Math.pow(x - 1, 2);
-}
 const seg = (t: number, from: number, dur: number) => clamp01((t - from) / dur);
 
-function beatOpacity(t: number, start: number, dur: number, fade: number): number {
-  if (t < start - fade || t > start + dur + fade) return 0;
-  return Math.min(seg(t, start - fade, fade), 1 - seg(t, start + dur, fade));
-}
-
-/** A smooth camera impulse: eases up from zero, peaks early, dies quietly. */
+/** A soft camera impulse: swells from zero, dies quietly. */
 function impulse(t: number, at: number, span = 650): number {
   const x = (t - at) / span;
   if (x <= 0 || x > 2.5) return 0;
@@ -59,94 +49,81 @@ function impulse(t: number, at: number, span = 650): number {
 
 /* --------------------------------------------------------------- timeline */
 
-type Word = { text: string; accent?: boolean; clay?: boolean };
-
-type Kinetic = {
-  kind: "kinetic";
-  start: number;
-  dur: number;
-  words: Word[];
-  size?: number;
+/**
+ * The cut. Scene starts double as slab-wipe moments; inside a scene,
+ * everything is timed from the scene's own zero.
+ */
+const T = {
+  chaos: 0, //          ink   the badge counts up, "Sound familiar?"
+  promise: 4400, //     paper "Your to-do list shouldn't make you feel bad."
+  reveal: 7900, //            mark + kairo + tagline
+  f1: 11600, //               Type it. AI plans it.       (capture demo)
+  f2: 16100, //               See only today.             (today demo)
+  f3: 20600, //               Nothing turns red.          (fresh start demo)
+  f4: 25100, //               One task at a time.         (focus demo)
+  m1: 29800, //         teal  Share lists.
+  m2: 31300, //         ink   Lock what's private.
+  m3: 32800, //         teal  See your month.
+  offer: 34300, //      teal  Free for 7 days.
+  end: 38600, //        paper the mark, the name, the address
 };
+export const DURATION = 44500;
 
-type Shot = {
-  kind: "shot";
-  start: number;
-  dur: number;
-  demo: React.ReactNode;
-  words: Word[];
-  sub?: string;
-  from: "left" | "right";
-};
-
-/** Word cadence: quick, but with room for each word to finish arriving. */
-const CADENCE = 190;
-const ACCENT_LAG = 90;
-
-const HOOKS: Kinetic[] = [
-  { kind: "kinetic", start: 800, dur: 2350, words: [{ text: "Too" }, { text: "many" }, { text: "tasks.", accent: true }] },
-  { kind: "kinetic", start: 3400, dur: 2350, words: [{ text: "Too" }, { text: "little" }, { text: "time.", accent: true }] },
-  { kind: "kinetic", start: 6000, dur: 3000, words: [{ text: "And" }, { text: "your" }, { text: "list" }, { text: "keeps" }, { text: "score.", accent: true, clay: true }] },
+const FEATURES = [
+  {
+    start: T.f1,
+    dur: T.f2 - T.f1,
+    demo: <CaptureDemo />,
+    tilt: -1.2,
+    head: [{ text: "Type it. " }, { text: "AI plans it.", accent: true }],
+    sub: "Date, time and list, filled in for you.",
+  },
+  {
+    start: T.f2,
+    dur: T.f3 - T.f2,
+    demo: <TodayDemo />,
+    tilt: 1.2,
+    head: [{ text: "See " }, { text: "only today.", accent: true }],
+    sub: "Just what fits in your day. Nothing else.",
+  },
+  {
+    start: T.f3,
+    dur: T.f4 - T.f3,
+    demo: <FreshStartDemo />,
+    tilt: -1.2,
+    head: [{ text: "Nothing " }, { text: "turns red.", accent: true }],
+    sub: "Unfinished tasks start fresh tomorrow.",
+  },
+  {
+    start: T.f4,
+    dur: T.m1 - T.f4 - 300,
+    demo: <FocusDemo />,
+    tilt: 1.2,
+    head: [{ text: "One task " }, { text: "at a time.", accent: true }],
+    sub: "A timer for the thing in front of you.",
+  },
 ];
 
-const BREATHE = { start: 9400, dur: 2400 };
-const REVEAL = { start: 12200, dur: 4000 };
-
-const SHOTS: Shot[] = [
-  { kind: "shot", start: 16600, dur: 4500, demo: <CaptureDemo />, from: "right", words: [{ text: "Say" }, { text: "it." }, { text: "AI" }, { text: "files", accent: true }, { text: "it.", accent: true }] },
-  { kind: "shot", start: 21400, dur: 4500, demo: <TodayDemo />, from: "left", words: [{ text: "A" }, { text: "day" }, { text: "with" }, { text: "edges.", accent: true }] },
-  { kind: "shot", start: 26200, dur: 4500, demo: <FreshStartDemo />, from: "right", words: [{ text: "Mornings" }, { text: "start" }, { text: "clean.", accent: true }], sub: "Nothing ever turns red." },
-  { kind: "shot", start: 31000, dur: 4500, demo: <FocusDemo />, from: "left", words: [{ text: "One" }, { text: "thing" }, { text: "at" }, { text: "a" }, { text: "time.", accent: true }] },
+const MONTAGE = [
+  { start: T.m1, dur: T.m2 - T.m1, bg: "var(--color-sun)", text: "Share lists." },
+  { start: T.m2, dur: T.m3 - T.m2, bg: "var(--color-ink)", text: "Lock what's private." },
+  { start: T.m3, dur: T.offer - T.m3, bg: "var(--color-sun-deep)", text: "See your month." },
 ];
-
-/** The closing montage breathes now: longer holds, overlapping crossfades. */
-const RAPID: { start: number; words: Word[] }[] = [
-  { start: 35900, words: [{ text: "Share" }, { text: "lists.", accent: true }] },
-  { start: 36950, words: [{ text: "Lock" }, { text: "what's" }, { text: "private.", accent: true }] },
-  { start: 38000, words: [{ text: "See" }, { text: "the" }, { text: "month.", accent: true }] },
-  { start: 39050, words: [{ text: "Never" }, { text: "feel" }, { text: "behind.", accent: true }] },
-];
-const RAPID_DUR = 950;
-
-const FLOOD = { start: 40350, dur: 3800 };
-const END = { start: 44550 };
-export const DURATION = 49500;
 
 /** How much faster the in-card demos run than they do on the landing page. */
 const DEMO_SPEED = 1.4;
 
 /** Demo-bearing beats, for scrubbing their CSS animations from beat-start. */
-const SCRUB_BEATS = SHOTS.map((s) => ({ start: s.start, dur: s.dur }));
+const SCRUB_BEATS = FEATURES.map((f) => ({ start: f.start, dur: f.dur }));
 
-/** When an accent word actually lands, for glows and camera impulses. */
-const accentAt = (k: Kinetic | Shot, textStart: number) => {
-  const i = k.words.findIndex((w) => w.accent);
-  return textStart + i * CADENCE + ACCENT_LAG + 260;
-};
-
-/** Soft radial glows — the film's punctuation. No lines, just light. */
-const GLOWS: { at: number; sun?: boolean }[] = [
-  { at: BREATHE.start + 300, sun: true },
-  { at: REVEAL.start + 250, sun: true },
-  { at: END.start + 250, sun: true },
-];
-
-/**
- * Camera impulses: a soft push that swells and dies, one per landing, riding
- * on a slow zoom across the whole film. Gentle on purpose — the frame should
- * feel alive, never shaken.
- */
+/** Gentle camera swells, only on the moments that deserve one. */
 const KICKS: { at: number; amp: number }[] = [
-  ...HOOKS.map((h) => ({ at: accentAt(h, h.start), amp: 0.014 })),
-  { at: BREATHE.start + 320, amp: 0.018 },
-  { at: REVEAL.start + 350, amp: 0.016 },
-  ...SHOTS.map((s) => ({ at: s.start + 280, amp: 0.012 })),
-  ...RAPID.map((r) => ({ at: r.start + 200, amp: 0.016 })),
-  { at: FLOOD.start + 400, amp: 0.024 },
-  { at: END.start + 1250, amp: 0.014 },
+  { at: 2450, amp: 0.016 }, // the badge tops out
+  { at: T.reveal + 350, amp: 0.014 },
+  { at: T.offer + 450, amp: 0.018 },
 ];
 
-/* ----------------------------------------------------------------- layout */
+/* ----------------------------------------------------------------- pieces */
 
 type Stage = { w: number; h: number; portrait: boolean };
 
@@ -166,32 +143,84 @@ function useStage(): Stage {
   return stage;
 }
 
-/* ------------------------------------------------------------------ rings */
+type Word = { text: string; accent?: boolean; clay?: boolean };
 
 /**
- * The neumorphic field. Every circle is painted once at its natural size and
- * then only ever transformed — breath, drift and the dive all ride on the
- * compositor, which is what keeps live playback at a full frame rate.
+ * A line that whips in and stops: the words share one entrance, staggered
+ * 55ms, each spending its speed immediately and freezing. After ~700ms the
+ * line is at perfect rest and stays there.
  */
-function RingField({ t, cx, cy, unit, fade, zoom }: { t: number; cx: number; cy: number; unit: number; fade: number; zoom: number }) {
-  const RINGS = [1560, 1160, 800, 470];
-  const driftX = 30 * unit * Math.sin(t / 5100);
-  const driftY = 22 * unit * Math.cos(t / 6300);
+function LineIn({
+  lt,
+  at,
+  words,
+  fontSize,
+  color,
+  align = "center",
+}: {
+  lt: number;
+  at: number;
+  words: Word[];
+  fontSize: number;
+  color?: string;
+  align?: "left" | "center";
+}) {
   return (
     <div
-      aria-hidden
       style={{
-        position: "absolute",
-        left: `${cx}%`,
-        top: `${cy}%`,
-        width: 0,
-        height: 0,
-        opacity: fade,
-        transform: `translate(${driftX}px, ${driftY}px)`,
+        display: "flex",
+        flexWrap: "wrap",
+        justifyContent: align === "left" ? "flex-start" : "center",
+        columnGap: fontSize * 0.24,
+        rowGap: fontSize * 0.05,
       }}
     >
+      {words.map((w, i) => {
+        const p = expoOut(seg(lt, at + i * 55, 620));
+        if (p <= 0) return null;
+        return (
+          <span
+            key={i}
+            className={w.accent ? "font-display" : undefined}
+            style={{
+              fontSize,
+              lineHeight: 1.1,
+              fontWeight: w.accent ? 500 : 700,
+              fontStyle: w.accent ? "italic" : undefined,
+              letterSpacing: w.accent ? "-0.02em" : "-0.035em",
+              color: w.clay ? "var(--color-clay)" : (color ?? "var(--color-ink)"),
+              opacity: clamp01(p * 1.25),
+              transform: `translateY(${lerp(0.55 * fontSize, 0, p)}px)`,
+              display: "inline-block",
+              whiteSpace: "pre",
+            }}
+          >
+            {w.text}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Content leaving a scene: a quick lift, gone before the next beat. */
+function exitLift(lt: number, at: number): React.CSSProperties {
+  const x = seg(lt, at, 240);
+  if (x <= 0) return {};
+  const p = x * x * x;
+  return { opacity: 1 - p, transform: `translateY(${-46 * p}px)` };
+}
+
+/**
+ * The neumorphic ring field, nearly at rest: a breath so slow it is felt on
+ * a re-watch, not seen. Painted once, transformed after — never repainted.
+ */
+function RingField({ t, cx, cy, unit }: { t: number; cx: number; cy: number; unit: number }) {
+  const RINGS = [1560, 1160, 800, 470];
+  return (
+    <div aria-hidden style={{ position: "absolute", left: `${cx}%`, top: `${cy}%`, width: 0, height: 0 }}>
       {RINGS.map((d, i) => {
-        const breathe = 1 + 0.045 * Math.sin((t / 5200) * Math.PI * 2 + i * 1.15);
+        const breathe = 1 + 0.016 * Math.sin((t / 7400) * Math.PI * 2 + i * 1.1);
         const size = d * unit;
         const raised = i % 2 === 0;
         return (
@@ -205,7 +234,7 @@ function RingField({ t, cx, cy, unit, fade, zoom }: { t: number; cx: number; cy:
               height: size,
               borderRadius: "50%",
               background: "var(--color-paper)",
-              transform: `scale(${breathe * zoom})`,
+              transform: `scale(${breathe})`,
               boxShadow: raised
                 ? `${-34 * unit}px ${-34 * unit}px ${76 * unit}px rgba(255,255,255,0.9), ${34 * unit}px ${34 * unit}px ${76 * unit}px rgba(28,38,36,0.075)`
                 : `inset ${-26 * unit}px ${-26 * unit}px ${58 * unit}px rgba(255,255,255,0.85), inset ${26 * unit}px ${26 * unit}px ${58 * unit}px rgba(28,38,36,0.06)`,
@@ -213,26 +242,13 @@ function RingField({ t, cx, cy, unit, fade, zoom }: { t: number; cx: number; cy:
           />
         );
       })}
-      {/* a soft light that orbits the field — quiet life in every frame */}
-      <div
-        style={{
-          position: "absolute",
-          left: -430 * unit,
-          top: -430 * unit,
-          width: 860 * unit,
-          height: 860 * unit,
-          borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 62%)",
-          transform: `translate(${170 * unit * Math.cos(t / 4200)}px, ${170 * unit * Math.sin(t / 4200)}px)`,
-        }}
-      />
     </div>
   );
 }
 
-/** A soft pulse of light, breathing out from the centre. */
-function Glow({ t, at, cx, cy, unit, sun }: { t: number; at: number; cx: number; cy: number; unit: number; sun?: boolean }) {
-  const p = seg(t, at, 1500);
+/** A soft pulse of light — the film's only punctuation mark. */
+function Glow({ t, at, unit, sun }: { t: number; at: number; unit: number; sun?: boolean }) {
+  const p = seg(t, at, 1400);
   if (p <= 0 || p >= 1) return null;
   const size = 1100 * unit;
   return (
@@ -240,91 +256,74 @@ function Glow({ t, at, cx, cy, unit, sun }: { t: number; at: number; cx: number;
       aria-hidden
       style={{
         position: "absolute",
-        left: `calc(${cx}% - ${size / 2}px)`,
-        top: `calc(${cy}% - ${size / 2}px)`,
+        left: `calc(50% - ${size / 2}px)`,
+        top: `calc(50% - ${size / 2}px)`,
         width: size,
         height: size,
         borderRadius: "50%",
         background: sun
-          ? "radial-gradient(circle, rgba(12,147,132,0.22) 0%, rgba(12,147,132,0.07) 45%, rgba(12,147,132,0) 70%)"
+          ? "radial-gradient(circle, rgba(12,147,132,0.20) 0%, rgba(12,147,132,0.06) 45%, rgba(12,147,132,0) 70%)"
           : "radial-gradient(circle, rgba(28,38,36,0.10) 0%, rgba(28,38,36,0) 65%)",
-        transform: `scale(${lerp(0.35, 2.3, easeOut(p))})`,
+        transform: `scale(${lerp(0.35, 2.2, easeOut(p))})`,
         opacity: 1 - p,
       }}
     />
   );
 }
 
-/* ------------------------------------------------------------------ words */
-
 /**
- * A sentence that assembles itself. Plain words rise in on a mild spring;
- * the accent word settles down from slightly above scale, serif and italic,
- * and lands with a glow. Everything arrives on transform and opacity alone.
+ * A scene slab: a full-bleed colour that wipes across at its moment and
+ * then IS the background until the next slab covers it. The wipe is the
+ * cut — nothing ever crossfades between scenes.
  */
-function KineticLine({
+function Slab({
   t,
-  start,
-  words,
-  fontSize,
-  exitAt,
-  align = "center",
+  at,
+  bg,
+  from,
+  children,
 }: {
   t: number;
-  start: number;
-  words: Word[];
-  fontSize: number;
-  exitAt: number;
-  align?: "left" | "center";
+  at: number;
+  bg: string;
+  from: "left" | "right";
+  children?: React.ReactNode;
 }) {
-  const gone = seg(t, exitAt, 420);
-  const goneEase = easeInOut(gone);
+  const p = expoOut(seg(t, at, 560));
+  if (p <= 0) return null;
+  const off = (from === "left" ? -1 : 1) * (1 - p) * 102;
   return (
     <div
       style={{
-        display: "flex",
-        flexWrap: "wrap",
-        justifyContent: align === "left" ? "flex-start" : "center",
-        columnGap: fontSize * 0.26,
-        rowGap: fontSize * 0.06,
-        opacity: 1 - goneEase,
-        transform: `translateY(${-24 * goneEase}px)`,
+        position: "absolute",
+        inset: 0,
+        background: bg,
+        transform: `translateX(${off}%)`,
+        overflow: "hidden",
       }}
     >
-      {words.map((w, i) => {
-        const wStart = start + i * CADENCE + (w.accent ? ACCENT_LAG : 0);
-        const p = seg(t, wStart, w.accent ? 560 : 480);
-        if (p <= 0) return null;
-        const scale = w.accent ? lerp(1.22, 1, easeOut(p)) : lerp(0.95, 1, softOut(p));
-        const rise = w.accent ? 0 : lerp(0.3 * fontSize, 0, easeOut(p));
-        return (
-          <span
-            key={i}
-            className={w.accent ? "font-display" : undefined}
-            style={{
-              fontSize,
-              lineHeight: 1.12,
-              fontWeight: w.accent ? 500 : 600,
-              fontStyle: w.accent ? "italic" : undefined,
-              letterSpacing: w.accent ? "-0.02em" : "-0.035em",
-              color: w.clay
-                ? "var(--color-clay)"
-                : w.accent
-                  ? "var(--color-ink)"
-                  : "var(--color-ink-faint)",
-              opacity: clamp01(p * 1.35),
-              transform: `translateY(${rise}px) scale(${scale})`,
-              transformOrigin: align === "left" ? "left 70%" : "center 70%",
-              display: "inline-block",
-              whiteSpace: "pre",
-            }}
-          >
-            {w.text}
-          </span>
-        );
-      })}
+      {children}
     </div>
   );
+}
+
+/* ----------------------------------------------------------- badge opener */
+
+/** When tick k of the badge count lands, 3 → 47 on a decelerating curve. */
+const BADGE_TICKS = 44;
+const tickTime = (k: number) => 350 + 2100 * (1 - Math.pow(1 - k / BADGE_TICKS, 1 / 3));
+
+function badgeCount(lt: number): { n: number; kick: number } {
+  let n = 3;
+  let last = -1e9;
+  for (let k = 1; k <= BADGE_TICKS; k++) {
+    const tk = tickTime(k);
+    if (lt >= tk) {
+      n = 3 + k;
+      last = tk;
+    } else break;
+  }
+  return { n, kick: Math.exp(-(lt - last) / 120) };
 }
 
 /* ------------------------------------------------------------------- film */
@@ -353,8 +352,6 @@ export function VideoLaunchFilm() {
     const freeRun = (now: number) => {
       if (driven) return;
       setT((now - t0) % DURATION);
-      // getAnimations() allocates; once a second is plenty to keep the
-      // landing-page demos at film speed
       if (frame.current++ % 60 === 0) {
         for (const anim of document.getAnimations()) anim.playbackRate = DEMO_SPEED;
       }
@@ -395,39 +392,25 @@ export function VideoLaunchFilm() {
   const unit = stage.portrait ? stage.w / 1080 : stage.w / 1920;
   const { portrait } = stage;
 
-  // the field sits right of centre in landscape, like the reference; the
-  // hooks type left of it, into the empty paper
-  const ringCx = portrait ? 50 : 60;
-  const ringCy = portrait ? 42 : 46;
-
-  const fieldIn = easeOut(seg(t, 0, 900));
-  const floodP = easeInOut(seg(t, FLOOD.start, 700));
-  const floodOut = easeInOut(seg(t, FLOOD.start + FLOOD.dur - 600, 600));
-  const floodR = lerp(0, 160, floodP) * (1 - floodOut);
-
-  /* the camera: a slow push for the whole film plus a soft swell per landing */
+  /* the camera: one slow push over the film, a soft swell on big landings */
   let kick = 0;
   for (const k of KICKS) kick += k.amp * impulse(t, k.at);
-  const camera = lerp(1, 1.05, easeInOut(t / DURATION)) + kick;
+  const camera = lerp(1, 1.045, easeInOut(t / DURATION)) + kick;
 
-  /* the dive: rings swell as the film passes through them */
-  const dive =
-    1 +
-    1.05 * easeInOut(seg(t, REVEAL.start - 600, 900)) * (1 - easeInOut(seg(t, REVEAL.start + 300, 1100))) +
-    0.75 * easeInOut(seg(t, FLOOD.start - 450, 700)) * (1 - easeInOut(seg(t, FLOOD.start + 300, 900)));
+  const demoScale = (portrait ? stage.w * 0.72 : stage.w * 0.295) / 420;
+  const headSize = (portrait ? 82 : 92) * unit;
+  const slabSize = (portrait ? 104 : 126) * unit;
 
-  const hookSize = (portrait ? 96 : 116) * unit;
+  /* chaos scene */
+  const { n: badgeN, kick: badgeKick } = badgeCount(t);
+  const badgeIn = expoOut(seg(t, 250, 600));
 
   /* reveal */
-  const rIn = seg(t, REVEAL.start, 700);
-  const rOut = 1 - easeInOut(seg(t, REVEAL.start + REVEAL.dur - 450, 450));
-  const markP = softOut(seg(t, REVEAL.start + 120, 800));
+  const markP = expoOut(seg(t, T.reveal + 100, 800));
+  const wordP = expoOut(seg(t, T.reveal + 320, 650));
 
-  /* end card */
-  const eIn = seg(t, END.start, 650);
-  const eMark = softOut(seg(t, END.start + 80, 800));
-
-  const demoScale = (portrait ? stage.w * 0.78 : stage.w * 0.34) / 420;
+  /* end */
+  const eMark = expoOut(seg(t, T.end + 250, 800));
 
   return (
     <div
@@ -436,357 +419,348 @@ export function VideoLaunchFilm() {
         height: "100dvh",
         overflow: "hidden",
         position: "relative",
-        background: "var(--color-paper)",
+        background: "var(--color-ink)",
         color: "var(--color-ink)",
       }}
     >
-      {/* everything the camera sees */}
       <div style={{ position: "absolute", inset: 0, transform: `scale(${camera})`, transformOrigin: "center 48%" }}>
-        <RingField t={t} cx={ringCx} cy={ringCy} unit={unit} fade={fieldIn} zoom={dive} />
-        {GLOWS.map((g) => (
-          <Glow key={g.at} t={t} at={g.at} cx={ringCx} cy={ringCy} unit={unit} sun={g.sun} />
-        ))}
-
-        {/* ------------------------------------------------------ the hooks */}
-        {HOOKS.map((beat, i) => {
-          const o = beatOpacity(t, beat.start, beat.dur, 240);
-          if (o <= 0.001) return null;
-          return (
-            <div
-              key={i}
-              style={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: portrait ? "center" : "flex-start",
-                paddingLeft: portrait ? 0 : "9%",
-                paddingRight: portrait ? "6%" : undefined,
-                opacity: o,
-              }}
-            >
-              <div style={{ maxWidth: portrait ? "94%" : "62%" }}>
-                <KineticLine
-                  t={t}
-                  start={beat.start}
-                  words={beat.words}
-                  fontSize={hookSize * (beat.size ?? 1)}
-                  exitAt={beat.start + beat.dur - 160}
-                  align={portrait ? "center" : "left"}
-                />
-              </div>
-            </div>
-          );
-        })}
-
-        {/* "Breathe." lands alone, in teal, dead centre */}
-        {t > BREATHE.start - 100 && t < BREATHE.start + BREATHE.dur + 300 && (
+        {/* ---------------------------------------------- 1 · chaos (ink) */}
+        {t < T.promise + 700 && (
           <div
             style={{
               position: "absolute",
               inset: 0,
-              display: "grid",
-              placeItems: "center",
-              opacity: beatOpacity(t, BREATHE.start, BREATHE.dur, 240),
-              pointerEvents: "none",
+              background: "var(--color-ink)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 34 * unit,
             }}
           >
-            <span
-              className="font-display"
-              style={{
-                fontSize: hookSize * 1.35,
-                fontStyle: "italic",
-                fontWeight: 500,
-                letterSpacing: "-0.02em",
-                color: "var(--color-sun)",
-                opacity: clamp01(seg(t, BREATHE.start + 90, 520) * 1.35),
-                transform: `scale(${lerp(1.24, 1, easeOut(seg(t, BREATHE.start + 90, 520)))})`,
-              }}
-            >
-              Breathe.
-            </span>
-          </div>
-        )}
-
-        {/* --------------------------------------------------------- reveal */}
-        {t >= REVEAL.start - 100 && t <= REVEAL.start + REVEAL.dur + 500 && (
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              display: "grid",
-              placeItems: "center",
-              opacity: clamp01(rIn * 1.5) * rOut,
-            }}
-          >
-            <div style={{ textAlign: "center" }}>
+            <div style={{ ...exitLift(t, T.promise - 300), display: "flex", flexDirection: "column", alignItems: "center", gap: 34 * unit }}>
               <div
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 20 * unit,
-                  transform: `scale(${Math.max(0.001, markP)})`,
+                  minWidth: 210 * unit,
+                  height: 210 * unit,
+                  borderRadius: 999,
+                  background: "var(--color-clay)",
+                  display: "grid",
+                  placeItems: "center",
+                  padding: `0 ${44 * unit}px`,
+                  transform: `scale(${badgeIn * (1 + 0.05 * badgeKick)})`,
+                  boxShadow: `0 ${22 * unit}px ${70 * unit}px rgba(217,99,84,0.35)`,
                 }}
               >
-                <span style={{ color: "var(--color-sun)", transform: `rotate(${lerp(-140, 0, markP)}deg)`, display: "inline-flex" }}>
-                  <Mark size={(portrait ? 96 : 108) * unit} />
-                </span>
                 <span
-                  className="font-display"
                   style={{
-                    fontSize: (portrait ? 104 : 118) * unit,
+                    fontSize: 108 * unit,
+                    fontWeight: 800,
                     letterSpacing: "-0.03em",
-                    opacity: clamp01(seg(t, REVEAL.start + 420, 550) * 1.35),
-                    transform: `translateX(${lerp(-20, 0, easeOut(seg(t, REVEAL.start + 420, 550))) * unit}px)`,
+                    color: "#fff",
+                    fontVariantNumeric: "tabular-nums",
                   }}
                 >
-                  kairo
+                  {badgeN}
                 </span>
               </div>
-              <p
+              <div
                 style={{
-                  marginTop: 26 * unit,
-                  fontSize: (portrait ? 40 : 36) * unit,
-                  color: "var(--color-ink-soft)",
-                  letterSpacing: "0.01em",
-                  opacity: clamp01(seg(t, REVEAL.start + 950, 650)),
-                  transform: `translateY(${lerp(16, 0, easeOut(seg(t, REVEAL.start + 950, 650)))}px)`,
+                  fontSize: 34 * unit,
+                  fontWeight: 600,
+                  letterSpacing: "0.16em",
+                  textTransform: "uppercase",
+                  color: "rgba(244,247,246,0.55)",
+                  opacity: badgeIn,
                 }}
               >
-                A daily planner that forgives.
-              </p>
+                overdue
+              </div>
+              <div style={{ marginTop: 10 * unit }}>
+                <LineIn
+                  lt={t}
+                  at={2750}
+                  words={[{ text: "Sound " }, { text: "familiar?", accent: true }]}
+                  fontSize={(portrait ? 76 : 84) * unit}
+                  color="var(--color-paper)"
+                />
+              </div>
             </div>
           </div>
         )}
 
-        {/* ---------------------------------------------------------- shots */}
-        {SHOTS.map((shot, i) => {
-          const o = beatOpacity(t, shot.start, shot.dur, 320);
-          if (o <= 0.001) return null;
-          const inP = softOut(seg(t, shot.start, 640));
-          const float = 8 * Math.sin((t - shot.start) / 1250 + i * 2.1);
-          const dir = shot.from === "left" ? -1 : 1;
-          const textSize = (portrait ? 72 : 80) * unit;
-          return (
-            <div
-              key={i}
-              style={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                flexDirection: portrait ? "column" : shot.from === "left" ? "row" : "row-reverse",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: portrait ? 54 * unit : 90 * unit,
-                padding: portrait ? `${90 * unit}px 6%` : "0 7%",
-                opacity: o,
-              }}
-            >
-              {/* the sentence */}
-              <div style={{ flex: portrait ? undefined : "0 1 46%", width: portrait ? "94%" : undefined }}>
-                <KineticLine
-                  t={t}
-                  start={shot.start + 260}
-                  words={shot.words}
-                  fontSize={textSize}
-                  exitAt={shot.start + shot.dur - 100}
-                  align={portrait ? "center" : "left"}
-                />
-                {shot.sub && (
-                  <p
-                    style={{
-                      marginTop: 22 * unit,
-                      fontSize: textSize * 0.42,
-                      color: "var(--color-ink-soft)",
-                      textAlign: portrait ? "center" : "left",
-                      opacity: clamp01(seg(t, shot.start + 1400, 600)),
-                      transform: `translateY(${lerp(14, 0, easeOut(seg(t, shot.start + 1400, 600)))}px)`,
-                    }}
-                  >
-                    {shot.sub}
-                  </p>
-                )}
-              </div>
-              {/* the card */}
+        {/* ------------------------------------- 2 · the paper act (rings) */}
+        {t >= T.promise - 600 && t < T.m1 + 700 && (
+          <Slab t={t} at={T.promise - 560} bg="var(--color-paper)" from="right">
+            <RingField t={t} cx={portrait ? 50 : 58} cy={portrait ? 42 : 46} unit={unit} />
+            <Glow t={t} at={T.reveal + 250} unit={unit} sun />
+
+            {/* the promise */}
+            {t < T.reveal + 400 && (
               <div
                 style={{
-                  transform: `translateY(${lerp(120, 0, inP) + float}px) translateX(${lerp(dir * 80, 0, inP)}px) rotate(${lerp(dir * 6, dir * 1.2, inP)}deg) scale(${lerp(0.92, 1, inP)})`,
+                  position: "absolute",
+                  inset: 0,
+                  display: "grid",
+                  placeItems: "center",
+                  padding: "0 8%",
+                  ...exitLift(t, T.reveal - 280),
                 }}
               >
-                <div
-                  style={{
-                    width: "fit-content",
-                    borderRadius: 30 * unit,
-                    background: "var(--color-paper)",
-                    boxShadow: `0 ${26 * unit}px ${70 * unit}px rgba(28,38,36,0.16), 0 ${6 * unit}px ${18 * unit}px rgba(28,38,36,0.08)`,
-                    padding: 10 * unit,
-                  }}
-                >
-                  {/* zoom, not transform: it scales layout too, so the card
-                      wraps the demo at its rendered size. Chrome-only is fine —
-                      this page only ever renders in the recorder. */}
-                  <div style={{ width: 420, zoom: demoScale }}>{shot.demo}</div>
+                <div style={{ textAlign: "center", maxWidth: portrait ? "96%" : "78%" }}>
+                  <LineIn
+                    lt={t}
+                    at={T.promise}
+                    words={[{ text: "Your to-do list" }]}
+                    fontSize={headSize * 1.06}
+                  />
+                  <div style={{ height: 8 * unit }} />
+                  <LineIn
+                    lt={t}
+                    at={T.promise + 240}
+                    words={[{ text: "shouldn't make you " }, { text: "feel bad.", accent: true }]}
+                    fontSize={headSize * 1.06}
+                  />
                 </div>
               </div>
-            </div>
+            )}
+
+            {/* the reveal */}
+            {t >= T.reveal - 100 && t < T.f1 + 400 && (
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "grid",
+                  placeItems: "center",
+                  ...exitLift(t, T.f1 - 280),
+                }}
+              >
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20 * unit }}>
+                    <span
+                      style={{
+                        color: "var(--color-sun)",
+                        transform: `scale(${Math.max(0.001, markP)}) rotate(${lerp(-100, 0, markP)}deg)`,
+                        display: "inline-flex",
+                      }}
+                    >
+                      <Mark size={(portrait ? 96 : 106) * unit} />
+                    </span>
+                    <span
+                      className="font-display"
+                      style={{
+                        fontSize: (portrait ? 104 : 116) * unit,
+                        letterSpacing: "-0.03em",
+                        opacity: clamp01(wordP * 1.25),
+                        transform: `translateY(${lerp(30, 0, wordP)}px)`,
+                        display: "inline-block",
+                      }}
+                    >
+                      kairo
+                    </span>
+                  </div>
+                  <p
+                    style={{
+                      marginTop: 24 * unit,
+                      fontSize: (portrait ? 40 : 36) * unit,
+                      fontWeight: 500,
+                      color: "var(--color-ink-soft)",
+                      opacity: clamp01(expoOut(seg(t, T.reveal + 700, 600)) * 1.25),
+                      transform: `translateY(${lerp(24, 0, expoOut(seg(t, T.reveal + 700, 600)))}px)`,
+                    }}
+                  >
+                    A daily planner that forgives.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* the features: headline up top, the product below, then rest */}
+            {FEATURES.map((f, i) => {
+              if (t < f.start - 100 || t > f.start + f.dur + 400) return null;
+              const lt = t - f.start;
+              const cardP = expoOut(seg(lt, 300, 700));
+              return (
+                <div
+                  key={i}
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: portrait ? 44 * unit : 38 * unit,
+                    padding: portrait ? "0 5%" : "0 8%",
+                    ...exitLift(lt, f.dur - 280),
+                  }}
+                >
+                  <div style={{ textAlign: "center" }}>
+                    <LineIn lt={lt} at={0} words={f.head} fontSize={headSize} />
+                    <p
+                      style={{
+                        marginTop: 14 * unit,
+                        fontSize: headSize * 0.36,
+                        fontWeight: 500,
+                        color: "var(--color-ink-soft)",
+                        opacity: clamp01(expoOut(seg(lt, 900, 550)) * 1.25),
+                        transform: `translateY(${lerp(18, 0, expoOut(seg(lt, 900, 550)))}px)`,
+                      }}
+                    >
+                      {f.sub}
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      transform: `translateY(${lerp(0.42 * stage.h, 0, cardP)}px) rotate(${f.tilt * cardP}deg)`,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "fit-content",
+                        borderRadius: 28 * unit,
+                        background: "var(--color-paper)",
+                        boxShadow: `0 ${26 * unit}px ${70 * unit}px rgba(28,38,36,0.16), 0 ${6 * unit}px ${18 * unit}px rgba(28,38,36,0.08)`,
+                        padding: 10 * unit,
+                      }}
+                    >
+                      {/* zoom, not transform: it scales layout too, so the
+                          card wraps the demo at its rendered size */}
+                      <div style={{ width: 420, zoom: demoScale }}>{f.demo}</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </Slab>
+        )}
+
+        {/* --------------------------------------- 3 · the montage (slabs) */}
+        {MONTAGE.map((m, i) => {
+          if (t < m.start - 100 || t > m.start + m.dur + 700) return null;
+          return (
+            <Slab key={i} t={t} at={m.start} bg={m.bg} from={i % 2 === 0 ? "left" : "right"}>
+              <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", padding: "0 6%" }}>
+                <LineIn
+                  lt={t - m.start}
+                  at={160}
+                  words={[{ text: m.text }]}
+                  fontSize={slabSize}
+                  color="#fff"
+                />
+              </div>
+            </Slab>
           );
         })}
 
-        {/* ---------------------------------------------------- the montage */}
-        {RAPID.map((r, i) => {
-          const o = beatOpacity(t, r.start, RAPID_DUR, 260);
-          if (o <= 0.001) return null;
-          return (
+        {/* --------------------------------------------- 4 · offer (teal) */}
+        {t >= T.offer - 100 && t < T.end + 700 && (
+          <Slab t={t} at={T.offer} bg="var(--color-sun)" from="left">
             <div
-              key={i}
               style={{
                 position: "absolute",
                 inset: 0,
                 display: "grid",
                 placeItems: "center",
-                opacity: o,
+                padding: "0 6%",
               }}
             >
-              <div style={{ transform: `translateY(${(i % 2 === 0 ? -1 : 1) * 18 * unit}px)` }}>
-                <KineticLine
-                  t={t}
-                  start={r.start - 140}
-                  words={r.words}
-                  fontSize={(portrait ? 92 : 104) * unit}
-                  exitAt={r.start + RAPID_DUR - 40}
-                />
+              <div style={{ textAlign: "center", color: "#fff", transform: `scale(${1 + kick * 1.3})` }}>
+                <div
+                  className="font-display"
+                  style={{
+                    fontSize: (portrait ? 122 : 142) * unit,
+                    fontStyle: "italic",
+                    fontWeight: 500,
+                    letterSpacing: "-0.025em",
+                    lineHeight: 1,
+                    opacity: clamp01(expoOut(seg(t, T.offer + 260, 620)) * 1.25),
+                    transform: `translateY(${lerp(70, 0, expoOut(seg(t, T.offer + 260, 620)))}px)`,
+                  }}
+                >
+                  Free for 7 days.
+                </div>
+                <p
+                  style={{
+                    marginTop: 26 * unit,
+                    fontSize: (portrait ? 42 : 40) * unit,
+                    fontWeight: 600,
+                    opacity: clamp01(expoOut(seg(t, T.offer + 850, 550)) * 1.25) * 0.95,
+                    transform: `translateY(${lerp(22, 0, expoOut(seg(t, T.offer + 850, 550)))}px)`,
+                  }}
+                >
+                  Everything unlocked. No card needed.
+                </p>
               </div>
             </div>
-          );
-        })}
+          </Slab>
+        )}
+
+        {/* ----------------------------------------------- 5 · end (paper) */}
+        {t >= T.end - 100 && (
+          <Slab t={t} at={T.end} bg="var(--color-paper)" from="right">
+            <RingField t={t} cx={50} cy={portrait ? 44 : 46} unit={unit} />
+            <Glow t={t} at={T.end + 400} unit={unit} sun />
+            <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18 * unit }}>
+                  <span
+                    style={{
+                      color: "var(--color-sun)",
+                      transform: `scale(${Math.max(0.001, eMark)}) rotate(${lerp(-100, 0, eMark)}deg)`,
+                      display: "inline-flex",
+                    }}
+                  >
+                    <Mark size={(portrait ? 84 : 92) * unit} />
+                  </span>
+                  <span
+                    className="font-display"
+                    style={{
+                      fontSize: (portrait ? 92 : 100) * unit,
+                      letterSpacing: "-0.03em",
+                      opacity: clamp01(expoOut(seg(t, T.end + 450, 600)) * 1.25),
+                      transform: `translateY(${lerp(26, 0, expoOut(seg(t, T.end + 450, 600)))}px)`,
+                      display: "inline-block",
+                    }}
+                  >
+                    kairo
+                  </span>
+                </div>
+                <p
+                  style={{
+                    marginTop: 22 * unit,
+                    fontSize: (portrait ? 38 : 34) * unit,
+                    fontWeight: 500,
+                    color: "var(--color-ink-soft)",
+                    opacity: clamp01(expoOut(seg(t, T.end + 900, 600)) * 1.25),
+                    transform: `translateY(${lerp(18, 0, expoOut(seg(t, T.end + 900, 600)))}px)`,
+                  }}
+                >
+                  A daily planner that forgives.
+                </p>
+                <div
+                  style={{
+                    marginTop: 40 * unit,
+                    display: "inline-block",
+                    background: "var(--color-ink)",
+                    color: "var(--color-paper)",
+                    borderRadius: 999,
+                    padding: `${18 * unit}px ${44 * unit}px`,
+                    fontSize: (portrait ? 34 : 30) * unit,
+                    fontWeight: 700,
+                    letterSpacing: "-0.01em",
+                    opacity: clamp01(expoOut(seg(t, T.end + 1350, 600)) * 1.25),
+                    transform: `translateY(${lerp(22, 0, expoOut(seg(t, T.end + 1350, 600)))}px)`,
+                  }}
+                >
+                  kairo.jaimansoni.com
+                </div>
+              </div>
+            </div>
+          </Slab>
+        )}
       </div>
-
-      {/* ------------------------------------------------------- teal flood */}
-      {floodR > 0.5 && (
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background: "var(--color-sun)",
-            clipPath: `circle(${floodR}% at 50% 50%)`,
-            display: "grid",
-            placeItems: "center",
-          }}
-        >
-          {/* soft light breathing out inside the flood — no lines here either */}
-          {[0, 380].map((delay, i) => {
-            const p = seg(t, FLOOD.start + 450 + delay, 1900);
-            if (p <= 0 || p >= 1) return null;
-            const size = 1200 * unit;
-            return (
-              <div
-                key={i}
-                aria-hidden
-                style={{
-                  position: "absolute",
-                  left: `calc(50% - ${size / 2}px)`,
-                  top: `calc(50% - ${size / 2}px)`,
-                  width: size,
-                  height: size,
-                  borderRadius: "50%",
-                  background:
-                    "radial-gradient(circle, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0) 72%)",
-                  transform: `scale(${lerp(0.4, 2.1, easeOut(p))})`,
-                  opacity: 1 - p,
-                }}
-              />
-            );
-          })}
-          <div style={{ textAlign: "center", color: "#fff", transform: `scale(${1 + kick * 1.4})` }}>
-            <div
-              className="font-display"
-              style={{
-                fontSize: (portrait ? 128 : 148) * unit,
-                fontStyle: "italic",
-                fontWeight: 500,
-                letterSpacing: "-0.025em",
-                lineHeight: 1,
-                opacity: clamp01(seg(t, FLOOD.start + 380, 520) * 1.35),
-                transform: `scale(${lerp(1.18, 1, easeOut(seg(t, FLOOD.start + 380, 560)))})`,
-              }}
-            >
-              7 days free.
-            </div>
-            <p
-              style={{
-                marginTop: 26 * unit,
-                fontSize: (portrait ? 44 : 42) * unit,
-                fontWeight: 600,
-                letterSpacing: "-0.01em",
-                opacity: clamp01(seg(t, FLOOD.start + 950, 500)) * 0.92,
-                transform: `translateY(${lerp(18, 0, easeOut(seg(t, FLOOD.start + 950, 500)))}px)`,
-              }}
-            >
-              Everything unlocked. No card.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* --------------------------------------------------------- end card */}
-      {t >= END.start - 100 && (
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            display: "grid",
-            placeItems: "center",
-            opacity: clamp01(eIn * 1.5),
-          }}
-        >
-          <div style={{ textAlign: "center", transform: `scale(${1 + kick})` }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 18 * unit,
-                transform: `scale(${Math.max(0.001, eMark)})`,
-              }}
-            >
-              <span style={{ color: "var(--color-sun)", transform: `rotate(${lerp(-110, 0, eMark)}deg)`, display: "inline-flex" }}>
-                <Mark size={(portrait ? 84 : 92) * unit} />
-              </span>
-              <span className="font-display" style={{ fontSize: (portrait ? 92 : 100) * unit, letterSpacing: "-0.03em" }}>
-                kairo
-              </span>
-            </div>
-            <p
-              style={{
-                marginTop: 22 * unit,
-                fontSize: (portrait ? 38 : 34) * unit,
-                color: "var(--color-ink-soft)",
-                opacity: clamp01(seg(t, END.start + 700, 600)),
-              }}
-            >
-              A daily planner that forgives.
-            </p>
-            <div
-              style={{
-                marginTop: 40 * unit,
-                display: "inline-block",
-                background: "var(--color-ink)",
-                color: "var(--color-paper)",
-                borderRadius: 999,
-                padding: `${18 * unit}px ${44 * unit}px`,
-                fontSize: (portrait ? 34 : 30) * unit,
-                fontWeight: 700,
-                letterSpacing: "-0.01em",
-                opacity: clamp01(seg(t, END.start + 1150, 600)),
-                transform: `scale(${lerp(0.94, 1, softOut(seg(t, END.start + 1150, 700)))})`,
-              }}
-            >
-              kairo.jaimansoni.com
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
