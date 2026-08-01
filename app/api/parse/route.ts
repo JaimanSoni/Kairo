@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   const gate = await requireFeature(session.userId, "ai-capture");
   if (gate) return gate;
 
-  let body: { text?: unknown; today?: unknown };
+  let body: { text?: unknown; today?: unknown; time?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -26,6 +26,11 @@ export async function POST(request: Request) {
   }
   if (typeof body.text !== "string" || !body.text.trim()) return badRequest("text required");
   const today = isDateString(body.today) ? body.today : new Date().toISOString().slice(0, 10);
+  // the user's local clock; the server's own clock is UTC and would mislead
+  const time =
+    typeof body.time === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(body.time)
+      ? body.time
+      : "12:00";
 
   const lists = await listsCollection();
   // Locked lists stay out of the AI prompt entirely — their names are private.
@@ -35,7 +40,7 @@ export async function POST(request: Request) {
     .map((d) => toList(d, session.userId))
     .filter((l) => !l.locked);
 
-  const parsed = await aiParseTask(body.text, today, userLists);
+  const parsed = await aiParseTask(body.text, today, time, userLists);
   if (!parsed) {
     return NextResponse.json({ error: "AI parse unavailable" }, { status: 502 });
   }

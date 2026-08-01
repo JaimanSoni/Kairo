@@ -38,6 +38,7 @@ function getSpeechRecognition(): (new () => SpeechRec) | null {
 type AiParsed = {
   title: string;
   plannedFor: string | null;
+  plannedTime: string | null;
   dueDate: string | null;
   estimateMin: number | null;
   listId: string | null;
@@ -130,10 +131,12 @@ export function Omnibar() {
     toast: boolean
   ): Promise<{ notes: string[] }> => {
     const today = state.today;
+    const now = new Date();
+    const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
     return fetch("/api/parse", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: raw, today }),
+      body: JSON.stringify({ text: raw, today, time }),
     })
       .then(async (res) => {
         if (!res.ok) return { notes: [] }; // AI unavailable → local parse stands
@@ -157,6 +160,15 @@ export function Omnibar() {
           patch.plannedFor = ai.plannedFor;
           if (current.status === "inbox") patch.status = "planned";
           notes.push(friendlyDay(ai.plannedFor, today));
+        }
+        if (
+          ai.plannedTime &&
+          ai.plannedTime !== current.plannedTime &&
+          untouched("plannedTime", local.plannedTime) &&
+          (patch.plannedFor || current.plannedFor)
+        ) {
+          patch.plannedTime = ai.plannedTime;
+          notes.push(fmtTime12(ai.plannedTime));
         }
         if (ai.dueDate && ai.dueDate !== current.dueDate && untouched("dueDate", local.dueDate)) {
           patch.dueDate = ai.dueDate;
