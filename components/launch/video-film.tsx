@@ -37,6 +37,8 @@ const lerp = (a: number, b: number, x: number) => a + (b - a) * x;
 /** The whip: nearly all of the travel happens in the first fifth. */
 const expoOut = (x: number) => (x >= 1 ? 1 : x <= 0 ? 0 : 1 - Math.pow(2, -10 * x));
 const easeOut = (x: number) => 1 - Math.pow(1 - x, 3);
+/** Softer than the whip: decelerates long, lands with no edge at all. */
+const quintOut = (x: number) => 1 - Math.pow(1 - clamp01(x), 5);
 const easeInOut = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
 const seg = (t: number, from: number, dur: number) => clamp01((t - from) / dur);
 
@@ -54,20 +56,21 @@ function impulse(t: number, at: number, span = 650): number {
  * everything is timed from the scene's own zero.
  */
 const T = {
-  chaos: 0, //          ink   the badge counts up, "Sound familiar?"
+  chaos: 0, //          ink   the badge counts up, "Sounds familiar?"
   promise: 4400, //     paper "Your to-do list shouldn't make you feel bad."
-  reveal: 7900, //            mark + kairo + tagline
-  f1: 11600, //               Type it. AI plans it.       (capture demo)
-  f2: 16100, //               See only today.             (today demo)
-  f3: 20600, //               Nothing turns red.          (fresh start demo)
-  f4: 25100, //               One task at a time.         (focus demo)
-  m1: 29800, //         teal  Share lists.
-  m2: 31300, //         ink   Lock what's private.
-  m3: 32800, //         teal  See your month.
-  offer: 34300, //      teal  Free for 7 days.
-  end: 38600, //        paper the mark, the name, the address
+  intro: 7700, //             "Introducing" — the held breath before the name
+  reveal: 9500, //            mark + kairo + tagline
+  f1: 13200, //               Type it. AI plans it.       (capture demo)
+  f2: 17700, //               See only today.             (today demo)
+  f3: 22200, //               Nothing turns red.          (fresh start demo)
+  f4: 26700, //               One task at a time.         (focus demo)
+  m1: 31400, //         teal  Share lists.
+  m2: 32900, //         ink   Lock what's private.
+  m3: 34400, //         teal  See your month.
+  offer: 35900, //      teal  Free for 7 days.
+  end: 40200, //        paper the mark, the name, the address
 };
-export const DURATION = 44500;
+export const DURATION = 46100;
 
 const FEATURES = [
   {
@@ -272,24 +275,45 @@ function Glow({ t, at, unit, sun }: { t: number; at: number; unit: number; sun?:
 }
 
 /**
- * A scene slab: a full-bleed colour that wipes across at its moment and
- * then IS the background until the next slab covers it. The wipe is the
- * cut — nothing ever crossfades between scenes.
+ * A scene slab: a full-bleed colour that arrives at its moment and then IS
+ * the background until the next slab covers it. Two arrivals: a side wipe
+ * for act changes, and the flood — a circle of colour swelling out of the
+ * centre — for the whole closing run. The arrival is the cut; nothing ever
+ * crossfades between scenes.
  */
 function Slab({
   t,
   at,
   bg,
   from,
+  wipeMs,
   children,
 }: {
   t: number;
   at: number;
   bg: string;
-  from: "left" | "right";
+  from: "left" | "right" | "circle";
+  wipeMs?: number;
   children?: React.ReactNode;
 }) {
-  const p = expoOut(seg(t, at, 560));
+  if (t < at) return null;
+  if (from === "circle") {
+    const p = easeInOut(seg(t, at, wipeMs ?? 750));
+    return (
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: bg,
+          clipPath: p < 1 ? `circle(${p * 150}% at 50% 50%)` : undefined,
+          overflow: "hidden",
+        }}
+      >
+        {children}
+      </div>
+    );
+  }
+  const p = expoOut(seg(t, at, wipeMs ?? 560));
   if (p <= 0) return null;
   const off = (from === "left" ? -1 : 1) * (1 - p) * 102;
   return (
@@ -480,7 +504,7 @@ export function VideoLaunchFilm() {
                 <LineIn
                   lt={t}
                   at={2750}
-                  words={[{ text: "Sound " }, { text: "familiar?", accent: true }]}
+                  words={[{ text: "Sounds " }, { text: "familiar?", accent: true }]}
                   fontSize={(portrait ? 76 : 84) * unit}
                   color="var(--color-paper)"
                 />
@@ -496,7 +520,7 @@ export function VideoLaunchFilm() {
             <Glow t={t} at={T.reveal + 250} unit={unit} sun />
 
             {/* the promise */}
-            {t < T.reveal + 400 && (
+            {t < T.intro + 400 && (
               <div
                 style={{
                   position: "absolute",
@@ -504,7 +528,7 @@ export function VideoLaunchFilm() {
                   display: "grid",
                   placeItems: "center",
                   padding: "0 8%",
-                  ...exitLift(t, T.reveal - 280),
+                  ...exitLift(t, T.intro - 280),
                 }}
               >
                 <div style={{ textAlign: "center", maxWidth: portrait ? "96%" : "78%" }}>
@@ -522,6 +546,26 @@ export function VideoLaunchFilm() {
                     fontSize={headSize * 1.06}
                   />
                 </div>
+              </div>
+            )}
+
+            {/* the held breath */}
+            {t >= T.intro - 100 && t < T.reveal + 400 && (
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "grid",
+                  placeItems: "center",
+                  ...exitLift(t, T.reveal - 280),
+                }}
+              >
+                <LineIn
+                  lt={t}
+                  at={T.intro}
+                  words={[{ text: "Introducing", accent: true }]}
+                  fontSize={headSize * 0.92}
+                />
               </div>
             )}
 
@@ -580,7 +624,9 @@ export function VideoLaunchFilm() {
             {FEATURES.map((f, i) => {
               if (t < f.start - 100 || t > f.start + f.dur + 400) return null;
               const lt = t - f.start;
-              const cardP = expoOut(seg(lt, 300, 700));
+              // the card rises, it is not thrown: a short climb on a long
+              // deceleration, fading in as it comes, settling into its tilt
+              const cardP = quintOut(seg(lt, 320, 900));
               return (
                 <div
                   key={i}
@@ -613,7 +659,8 @@ export function VideoLaunchFilm() {
                   </div>
                   <div
                     style={{
-                      transform: `translateY(${lerp(0.42 * stage.h, 0, cardP)}px) rotate(${f.tilt * cardP}deg)`,
+                      opacity: clamp01(cardP * 1.6),
+                      transform: `translateY(${lerp(120 * unit, 0, cardP)}px) scale(${lerp(0.96, 1, cardP)}) rotate(${f.tilt * cardP}deg)`,
                     }}
                   >
                     <div
@@ -640,7 +687,7 @@ export function VideoLaunchFilm() {
         {MONTAGE.map((m, i) => {
           if (t < m.start - 100 || t > m.start + m.dur + 700) return null;
           return (
-            <Slab key={i} t={t} at={m.start} bg={m.bg} from={i % 2 === 0 ? "left" : "right"}>
+            <Slab key={i} t={t} at={m.start} bg={m.bg} from="circle" wipeMs={620}>
               <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", padding: "0 6%" }}>
                 <LineIn
                   lt={t - m.start}
@@ -656,7 +703,7 @@ export function VideoLaunchFilm() {
 
         {/* --------------------------------------------- 4 · offer (teal) */}
         {t >= T.offer - 100 && t < T.end + 700 && (
-          <Slab t={t} at={T.offer} bg="var(--color-sun)" from="left">
+          <Slab t={t} at={T.offer} bg="var(--color-sun)" from="circle" wipeMs={800}>
             <div
               style={{
                 position: "absolute",
@@ -699,7 +746,7 @@ export function VideoLaunchFilm() {
 
         {/* ----------------------------------------------- 5 · end (paper) */}
         {t >= T.end - 100 && (
-          <Slab t={t} at={T.end} bg="var(--color-paper)" from="right">
+          <Slab t={t} at={T.end} bg="var(--color-paper)" from="circle" wipeMs={800}>
             <RingField t={t} cx={50} cy={portrait ? 44 : 46} unit={unit} />
             <Glow t={t} at={T.end + 400} unit={unit} sun />
             <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
