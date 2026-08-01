@@ -11,6 +11,7 @@ import { usePathname } from "next/navigation";
  */
 const SECTIONS = [
   { href: "/admin", label: "Overview" },
+  { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/plans", label: "Plans" },
   { href: "/admin/payments", label: "Payments" },

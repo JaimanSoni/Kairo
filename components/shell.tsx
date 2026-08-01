@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { hiddenListIds, useApp } from "./store";
 import { navigateApp } from "./app-views";
 import { animalAvatar } from "@/lib/avatars";
+import { track } from "@/lib/analytics-client";
 import { upgradeHref, useCan } from "./entitlements";
 import { registerServiceWorker } from "@/lib/push-client";
 import { playNotify } from "@/lib/sound";
@@ -65,7 +66,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        setPaletteOpen((v) => !v);
+        setPaletteOpen((v) => {
+          if (!v) track("search-open");
+          return !v;
+        });
         return;
       }
 
@@ -118,6 +122,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
         <button
           onClick={() => setOmnibar(true)}
+          data-track="capture-open"
           className="mt-6 flex items-center justify-between rounded-xl bg-sun px-3.5 py-2.5 text-sm font-bold text-on-accent shadow-lg shadow-sun/25 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-sun/30"
         >
           <span className="flex items-center gap-2">
@@ -128,6 +133,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
         <button
           onClick={() => setPaletteOpen(true)}
+          data-track="search-open"
           className="mt-2 flex items-center justify-between rounded-xl border border-line bg-card/60 px-3.5 py-2 text-sm text-ink-faint transition-colors hover:border-ink-faint hover:text-ink-soft"
         >
           <span className="flex items-center gap-2">
@@ -236,6 +242,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <button
             onClick={() => setOmnibar(true)}
             aria-label="Capture, AI sorts the details"
+            data-track="capture-open"
             className="grid size-12 -translate-y-3 place-items-center rounded-full bg-gradient-to-br from-sun to-sky text-on-accent shadow-lg shadow-sun/35 transition-transform active:scale-95"
           >
             {/* sparkle — capture is AI-assisted */}

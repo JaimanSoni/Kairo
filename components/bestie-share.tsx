@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { canvasToBlob, drawShareCard } from "@/lib/share-card";
+import { track } from "@/lib/analytics-client";
 import { Modal } from "./ui";
 
 /**
@@ -86,6 +87,7 @@ export function ShareWithBestie({
     <>
       <button
         onClick={() => setOpen(true)}
+        data-track="share-bestie-open"
         className="anim-rise mt-5 inline-flex items-center gap-2 rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-paper shadow-lg shadow-ink/15 transition-transform active:scale-[0.99]"
       >
         <span aria-hidden>💌</span> Share it with your bestie
@@ -164,6 +166,7 @@ function ShareSheet({
     if (!file) return;
     try {
       await navigator.share({ files: [file], text: caption });
+      track("share-bestie-shared");
     } catch (err) {
       // AbortError just means they backed out of the sheet; not a failure
       if ((err as Error)?.name !== "AbortError") {
@@ -224,6 +227,7 @@ function ShareSheet({
           <a
             href={url ?? "#"}
             download="kairo-day-won.png"
+            data-track="share-bestie-saved"
             aria-disabled={!url}
             className={`flex-1 rounded-full border border-line bg-card px-5 py-2.5 text-center text-sm font-semibold transition-colors hover:border-sun hover:text-sun-deep ${
               url ? "" : "pointer-events-none opacity-50"

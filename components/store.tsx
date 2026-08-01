@@ -15,6 +15,7 @@ import { nextOccurrence } from "@/lib/repeat";
 import { cancelPush } from "@/lib/push-client";
 import type { ParsedInput } from "@/lib/nlp";
 import { avatarChoiceUrl } from "@/lib/avatars";
+import { track } from "@/lib/analytics-client";
 
 /* ---------------- state ---------------- */
 
@@ -507,6 +508,7 @@ export function AppProvider({
       const t = stateRef.current.tasks[id];
       if (!t || t.status === "done") return;
 
+      track("task-complete");
       if (t.reminderAt) cancelPush(`remind-${id}`); // a done task needs no reminder
 
       if (t.repeat) {
@@ -911,6 +913,7 @@ export function AppProvider({
       const prev = stateRef.current.user.picture;
       const next = avatarChoiceUrl(choice) ?? stateRef.current.user.googlePicture;
       dispatch({ type: "SET_USER_PICTURE", picture: next });
+      track("avatar-change", { choice });
       api("/api/profile/avatar", { method: "POST", body: JSON.stringify({ choice }) }).catch(() =>
         syncError(() => dispatch({ type: "SET_USER_PICTURE", picture: prev }))
       );

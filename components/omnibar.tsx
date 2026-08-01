@@ -6,6 +6,7 @@ import { parseQuickAdd, type ParsedInput } from "@/lib/nlp";
 import { friendlyDay, fmtMinutes, fmtTime12 } from "@/lib/dates";
 import { repeatLabel } from "@/lib/repeat";
 import { useApp, visibleLists } from "./store";
+import { track } from "@/lib/analytics-client";
 import { Icon3d } from "./img3d";
 import { Chip, Kbd, Modal } from "./ui";
 
@@ -167,6 +168,7 @@ export function Omnibar() {
   };
 
   const submit = (keepOpen: boolean) => {
+    track("capture");
     const raw = text.trim();
     if (!raw) return;
     const local = parseQuickAdd(raw, lists);

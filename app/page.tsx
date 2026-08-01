@@ -184,6 +184,7 @@ export default async function Landing({
           ) : (
             <a
               href="/api/auth/google"
+              data-track="signin-google"
               className="flex items-center gap-2 rounded-full bg-ink py-1.5 pl-1.5 pr-4 text-sm font-semibold text-paper transition-all hover:-translate-y-0.5 hover:shadow-md"
             >
               <GoogleBadge size={26} /> Sign in
@@ -268,6 +269,7 @@ export default async function Landing({
             ) : (
               <a
                 href="/api/auth/google"
+              data-track="signin-google"
                 className="flex items-center gap-3 rounded-full bg-sun py-2.5 pl-2.5 pr-8 text-base font-semibold text-on-accent shadow-xl shadow-sun/25 transition-all hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-sun/30 active:translate-y-0"
               >
                 <GoogleBadge size={34} /> Continue with Google
@@ -450,6 +452,7 @@ export default async function Landing({
         </p>
         <a
           href="/api/auth/google"
+              data-track="signin-google"
           className="mt-8 inline-flex items-center gap-3 rounded-full bg-ink px-8 py-4 text-base font-semibold text-paper shadow-xl shadow-ink/20 transition-all hover:-translate-y-0.5 hover:shadow-2xl"
         >
           Start your first day →

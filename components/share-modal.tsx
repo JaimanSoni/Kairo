@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { List, Task } from "@/lib/types";
 import { useApp } from "./store";
+import { track } from "@/lib/analytics-client";
 import { ListMark } from "./img3d";
 import { Modal } from "./ui";
 
@@ -46,6 +47,7 @@ export function ShareListModal({ list, onClose }: { list: List; onClose: () => v
       } else {
         setEmail("");
         upsertList(data.list as List);
+        track("list-share");
         showToast({ message: `👥 Shared with ${data.member.name || data.member.email}` });
         loadMembers();
       }
@@ -201,6 +203,7 @@ export function SendTaskModal({ task, onClose }: { task: Task; onClose: () => vo
         setBusy(false);
         return;
       }
+      track("task-send");
       showToast({ message: `📤 Sent to ${data.to}` });
       onClose();
     } catch {
