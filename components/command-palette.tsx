@@ -110,7 +110,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Modal onClose={onClose}>
+    <Modal onClose={onClose} anchor="top">
       <div className="p-3">
         <div className="flex items-center gap-2.5 border-b border-line px-2 pb-3">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 text-ink-faint">
@@ -141,7 +141,8 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
           <Kbd>esc</Kbd>
         </div>
 
-        <div ref={listRef} className="no-scrollbar max-h-[50vh] overflow-y-auto overscroll-contain pt-2">
+        {/* short enough that the list never reaches under a raised keyboard */}
+        <div ref={listRef} className="no-scrollbar max-h-[44dvh] overflow-y-auto overscroll-contain pt-2 sm:max-h-[50vh]">
           {items.length === 0 && (
             <p className="px-3 py-6 text-center text-sm text-ink-faint">
               Nothing matches “{q}”.

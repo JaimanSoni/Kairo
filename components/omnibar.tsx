@@ -178,7 +178,7 @@ export function Omnibar() {
   };
 
   return (
-    <Modal onClose={() => setOmnibar(false)}>
+    <Modal onClose={() => setOmnibar(false)} anchor="top">
       <div className="p-4">
         <div className="flex items-center gap-2">
           <Icon3d name="feather" size={20} className="shrink-0" />

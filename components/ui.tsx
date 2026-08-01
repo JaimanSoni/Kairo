@@ -159,11 +159,20 @@ export function Modal({
   onClose,
   children,
   wide,
+  anchor = "sheet",
 }: {
   onClose: () => void;
   children: React.ReactNode;
   wide?: boolean;
+  /**
+   * Where the panel lives on a phone. "sheet" is the default bottom sheet;
+   * "top" drops the panel in from above instead — for anything built around
+   * typing, because the keyboard owns the bottom of a phone screen and a
+   * bottom sheet ends up crushed against it. Desktop is identical either way.
+   */
+  anchor?: "sheet" | "top";
 }) {
+  const top = anchor === "top";
   // portals need a DOM; server render and first hydration pass return null
   const mounted = useSyncExternalStore(
     () => () => {},
@@ -186,6 +195,19 @@ export function Modal({
         onClose();
         return;
       }
+      if (top) {
+        // the top panel leaves the way it came: a short lift and fade
+        closingRef.current = true;
+        panel.style.transition = "transform 150ms ease-in, opacity 150ms ease-in";
+        panel.style.transform = "translate3d(0,-16px,0)";
+        panel.style.opacity = "0";
+        if (backdropRef.current) {
+          backdropRef.current.style.transition = "opacity 150ms ease";
+          backdropRef.current.style.opacity = "0";
+        }
+        setTimeout(onClose, 135);
+        return;
+      }
       closingRef.current = true;
 
       const current = panel.getBoundingClientRect().top;
@@ -203,7 +225,7 @@ export function Modal({
       }
       setTimeout(onClose, ms - 20);
     },
-    [onClose]
+    [onClose, top]
   );
 
   const animatedClose = useCallback(() => dismiss(0), [dismiss]);
@@ -245,8 +267,10 @@ export function Modal({
   }, []);
 
   /* drag-to-dismiss (mobile bottom sheet). Native listeners because React's
-     root touch handlers are passive and can't preventDefault scrolling. */
+     root touch handlers are passive and can't preventDefault scrolling. A
+     top-anchored panel has no handle and no sheet gesture. */
   useEffect(() => {
+    if (top) return;
     const panel = panelRef.current;
     if (!panel) return;
 
@@ -355,7 +379,7 @@ export function Modal({
       panel.removeEventListener("touchend", onEnd);
       panel.removeEventListener("touchcancel", onEnd);
     };
-  }, [dismiss]);
+  }, [dismiss, top]);
 
   if (!mounted) return null;
 
@@ -369,8 +393,14 @@ export function Modal({
    */
   return createPortal(
     // bottom sheet on touch, genuinely centred on desktop — it used to sit at a
-    // fixed 12vh from the top, which reads as centred only for the tallest sheets
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
+    // fixed 12vh from the top, which reads as centred only for the tallest
+    // sheets. Top-anchored panels hug the top on a phone, keyboard territory
+    // stays clear below.
+    <div
+      className={`fixed inset-0 z-50 flex justify-center sm:items-center sm:p-4 ${
+        top ? "items-start p-3 pt-[max(0.75rem,env(safe-area-inset-top))]" : "items-end"
+      }`}
+    >
       <div
         ref={backdropRef}
         className="absolute inset-0 bg-ink/30 backdrop-blur-[2px]"
@@ -389,13 +419,15 @@ export function Modal({
           // only the panel's own entrance, not animations from children
           if (e.target === e.currentTarget) clearEntranceAnimation();
         }}
-        className={`anim-modal no-scrollbar relative w-full ${wide ? "sm:max-w-2xl" : "sm:max-w-lg"} max-h-[92dvh] overflow-y-auto overscroll-contain rounded-t-3xl border border-line bg-card pb-[env(safe-area-inset-bottom)] shadow-2xl will-change-transform sm:rounded-2xl sm:pb-0`}
+        className={`${top ? "anim-modal-drop rounded-2xl max-h-[85dvh]" : "anim-modal rounded-t-3xl max-h-[92dvh] pb-[env(safe-area-inset-bottom)]"} no-scrollbar relative w-full ${wide ? "sm:max-w-2xl" : "sm:max-w-lg"} overflow-y-auto overscroll-contain border border-line bg-card shadow-2xl will-change-transform sm:rounded-2xl sm:pb-0`}
         role="dialog"
         aria-modal
       >
-        <div data-sheet-handle className="sticky top-0 z-20 -mb-3 flex touch-none justify-center pb-4 pt-2.5 sm:hidden" aria-hidden>
-          <div className="h-1 w-10 rounded-full bg-ink-faint/40" />
-        </div>
+        {!top && (
+          <div data-sheet-handle className="sticky top-0 z-20 -mb-3 flex touch-none justify-center pb-4 pt-2.5 sm:hidden" aria-hidden>
+            <div className="h-1 w-10 rounded-full bg-ink-faint/40" />
+          </div>
+        )}
         {children}
       </div>
     </div>,

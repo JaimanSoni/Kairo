@@ -390,6 +390,27 @@ input,
   }
 }
 
+/* top-anchored modals (capture, search): they drop in from above so the
+   keyboard can own the bottom of a phone screen without a fight */
+@keyframes modal-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-22px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.anim-modal-drop {
+  animation: modal-drop 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@media (min-width: 640px) {
+  .anim-modal-drop {
+    animation: pop-in 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .anim-rise,
   .anim-pop,
@@ -401,6 +422,7 @@ input,
   .anim-bar,
   .anim-shimmer,
   .anim-modal,
+  .anim-modal-drop,
   .demo-chip,
   .demo-caret,
   .demo-type,
