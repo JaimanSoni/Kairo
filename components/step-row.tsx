@@ -56,6 +56,7 @@ export function StepRow({ task, step }: { task: Task; step: Subtask }) {
       <button
         onClick={() => toggleStep(task.id, step.id)}
         aria-label={step.done ? "Mark step as not done" : "Mark step as done"}
+        data-tip={step.done ? "Not done after all" : "Done"}
         className={`grid size-[18px] shrink-0 place-items-center rounded-full border-2 transition-colors ${
           step.done
             ? "border-moss bg-moss text-on-accent"
@@ -67,7 +68,7 @@ export function StepRow({ task, step }: { task: Task; step: Subtask }) {
       <button
         className="flex min-w-0 flex-1 items-baseline gap-2 text-left"
         onClick={() => setEditing(task.id)}
-        title={`Part of: ${task.title}`}
+        data-tip={`Part of: ${task.title}`}
       >
         <span className={`truncate text-sm ${step.done ? "text-ink-faint line-through" : ""}`}>
           {step.title}

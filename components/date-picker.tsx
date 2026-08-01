@@ -80,6 +80,7 @@ export function DatePicker({
           onClick={() => moveMonth(-1)}
           disabled={!canGoBack}
           aria-label="Previous month"
+          data-tip="Previous month"
           className="grid size-8 place-items-center rounded-lg text-ink-soft transition-colors hover:bg-paper-deep disabled:opacity-25"
         >
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
@@ -92,6 +93,7 @@ export function DatePicker({
         <button
           onClick={() => moveMonth(1)}
           aria-label="Next month"
+          data-tip="Next month"
           className="grid size-8 place-items-center rounded-lg text-ink-soft transition-colors hover:bg-paper-deep"
         >
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none">

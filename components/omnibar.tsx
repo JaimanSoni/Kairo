@@ -198,6 +198,7 @@ export function Omnibar() {
             <button
               onClick={toggleVoice}
               aria-label={listening ? "Stop listening" : "Speak a task"}
+              data-tip={listening ? "Stop listening" : "Speak instead"}
               className={`grid size-10 shrink-0 place-items-center rounded-full transition-colors ${
                 listening
                   ? "anim-pulse bg-clay text-on-accent"
@@ -211,6 +212,7 @@ export function Omnibar() {
             onClick={() => submit(false)}
             disabled={!parsed.title}
             aria-label="Capture"
+            data-tip="Capture (Enter)"
             className="grid size-10 shrink-0 place-items-center rounded-full bg-ink text-paper transition-opacity disabled:opacity-25"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">

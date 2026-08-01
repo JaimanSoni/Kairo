@@ -270,7 +270,7 @@ function TodayCapture({ today, hasTasks }: { today: string; hasTasks: boolean })
               type="button"
               onClick={() => setDest(d)}
               aria-pressed={dest === d}
-              title={d === "today" ? "Add to today" : "Add to the inbox, undated"}
+              data-tip={d === "today" ? "Add to today" : "Add to the inbox, undated"}
               className={`rounded-full px-2.5 py-1 capitalize transition-colors ${
                 dest === d ? "bg-card text-ink shadow-sm" : "text-ink-faint hover:text-ink-soft"
               }`}
@@ -380,7 +380,7 @@ export function AddRow({
         onMouseDown={(e) => e.preventDefault()}
         onClick={submit}
         aria-label="Add task"
-        title="Add task"
+        data-tip="Add task"
         className={`grid size-7 shrink-0 place-items-center rounded-lg transition-colors ${
           text.trim()
             ? "text-sun-deep hover:bg-sun-soft"

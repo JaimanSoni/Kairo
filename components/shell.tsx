@@ -193,6 +193,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <button
               onClick={() => setPaletteOpen(true)}
               aria-label="Search"
+              data-tip="Search"
+              data-tip-side="bottom"
               className="grid size-8 place-items-center rounded-full text-ink-soft hover:bg-paper-deep"
             >
               <svg width="17" height="17" viewBox="0 0 16 16" fill="none">
@@ -200,7 +202,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </button>
-            <button onClick={() => setProfileOpen(true)} aria-label="Profile and settings">
+            <button
+              onClick={() => setProfileOpen(true)}
+              aria-label="Profile and settings"
+              data-tip="Profile and settings"
+              data-tip-side="bottom"
+            >
               <Avatar name={state.user.name} picture={state.user.picture} size={8} />
             </button>
           </span>
@@ -302,7 +309,7 @@ function ProfileSheet({
             <div className="truncate text-base font-bold">{name}</div>
             <div className="truncate text-sm text-ink-soft">{email}</div>
           </div>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-ink-faint hover:bg-paper-deep" aria-label="Close">
+          <button onClick={onClose} className="rounded-lg p-1.5 text-ink-faint hover:bg-paper-deep" aria-label="Close" data-tip="Close">
             <IconX />
           </button>
         </div>
@@ -411,7 +418,7 @@ function WorkingOn({ className = "" }: { className?: string }) {
       <button
         onClick={() => setEditing(task.id)}
         className="min-w-0 flex-1 text-left"
-        title="Open this task"
+        data-tip="Open this task"
       >
         <span className="block text-[10px] font-semibold uppercase tracking-wide text-sky">
           Working on
@@ -421,7 +428,7 @@ function WorkingOn({ className = "" }: { className?: string }) {
       <button
         onClick={() => toggleStarted(task.id)}
         aria-label="Stop working on this"
-        title="Stop working on this"
+        data-tip="Stop working on this"
         className="grid size-6 shrink-0 place-items-center rounded-full text-sky transition-colors hover:bg-sky hover:text-on-accent"
       >
         <svg width="9" height="9" viewBox="0 0 12 12" fill="currentColor" aria-hidden>

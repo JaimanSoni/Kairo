@@ -191,7 +191,7 @@ export function ListsView() {
           {!reordering && allSectionIds.length > 1 && (
             <button
               onClick={() => setFolded(allFolded ? [] : allSectionIds)}
-              title={allFolded ? "Expand every section" : "Collapse every section"}
+              data-tip={allFolded ? "Expand every section" : "Collapse every section"}
               className="flex h-9 items-center gap-1.5 rounded-full border border-line bg-card px-3.5 text-xs font-medium text-ink-soft hover:border-ink-faint hover:text-ink"
             >
               <Chevron open={!allFolded} />
@@ -626,7 +626,7 @@ function Section({
           </h2>
         )}
         {locked && (
-          <span className="shrink-0 text-ink-faint" title="PIN-protected list">
+          <span className="shrink-0 text-ink-faint" data-tip="PIN-protected list">
             <LockGlyph />
           </span>
         )}
@@ -637,7 +637,7 @@ function Section({
         {peopleCount > 0 && (
           <span
             className="shrink-0 rounded-md bg-sky-soft px-1.5 py-0.5 text-[11px] font-medium text-sky"
-            title="Shared list"
+            data-tip="Shared list"
           >
             👥 {peopleCount}
           </span>
@@ -727,7 +727,7 @@ function SectionMenu({
         onClick={() => setOpen((v) => !v)}
         aria-label="List actions"
         aria-expanded={open}
-        title="List actions"
+        data-tip="More"
         className={`grid size-8 place-items-center rounded-lg text-ink-faint transition-colors hover:bg-paper-deep hover:text-ink ${
           open ? "bg-paper-deep text-ink" : ""
         }`}

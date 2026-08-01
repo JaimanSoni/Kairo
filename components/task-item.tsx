@@ -148,6 +148,7 @@ export function TaskItem({
       <button
         onClick={toggle}
         aria-label={done ? "Mark as not done" : "Mark as done"}
+        data-tip={done ? "Not done after all" : "Done"}
         className={`grid size-[22px] shrink-0 place-items-center rounded-full border-2 transition-colors ${
           done || checking
             ? "anim-check border-moss bg-moss text-on-accent"
@@ -171,12 +172,12 @@ export function TaskItem({
           }}
           aria-pressed={running}
           aria-label={running ? "Stop working on this" : "Start working on this"}
-          title={
+          data-tip={
             running
               ? "Stop working on this"
               : task.estimateMin != null
-                ? `Start — focus for ~${fmtMinutes(task.estimateMin)}`
-                : "Start — pick how long first"
+                ? `Focus for ~${fmtMinutes(task.estimateMin)}`
+                : "Start, pick how long first"
           }
           className={`grid size-6 shrink-0 place-items-center rounded-full transition-colors ${
             running
@@ -374,6 +375,7 @@ export function TaskItem({
           <button
             onClick={() => setMenuOpen((v) => !v)}
             aria-label="Task actions"
+            data-tip="More"
             className={`rounded-md p-1 text-ink-faint transition-opacity hover:bg-paper-deep hover:text-ink ${
               menuOpen ? "" : "opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100 max-md:opacity-100"
             }`}

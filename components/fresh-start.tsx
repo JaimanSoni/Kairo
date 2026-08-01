@@ -81,7 +81,7 @@ export function FreshStart({ carryover }: { carryover: Task[] }) {
                 {(t.repeat ? CHOICES_RECURRING : CHOICES).map((c) => (
                   <button
                     key={c.value}
-                    title={c.hint}
+                    data-tip={c.hint}
                     onClick={() => setDecisions((d) => ({ ...d, [t.id]: c.value }))}
                     className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                       decisions[t.id] === c.value

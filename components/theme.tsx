@@ -93,7 +93,7 @@ export function ThemeToggle() {
           key={o.value}
           onClick={() => setTheme(o.value)}
           aria-label={`${o.label} theme`}
-          title={`${o.label} theme`}
+          data-tip={`${o.label} theme`}
           className={`flex flex-1 items-center justify-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium transition-colors ${
             mounted && pref === o.value
               ? "bg-card text-ink shadow-sm"

@@ -278,6 +278,7 @@ export function CalendarView() {
             <button
               onClick={() => moveMonth(-1)}
               aria-label="Previous month"
+              data-tip="Previous month"
               className="grid size-8 place-items-center rounded-lg text-ink-soft hover:bg-paper-deep"
             >
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
@@ -287,6 +288,7 @@ export function CalendarView() {
             <button
               onClick={() => moveMonth(1)}
               aria-label="Next month"
+              data-tip="Next month"
               className="grid size-8 place-items-center rounded-lg text-ink-soft hover:bg-paper-deep"
             >
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none">

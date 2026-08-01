@@ -306,6 +306,8 @@ export function FocusOverlay() {
         <button
           onClick={() => minimizeFocus(true)}
           aria-label="Minimize"
+          data-tip="Minimize, keep going"
+          data-tip-side="bottom"
           className="grid size-10 place-items-center rounded-full text-ink-soft hover:bg-paper-deep"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -316,6 +318,8 @@ export function FocusOverlay() {
         <button
           onClick={exit}
           aria-label="Exit focus"
+          data-tip="End the session"
+          data-tip-side="bottom"
           className="grid size-10 place-items-center rounded-full text-ink-soft hover:bg-paper-deep"
         >
           <IconX />
@@ -404,6 +408,7 @@ export function FocusOverlay() {
           <button
             onClick={timer.running ? pause : resume}
             aria-label={timer.running ? "Pause" : "Start"}
+            data-tip={timer.running ? "Pause" : "Start"}
             className="grid size-20 place-items-center rounded-full bg-ink text-paper shadow-lg transition-transform hover:scale-105 active:scale-95"
           >
             {timer.running ? (
