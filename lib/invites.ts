@@ -113,6 +113,8 @@ export async function inviteUserByEmail(input: {
     when: input.invite.when ?? null,
     email,
     magicUrl: url,
+    // the same guess the account will be created with
+    recipientName: nameFromEmail(email),
   });
 
   const result = await sendEmail({ key: input.emailKey, to: email, ...mail });

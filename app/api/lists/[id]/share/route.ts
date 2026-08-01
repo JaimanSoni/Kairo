@@ -109,7 +109,11 @@ export async function POST(request: Request, ctx: RouteContext<"/api/lists/[id]/
   // keyed per list+member: re-inviting someone removed and added back tells
   // them again, but a double-click does not
   if (!invited) {
-    const mail = listSharedEmail({ inviterName: session.name, listName: String(updated.name) });
+    const mail = listSharedEmail({
+      inviterName: session.name,
+      listName: String(updated.name),
+      recipientName: String(recipient.name ?? ""),
+    });
     void sendEmail({
       key: `share:${id}:${recipient._id.toHexString()}`,
       to: String(recipient.email),

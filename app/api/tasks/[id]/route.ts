@@ -96,6 +96,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/tasks/[id]
         assignerName: session.name,
         taskTitle: String(result.title ?? "A task"),
         listName: where ? where.replace(" \u00b7 in ", "") : "a shared list",
+        recipientName: String(assignee.name ?? ""),
       });
       await sendEmail({
         key: `assign:${id}:${notifyAssignee.toHexString()}`,

@@ -58,6 +58,9 @@ const button = (label: string, href: string) =>
 const footerText = (reason: string) =>
   `\n\n${reason} Questions? Write to ${SUPPORT_INBOX}.\nKairo · ${SITE_URL}`;
 
+/** "Priya Sharma" arrives, "Priya" is who the email talks to. */
+const firstName = (name: string | undefined) => name?.trim().split(/\s+/)[0] || "there";
+
 /* ------------------------------------------------------------------ money */
 
 export function receiptEmail(input: {
@@ -68,10 +71,11 @@ export function receiptEmail(input: {
   paymentId: string;
 }): Rendered {
   const reason = "You received this because a payment was made on your Kairo account.";
+  const first = firstName(input.name);
   return {
     subject: `Payment received. You are covered until ${input.coversUntil}`,
     html: shell(
-      heading("Thank you.") +
+      heading(`Thank you, ${h(first)}.`) +
         para(
           `Your payment of ${strong(h(input.amountLabel))} for the ${strong(h(input.planName))} plan went through. Kairo is yours until ${strong(h(input.coversUntil))}.`
         ) +
@@ -84,7 +88,7 @@ export function receiptEmail(input: {
         button("Open Kairo", `${SITE_URL}/today`),
       reason
     ),
-    text: `Thank you.\n\nYour payment of ${input.amountLabel} for the ${input.planName} plan went through. Kairo is yours until ${input.coversUntil}.\n\nNothing renews by itself. When the month runs out, you decide again.\n\nPayment reference: ${input.paymentId}\n\nOpen Kairo: ${SITE_URL}/today${footerText(reason)}`,
+    text: `Thank you, ${first}.\n\nYour payment of ${input.amountLabel} for the ${input.planName} plan went through. Kairo is yours until ${input.coversUntil}.\n\nNothing renews by itself. When the month runs out, you decide again.\n\nPayment reference: ${input.paymentId}\n\nOpen Kairo: ${SITE_URL}/today${footerText(reason)}`,
   };
 }
 
@@ -95,10 +99,11 @@ export function renewalEmail(input: {
   planName: string;
 }): Rendered {
   const reason = "You received this because your paid month on Kairo is about to end.";
+  const first = firstName(input.name);
   return {
-    subject: `Your Kairo month ends on ${input.endsOn}`,
+    subject: `${first}, your Kairo month ends on ${input.endsOn}`,
     html: shell(
-      heading("Your month is nearly up.") +
+      heading(`Hey ${h(first)}, your month is nearly up.`) +
         para(
           `Your ${strong(h(input.planName))} plan runs until ${strong(h(input.endsOn))}. Kairo never renews by itself, so if you want to keep going, it takes one payment of ${strong(h(input.priceLabel))} and about thirty seconds.`
         ) +
@@ -108,17 +113,18 @@ export function renewalEmail(input: {
         button("Renew from your billing page", `${SITE_URL}/billing`),
       reason
     ),
-    text: `Your month is nearly up.\n\nYour ${input.planName} plan runs until ${input.endsOn}. Kairo never renews by itself, so if you want to keep going, it takes one payment of ${input.priceLabel}.\n\nIf you let it lapse, nothing is deleted.\n\nRenew: ${SITE_URL}/billing${footerText(reason)}`,
+    text: `Hey ${first}, your month is nearly up.\n\nYour ${input.planName} plan runs until ${input.endsOn}. Kairo never renews by itself, so if you want to keep going, it takes one payment of ${input.priceLabel}.\n\nIf you let it lapse, nothing is deleted.\n\nRenew: ${SITE_URL}/billing${footerText(reason)}`,
   };
 }
 
 export function trialEndingEmail(input: { name: string; daysLeft: number }): Rendered {
   const days = input.daysLeft === 1 ? "tomorrow" : `in ${input.daysLeft} days`;
   const reason = "You received this because your Kairo free trial is ending.";
+  const first = firstName(input.name);
   return {
-    subject: `Your Kairo trial ends ${days}`,
+    subject: `${first}, your Kairo trial ends ${days}`,
     html: shell(
-      heading("The trial is almost over.") +
+      heading(`Hey ${h(first)}, the trial is almost over.`) +
         para(
           `Your free trial ends ${strong(days)}. If Kairo has earned a place in your day, picking a plan takes about thirty seconds.`
         ) +
@@ -128,7 +134,7 @@ export function trialEndingEmail(input: { name: string; daysLeft: number }): Ren
         button("See the plans", `${SITE_URL}/pricing`),
       reason
     ),
-    text: `The trial is almost over.\n\nYour free trial ends ${days}. If Kairo has earned a place in your day, picking a plan takes about thirty seconds.\n\nNothing you wrote is deleted either way.\n\nPlans: ${SITE_URL}/pricing${footerText(reason)}`,
+    text: `Hey ${first}, the trial is almost over.\n\nYour free trial ends ${days}. If Kairo has earned a place in your day, picking a plan takes about thirty seconds.\n\nNothing you wrote is deleted either way.\n\nPlans: ${SITE_URL}/pricing${footerText(reason)}`,
   };
 }
 
@@ -137,19 +143,21 @@ export function trialEndingEmail(input: { name: string; daysLeft: number }): Ren
 export function listSharedEmail(input: {
   inviterName: string;
   listName: string;
+  recipientName?: string;
 }): Rendered {
   const reason = `You received this because ${h(input.inviterName)} shared a list with your Kairo account.`;
+  const first = firstName(input.recipientName);
   return {
     subject: `${input.inviterName} shared "${input.listName}" with you`,
     html: shell(
-      heading(`${h(input.inviterName)} shared a list with you.`) +
+      heading(`Hey ${h(first)}, ${h(input.inviterName)} shared a list with you.`) +
         para(
           `You now have access to ${strong(h(input.listName))}. Everyone on the list sees the same tasks, and anything assigned to you will show up in your own Today.`
         ) +
         button("Open the list", `${SITE_URL}/lists`),
       reason
     ),
-    text: `${input.inviterName} shared a list with you.\n\nYou now have access to "${input.listName}". Everyone on the list sees the same tasks.\n\nOpen it: ${SITE_URL}/lists${footerText(reason)}`,
+    text: `Hey ${first}, ${input.inviterName} shared a list with you.\n\nYou now have access to "${input.listName}". Everyone on the list sees the same tasks.\n\nOpen it: ${SITE_URL}/lists${footerText(reason)}`,
   };
 }
 
@@ -157,19 +165,21 @@ export function taskAssignedEmail(input: {
   assignerName: string;
   taskTitle: string;
   listName: string;
+  recipientName?: string;
 }): Rendered {
   const reason = `You received this because ${h(input.assignerName)} assigned a task to you on Kairo.`;
+  const first = firstName(input.recipientName);
   return {
     subject: `${input.assignerName} sent this your way: ${input.taskTitle}`,
     html: shell(
-      heading("A task landed with you.") +
+      heading(`Hey ${h(first)}, a task landed with you.`) +
         para(
           `${strong(h(input.assignerName))} assigned ${strong(h(input.taskTitle))} to you in ${strong(h(input.listName))}.`
         ) +
         button("See it in Kairo", `${SITE_URL}/today`),
       reason
     ),
-    text: `A task landed with you.\n\n${input.assignerName} assigned "${input.taskTitle}" to you in ${input.listName}.\n\nSee it: ${SITE_URL}/today${footerText(reason)}`,
+    text: `Hey ${first}, a task landed with you.\n\n${input.assignerName} assigned "${input.taskTitle}" to you in ${input.listName}.\n\nSee it: ${SITE_URL}/today${footerText(reason)}`,
   };
 }
 
@@ -178,8 +188,10 @@ export function taskSentEmail(input: {
   taskTitle: string;
   /** "1 August at 20:00" when the copy travelled with its plan, else null. */
   when?: string | null;
+  recipientName?: string;
 }): Rendered {
   const reason = `You received this because ${h(input.senderName)} sent a task to your Kairo account.`;
+  const first = firstName(input.recipientName);
   const landing = input.when
     ? `${strong(h(input.taskTitle))} arrived with its plan intact: ${strong(h(input.when))}. It is your copy now, move it if that does not suit.`
     : `${strong(h(input.taskTitle))} is waiting in your inbox. It is your copy now, plan it whenever it suits you.`;
@@ -189,12 +201,12 @@ export function taskSentEmail(input: {
   return {
     subject: `${input.senderName} sent you a task: ${input.taskTitle}`,
     html: shell(
-      heading(`${h(input.senderName)} sent you a task.`) +
+      heading(`Hey ${h(first)}, ${h(input.senderName)} sent you a task.`) +
         para(landing) +
         button(input.when ? "See it in Kairo" : "Open your inbox", `${SITE_URL}${input.when ? "/today" : "/lists"}`),
       reason
     ),
-    text: `${input.senderName} sent you a task.\n\n${landingText}\n\nOpen it: ${SITE_URL}${input.when ? "/today" : "/lists"}${footerText(reason)}`,
+    text: `Hey ${first}, ${input.senderName} sent you a task.\n\n${landingText}\n\nOpen it: ${SITE_URL}${input.when ? "/today" : "/lists"}${footerText(reason)}`,
   };
 }
 
@@ -211,9 +223,12 @@ export function inviteEmail(input: {
   when?: string | null;
   email: string;
   magicUrl: string;
+  /** Best guess from the address, this person has no account yet. */
+  recipientName?: string;
 }): Rendered {
   const isTask = input.kind === "task";
   const reason = `You received this because ${h(input.inviterName)} shared something with this address on Kairo.`;
+  const first = firstName(input.recipientName);
   const what = isTask
     ? `${strong(h(input.itemName))} is waiting for you on Kairo, a calm daily planner.${
         input.when ? ` It is planned for ${strong(h(input.when))}, and it is your copy to move.` : ""
@@ -229,7 +244,11 @@ export function inviteEmail(input: {
       ? `${input.inviterName} sent you a task: ${input.itemName}`
       : `${input.inviterName} shared a list with you: ${input.itemName}`,
     html: shell(
-      heading(isTask ? `${h(input.inviterName)} sent you a task.` : `${h(input.inviterName)} shared a list with you.`) +
+      heading(
+        isTask
+          ? `Hey ${h(first)}, ${h(input.inviterName)} sent you a task.`
+          : `Hey ${h(first)}, ${h(input.inviterName)} shared a list with you.`
+      ) +
         para(what) +
         para(
           `An account is already set up for ${strong(h(input.email))}. One click below signs you in, nothing to create.`
@@ -240,17 +259,17 @@ export function inviteEmail(input: {
         ),
       reason
     ),
-    text: `${input.inviterName} ${isTask ? "sent you a task" : "shared a list with you"}.\n\n${whatText}\n\nAn account is already set up for ${input.email}. This link signs you in:\n${input.magicUrl}\n\nThe link works for 14 days. After that, signing in with Google on the same address opens the same account. Not expecting this? Ignore this email and nothing happens.${footerText(reason)}`,
+    text: `Hey ${first}, ${input.inviterName} ${isTask ? "sent you a task" : "shared a list with you"}.\n\n${whatText}\n\nAn account is already set up for ${input.email}. This link signs you in:\n${input.magicUrl}\n\nThe link works for 14 days. After that, signing in with Google on the same address opens the same account. Not expecting this? Ignore this email and nothing happens.${footerText(reason)}`,
   };
 }
 
 export function welcomeEmail(input: { name: string; trialDays: number }): Rendered {
-  const first = input.name.split(" ")[0] || "there";
+  const first = firstName(input.name);
   const reason = "You received this because you just created a Kairo account.";
   return {
-    subject: "Welcome to Kairo",
+    subject: `Hey ${first}, welcome to Kairo`,
     html: shell(
-      heading(`Hello, ${h(first)}.`) +
+      heading(`Hey ${h(first)}, welcome to Kairo.`) +
         para(
           `Kairo is built on one idea: a to-do list should never make you feel bad. Nothing ever turns red, nothing counts how far behind you are, and every morning starts clean.`
         ) +
@@ -260,7 +279,7 @@ export function welcomeEmail(input: { name: string; trialDays: number }): Render
         button("Open Kairo", `${SITE_URL}/today`),
       reason
     ),
-    text: `Hello, ${first}.
+    text: `Hey ${first}, welcome to Kairo.
 
 Kairo is built on one idea: a to-do list should never make you feel bad. Nothing ever turns red, and every morning starts clean.
 

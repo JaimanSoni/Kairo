@@ -111,7 +111,12 @@ export async function POST(request: Request, ctx: RouteContext<"/api/tasks/[id]/
   });
 
   if (!invited) {
-    const mail = taskSentEmail({ senderName: session.name, taskTitle: String(task.title), when });
+    const mail = taskSentEmail({
+      senderName: session.name,
+      taskTitle: String(task.title),
+      when,
+      recipientName: String(recipient.name ?? ""),
+    });
     void sendEmail({
       key: `sent:${id}:${recipient._id.toHexString()}`,
       to: String(recipient.email),
