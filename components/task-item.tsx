@@ -70,6 +70,7 @@ export function TaskItem({
   const [stepsOpen, setStepsOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuUp, setMenuUp] = useState(false);
   const [askEstimate, setAskEstimate] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const askRef = useRef<HTMLDivElement>(null);
@@ -396,7 +397,12 @@ export function TaskItem({
       {context !== "log" && (
         <div className="relative shrink-0" ref={menuRef}>
           <button
-            onClick={() => setMenuOpen((v) => !v)}
+            onClick={(e) => {
+              // near the bottom of the screen the menu flips upward rather
+              // than opening into space that is not there
+              setMenuUp(window.innerHeight - e.currentTarget.getBoundingClientRect().bottom < 330);
+              setMenuOpen((v) => !v);
+            }}
             aria-label="Task actions"
             data-tip="More"
             className={`rounded-md p-1 text-ink-faint transition-opacity hover:bg-paper-deep hover:text-ink ${
@@ -406,7 +412,7 @@ export function TaskItem({
             <IconDots size={16} />
           </button>
           {menuOpen && (
-            <div className="anim-pop absolute right-0 top-8 z-30 w-44 rounded-xl border border-line bg-card p-1.5 shadow-lg">
+            <div className={`anim-pop absolute right-0 z-30 w-44 rounded-xl border border-line bg-card p-1.5 shadow-lg ${menuUp ? "bottom-8" : "top-8"}`}>
               {!done && task.plannedFor !== today && (
                 <MenuBtn onClick={() => plan({ plannedFor: today, status: "planned" })}>
                   <Icon3d name="sun" size={15} /> Do today

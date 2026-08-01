@@ -710,6 +710,7 @@ function SectionMenu({
   onDelete?: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [up, setUp] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -734,7 +735,11 @@ function SectionMenu({
   return (
     <div className="relative shrink-0" ref={ref}>
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={(e) => {
+          // flip upward when the bottom of the screen is too close
+          setUp(window.innerHeight - e.currentTarget.getBoundingClientRect().bottom < 380);
+          setOpen((v) => !v);
+        }}
         aria-label="List actions"
         aria-expanded={open}
         data-tip="More"
@@ -746,7 +751,7 @@ function SectionMenu({
       </button>
 
       {open && (
-        <div className="anim-pop absolute right-0 top-9 z-30 w-52 rounded-xl border border-line bg-card p-1.5 shadow-lg">
+        <div className={`anim-pop absolute right-0 z-30 w-52 rounded-xl border border-line bg-card p-1.5 shadow-lg ${up ? "bottom-9" : "top-9"}`}>
           {onShare && (
             <SectionMenuBtn onClick={run(onShare)} icon={<span aria-hidden>👥</span>}>
               {canManage ? "Share this list" : "See who's on it"}
