@@ -65,12 +65,12 @@ const T = {
   f3: 18400, //               Nothing turns red.          (fresh start demo)
   f4: 22100, //               One task at a time.         (focus demo)
   m1: 25800, //         teal  Share lists.
-  m2: 27000, //         ink   Lock what's private.
-  m3: 28200, //         teal  See your month.
-  offer: 29400, //      teal  Free for 7 days.
-  end: 32800, //        paper the mark, the name, the address
+  m2: 26600, //         ink   Lock what's private.
+  m3: 27400, //         teal  See your month.
+  offer: 28200, //      teal  Free for 7 days.
+  end: 31600, //        paper the mark, the name, the address
 };
-export const DURATION = 37400;
+export const DURATION = 36200;
 
 const FEATURES = [
   {
@@ -175,6 +175,7 @@ function LineIn({
   fontSize,
   color,
   align = "center",
+  riseMs = 780,
 }: {
   lt: number;
   at: number;
@@ -182,6 +183,7 @@ function LineIn({
   fontSize: number;
   color?: string;
   align?: "left" | "center";
+  riseMs?: number;
 }) {
   return (
     <div
@@ -206,7 +208,7 @@ function LineIn({
             color: w.clay ? "var(--color-clay)" : (color ?? "var(--color-ink)"),
             display: "inline-block",
             whiteSpace: "pre",
-            ...rise(lt, at + i * 70, 780, 0.5 * fontSize),
+            ...rise(lt, at + i * 70, riseMs, 0.5 * fontSize),
           }}
         >
           {w.text}
@@ -693,14 +695,15 @@ export function VideoLaunchFilm() {
         {MONTAGE.map((m, i) => {
           if (t < m.start - 100 || t > m.start + m.dur + 700) return null;
           return (
-            <Slab key={i} t={t} at={m.start} bg={m.bg} from="circle" wipeMs={620}>
+            <Slab key={i} t={t} at={m.start} bg={m.bg} from="circle" wipeMs={500}>
               <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", padding: "0 6%" }}>
                 <LineIn
                   lt={t - m.start}
-                  at={160}
+                  at={90}
                   words={[{ text: m.text }]}
                   fontSize={slabSize}
                   color="#fff"
+                  riseMs={500}
                 />
               </div>
             </Slab>
