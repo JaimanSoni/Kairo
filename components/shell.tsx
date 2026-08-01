@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { hiddenListIds, useApp } from "./store";
 import { navigateApp } from "./app-views";
+import { animalAvatar } from "@/lib/avatars";
 import { upgradeHref, useCan } from "./entitlements";
 import { registerServiceWorker } from "@/lib/push-client";
 import { playNotify } from "@/lib/sound";
@@ -285,13 +286,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
 }
 
 function Avatar({ name, picture, size }: { name: string; picture?: string; size: 8 | 12 }) {
-  const cls = size === 12 ? "size-12 text-lg" : "size-8 text-sm";
+  const cls = size === 12 ? "size-12" : "size-8";
   return picture ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img src={picture} alt="" className={`${cls} rounded-full`} referrerPolicy="no-referrer" />
   ) : (
-    <span className={`grid ${cls} place-items-center rounded-full bg-sun-soft font-bold text-sun-deep`}>
-      {name.charAt(0).toUpperCase()}
+    <span className={`grid ${cls} place-items-center overflow-hidden rounded-full bg-sun-soft`}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={animalAvatar(name)} alt="" className="size-full object-contain p-[5%]" />
     </span>
   );
 }

@@ -10,6 +10,8 @@
  * cropping; a square wastes vertical space and a story is too tall for a feed.
  */
 
+import { animalAvatar } from "./avatars";
+
 export const CARD_W = 1080;
 export const CARD_H = 1350;
 
@@ -207,11 +209,14 @@ export async function drawShareCard(input: CardInput): Promise<HTMLCanvasElement
   /* -------------------------------------------------------------- footer */
   const footY = cardY + cardH + 96;
 
-  // the face next to the claim: the photo when it loads, an initial otherwise
+  // the face next to the claim: the photo when it loads, the person's house
+  // animal otherwise, an initial only if even that fails
   const R = 42;
   const ax = 88 + R;
   const ay = footY + 4;
-  const avatar = input.picture ? await loadAvatar(input.picture) : null;
+  const avatar =
+    (input.picture ? await loadAvatar(input.picture) : null) ??
+    (await loadAvatar(animalAvatar(input.name)));
   ctx.save();
   ctx.shadowColor = "rgba(28,35,32,0.14)";
   ctx.shadowBlur = 24;
@@ -222,11 +227,21 @@ export async function drawShareCard(input: CardInput): Promise<HTMLCanvasElement
   ctx.fill();
   ctx.restore();
   if (avatar) {
+    const animal = !input.picture || avatar.src.includes("/avatars/");
     ctx.save();
     ctx.beginPath();
     ctx.arc(ax, ay, R, 0, Math.PI * 2);
     ctx.clip();
-    ctx.drawImage(avatar, ax - R, ay - R, R * 2, R * 2);
+    if (animal) {
+      // the characters are stickers, not headshots: a soft disc behind and a
+      // slight inset so ears and cups survive the circle
+      ctx.fillStyle = "#ddf1ee";
+      ctx.fillRect(ax - R, ay - R, R * 2, R * 2);
+      const s = R * 1.74;
+      ctx.drawImage(avatar, ax - s / 2, ay - s / 2, s, s);
+    } else {
+      ctx.drawImage(avatar, ax - R, ay - R, R * 2, R * 2);
+    }
     ctx.restore();
   } else {
     ctx.fillStyle = "#0c9384";

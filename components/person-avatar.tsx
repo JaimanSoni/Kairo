@@ -1,4 +1,6 @@
-/** Tiny avatar: profile photo when available, else a colored initial. */
+import { animalAvatar } from "@/lib/avatars";
+
+/** Tiny avatar: profile photo when available, else the person's animal. */
 export function PersonAvatar({
   name,
   picture,
@@ -25,10 +27,13 @@ export function PersonAvatar({
   }
   return (
     <span
-      className="grid shrink-0 place-items-center rounded-full bg-sun-soft font-bold text-sun-deep"
-      style={{ width: dim, height: dim, fontSize: Math.round(size * 0.5) }}
+      className="grid shrink-0 place-items-center overflow-hidden rounded-full bg-sun-soft"
+      style={{ width: dim, height: dim }}
     >
-      {(name || "?").charAt(0).toUpperCase()}
+      {/* object-contain with a whisker of padding: the characters have ears
+          and cups that a cover-crop circle would amputate */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={animalAvatar(name)} alt="" className="size-full object-contain p-[5%]" />
     </span>
   );
 }
