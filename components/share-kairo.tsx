@@ -15,7 +15,7 @@ import { SITE_URL } from "@/lib/site";
  */
 
 const PITCH =
-  "Kairo is a daily planner that forgives — nothing ever turns red, and every morning starts clean. It's the first one I've actually kept using.";
+  "Kairo is a daily planner that forgives, nothing ever turns red, and every morning starts clean. It's the first one I've actually kept using.";
 
 const SHARE_URL = SITE_URL;
 
@@ -50,7 +50,7 @@ function ShareKairoSheet({ onClose }: { onClose: () => void }) {
       await navigator.share({ title: "Kairo", text: PITCH, url: SHARE_URL });
     } catch (err) {
       // backing out of the OS sheet isn't a failure worth reporting
-      if ((err as Error)?.name !== "AbortError") setError("Sharing didn't work — copy the link instead.");
+      if ((err as Error)?.name !== "AbortError") setError("Sharing didn't work, copy the link instead.");
     }
   };
 
@@ -59,7 +59,7 @@ function ShareKairoSheet({ onClose }: { onClose: () => void }) {
       await navigator.clipboard.writeText(message);
       setCopied(true);
     } catch {
-      setError("Couldn't copy — select the link and copy it manually.");
+      setError("Couldn't copy, select the link and copy it manually.");
     }
   };
 
@@ -87,7 +87,7 @@ function ShareKairoSheet({ onClose }: { onClose: () => void }) {
       <div className="p-5 sm:p-6">
         <h2 className="font-display text-2xl">Tell a friend</h2>
         <p className="mt-1 text-[13px] leading-6 text-ink-soft">
-          No referral codes, no rewards — just the link. Say it in your own words if you like.
+          No referral codes, no rewards, just the link. Say it in your own words if you like.
         </p>
 
         <div className="mt-4 rounded-2xl border border-line bg-paper-deep/40 p-4">

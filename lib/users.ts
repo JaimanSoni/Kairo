@@ -245,7 +245,7 @@ export async function isUserDisabled(idHex: string): Promise<boolean> {
     return disabled;
   } catch (err) {
     if (hit) return hit.disabled; // stale beats a lie in either direction
-    console.error("[users] disabled check failed with no cache — failing open", err);
+    console.error("[users] disabled check failed with no cache, failing open", err);
     return false;
   }
 }

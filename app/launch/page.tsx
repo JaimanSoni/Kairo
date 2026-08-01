@@ -13,7 +13,7 @@ import { LaunchFilm } from "@/components/launch/film";
  * re-record. Nothing here is baked into a file.
  */
 export const metadata: Metadata = {
-  title: "Kairo — launch film",
+  title: "Kairo, launch film",
   robots: { index: false, follow: false },
 };
 

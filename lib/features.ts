@@ -19,7 +19,7 @@ export const FEATURES = {
   "ai-capture": {
     name: "AI capture",
     description:
-      "Reads a captured sentence and fills in the day, time, estimate and list. Without it, capture still works — the local parser handles dates and times.",
+      "Reads a captured sentence and fills in the day, time, estimate and list. Without it, capture still works, the local parser handles dates and times.",
     enforcedAt: "POST /api/parse",
   },
   "app-lock": {

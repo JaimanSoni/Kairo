@@ -370,7 +370,7 @@ export function CalendarView() {
                       className={`hidden text-[9px] tabular-nums sm:inline ${
                         load > DAY_CAPACITY_MIN ? "font-semibold text-sun-deep" : "text-ink-faint"
                       }`}
-                      title={load > DAY_CAPACITY_MIN ? "Holds more than 6h — heavy day" : undefined}
+                      title={load > DAY_CAPACITY_MIN ? "Holds more than 6h, heavy day" : undefined}
                     >
                       {fmtMinutes(load)}
                     </span>
@@ -522,13 +522,13 @@ function DayPanel({
       {load > 0 && (
         <p className={`mb-2 text-xs ${load > DAY_CAPACITY_MIN ? "font-medium text-sun-deep" : "text-ink-soft"}`}>
           holds ~{fmtMinutes(load)}
-          {load > DAY_CAPACITY_MIN ? " — that's a lot" : " · fits ✓"}
+          {load > DAY_CAPACITY_MIN ? "that's a lot" : " · fits ✓"}
         </p>
       )}
 
       {tasks.length === 0 && daySteps.length === 0 && doneTasks.length === 0 && (
         <p className="mb-2 rounded-xl border border-dashed border-line px-3 py-3 text-xs text-ink-faint">
-          Nothing planned — a quiet day is a feature.
+          Nothing planned, a quiet day is a feature.
         </p>
       )}
 

@@ -35,16 +35,16 @@ export const metadata: Metadata = {
     "guilt-free productivity",
   ],
   openGraph: {
-    title: "Kairo — a daily planner that forgives",
+    title: "Kairo, a daily planner that forgives",
     description:
       "Plan a day you can actually finish. Voice + AI capture, a morning reset instead of overdue guilt, focus timer, shared lists, assignments and PIN locks.",
     type: "website",
     siteName: "Kairo",
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: "Kairo — a daily planner that forgives" }],
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "Kairo, a daily planner that forgives" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Kairo — a daily planner that forgives",
+    title: "Kairo, a daily planner that forgives",
     description: "Plan a day you can actually finish. No red badges, no overdue guilt.",
     images: ["/og.png"],
   },
@@ -213,11 +213,11 @@ export default async function Landing({
             ) : auth_error === "link_expired" ? (
               <>
                 <b>That sign-in link has expired.</b> Signing in with Google using the same email
-                address opens the same account — everything shared with you is still there.
+                address opens the same account, everything shared with you is still there.
               </>
             ) : auth_error === "deactivated" ? (
               <>
-                <b>This account has been deactivated.</b> Nothing has been deleted — everything
+                <b>This account has been deactivated.</b> Nothing has been deleted, everything
                 you&apos;ve written is still there. Email{" "}
                 <a
                   href={`mailto:${SUPPORT_EMAIL}`}
@@ -249,7 +249,7 @@ export default async function Landing({
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-ink-soft">
             Speak a thought and AI files it. Plan a day you can actually finish. When life happens,
-            start fresh — no red badges, no &ldquo;62 overdue&rdquo;, no shame spiral.
+            start fresh, no red badges, no &ldquo;62 overdue&rdquo;, no shame spiral.
           </p>
 
           <div className="mt-9 flex flex-col items-center gap-3">
@@ -452,7 +452,7 @@ export default async function Landing({
       </section>
 
       <footer className="border-t border-line/60 py-8 text-center text-xs text-ink-faint">
-        <Mark size={12} className="inline text-sun" /> kairo — made for humans with unfinished lists
+        <Mark size={12} className="inline text-sun" /> kairo, made for humans with unfinished lists
         {" · "}
         <Link href="/support" className="underline underline-offset-2 hover:text-ink-soft">
           Help

@@ -31,7 +31,7 @@ function money(minor: number, currency: string): string {
 const ALWAYS_INCLUDED = [
   "Voice and typed capture, with the day, time, estimate and list parsed from what you wrote",
   "A bounded Today, with an honest capacity line",
-  "The morning reset — yesterday's leftovers, one decision each, never turning red",
+  "The morning reset, yesterday's leftovers, one decision each, never turning red",
   "Focus timer, with reminders that arrive even when the app is closed",
   "Recurring tasks, deadlines, and steps you can plan onto their own days",
   "Week and month calendar views, colour-coded per list",
@@ -49,7 +49,7 @@ export default async function PricingPage() {
 
       <P>
         Free for the first <B>{TRIAL_DAYS} days</B> with everything unlocked, and no card asked for.
-        After that, pick the plan that fits. Every plan is <B>charged one month at a time</B> — it
+        After that, pick the plan that fits. Every plan is <B>charged one month at a time</B> it
         does not renew by itself, so you are never billed for a month you forgot you were paying
         for.
       </P>
@@ -76,7 +76,7 @@ export default async function PricingPage() {
                   return (
                     <li key={key} className="flex gap-2 text-sm leading-6">
                       <span className={on ? "text-moss" : "text-ink-faint"} aria-hidden>
-                        {on ? "✓" : "—"}
+                        {on ? "✓" : ""}
                       </span>
                       <span className={on ? "text-ink-soft" : "text-ink-faint"}>
                         {FEATURES[key].name}
@@ -122,7 +122,7 @@ export default async function PricingPage() {
           Kairo.
         </LI>
         <LI>
-          Paying twice stacks rather than overlaps — a second month is added to the end of the
+          Paying twice stacks rather than overlaps, a second month is added to the end of the
           first, so nothing is wasted.
         </LI>
         <LI>

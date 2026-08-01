@@ -35,14 +35,14 @@ export function Feedback({ slug, title }: { slug: string; title: string }) {
 
       {vote === "up" && (
         <p className="text-sm text-ink-soft">
-          Good — thanks for letting us know. <span aria-hidden>🌱</span>
+          Good, thanks for letting us know. <span aria-hidden>🌱</span>
         </p>
       )}
 
       {vote === "down" && (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-ink-soft">
-            Sorry — that&apos;s our gap to close. Tell us what was missing?
+            Sorry, that&apos;s our gap to close. Tell us what was missing?
           </p>
           <Link
             href={`/support/contact?article=${encodeURIComponent(title)}&from=${slug}`}

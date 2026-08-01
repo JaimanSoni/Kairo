@@ -12,7 +12,7 @@ export async function POST() {
   const subs = await subscriptionsCollection();
   const count = await subs.countDocuments({ userId });
   if (count === 0) {
-    return NextResponse.json({ error: "No subscription — enable notifications first" }, { status: 409 });
+    return NextResponse.json({ error: "No subscription, enable notifications first" }, { status: 409 });
   }
 
   ensureTicker();

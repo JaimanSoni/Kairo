@@ -66,7 +66,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Most people abandon task apps within a few weeks, and it's rarely because a feature was missing. It's because the app turned into a scoreboard of failure — a wall of red, overdue items that makes opening it feel worse than avoiding it.",
+            text: "Most people abandon task apps within a few weeks, and it's rarely because a feature was missing. It's because the app turned into a scoreboard of failure, a wall of red, overdue items that makes opening it feel worse than avoiding it.",
           },
           {
             t: "p",
@@ -83,7 +83,7 @@ export const ARTICLES: Article[] = [
             items: [
               "**Nothing ever goes red.** There is no overdue count anywhere in Kairo. Unfinished work waits for you calmly.",
               "**The day is the unit.** [Today](/support/today) shows a short list you chose, not everything you've ever written down. The backlog stays out of sight until you ask for it.",
-              "**Planning a day is not a deadline.** The day you intend to *do* something is separate from a real, external [deadline](/support/deadlines) — and deadlines should be rare.",
+              "**Planning a day is not a deadline.** The day you intend to *do* something is separate from a real, external [deadline](/support/deadlines), and deadlines should be rare.",
               "**Falling behind is normal.** Each morning the [Fresh Start sweep](/support/fresh-start) helps you decide once about yesterday's leftovers, then moves on.",
             ],
           },
@@ -99,7 +99,7 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "tip",
-            text: "The one hard limit in Kairo is **Spotlight**, which holds three tasks. It's a constraint, not a bug — three real wins is a good day.",
+            text: "The one hard limit in Kairo is **Spotlight**, which holds three tasks. It's a constraint, not a bug, three real wins is a good day.",
           },
         ],
       },
@@ -110,9 +110,9 @@ export const ARTICLES: Article[] = [
           {
             t: "ol",
             items: [
-              "**Morning.** Open Kairo. If anything is left over, the Fresh Start sweep asks what to do with it — one decision each.",
+              "**Morning.** Open Kairo. If anything is left over, the Fresh Start sweep asks what to do with it, one decision each.",
               "**Plan.** Pull a few things into today from your inbox and star up to three as Spotlight.",
-              "**During the day.** Capture whatever lands in your head with `N`. Don't organize it — that's what planning time is for.",
+              "**During the day.** Capture whatever lands in your head with `N`. Don't organize it, that's what planning time is for.",
               "**Evening.** Check off what you did. Whatever's left is tomorrow's problem, and tomorrow will offer you a clean slate.",
             ],
           },
@@ -134,7 +134,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Kairo uses Google sign-in only — there's no password to create or forget. Click **Continue with Google** and pick an account.",
+            text: "Kairo uses Google sign-in only, there's no password to create or forget. Click **Continue with Google** and pick an account.",
           },
           {
             t: "note",
@@ -171,10 +171,10 @@ export const ARTICLES: Article[] = [
           {
             t: "ol",
             items: [
-              "Press `N` and type a few things that are on your mind. Don't add dates yet — just get them out.",
+              "Press `N` and type a few things that are on your mind. Don't add dates yet, just get them out.",
               "Go to **Lists** and create one or two lists, like Work and Home.",
               "Back on **Today**, pull two or three tasks in from the inbox panel.",
-              "Star the one that matters most — that's your first [Spotlight](/support/today).",
+              "Star the one that matters most, that's your first [Spotlight](/support/today).",
               "Optional: open a task, give it an estimate, and press **Start** to try the [focus timer](/support/focus-timer).",
             ],
           },
@@ -197,7 +197,7 @@ export const ARTICLES: Article[] = [
             t: "keys",
             rows: [
               { k: "N", d: "Open capture. `C` does the same thing." },
-              { k: "⌘K / Ctrl K", d: "Open the search palette — find any task, list, or action." },
+              { k: "⌘K / Ctrl K", d: "Open the search palette, find any task, list, or action." },
               { k: "1", d: "Go to Today" },
               { k: "2", d: "Go to Calendar" },
               { k: "3", d: "Go to Lists" },
@@ -246,7 +246,7 @@ export const ARTICLES: Article[] = [
     slug: "capture",
     title: "Capture a task in seconds",
     summary:
-      "Press N, type the thought, hit Enter. Nothing else is required — deciding comes later.",
+      "Press N, type the thought, hit Enter. Nothing else is required, deciding comes later.",
     categoryId: "capture",
     keywords: ["add task", "new task", "capture", "quick add", "omnibar", "inbox"],
     sections: [
@@ -264,11 +264,11 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "p",
-            text: "That's it. With no date, the task lands in your **Inbox** — a holding pen you triage later, when you're planning rather than thinking.",
+            text: "That's it. With no date, the task lands in your **Inbox**, a holding pen you triage later, when you're planning rather than thinking.",
           },
           {
             t: "tip",
-            text: "Capturing several things at once? Use `Shift Enter` instead — it saves the task and keeps the box open for the next one.",
+            text: "Capturing several things at once? Use `Shift Enter` instead, it saves the task and keeps the box open for the next one.",
           },
         ],
       },
@@ -294,7 +294,7 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "p",
-            text: "The full reference — including repeats like `every mon and wed` — is in [dates, times, and other shortcuts](/support/quick-add-syntax).",
+            text: "The full reference, including repeats like `every mon and wed`, is in [dates, times, and other shortcuts](/support/quick-add-syntax).",
           },
         ],
       },
@@ -313,7 +313,7 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "note",
-            text: "After you capture, AI quietly reviews the raw sentence and can fill in details you didn't type — see [how AI tidies your captures](/support/ai).",
+            text: "After you capture, AI quietly reviews the raw sentence and can fill in details you didn't type, see [how AI tidies your captures](/support/ai).",
           },
         ],
       },
@@ -323,7 +323,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Every list, every day in the Calendar's week view, and Today itself have their own inline add row. They understand the same syntax, but default to that context — typing in Thursday's row plans it for Thursday, and typing in a list files it there.",
+            text: "Every list, every day in the Calendar's week view, and Today itself have their own inline add row. They understand the same syntax, but default to that context, typing in Thursday's row plans it for Thursday, and typing in a list files it there.",
           },
           {
             t: "note",
@@ -400,7 +400,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Write `due` followed by a day word — `due fri`, `due tomorrow` — to set a real deadline instead of a planned day. The two are deliberately different things; see [deadlines vs planned days](/support/deadlines).",
+            text: "Write `due` followed by a day word, `due fri`, `due tomorrow`, to set a real deadline instead of a planned day. The two are deliberately different things; see [deadlines vs planned days](/support/deadlines).",
           },
         ],
       },
@@ -412,7 +412,7 @@ export const ARTICLES: Article[] = [
             t: "ul",
             items: [
               "`~30m`, `45m`, `2h`, `1h30m` and `1h15` all work.",
-              "A bare number is **not** an estimate — `30` stays in the title. Write `~30` or `30m`.",
+              "A bare number is **not** an estimate, `30` stays in the title. Write `~30` or `30m`.",
               "Estimates power the day's capacity line and unlock the [focus timer](/support/focus-timer).",
             ],
           },
@@ -426,7 +426,7 @@ export const ARTICLES: Article[] = [
             t: "ul",
             items: [
               "`#work` files the task into the first list whose name starts with “work”. If nothing matches, the `#word` simply stays in the title.",
-              "A standalone `!` marks the task as a Spotlight must-win. It has to be its own word — `Call mom!` won't do it.",
+              "A standalone `!` marks the task as a Spotlight must-win. It has to be its own word, `Call mom!` won't do it.",
             ],
           },
           {
@@ -452,7 +452,7 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "warn",
-            text: "`every 2 days` on its own starts **tomorrow**, not today — the first occurrence is one interval from now. Add `today` if you want it to start immediately.",
+            text: "`every 2 days` on its own starts **tomorrow**, not today, the first occurrence is one interval from now. Add `today` if you want it to start immediately.",
           },
         ],
       },
@@ -471,7 +471,7 @@ export const ARTICLES: Article[] = [
   {
     slug: "voice",
     title: "Capture with your voice",
-    summary: "Speak a task instead of typing it — useful when your hands are busy.",
+    summary: "Speak a task instead of typing it, useful when your hands are busy.",
     categoryId: "capture",
     keywords: ["voice", "speech", "dictation", "microphone", "speak", "talk"],
     sections: [
@@ -484,7 +484,7 @@ export const ARTICLES: Article[] = [
             items: [
               "Press `N` to open capture.",
               "Tap the microphone button and allow microphone access if asked.",
-              "Say the task naturally — “water the plants tomorrow evening, about fifteen minutes”.",
+              "Say the task naturally, “water the plants tomorrow evening, about fifteen minutes”.",
               "The words appear in the box as you speak. Review them, then press `Enter`.",
             ],
           },
@@ -500,11 +500,11 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Voice capture uses your browser's built-in speech recognition. The microphone button only appears when your browser supports it — Chrome and Edge do, on desktop and Android. Firefox and some privacy browsers don't, so the button is simply hidden there.",
+            text: "Voice capture uses your browser's built-in speech recognition. The microphone button only appears when your browser supports it, Chrome and Edge do, on desktop and Android. Firefox and some privacy browsers don't, so the button is simply hidden there.",
           },
           {
             t: "tip",
-            text: "Messy speech is exactly what the [AI pass](/support/ai) is best at. Ramble freely — it strips the filler and pulls out the date, duration and list.",
+            text: "Messy speech is exactly what the [AI pass](/support/ai) is best at. Ramble freely, it strips the filler and pulls out the date, duration and list.",
           },
         ],
       },
@@ -515,7 +515,7 @@ export const ARTICLES: Article[] = [
           {
             t: "ul",
             items: [
-              "You'll see “Couldn't hear that — try again, or just type” if recognition fails. Retrying usually fixes it.",
+              "You'll see “Couldn't hear that, try again, or just type” if recognition fails. Retrying usually fixes it.",
               "Check that the site has microphone permission in your browser's address-bar settings.",
               "Speech recognition needs a network connection in most browsers.",
             ],
@@ -528,7 +528,7 @@ export const ARTICLES: Article[] = [
     slug: "ai",
     title: "How AI tidies your captures",
     summary:
-      "After you capture, AI reads the raw sentence and fills in details you didn't type — without ever overruling you.",
+      "After you capture, AI reads the raw sentence and fills in details you didn't type, without ever overruling you.",
     categoryId: "capture",
     keywords: ["ai", "gemma", "ollama", "smart", "parsing", "automatic", "magic"],
     sections: [
@@ -538,7 +538,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Your task is saved **instantly** by Kairo's own parser — the AI never makes you wait. A moment later, the original sentence is sent for a second read, and anything useful it finds is added quietly. You'll see a small toast like `✨ Tomorrow · ~45m · #Work` when it adjusts something.",
+            text: "Your task is saved **instantly** by Kairo's own parser, the AI never makes you wait. A moment later, the original sentence is sent for a second read, and anything useful it finds is added quietly. You'll see a small toast like `✨ Tomorrow · ~45m · #Work` when it adjusts something.",
           },
           {
             t: "p",
@@ -568,7 +568,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "If the service is slow or offline, Kairo gives up after about nine seconds and simply keeps what its own parser understood. Nothing breaks, nothing is lost, and no error interrupts you — you just don't get the extra polish on that one task.",
+            text: "If the service is slow or offline, Kairo gives up after about nine seconds and simply keeps what its own parser understood. Nothing breaks, nothing is lost, and no error interrupts you, you just don't get the extra polish on that one task.",
           },
           {
             t: "note",
@@ -615,7 +615,7 @@ export const ARTICLES: Article[] = [
           {
             t: "ul",
             items: [
-              "Tasks you planned for today — nothing else.",
+              "Tasks you planned for today, nothing else.",
               "**Spotlight** at the top: up to three must-wins.",
               "**Steps today**, if you scheduled individual [steps](/support/steps) of bigger tasks.",
               "**Done today**, so the day's wins stay visible.",
@@ -634,7 +634,7 @@ export const ARTICLES: Article[] = [
           {
             t: "ol",
             items: [
-              "Type into the add row at the bottom of the list — it plans straight to today.",
+              "Type into the add row at the bottom of the list, it plans straight to today.",
               "Or use the **Plan today from your inbox** panel that appears when today is empty, and tap **+ Today** on anything you want.",
               "Or drag tasks onto today in the [Calendar](/support/calendar).",
             ],
@@ -647,7 +647,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Tap the star on a task to make it a Spotlight must-win. Kairo holds a maximum of three at a time and will refuse a fourth with the message “Spotlight holds 3 — that's the point ✦”.",
+            text: "Tap the star on a task to make it a Spotlight must-win. Kairo holds a maximum of three at a time and will refuse a fourth with the message “Spotlight holds 3, that's the point ✦”.",
           },
           {
             t: "warn",
@@ -665,7 +665,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "If your today tasks have [estimates](/support/focus-timer), the header adds them up: `holds ~2h 45m · fits ✓`. Once the total passes six hours it changes tone — `holds ~7h — that's a lot. Trim one?`",
+            text: "If your today tasks have [estimates](/support/focus-timer), the header adds them up: `holds ~2h 45m · fits ✓`. Once the total passes six hours it changes tone, `holds ~7h, that's a lot. Trim one?`",
           },
           {
             t: "note",
@@ -689,7 +689,7 @@ export const ARTICLES: Article[] = [
     slug: "fresh-start",
     title: "Start fresh when you fall behind",
     summary:
-      "Unfinished tasks never pile up in red. Each morning, one decision each — then a clean day.",
+      "Unfinished tasks never pile up in red. Each morning, one decision each, then a clean day.",
     categoryId: "planning",
     keywords: [
       "overdue",
@@ -725,7 +725,7 @@ export const ARTICLES: Article[] = [
             head: ["Choice", "What happens"],
             rows: [
               ["**Today**", "Moves to today. Its carry counter goes up by one."],
-              ["**Later**", "Back to the Inbox with no date — decide another time."],
+              ["**Later**", "Back to the Inbox with no date, decide another time."],
               ["**Someday**", "Parked in Someday, guilt-free."],
               ["**Did it**", "Marked done, and it shows up in your Log."],
               ["**Let go**", "Deleted. Sometimes that's the honest answer."],
@@ -757,7 +757,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Each time you move a task to today from the sweep, Kairo counts it. After a couple of rounds you'll see a `↻ ×3` badge, and a gentle line: *“Keeps carrying over — too big? Try breaking it into steps, or let it go. Both are wins.”*",
+            text: "Each time you move a task to today from the sweep, Kairo counts it. After a couple of rounds you'll see a `↻ ×3` badge, and a gentle line: *“Keeps carrying over, too big? Try breaking it into steps, or let it go. Both are wins.”*",
           },
           {
             t: "tip",
@@ -771,7 +771,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "**Not now** closes the panel without changing anything. A small button then appears in the Today header — `🌅 3 from before` — to reopen it whenever you're ready. It returns on its own the next morning.",
+            text: "**Not now** closes the panel without changing anything. A small button then appears in the Today header, `🌅 3 from before`, to reopen it whenever you're ready. It returns on its own the next morning.",
           },
         ],
       },
@@ -781,7 +781,7 @@ export const ARTICLES: Article[] = [
     slug: "times",
     title: "Set a time of day",
     summary:
-      "Give a planned task a clock time — “31 July at 6 PM” — and optionally get a reminder then.",
+      "Give a planned task a clock time, “31 July at 6 PM”, and optionally get a reminder then.",
     categoryId: "planning",
     keywords: ["time", "clock", "hour", "6pm", "schedule", "time of day", "appointment"],
     sections: [
@@ -794,7 +794,7 @@ export const ARTICLES: Article[] = [
             items: [
               "Open the task and expand **Planned day**.",
               "Pick a date on the calendar. A **Time** row appears underneath.",
-              "Tap a quick pick — 9 AM, Noon, 3 PM, 6 PM, 9 PM — or use the time field for anything else.",
+              "Tap a quick pick, 9 AM, Noon, 3 PM, 6 PM, 9 PM, or use the time field for anything else.",
             ],
           },
           {
@@ -826,7 +826,7 @@ export const ARTICLES: Article[] = [
             items: [
               "A time always belongs to a day. Clear the day and the time clears with it.",
               "The time shows as a `🕐 6 PM` chip on the task card.",
-              "A time doesn't move the task or block anything — Kairo plans days, not hour-by-hour calendars.",
+              "A time doesn't move the task or block anything, Kairo plans days, not hour-by-hour calendars.",
             ],
           },
         ],
@@ -837,7 +837,7 @@ export const ARTICLES: Article[] = [
     slug: "deadlines",
     title: "Deadlines vs planned days",
     summary:
-      "The day you'll work on something and the day it's actually due are two different fields — on purpose.",
+      "The day you'll work on something and the day it's actually due are two different fields, on purpose.",
     categoryId: "planning",
     keywords: ["deadline", "due date", "due", "planned", "difference"],
     sections: [
@@ -882,7 +882,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "tip",
-            text: "If you set a deadline on everything, the chip stops meaning anything. Reserve it for dates someone else actually cares about — a bill, a flight, a filing.",
+            text: "If you set a deadline on everything, the chip stops meaning anything. Reserve it for dates someone else actually cares about, a bill, a flight, a filing.",
           },
           {
             t: "p",
@@ -913,7 +913,7 @@ export const ARTICLES: Article[] = [
             items: [
               "**Desktop:** each day shows up to three task chips, plus `+2 more` when there are extras.",
               "**Mobile:** each day shows coloured dots instead, so the grid stays readable.",
-              "**Click any day** to open its detail panel — the full task list, planned steps, what's done, and an add row for that date.",
+              "**Click any day** to open its detail panel, the full task list, planned steps, what's done, and an add row for that date.",
               "**Drag chips** between days to reschedule.",
             ],
           },
@@ -925,7 +925,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Switch to **Week** with the toggle in the header — Kairo remembers your choice. It lists the next seven days, each with its own tasks, load estimate and add row. Your Inbox sits alongside so you can pull work into days.",
+            text: "Switch to **Week** with the toggle in the header, Kairo remembers your choice. It lists the next seven days, each with its own tasks, load estimate and add row. Your Inbox sits alongside so you can pull work into days.",
           },
           {
             t: "ul",
@@ -937,7 +937,7 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "note",
-            text: "Drag-and-drop is a mouse feature. On a phone, use a task's ⋯ menu — **Do today**, **Tomorrow**, or open it and pick a date.",
+            text: "Drag-and-drop is a mouse feature. On a phone, use a task's ⋯ menu, **Do today**, **Tomorrow**, or open it and pick a date.",
           },
         ],
       },
@@ -947,7 +947,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Each list gets its own colour, and the dots and chips wear it. Below the grid, a legend spells out which colour is which list — plus two fixed meanings: **green is done**, and a **grey dot means no list**. A gold ✦ marks Spotlight tasks.",
+            text: "Each list gets its own colour, and the dots and chips wear it. Below the grid, a legend spells out which colour is which list, plus two fixed meanings: **green is done**, and a **grey dot means no list**. A gold ✦ marks Spotlight tasks.",
           },
           {
             t: "note",
@@ -973,7 +973,7 @@ export const ARTICLES: Article[] = [
     slug: "steps",
     title: "Break a task into steps",
     summary:
-      "Split a big task into a checklist — and schedule individual steps onto their own days.",
+      "Split a big task into a checklist, and schedule individual steps onto their own days.",
     categoryId: "tasks",
     keywords: ["steps", "subtasks", "checklist", "break down", "split", "sub-tasks"],
     sections: [
@@ -991,7 +991,7 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "warn",
-            text: "Changes you make inside the editor — the title, notes, and the steps list — save when you **close** the editor. Ticking a step from a task card saves immediately.",
+            text: "Changes you make inside the editor, the title, notes, and the steps list, save when you **close** the editor. Ticking a step from a task card saves immediately.",
           },
         ],
       },
@@ -1015,7 +1015,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "This is what makes steps more than a checklist. Each step row has a **+ day** button — pick a day and that single step appears on [Today](/support/today) under **Steps today**, and inside that day in the Calendar.",
+            text: "This is what makes steps more than a checklist. Each step row has a **+ day** button, pick a day and that single step appears on [Today](/support/today) under **Steps today**, and inside that day in the Calendar.",
           },
           {
             t: "p",
@@ -1036,7 +1036,7 @@ export const ARTICLES: Article[] = [
             items: [
               "A scheduled step shows its own row with the parent task's name after it (`↳ File taxes`). Tapping the text opens the parent.",
               "A step you didn't get to shows `from yesterday`.",
-              "Steps don't count toward the day's capacity estimate — only whole tasks do.",
+              "Steps don't count toward the day's capacity estimate, only whole tasks do.",
             ],
           },
         ],
@@ -1047,7 +1047,7 @@ export const ARTICLES: Article[] = [
     slug: "recurring",
     title: "Repeat a task",
     summary:
-      "Daily, weekly on chosen days, or monthly — a repeating task is one card that rolls forward as you complete it.",
+      "Daily, weekly on chosen days, or monthly, a repeating task is one card that rolls forward as you complete it.",
     categoryId: "tasks",
     keywords: ["repeat", "recurring", "every day", "weekly", "monthly", "habit", "routine"],
     sections: [
@@ -1084,7 +1084,7 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "note",
-            text: "Monthly rules handle short months gracefully — the 31st becomes the 30th in April and the 28th or 29th in February.",
+            text: "Monthly rules handle short months gracefully, the 31st becomes the 30th in April and the 28th or 29th in February.",
           },
         ],
       },
@@ -1115,7 +1115,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "In the [morning sweep](/support/fresh-start), repeating tasks get their own options: **Today**, **Did it**, and **Skip**. Skip jumps to the next occurrence with no penalty — and crucially, *Let go* and *Someday* aren't offered, so a bad week can't silently delete a habit.",
+            text: "In the [morning sweep](/support/fresh-start), repeating tasks get their own options: **Today**, **Did it**, and **Skip**. Skip jumps to the next occurrence with no penalty, and crucially, *Let go* and *Someday* aren't offered, so a bad week can't silently delete a habit.",
           },
           {
             t: "p",
@@ -1166,7 +1166,7 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "note",
-            text: "The timer needs an estimate — that's the only requirement. No estimate, no play button.",
+            text: "The timer needs an estimate, that's the only requirement. No estimate, no play button.",
           },
         ],
       },
@@ -1179,11 +1179,11 @@ export const ARTICLES: Article[] = [
             head: ["Control", "What it does"],
             rows: [
               ["**Pause / Start**", "Freezes the countdown, or picks it back up"],
-              ["**Reset**", "Returns to the full duration — and leaves the timer **paused**"],
+              ["**Reset**", "Returns to the full duration, and leaves the timer **paused**"],
               ["**+5 min**", "Adds five minutes, whether running or paused"],
               ["**Done**", "Completes the task and closes focus"],
               ["**Minimize** (⌄)", "Shrinks to a floating pill that keeps ticking"],
-              ["**Exit** (✕)", "Ends the session — the task is *not* completed"],
+              ["**Exit** (✕)", "Ends the session, the task is *not* completed"],
             ],
           },
         ],
@@ -1194,11 +1194,11 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "At zero you get a chime and a vibration, and — if Kairo isn't open in front of you — a notification saying **⏱ Time's up**. The timer then keeps counting *upward* in overtime, showing `+4:20` and turning terracotta.",
+            text: "At zero you get a chime and a vibration, and, if Kairo isn't open in front of you, a notification saying **⏱ Time's up**. The timer then keeps counting *upward* in overtime, showing `+4:20` and turning terracotta.",
           },
           {
             t: "p",
-            text: "Overtime is not a failure state. The message reads *“Overtime — still going. Respect.”*",
+            text: "Overtime is not a failure state. The message reads *“Overtime, still going. Respect.”*",
           },
         ],
       },
@@ -1248,9 +1248,9 @@ export const ARTICLES: Article[] = [
           {
             t: "ul",
             items: [
-              "**Inbox** — everything captured without a decision. It's meant to be temporary.",
-              "**Your lists** — Work, Home, Errands, whatever fits. Give each an icon.",
-              "**Someday** — ideas you're not ready for. Parking something here is a legitimate outcome, not a failure.",
+              "**Inbox**, everything captured without a decision. It's meant to be temporary.",
+              "**Your lists**, Work, Home, Errands, whatever fits. Give each an icon.",
+              "**Someday**, ideas you're not ready for. Parking something here is a legitimate outcome, not a failure.",
             ],
           },
         ],
@@ -1280,7 +1280,7 @@ export const ARTICLES: Article[] = [
           {
             t: "ul",
             items: [
-              "While capturing, type `#work` — it matches on the first few letters.",
+              "While capturing, type `#work`, it matches on the first few letters.",
               "In a task, expand **List** and pick one.",
               "Use a list's own add row to create tasks directly there.",
             ],
@@ -1295,21 +1295,21 @@ export const ARTICLES: Article[] = [
             t: "ol",
             items: [
               "On the Lists page, click **Reorder** in the header.",
-              "**Drag a list by its grip handle** (the dotted square on the left) to slide it into place — or use the ↑ and ↓ buttons.",
+              "**Drag a list by its grip handle** (the dotted square on the left) to slide it into place, or use the ↑ and ↓ buttons.",
               "Click **Done** when the order looks right.",
             ],
           },
           {
             t: "p",
-            text: "Dragging works with a finger as well as a mouse, and the other lists shuffle aside as you move. Every change saves immediately, and the order follows you to your other devices. Inbox always sits at the top and Someday at the bottom — they're fixed on purpose, so your captured and parked items always live in the same place.",
+            text: "Dragging works with a finger as well as a mouse, and the other lists shuffle aside as you move. Every change saves immediately, and the order follows you to your other devices. Inbox always sits at the top and Someday at the bottom, they're fixed on purpose, so your captured and parked items always live in the same place.",
           },
           {
             t: "tip",
-            text: "The arrows are there for precision and for keyboard use — you never have to drag if you'd rather not.",
+            text: "The arrows are there for precision and for keyboard use, you never have to drag if you'd rather not.",
           },
           {
             t: "tip",
-            text: "The order is **yours alone**. Rearranging a [shared list](/support/sharing-lists) changes nothing for the people you share it with — everyone keeps their own arrangement.",
+            text: "The order is **yours alone**. Rearranging a [shared list](/support/sharing-lists) changes nothing for the people you share it with, everyone keeps their own arrangement.",
           },
         ],
       },
@@ -1319,7 +1319,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Once you have a lot of lists, the page gets long. Click the small chevron beside any list's name to fold it away — the header stays visible with its count, and the tasks tuck out of sight.",
+            text: "Once you have a lot of lists, the page gets long. Click the small chevron beside any list's name to fold it away, the header stays visible with its count, and the tasks tuck out of sight.",
           },
           {
             t: "ul",
@@ -1331,7 +1331,7 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "note",
-            text: "Collapsing is only about the view — it doesn't hide anything from Today, search or the calendar. To genuinely hide a list's contents, [lock it with a PIN](/support/locks).",
+            text: "Collapsing is only about the view, it doesn't hide anything from Today, search or the calendar. To genuinely hide a list's contents, [lock it with a PIN](/support/locks).",
           },
         ],
       },
@@ -1341,7 +1341,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Hover a list and click the bin icon, then confirm. **Its tasks are not deleted** — they simply lose their list label. A task planned for Friday stays planned for Friday; an undated one shows up in your Inbox.",
+            text: "Hover a list and click the bin icon, then confirm. **Its tasks are not deleted**, they simply lose their list label. A task planned for Friday stays planned for Friday; an undated one shows up in your Inbox.",
           },
           {
             t: "note",
@@ -1349,7 +1349,7 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "tip",
-            text: "A task can legitimately appear twice on this page — once under its list and once under **Inbox** — because “in a list” and “not yet planned” are different things.",
+            text: "A task can legitimately appear twice on this page, once under its list and once under **Inbox**, because “in a list” and “not yet planned” are different things.",
           },
         ],
       },
@@ -1372,7 +1372,7 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "p",
-            text: "There are no streaks and no gaps highlighted. A quiet week isn't a broken chain — it's just a quiet week.",
+            text: "There are no streaks and no gaps highlighted. A quiet week isn't a broken chain, it's just a quiet week.",
           },
         ],
       },
@@ -1382,7 +1382,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Each completion of a [repeating task](/support/recurring) is written as its own entry, so ten weeks of Monday gym sessions read as ten wins — not one task that keeps moving.",
+            text: "Each completion of a [repeating task](/support/recurring) is written as its own entry, so ten weeks of Monday gym sessions read as ten wins, not one task that keeps moving.",
           },
         ],
       },
@@ -1404,7 +1404,7 @@ export const ARTICLES: Article[] = [
     slug: "notifications",
     title: "Turn on notifications",
     summary:
-      "Get a ping when a focus timer ends, when a reminder fires, or when someone assigns you a task — even with Kairo closed.",
+      "Get a ping when a focus timer ends, when a reminder fires, or when someone assigns you a task, even with Kairo closed.",
     categoryId: "reminders",
     keywords: [
       "notifications",
@@ -1425,14 +1425,14 @@ export const ARTICLES: Article[] = [
           {
             t: "ol",
             items: [
-              "Open your profile (your avatar — top right on mobile, bottom of the sidebar on desktop).",
+              "Open your profile (your avatar, top right on mobile, bottom of the sidebar on desktop).",
               "Under **Notifications**, click **Enable**.",
               "Allow notifications when your browser asks.",
             ],
           },
           {
             t: "p",
-            text: "The button then reads **On ✓**, and a **Send a test notification** link appears — use it to confirm the whole chain works.",
+            text: "The button then reads **On ✓**, and a **Send a test notification** link appears, use it to confirm the whole chain works.",
           },
         ],
       },
@@ -1474,7 +1474,7 @@ export const ARTICLES: Article[] = [
             items: [
               "Notifications use your device's normal notification sound and a short vibration, and stay on screen until you dismiss them.",
               "If a Kairo tab is open when one arrives, it also plays a soft two-note chime.",
-              "Custom notification sounds aren't possible on the web — browsers don't support them.",
+              "Custom notification sounds aren't possible on the web, browsers don't support them.",
             ],
           },
         ],
@@ -1496,14 +1496,14 @@ export const ARTICLES: Article[] = [
                 "You're on an address like `192.168.x.x`. Push only works over HTTPS or on `localhost`.",
               ],
               [
-                "Blocked — allow notifications for this site",
+                "Blocked, allow notifications for this site",
                 "You (or the browser) denied permission before. Tap the lock icon in the address bar, allow notifications, then try again.",
               ],
               [
                 "This browser doesn't support push",
                 "Use Chrome, Edge, or an installed app on iPhone.",
               ],
-              ["Couldn't enable: …", "The detail is the real error — send it to us and we'll dig in."],
+              ["Couldn't enable: …", "The detail is the real error, send it to us and we'll dig in."],
             ],
           },
           {
@@ -1530,7 +1530,7 @@ export const ARTICLES: Article[] = [
             t: "ol",
             items: [
               "Open the task and expand **Reminder**.",
-              "Pick a quick option — **In 1 hour**, **In 3 hours**, **Evening 18:00**, **Tomorrow 9:00** — or choose an exact date and time.",
+              "Pick a quick option, **In 1 hour**, **In 3 hours**, **Evening 18:00**, **Tomorrow 9:00**, or choose an exact date and time.",
             ],
           },
           {
@@ -1552,7 +1552,7 @@ export const ARTICLES: Article[] = [
             items: [
               "They arrive even if Kairo is closed and your phone is locked.",
               "**A reminder for something you've already done never fires.** Completing or deleting the task cancels it, and Kairo double-checks at send time.",
-              "Setting a new time replaces the old one — there's one reminder per task.",
+              "Setting a new time replaces the old one, there's one reminder per task.",
               "Reminders can be set up to 30 days ahead, and must be at least a moment in the future.",
               "Completing a [repeating task](/support/recurring) clears its reminder, since it belonged to that occurrence.",
             ],
@@ -1577,7 +1577,7 @@ export const ARTICLES: Article[] = [
     slug: "sharing-lists",
     title: "Share a list with someone",
     summary:
-      "Invite someone to a list and you both see and edit the same tasks — groceries, a project, a household.",
+      "Invite someone to a list and you both see and edit the same tasks, groceries, a project, a household.",
     categoryId: "sharing",
     keywords: ["share", "shared", "collaborate", "invite", "team", "family", "together", "members"],
     sections: [
@@ -1595,7 +1595,7 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "warn",
-            text: "They must have signed in to Kairo with that Google account at least once. If they haven't, you'll see *“No Kairo account with that email — they need to sign in once first.”* Ask them to sign in, then invite them again.",
+            text: "They must have signed in to Kairo with that Google account at least once. If they haven't, you'll see *“No Kairo account with that email, they need to sign in once first.”* Ask them to sign in, then invite them again.",
           },
         ],
       },
@@ -1609,7 +1609,7 @@ export const ARTICLES: Article[] = [
               "Both of you see the same tasks in that list, and either can add, edit, or complete them.",
               "The list shows a **👥** badge with the number of people on it.",
               "Tasks in a shared list can be [assigned](/support/assigning) to a specific person.",
-              "Everyone's own Today, Calendar and Log stay personal — only the list's contents are shared.",
+              "Everyone's own Today, Calendar and Log stay personal, only the list's contents are shared.",
             ],
           },
         ],
@@ -1620,7 +1620,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Kairo re-checks for changes when you return to the tab — at most once every 20 seconds — so a partner's additions appear when you come back to the app. It isn't live, cursor-by-cursor collaboration; refresh the page if you're working side by side in real time.",
+            text: "Kairo re-checks for changes when you return to the tab, at most once every 20 seconds, so a partner's additions appear when you come back to the app. It isn't live, cursor-by-cursor collaboration; refresh the page if you're working side by side in real time.",
           },
         ],
       },
@@ -1652,7 +1652,7 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "note",
-            text: "Two practical notes: you'll need to **unlock a locked list before you can open its Share dialog**, and Kairo has no way to deliver the PIN — tell your people out of band.",
+            text: "Two practical notes: you'll need to **unlock a locked list before you can open its Share dialog**, and Kairo has no way to deliver the PIN, tell your people out of band.",
           },
         ],
       },
@@ -1661,7 +1661,7 @@ export const ARTICLES: Article[] = [
   {
     slug: "assigning",
     title: "Assign a task to someone",
-    summary: "In a shared list, put someone's name on a task — and let them know.",
+    summary: "In a shared list, put someone's name on a task, and let them know.",
     categoryId: "sharing",
     keywords: ["assign", "assignee", "delegate", "owner", "responsible", "who"],
     sections: [
@@ -1674,7 +1674,7 @@ export const ARTICLES: Article[] = [
             items: [
               "Open a task that lives in a [shared list](/support/sharing-lists).",
               "Expand **Assignee**.",
-              "Pick a person — or **Anyone** to leave it unassigned.",
+              "Pick a person, or **Anyone** to leave it unassigned.",
             ],
           },
           {
@@ -1689,7 +1689,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "They get a push notification — **📋 Alex assigned you a task** — if they've [enabled notifications](/support/notifications). The task then carries their avatar as a chip.",
+            text: "They get a push notification, **📋 Alex assigned you a task**, if they've [enabled notifications](/support/notifications). The task then carries their avatar as a chip.",
           },
           {
             t: "p",
@@ -1707,7 +1707,7 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "note",
-            text: "You can only assign to people who are actually on that list — Kairo checks on the server, not just in the interface.",
+            text: "You can only assign to people who are actually on that list, Kairo checks on the server, not just in the interface.",
           },
         ],
       },
@@ -1748,7 +1748,7 @@ export const ARTICLES: Article[] = [
             head: ["Send a copy", "Share a list"],
             rows: [
               ["One task", "A whole list"],
-              ["Independent — changes don't sync", "The same tasks for everyone"],
+              ["Independent, changes don't sync", "The same tasks for everyone"],
               ["They own their copy", "Shared ownership"],
               ["Good for handoffs", "Good for ongoing collaboration"],
             ],
@@ -1763,7 +1763,7 @@ export const ARTICLES: Article[] = [
             t: "ul",
             items: [
               "**Carried over:** title, notes, deadline, estimate, and the step titles (unticked).",
-              "**Not carried:** your planned day and time, Spotlight star, list, repeat rule, reminders and assignee — those are yours, not theirs.",
+              "**Not carried:** your planned day and time, Spotlight star, list, repeat rule, reminders and assignee, those are yours, not theirs.",
             ],
           },
           {
@@ -1798,7 +1798,7 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "p",
-            text: "Its tasks now disappear from **everywhere** — Today, the Calendar, the Log, search, the inbox count, even the AI's context. The list itself shows only its name and a *Locked — tap to unlock* panel.",
+            text: "Its tasks now disappear from **everywhere**, Today, the Calendar, the Log, search, the inbox count, even the AI's context. The list itself shows only its name and a *Locked, tap to unlock* panel.",
           },
           {
             t: "note",
@@ -1832,7 +1832,7 @@ export const ARTICLES: Article[] = [
             items: [
               "An unlock applies to **the tab you're in**. Refreshing and navigating keep it open.",
               "A new tab, a new window, or reopening Kairo asks for the PIN again.",
-              "**Relock** hides an unlocked list again immediately — useful before handing someone your laptop.",
+              "**Relock** hides an unlocked list again immediately, useful before handing someone your laptop.",
               "Unlocks are per account: unlocking as one [account](/support/accounts) never reveals anything in another.",
             ],
           },
@@ -1844,7 +1844,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Both locks offer **Change PIN** and **Remove** while unlocked. Each requires the current PIN — knowing the old one is always the price of changing it.",
+            text: "Both locks offer **Change PIN** and **Remove** while unlocked. Each requires the current PIN, knowing the old one is always the price of changing it.",
           },
           {
             t: "warn",
@@ -1858,15 +1858,15 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "PINs are never stored as text — only a salted hash lives on the server, checks happen there, and every wrong attempt is deliberately slowed down.",
+            text: "PINs are never stored as text, only a salted hash lives on the server, checks happen there, and every wrong attempt is deliberately slowed down.",
           },
           {
             t: "warn",
-            text: "Be clear-eyed about what this is: **glance privacy, not encryption.** It stops someone using your unlocked device from seeing those tasks. It does not protect against someone who can inspect the page, use the API with your session, or read the database. There's also no attempt limit — a determined person with your unlocked laptop could guess a 4-digit PIN.",
+            text: "Be clear-eyed about what this is: **glance privacy, not encryption.** It stops someone using your unlocked device from seeing those tasks. It does not protect against someone who can inspect the page, use the API with your session, or read the database. There's also no attempt limit, a determined person with your unlocked laptop could guess a 4-digit PIN.",
           },
           {
             t: "note",
-            text: "The app lock guards **one account**. If you have other [accounts](/support/accounts) signed in, the lock screen lets you switch to them without unlocking this one — by design, so you're never trapped.",
+            text: "The app lock guards **one account**. If you have other [accounts](/support/accounts) signed in, the lock screen lets you switch to them without unlocking this one, by design, so you're never trapped.",
           },
         ],
       },
@@ -1893,7 +1893,7 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "warn",
-            text: "Five accounts is the limit for one browser. Adding a sixth quietly signs out the one you added first — no warning, so keep the roster tidy.",
+            text: "Five accounts is the limit for one browser. Adding a sixth quietly signs out the one you added first, no warning, so keep the roster tidy.",
           },
         ],
       },
@@ -1903,7 +1903,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Tap any account in the list. Kairo reloads straight into that account's tasks, lists, and settings — no re-login.",
+            text: "Tap any account in the list. Kairo reloads straight into that account's tasks, lists, and settings, no re-login.",
           },
         ],
       },
@@ -1928,7 +1928,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "**Sign out of this account** removes only the current one. If others are still signed in, you land in the first account on your list; sign out of the last and you return to the landing page. There's no “sign out everywhere” button — sign out once per account.",
+            text: "**Sign out of this account** removes only the current one. If others are still signed in, you land in the first account on your list; sign out of the last and you return to the landing page. There's no “sign out everywhere” button, sign out once per account.",
           },
         ],
       },
@@ -1965,7 +1965,7 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "p",
-            text: "Before you type anything, it shows your five most recent tasks — so `⌘K` doubles as “take me back to what I just added”.",
+            text: "Before you type anything, it shows your five most recent tasks, so `⌘K` doubles as “take me back to what I just added”.",
           },
         ],
       },
@@ -1990,9 +1990,9 @@ export const ARTICLES: Article[] = [
           {
             t: "ul",
             items: [
-              "Tasks in [locked lists](/support/locks) never appear — search can't be used to peek.",
+              "Tasks in [locked lists](/support/locks) never appear, search can't be used to peek.",
               "It covers your live tasks plus anything completed in the **last three days**. Older history lives in the [Log](/support/log).",
-              "It matches whole words as you type them — there's no typo correction — and it doesn't search inside steps.",
+              "It matches whole words as you type them, there's no typo correction, and it doesn't search inside steps.",
             ],
           },
         ],
@@ -2012,7 +2012,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Your tasks, lists, and settings live in Kairo's database, tied to your Google account ID. Signing in with Google shares only your name, email address, and profile picture — Kairo never sees your password and never asks for access to Gmail, Drive, or your calendar.",
+            text: "Your tasks, lists, and settings live in Kairo's database, tied to your Google account ID. Signing in with Google shares only your name, email address, and profile picture, Kairo never sees your password and never asks for access to Gmail, Drive, or your calendar.",
           },
         ],
       },
@@ -2025,7 +2025,7 @@ export const ARTICLES: Article[] = [
             items: [
               "Only the text of the task you just captured, plus today's date and your **unlocked** list names, is sent for parsing.",
               "Locked list names are never sent.",
-              "Nothing else — no other tasks, no history, no account details.",
+              "Nothing else, no other tasks, no history, no account details.",
               "If you'd rather not use it at all, capture still works completely without AI; it's an enhancement layered on top of the local parser.",
             ],
           },
@@ -2037,7 +2037,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Your theme choice, which view you last used in the Calendar, running focus timers, and which locks you've unlocked this session are all stored locally in your browser — never on the server.",
+            text: "Your theme choice, which view you last used in the Calendar, running focus timers, and which locks you've unlocked this session are all stored locally in your browser, never on the server.",
           },
         ],
       },
@@ -2047,7 +2047,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "warn",
-            text: "PIN [locks](/support/locks) hide content in the interface and are enforced on the server, but the underlying tasks are stored normally. Treat locks as privacy from people using your device — not as encryption.",
+            text: "PIN [locks](/support/locks) hide content in the interface and are enforced on the server, but the underlying tasks are stored normally. Treat locks as privacy from people using your device, not as encryption.",
           },
         ],
       },
@@ -2092,13 +2092,13 @@ export const ARTICLES: Article[] = [
             t: "ol",
             items: [
               "Check your internet connection.",
-              "Refresh the page — you'll see the true saved state.",
+              "Refresh the page, you'll see the true saved state.",
               "Redo the change.",
             ],
           },
           {
             t: "p",
-            text: "If it keeps happening on every action, [tell us](/support/contact) — something server-side needs attention.",
+            text: "If it keeps happening on every action, [tell us](/support/contact), something server-side needs attention.",
           },
         ],
       },
@@ -2112,7 +2112,7 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "p",
-            text: "If the screen stays, note the `ref:` code shown under the message and [send it to us](/support/contact) — it points straight at the cause.",
+            text: "If the screen stays, note the `ref:` code shown under the message and [send it to us](/support/contact), it points straight at the cause.",
           },
         ],
       },
@@ -2123,7 +2123,7 @@ export const ARTICLES: Article[] = [
           {
             t: "ul",
             items: [
-              "Use **Send a test notification** in your profile — it verifies the whole chain in two seconds.",
+              "Use **Send a test notification** in your profile, it verifies the whole chain in two seconds.",
               "On iPhone, Kairo must be [installed to the home screen](/support/getting-started) first.",
               "Push needs HTTPS. Opening Kairo through a local network address like `192.168.x.x` can't receive notifications.",
               "Check your device's Do Not Disturb or Focus mode.",
@@ -2138,7 +2138,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Shared lists sync when you return to the tab rather than continuously. Switch away and back, or refresh, and their changes appear. Also confirm you're both on the same list — and that you're signed into the [account](/support/accounts) you shared from.",
+            text: "Shared lists sync when you return to the tab rather than continuously. Switch away and back, or refresh, and their changes appear. Also confirm you're both on the same list, and that you're signed into the [account](/support/accounts) you shared from.",
           },
         ],
       },
@@ -2149,9 +2149,9 @@ export const ARTICLES: Article[] = [
           {
             t: "ul",
             items: [
-              "Check whether the list is [locked](/support/locks) — locked tasks are hidden everywhere by design.",
+              "Check whether the list is [locked](/support/locks), locked tasks are hidden everywhere by design.",
               "Check you're in the right [account](/support/accounts).",
-              "Deleted a list? Its tasks survive without a list label — undated ones sit in the Inbox, dated ones stay on their day.",
+              "Deleted a list? Its tasks survive without a list label, undated ones sit in the Inbox, dated ones stay on their day.",
               "Look in the [Log](/support/log): it may simply be done.",
             ],
           },

@@ -4,7 +4,7 @@ import { B, H2, LI, Mail, P, PageHead, UL } from "../_parts";
 
 export const metadata: Metadata = {
   title: "Refund & Cancellation Policy · Kairo",
-  description: "How to cancel and how to get a refund from Kairo — a 7-day, no-argument policy.",
+  description: "How to cancel and how to get a refund from Kairo, a 7-day, no-argument policy.",
   alternates: { canonical: "/refunds" },
 };
 
@@ -23,7 +23,7 @@ export default function RefundsPage() {
       <H2>Cancelling</H2>
       <P>
         There is no subscription and no auto-renewal. A payment buys one month and then stops on
-        its own — you are never charged again unless you choose to pay for another month. So there
+        its own, you are never charged again unless you choose to pay for another month. So there
         is no cancellation step, and no way to be billed by forgetting about us.
       </P>
       <P>
@@ -38,7 +38,7 @@ export default function RefundsPage() {
           not need to give a reason.
         </LI>
         <LI>
-          <B>After 7 days,</B> that month is generally not refundable — you have had the use of
+          <B>After 7 days,</B> that month is generally not refundable, you have had the use of
           it. If something went genuinely wrong at our end, tell us and we will make it right.
         </LI>
         <LI>
@@ -68,7 +68,7 @@ export default function RefundsPage() {
       <P>
         Refunding does not delete anything. Your tasks stay exactly where they are, and you keep
         access until the month you paid for runs out. If you want the account removed as well, say
-        so in the same email — see the{" "}
+        so in the same email, see the{" "}
         <Link href="/privacy" className="font-medium text-sun-deep underline decoration-sun/40 underline-offset-2">Privacy Policy</Link>.
       </P>
 

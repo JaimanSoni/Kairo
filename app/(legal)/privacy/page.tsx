@@ -19,7 +19,7 @@ export default function PrivacyPage() {
       <P>
         Kairo is a personal planner, so almost everything in it is something you wrote down. This
         page says exactly what is stored, what leaves our servers, and how to get rid of it. It
-        describes what the software actually does — not what a template says it might.
+        describes what the software actually does, not what a template says it might.
       </P>
 
       <H2>What is stored</H2>
@@ -39,7 +39,7 @@ export default function PrivacyPage() {
         </LI>
         <LI>
           <B>Billing state.</B> Whether you are on a trial, what you have paid for, and the
-          Razorpay identifiers for those payments. <B>Card details never reach Kairo</B> — they are
+          Razorpay identifiers for those payments. <B>Card details never reach Kairo</B> they are
           entered on Razorpay&apos;s checkout and we never receive them.
         </LI>
         <LI>
@@ -59,10 +59,10 @@ export default function PrivacyPage() {
       </P>
       <UL>
         <LI>
-          <B>Google</B> — sign-in only. We receive your profile from Google; we send nothing back.
+          <B>Google</B> sign-in only. We receive your profile from Google; we send nothing back.
         </LI>
         <LI>
-          <B>Ollama</B> (AI capture) — when you capture a task, the sentence you typed or spoke
+          <B>Ollama</B> (AI capture), when you capture a task, the sentence you typed or spoke
           (up to 2,000 characters), today&apos;s date, and the names of your{" "}
           <B>unlocked</B> lists are sent, so the day, time, estimate and list can be filled in.
           Nothing else goes with it: not your email, not your other tasks, not your notes. The
@@ -70,21 +70,21 @@ export default function PrivacyPage() {
           back to parsing the sentence on its own.
         </LI>
         <LI>
-          <B>Razorpay</B> — payments. They receive your name and email to attach to the payment,
+          <B>Razorpay</B> payments. They receive your name and email to attach to the payment,
           and handle the card themselves.
         </LI>
         <LI>
-          <B>Google Analytics</B> — anonymous traffic measurement: which public pages are visited,
+          <B>Google Analytics</B> anonymous traffic measurement: which public pages are visited,
           roughly where from, and on what kind of device. It does not receive your tasks, your
           email, or anything you type. Most tracker-blocking extensions stop it, and Kairo works
           exactly the same without it.
         </LI>
         <LI>
-          <B>Microsoft Clarity</B> — anonymous analytics and session replay, used to see where the
+          <B>Microsoft Clarity</B> anonymous analytics and session replay, used to see where the
           interface confuses people. It records how you move around the app, <B>which can include
           the text of tasks visible on screen</B>. It is disabled entirely on the admin pages. If
           you would rather not be recorded, most tracker-blocking extensions stop it, and we will
-          honour a request to exclude you — just ask.
+          honour a request to exclude you, just ask.
         </LI>
       </UL>
 
@@ -100,8 +100,8 @@ export default function PrivacyPage() {
       <P>
         When you share a list, the people you invite by email can see and edit the tasks in{" "}
         <B>that list</B> and see your name and picture on it. They cannot see your other lists,
-        your Today, or anything locked. Locked lists stay hidden from every view — including
-        search, the calendar, and the AI — until unlocked on that device.
+        your Today, or anything locked. Locked lists stay hidden from every view, including
+        search, the calendar, and the AI, until unlocked on that device.
       </P>
 
       <H2>How long it is kept</H2>

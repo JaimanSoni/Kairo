@@ -43,7 +43,7 @@ export function PlanEditor({ plans, features }: { plans: Plan[]; features: Featu
       if (!res.ok) throw new Error(data.error ?? "That didn't save");
       if (data.deleted === false && (data.holders ?? 0) > 0) {
         alert(
-          `${data.holders} account${data.holders === 1 ? "" : "s"} still on this plan, so it has been retired instead of deleted — it can't be bought, and they keep what they paid for.`
+          `${data.holders} account${data.holders === 1 ? "" : "s"} still on this plan, so it has been retired instead of deleted, it can't be bought, and they keep what they paid for.`
         );
       }
       router.refresh();
@@ -80,7 +80,7 @@ export function PlanEditor({ plans, features }: { plans: Plan[]; features: Featu
           onDelete={async () => {
             if (
               !confirm(
-                `Delete "${plan.name}"?\n\nIf anyone is on it, it will be retired instead — hidden from checkout, but still honoured for them.`
+                `Delete "${plan.name}"?\n\nIf anyone is on it, it will be retired instead, hidden from checkout, but still honoured for them.`
               )
             )
               return;
@@ -174,7 +174,7 @@ function PlanCard({
         <code className="rounded-md bg-paper-deep px-1.5 py-0.5 text-[11px] text-ink-faint">{plan.key}</code>
         {!plan.active && (
           <span className="rounded-md bg-paper-deep px-1.5 py-0.5 text-[11px] text-ink-soft">
-            retired — not sellable
+            retired, not sellable
           </span>
         )}
         {/* only while editing — "₹199 saved" on a pricing page reads as a discount */}
@@ -268,7 +268,7 @@ function NewPlan({
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Name — e.g. Lite"
+          placeholder="Name, e.g. Lite"
           className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm"
         />
         <input

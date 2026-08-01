@@ -146,7 +146,7 @@ export function FreshStartDemo() {
         </div>
         <div className="font-display mt-1 text-xl">Fresh start</div>
         <p className="mt-0.5 text-[11px] text-ink-soft">
-          2 things from before didn&apos;t get done — that&apos;s what tomorrows are for.
+          2 things from before didn&apos;t get done, that&apos;s what tomorrows are for.
         </p>
       </div>
       <div className="mt-3 space-y-2">
@@ -286,7 +286,7 @@ export function LockDemo() {
         </span>
       </div>
       <div className="demo-unlock space-y-1.5">
-        <Row title="Therapy — Thursday 5pm" chip="🕐 5 PM" chipTone="sun" />
+        <Row title="Therapy, Thursday 5pm" chip="🕐 5 PM" chipTone="sun" />
         <Row title="Look at the mortgage rates" />
         <Row title="Write the letter" chip="~30m" />
       </div>

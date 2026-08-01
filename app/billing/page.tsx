@@ -52,11 +52,11 @@ export default async function BillingPage() {
       : billing.comped
         ? "You have free access"
         : access.reason === "trial"
-          ? `Free trial — ${access.trialDaysLeft} ${access.trialDaysLeft === 1 ? "day" : "days"} left`
+          ? `Free trial, ${access.trialDaysLeft} ${access.trialDaysLeft === 1 ? "day" : "days"} left`
           : access.reason === "subscribed"
             ? "Active"
             : access.reason === "grace"
-              ? "Paid — not renewing"
+              ? "Paid, not renewing"
               : "Not active";
 
   const detail =
@@ -104,7 +104,7 @@ export default async function BillingPage() {
                 {!access.allowed ? "Ended" : mode === "subscription" ? "Next payment" : "Renew by"}
               </dt>
               <dd className="mt-0.5 text-sm font-semibold">
-                {renewBy ? fmtDate(renewBy) : "—"}
+                {renewBy ? fmtDate(renewBy) : ""}
                 {renewBy && access.allowed && (
                   <span className="ml-1.5 font-normal text-ink-faint">
                     ({daysUntil(renewBy, now)}d)
@@ -133,7 +133,7 @@ export default async function BillingPage() {
 
       {access.paymentsEnabled && mode === "one-off" && !billing.comped && (
         <p className="mt-3 text-xs leading-6 text-ink-faint">
-          Nothing renews on its own — you&apos;re never charged unless you choose to pay for
+          Nothing renews on its own, you&apos;re never charged unless you choose to pay for
           another month. Paying early stacks: the month is added to the end of the one you have.
         </p>
       )}
@@ -179,7 +179,7 @@ export default async function BillingPage() {
           <Link href="/refunds" className="underline underline-offset-2 hover:text-ink-soft">
             refund policy
           </Link>{" "}
-          — or just email us and we&apos;ll sort it.
+          or just email us and we&apos;ll sort it.
         </p>
       </section>
     </div>

@@ -227,7 +227,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <div className="flex justify-center">
           <button
             onClick={() => setOmnibar(true)}
-            aria-label="Capture — AI sorts the details"
+            aria-label="Capture, AI sorts the details"
             className="grid size-12 -translate-y-3 place-items-center rounded-full bg-gradient-to-br from-sun to-sky text-on-accent shadow-lg shadow-sun/35 transition-transform active:scale-95"
           >
             {/* sparkle — capture is AI-assisted */}
@@ -501,7 +501,7 @@ function NotificationSettings() {
       {status === "insecure" ? (
         <p className="text-sm text-ink-faint">
           Push needs a secure connection (HTTPS or localhost). Opening Kairo via a LAN IP like
-          192.168.x.x can&apos;t receive notifications — use it on this machine at localhost, or host it
+          192.168.x.x can&apos;t receive notifications, use it on this machine at localhost, or host it
           with HTTPS.
         </p>
       ) : status === "unsupported" ? (
@@ -511,7 +511,7 @@ function NotificationSettings() {
         </p>
       ) : status === "denied" ? (
         <p className="text-sm text-ink-faint">
-          Blocked — allow notifications for this site in your browser settings (tap the lock icon
+          Blocked, allow notifications for this site in your browser settings (tap the lock icon
           in the address bar), then try again.
         </p>
       ) : (
@@ -534,7 +534,7 @@ function NotificationSettings() {
             <button
               onClick={async () => {
                 const res = await fetch("/api/push/test", { method: "POST" });
-                setError(res.ok ? null : "Test send failed — check the server logs");
+                setError(res.ok ? null : "Test send failed, check the server logs");
               }}
               className="mt-2 text-xs font-medium text-ink-faint underline hover:text-ink"
             >

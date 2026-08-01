@@ -110,7 +110,7 @@ export function PlanPicker({
       aria-label="Plan"
       className="rounded-lg border border-line bg-card px-2 py-1 text-[11px] text-ink-soft disabled:opacity-50"
     >
-      <option value="">— none —</option>
+      <option value="">none, </option>
       {plans.map((p) => (
         <option key={p.key} value={p.key}>
           {p.name}

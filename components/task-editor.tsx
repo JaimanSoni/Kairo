@@ -107,9 +107,9 @@ export function TaskEditor({ task }: { task: Task }) {
         showToast({
           message:
             result.status === "denied"
-              ? "Notifications are blocked for this site — allow them in browser settings"
+              ? "Notifications are blocked for this site, allow them in browser settings"
               : result.status === "insecure"
-                ? "Push needs HTTPS or localhost — LAN IPs can't receive notifications"
+                ? "Push needs HTTPS or localhost, LAN IPs can't receive notifications"
                 : result.status === "failed"
                   ? `Couldn't enable notifications: ${result.detail}`
                   : "Push isn't supported in this browser",
@@ -156,7 +156,7 @@ export function TaskEditor({ task }: { task: Task }) {
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="Notes — why does this matter? links, context…"
+          placeholder="Notes, why does this matter? links, context…"
           rows={2}
           className="mt-3 w-full resize-none rounded-xl border border-line bg-paper px-3 py-2 text-base outline-none placeholder:text-ink-faint focus:border-sun sm:text-sm"
         />
@@ -167,7 +167,7 @@ export function TaskEditor({ task }: { task: Task }) {
             Steps{" "}
             {task.carryCount >= 3 && (
               <span className="ml-2 normal-case text-lilac">
-                carried ×{task.carryCount} — breaking it down usually helps ↓
+                carried ×{task.carryCount} breaking it down usually helps ↓
               </span>
             )}
           </div>
@@ -357,7 +357,7 @@ export function TaskEditor({ task }: { task: Task }) {
                     : "border-line bg-card text-ink-soft hover:border-ink-faint"
                 }`}
               >
-                <Icon3d name="moon" size={15} /> Someday — park it, guilt-free
+                <Icon3d name="moon" size={15} /> Someday, park it, guilt-free
               </button>
             </div>
           )}
@@ -445,7 +445,7 @@ export function TaskEditor({ task }: { task: Task }) {
 
               {task.repeat && (
                 <p className="mt-3 text-xs text-ink-soft">
-                  Finishing it logs a win and rolls the card to the next date — miss a day and the
+                  Finishing it logs a win and rolls the card to the next date, miss a day and the
                   morning sweep offers a guilt-free skip.
                 </p>
               )}
@@ -467,7 +467,7 @@ export function TaskEditor({ task }: { task: Task }) {
                 onChange={(min) => updateTask(task.id, { estimateMin: min })}
               />
               <div className="mt-1 flex items-center justify-between">
-                <span className="text-xs text-ink-faint">scroll to set — any amount</span>
+                <span className="text-xs text-ink-faint">scroll to set, any amount</span>
                 {task.estimateMin != null && (
                   <button
                     onClick={() => updateTask(task.id, { estimateMin: null })}
@@ -491,7 +491,7 @@ export function TaskEditor({ task }: { task: Task }) {
           {open === "deadline" && (
             <div className="anim-rise border-b border-line bg-paper px-4 py-4">
               <p className="mb-3 text-xs text-ink-soft">
-                A real, external deadline — rare on purpose. Kairo never turns these red.
+                A real, external deadline, rare on purpose. Kairo never turns these red.
               </p>
               <DatePicker
                 value={task.dueDate}
@@ -599,7 +599,7 @@ export function TaskEditor({ task }: { task: Task }) {
                   </button>
                 ))}
                 {state.lists.length === 0 && (
-                  <span className="text-xs text-ink-faint">No lists yet — create one in Lists</span>
+                  <span className="text-xs text-ink-faint">No lists yet, create one in Lists</span>
                 )}
               </div>
             </div>

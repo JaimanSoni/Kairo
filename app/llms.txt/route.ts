@@ -31,7 +31,7 @@ export function GET() {
     "is ever marked overdue, there is no streak or productivity score, and each",
     "morning offers one decision per leftover task rather than a wall of red.",
     "",
-    `Pricing: a ${TRIAL_DAYS}-day free trial, then ${PRICE_LABEL} for a month. Payment is one-off —`,
+    `Pricing: a ${TRIAL_DAYS}-day free trial, then ${PRICE_LABEL} for a month. Payment is one-off, `,
     "there is no recurring subscription and nothing to cancel. Sign-in is Google only.",
     "",
     `Contact: ${SUPPORT_EMAIL}`,

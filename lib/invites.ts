@@ -129,7 +129,7 @@ export async function inviteUserByEmail(input: {
       error:
         result.skipped === "unconfigured"
           ? "Email isn't configured on this server"
-          : "That address didn't accept the invite — worth checking for a typo",
+          : "That address didn't accept the invite, worth checking for a typo",
     };
   }
 

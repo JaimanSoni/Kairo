@@ -83,11 +83,11 @@ export function ShareListModal({ list, onClose }: { list: List; onClose: () => v
           <h2 className="font-display min-w-0 flex-1 truncate text-2xl">{list.name}</h2>
         </div>
         <p className="mt-1 text-sm text-ink-soft">
-          {isOwner ? "Share this list — you'll both see and edit its tasks." : "Shared with you."}
+          {isOwner ? "Share this list, you'll both see and edit its tasks." : "Shared with you."}
         </p>
         {list.locked && (
           <p className="mt-2 rounded-xl bg-sun-soft px-3 py-2 text-xs text-sun-deep">
-            🔒 This list is locked — everyone needs the same PIN to open it.
+            🔒 This list is locked, everyone needs the same PIN to open it.
           </p>
         )}
 
@@ -215,7 +215,7 @@ export function SendTaskModal({ task, onClose }: { task: Task; onClose: () => vo
         <h2 className="font-display text-2xl">Send a copy</h2>
         <p className="mt-1 truncate text-sm text-ink-soft">“{task.title}”</p>
         <p className="mt-2 text-xs text-ink-faint">
-          A copy lands in their inbox with your name on it — they plan it their way.
+          A copy lands in their inbox with your name on it, they plan it their way.
         </p>
         <div className="mt-4 flex items-center gap-2">
           <input

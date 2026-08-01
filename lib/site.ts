@@ -13,7 +13,7 @@ export const SITE_NAME = "Kairo";
 export const SITE_TAGLINE = "A daily planner that forgives.";
 
 export const SITE_DESCRIPTION =
-  "Plan a day you can actually finish — no red badges, no overdue guilt, no infinite lists.";
+  "Plan a day you can actually finish, no red badges, no overdue guilt, no infinite lists.";
 
 /** Where a human should write to — matches the legal pages and /support/contact. */
 export const SUPPORT_EMAIL = "jaimansoni@gmail.com";

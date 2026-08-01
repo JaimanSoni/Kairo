@@ -64,7 +64,7 @@ export async function sendEmail(input: {
   text: string;
 }): Promise<SendResult> {
   if (!emailConfigured()) {
-    console.warn("[email] RESEND_API_KEY unset — not sending", input.key);
+    console.warn("[email] RESEND_API_KEY unset, not sending", input.key);
     return { sent: false, skipped: "unconfigured" };
   }
 

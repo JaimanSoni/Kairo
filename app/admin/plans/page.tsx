@@ -34,7 +34,7 @@ export default async function AdminPlans() {
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <PageHead title="Plans">
         What people can buy, and what each plan unlocks. Everyone gets the whole product free for
-        the first {TRIAL_DAYS} days regardless — nobody upgrades for a feature they were never
+        the first {TRIAL_DAYS} days regardless, nobody upgrades for a feature they were never
         allowed to try.
       </PageHead>
 
@@ -54,7 +54,7 @@ export default async function AdminPlans() {
       <section className="mt-10 rounded-2xl border border-line bg-card p-5">
         <h2 className="text-sm font-semibold">Where these are enforced</h2>
         <p className="mt-1 text-xs leading-5 text-ink-soft">
-          Features are defined in code, not here — a toggle that nothing reads would look like it
+          Features are defined in code, not here, a toggle that nothing reads would look like it
           worked and quietly sell someone nothing. Each one is checked on the server at the point
           below, so hiding a button is never the only thing standing in the way.
         </p>

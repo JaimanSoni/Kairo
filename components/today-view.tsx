@@ -115,7 +115,7 @@ export function TodayView() {
           {totalEstimate > 0 && (
             <span className={overCapacity ? "font-medium text-sun-deep" : ""}>
               holds ~{fmtMinutes(totalEstimate)}
-              {overCapacity ? " — that's a lot. Trim one?" : " · fits ✓"}
+              {overCapacity ? "that's a lot. Trim one?" : " · fits ✓"}
             </span>
           )}
           {carryover.length > 0 && state.sweepDismissed && (
@@ -130,7 +130,7 @@ export function TodayView() {
             <Link
               href="/lists"
               className="rounded-full border border-line bg-card px-3 py-1 font-medium text-ink-faint hover:border-ink-faint hover:text-ink"
-              title="Tasks in locked lists — unlock them in Lists"
+              title="Tasks in locked lists. Unlock them in Lists"
             >
               🔒 {lockedTodayCount} hidden
             </Link>
@@ -173,7 +173,7 @@ export function TodayView() {
             <section className="anim-rise rounded-2xl border border-line bg-paper-deep/50 p-5">
               <h3 className="text-sm font-semibold">Plan today from your inbox</h3>
               <p className="mb-3 mt-0.5 text-xs text-ink-soft">
-                Pull in only what fits. The rest will wait — happily.
+                Pull in only what fits. The rest will wait, happily.
               </p>
               <div className="space-y-2">
                 {inboxPreview.map((t) => (
@@ -196,7 +196,7 @@ export function TodayView() {
               <EmptyState
                 icon="sunrise"
                 title="A blank day. How rare."
-                body="Capture what's on your mind (press N), or enjoy the silence — that's productivity too."
+                body="Capture what's on your mind (press N), or enjoy the silence, that's productivity too."
               />
             )
           )}
@@ -255,7 +255,7 @@ function TodayCapture({ today, hasTasks }: { today: string; hasTasks: boolean })
       key={dest}
       placeholder={
         toInbox
-          ? "Capture it — decide the day later…"
+          ? "Capture it, decide the day later…"
           : hasTasks
             ? "Add to today…"
             : "What would make today good?"

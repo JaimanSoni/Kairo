@@ -15,13 +15,13 @@ export default async function AdminPayments() {
   await requireAdmin();
 
   const [revenue, plans] = await Promise.all([loadRevenue(), listPlans({ fresh: true })]);
-  const planName = (key?: string) => (key ? plans.find((p) => p.key === key)?.name ?? key : "—");
+  const planName = (key?: string) => (key ? plans.find((p) => p.key === key)?.name ?? key : "");
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
       <PageHead title="Payments">
         Every payment Kairo has taken. These figures come from our own records, written when a
-        payment is confirmed — Razorpay&apos;s dashboard remains the final word.
+        payment is confirmed, Razorpay&apos;s dashboard remains the final word.
       </PageHead>
 
       <Stats
@@ -52,7 +52,7 @@ export default async function AdminPayments() {
               {revenue.payments.map((p) => (
                 <tr key={p.paymentId} className="border-t border-line/70">
                   <td className="px-4 py-2.5">
-                    <span className="block truncate font-medium">{p.name || "—"}</span>
+                    <span className="block truncate font-medium">{p.name || ""}</span>
                     <span className="block truncate text-xs text-ink-faint">{p.email}</span>
                   </td>
                   <td className="whitespace-nowrap px-4 py-2.5 text-ink-soft">
@@ -60,7 +60,7 @@ export default async function AdminPayments() {
                   </td>
                   <td className="whitespace-nowrap px-4 py-2.5 text-ink-soft">{fmtDate(p.paidAt)}</td>
                   <td className="whitespace-nowrap px-4 py-2.5 text-ink-soft">
-                    {p.coversUntil ? fmtDate(new Date(p.coversUntil).toISOString()) : "—"}
+                    {p.coversUntil ? fmtDate(new Date(p.coversUntil).toISOString()) : ""}
                   </td>
                   <td className="px-4 py-2.5 font-mono text-[11px] text-ink-faint">{p.paymentId}</td>
                   <td className="px-4 py-2.5 text-right font-semibold tabular-nums">

@@ -164,7 +164,7 @@ export function CalendarSection() {
                   </div>
                 ) : (
                   <div className="rounded-lg border border-dashed border-line/80 px-3 py-2 text-xs text-ink-faint">
-                    nothing yet — drop something here
+                    nothing yet, drop something here
                   </div>
                 )}
                 <AddRow placeholder="Add…" plannedFor={day} />

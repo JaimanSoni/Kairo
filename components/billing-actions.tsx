@@ -52,7 +52,7 @@ export function BillingActions({
         {busy
           ? "Opening checkout…"
           : mode === "subscription"
-            ? `Subscribe — ${price}/mo`
+            ? `Subscribe, ${price}/mo`
             : `Pay ${price} for a month`}
       </button>
       {canCancel && (

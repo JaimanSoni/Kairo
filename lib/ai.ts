@@ -24,13 +24,13 @@ function systemPrompt(today: string, lists: List[]): string {
   return (
     "You extract ONE structured task from messy natural language (often a voice transcript). " +
     "Reply with ONLY a raw JSON object, no markdown fences, using EXACTLY these keys: " +
-    "title (string — short, imperative, filler words stripped, keep essential context), " +
-    "plannedFor (YYYY-MM-DD or null — the day the user intends to DO it; resolve relative words like tomorrow/friday/next week), " +
-    "dueDate (YYYY-MM-DD or null — ONLY a genuine hard deadline like 'before friday', 'due', 'by the 30th'), " +
-    "estimateMin (integer minutes or null — only if a duration is stated or strongly implied), " +
-    `listName (one of: ${listNames} — or null if none clearly fits), ` +
-    "spotlight (boolean — true ONLY if the user signals it is critical/most-important/must-do), " +
-    "subtasks (array of short strings — usually empty; fill ONLY when the user explicitly lists steps). " +
+    "title (string, short, imperative, filler words stripped, keep essential context), " +
+    "plannedFor (YYYY-MM-DD or null, the day the user intends to DO it; resolve relative words like tomorrow/friday/next week), " +
+    "dueDate (YYYY-MM-DD or null, ONLY a genuine hard deadline like 'before friday', 'due', 'by the 30th'), " +
+    "estimateMin (integer minutes or null, only if a duration is stated or strongly implied), " +
+    `listName (one of: ${listNames}, or null if none clearly fits), ` +
+    "spotlight (boolean, true ONLY if the user signals it is critical/most-important/must-do), " +
+    "subtasks (array of short strings, usually empty; fill ONLY when the user explicitly lists steps). " +
     `Today is ${weekday} ${today}. Never invent dates, durations, or steps the user did not imply.`
   );
 }

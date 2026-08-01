@@ -65,7 +65,7 @@ export const ICON_VARIANTS: IconVariant[] = [
   {
     key: "tide",
     name: "Tide",
-    note: "The current mark, finished properly — deeper gradient, sheen, a real shadow under the ✱.",
+    note: "The current mark, finished properly, deeper gradient, sheen, a real shadow under the ✱.",
     build: (o) =>
       svg(
         `<linearGradient id="__ID__bg" x1="0" y1="0" x2="0" y2="1">
@@ -80,7 +80,7 @@ export const ICON_VARIANTS: IconVariant[] = [
   {
     key: "lagoon",
     name: "Lagoon",
-    note: "Teal into sky on the diagonal — the two calm colours of the app in one wash.",
+    note: "Teal into sky on the diagonal, the two calm colours of the app in one wash.",
     build: (o) =>
       svg(
         `<linearGradient id="__ID__bg" x1="0" y1="0" x2="1" y2="1">
@@ -99,7 +99,7 @@ export const ICON_VARIANTS: IconVariant[] = [
   {
     key: "ink",
     name: "Ink",
-    note: "Lights off. The ✱ carries the gradient instead of the tile — reads premium at every size.",
+    note: "Lights off. The ✱ carries the gradient instead of the tile, reads premium at every size.",
     build: (o) =>
       svg(
         `<linearGradient id="__ID__bg" x1="0" y1="0" x2="0" y2="1">
@@ -117,7 +117,7 @@ export const ICON_VARIANTS: IconVariant[] = [
   {
     key: "aurora",
     name: "Aurora",
-    note: "The whole palette as northern lights behind the mark — loudest of the set.",
+    note: "The whole palette as northern lights behind the mark, loudest of the set.",
     build: (o) =>
       svg(
         `<radialGradient id="__ID__a" cx="0.2" cy="0.15" r="0.8"><stop offset="0" stop-color="${SKY}"/><stop offset="1" stop-color="${SKY}" stop-opacity="0"/></radialGradient>
@@ -138,7 +138,7 @@ export const ICON_VARIANTS: IconVariant[] = [
   {
     key: "bloom",
     name: "Bloom",
-    note: "The ✱ softened into six petals around a centre — same silhouette, friendlier soul.",
+    note: "The ✱ softened into six petals around a centre, same silhouette, friendlier soul.",
     build: (o) => {
       const petal = (rot: number) =>
         `<path d="M256 226 C 286 196 286 118 256 96 C 226 118 226 196 256 226 Z" transform="rotate(${rot} 256 256)"/>`;
@@ -159,7 +159,7 @@ export const ICON_VARIANTS: IconVariant[] = [
   {
     key: "badge",
     name: "Badge",
-    note: "Tide plus a small moss tick — says “tasks” at a glance, at the cost of some calm.",
+    note: "Tide plus a small moss tick, says “tasks” at a glance, at the cost of some calm.",
     build: (o) =>
       svg(
         `<linearGradient id="__ID__bg" x1="0" y1="0" x2="0" y2="1">
@@ -199,7 +199,7 @@ export const ICON_VARIANTS: IconVariant[] = [
   {
     key: "porcelain",
     name: "Porcelain",
-    note: "Paper tile, teal mark — the quietest one, at home next to Things and Bear.",
+    note: "Paper tile, teal mark, the quietest one, at home next to Things and Bear.",
     build: (o) =>
       svg(
         `<linearGradient id="__ID__bg" x1="0" y1="0" x2="0" y2="1">

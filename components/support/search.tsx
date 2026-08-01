@@ -253,7 +253,7 @@ export function SupportSearch() {
           )}
           {rows.length === 0 && (
             <p className="px-3 py-8 text-center text-sm text-ink-faint">
-              Nothing matches “{q}”. Try a simpler word — or{" "}
+              Nothing matches “{q}”. Try a simpler word, or{" "}
               <button onClick={() => go("/support/contact")} className="underline">
                 get in touch
               </button>

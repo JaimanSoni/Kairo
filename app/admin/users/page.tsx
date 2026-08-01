@@ -69,7 +69,7 @@ export default async function AdminUsers() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
       <PageHead title="Users">
-        Everyone who has signed in. Deactivating keeps every task and list — it only stops the
+        Everyone who has signed in. Deactivating keeps every task and list, it only stops the
         account being used, and it can be undone.
       </PageHead>
 

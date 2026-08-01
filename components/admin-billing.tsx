@@ -39,7 +39,7 @@ export function PaymentsToggle({
     if (next) {
       const warning =
         keyMode === "test"
-          ? "\n\nWARNING: these are TEST keys. Real cards will be declined — everyone past the trial would be locked out with no way to pay."
+          ? "\n\nWARNING: these are TEST keys. Real cards will be declined, everyone past the trial would be locked out with no way to pay."
           : "";
       if (!confirm(`Turn payments on? Anyone past their ${trialDays}-day trial will have to pay ${price}.${warning}`)) {
         return;
@@ -70,8 +70,8 @@ export function PaymentsToggle({
           <h2 className="text-sm font-semibold">Payments</h2>
           <p className="mt-0.5 text-xs text-ink-soft">
             {enabled
-              ? `On — ${terms}. Comped accounts are unaffected.`
-              : "Off — everyone uses Kairo free. Trials and payments are ignored."}
+              ? `On, ${terms}. Comped accounts are unaffected.`
+              : "Off, everyone uses Kairo free. Trials and payments are ignored."}
           </p>
         </div>
         <button
@@ -98,7 +98,7 @@ export function PaymentsToggle({
       )}
       {configured && keyMode === "test" && (
         <p className="mt-3 rounded-lg bg-clay-soft px-3 py-2 text-xs text-clay">
-          <b>These are test keys.</b> Only Razorpay&apos;s fake cards work — a real customer&apos;s
+          <b>These are test keys.</b> Only Razorpay&apos;s fake cards work, a real customer&apos;s
           card is declined. Swap <code className="mx-1">RAZORPAY_KEY_ID</code>/
           <code className="mx-1">RAZORPAY_KEY_SECRET</code> for <code className="mx-1">rzp_live_…</code>
           keys before charging anyone.
@@ -108,7 +108,7 @@ export function PaymentsToggle({
         <p className="mt-3 rounded-lg bg-clay-soft px-3 py-2 text-xs text-clay">
           <b>RAZORPAY_WEBHOOK_SECRET is unset.</b>{" "}
           {mode === "subscription"
-            ? "Checkout will work, but renewals, failures and cancellations won't reach us — subscription states would silently go stale."
+            ? "Checkout will work, but renewals, failures and cancellations won't reach us, subscription states would silently go stale."
             : "Checkout will work, but only while the browser stays open to confirm it. If a customer's tab closes or their network drops after paying, the money arrives and their access doesn't."}
         </p>
       )}

@@ -82,7 +82,7 @@ function QrCode({ value }: { value: string }) {
   if (failed) {
     return (
       <div className="grid aspect-square w-full place-items-center rounded-2xl bg-paper-deep p-6 text-center text-xs text-ink-soft">
-        Couldn&apos;t draw the QR — the UPI ID below works just as well.
+        Couldn&apos;t draw the QR, the UPI ID below works just as well.
       </div>
     );
   }
@@ -144,7 +144,7 @@ function CoffeeModal({ onClose, earned }: { onClose: () => void; earned?: boolea
                 <>
                   You&apos;ve used Kairo three days running, and that genuinely means a lot. I
                   build and look after it on my own time. If it&apos;s been helping your days go a
-                  little smoother, I&apos;d be really grateful for a coffee — and if not, please
+                  little smoother, I&apos;d be really grateful for a coffee, and if not, please
                   just carry on enjoying it.
                 </>
               ) : (
@@ -242,7 +242,7 @@ function CoffeeModal({ onClose, earned }: { onClose: () => void; earned?: boolea
               {canPay ? `Pay ₹${effective}` : "Pay with any UPI app"}
             </a>
             <p className="mt-2 text-center text-xs text-ink-faint">
-              Opens GPay, PhonePe or Paytm — whichever you prefer.
+              Opens GPay, PhonePe or Paytm, whichever you prefer.
             </p>
 
             {/* Some browsers simply won't hand off to an app — an in-app
@@ -255,7 +255,7 @@ function CoffeeModal({ onClose, earned }: { onClose: () => void; earned?: boolea
                 </div>
                 <p className="mt-2 text-center text-xs text-ink-faint">
                   Scan this from another device
-                  {canPay && <> — it&apos;ll prefill ₹{effective}</>}
+                  {canPay && <> it&apos;ll prefill ₹{effective}</>}
                 </p>
               </div>
             ) : (
@@ -275,7 +275,7 @@ function CoffeeModal({ onClose, earned }: { onClose: () => void; earned?: boolea
             </div>
             <p className="mt-3 text-center text-xs text-ink-faint">
               Scan with any UPI app
-              {canPay && <> — it&apos;ll prefill ₹{effective}</>}
+              {canPay && <> it&apos;ll prefill ₹{effective}</>}
             </p>
             {/* Detection is a guess about someone else's device, and this one
                 has been wrong before. If we guessed wrong, the app link is
@@ -292,7 +292,7 @@ function CoffeeModal({ onClose, earned }: { onClose: () => void; earned?: boolea
         <p className="mt-4 text-center text-[11px] leading-relaxed text-ink-faint">
           {/* one string, not text-around-an-expression: JSX drops the space when a
               line wrap lands between the two, which silently ate it once already */}
-          {`Goes straight to ${COFFEE.payeeName} over UPI. It's a thank-you, not a purchase — nothing unlocks, and Kairo stays exactly the same either way.`}
+          {`Goes straight to ${COFFEE.payeeName} over UPI. It's a thank-you, not a purchase, nothing unlocks, and Kairo stays exactly the same either way.`}
         </p>
       </div>
     </Modal>

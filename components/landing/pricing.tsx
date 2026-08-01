@@ -32,7 +32,7 @@ export async function Pricing({ signedIn }: { signedIn: boolean }) {
         Simple pricing. <em className="text-sun">No surprises.</em>
       </h2>
       <p className="mx-auto mt-3 max-w-md text-center text-[15px] leading-7 text-ink-soft">
-        {TRIAL_DAYS} days free with everything unlocked — no card. Then pick what you need. Nothing
+        {TRIAL_DAYS} days free with everything unlocked, no card. Then pick what you need. Nothing
         renews by itself.
       </p>
 
@@ -83,7 +83,7 @@ export async function Pricing({ signedIn }: { signedIn: boolean }) {
                       className={`flex gap-2.5 text-sm leading-6 ${on ? "text-ink-soft" : "text-ink-faint"}`}
                     >
                       <span className={on ? "text-moss" : "text-ink-faint/70"} aria-hidden>
-                        {on ? "✓" : "—"}
+                        {on ? "✓" : ""}
                       </span>
                       <span className={on ? "" : "line-through decoration-ink-faint/40"}>
                         {FEATURES[key].name}
@@ -109,7 +109,7 @@ export async function Pricing({ signedIn }: { signedIn: boolean }) {
       </div>
 
       <p className="mt-6 text-center text-xs text-ink-faint">
-        Card handled by Razorpay — it never touches Kairo. Refunded in full within 7 days, no reason
+        Card handled by Razorpay, it never touches Kairo. Refunded in full within 7 days, no reason
         needed.{" "}
         <Link href="/pricing" className="underline underline-offset-2 hover:text-ink-soft">
           Full pricing details

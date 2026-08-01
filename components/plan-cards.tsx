@@ -121,7 +121,7 @@ export function PlanCards({
                         className={`mt-px shrink-0 ${on ? "text-moss" : "text-ink-faint/70"}`}
                         aria-hidden
                       >
-                        {on ? "✓" : "—"}
+                        {on ? "✓" : ""}
                       </span>
                       <span className={on ? "" : "line-through decoration-ink-faint/40"}>
                         {f.name}
@@ -149,7 +149,7 @@ export function PlanCards({
                 {busy === plan.key
                   ? "Opening checkout…"
                   : current
-                    ? `Renew — ${money(plan.priceMinor, plan.currency)}`
+                    ? `Renew, ${money(plan.priceMinor, plan.currency)}`
                     : `Choose ${plan.name}`}
               </button>
             </div>
@@ -160,7 +160,7 @@ export function PlanCards({
       {error && <p className="mt-3 text-sm text-clay">{error}</p>}
 
       <p className="mt-3 text-xs text-ink-faint">
-        One month at a time — nothing renews by itself. Secure checkout by Razorpay; card details
+        One month at a time, nothing renews by itself. Secure checkout by Razorpay; card details
         never touch Kairo. Paying again adds a month to the end of the one you have, so nothing is
         wasted.
       </p>

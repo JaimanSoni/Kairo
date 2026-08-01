@@ -57,7 +57,7 @@ export async function setPaymentsEnabled(enabled: boolean, by: string): Promise<
   // Refuse to arm the paywall without keys — it would lock every user out of
   // an app they can't pay for.
   if (enabled && !razorpayConfigured()) {
-    throw new Error("Razorpay is not configured — set the keys and plan id first");
+    throw new Error("Razorpay is not configured, set the keys and plan id first");
   }
   return withDbRetry(async () => {
     const db = await getDb();

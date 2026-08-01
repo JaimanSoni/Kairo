@@ -4,7 +4,7 @@ import { ARTICLES, CATEGORIES, QUICK_START } from "@/lib/support/content";
 import { SearchTrigger } from "@/components/support/search";
 
 export const metadata: Metadata = {
-  title: "Kairo Help — guides and answers",
+  title: "Kairo Help, guides and answers",
   description:
     "Everything about Kairo: capture and AI parsing, planning your day, the focus timer, reminders and notifications, shared lists, PIN locks, multiple accounts, and troubleshooting.",
   alternates: { canonical: "/support" },
@@ -27,7 +27,7 @@ export default function SupportIndex() {
         <div className="mx-auto max-w-3xl px-4 py-12 text-center sm:px-5 sm:py-20">
           <h1 className="font-display text-4xl tracking-tight sm:text-5xl">How can we help?</h1>
           <p className="mx-auto mt-3 max-w-lg text-[15px] leading-7 text-ink-soft">
-            {ARTICLES.length} short guides covering every corner of Kairo — from your first capture
+            {ARTICLES.length} short guides covering every corner of Kairo, from your first capture
             to locks, sharing, and notifications.
           </p>
           <div className="mx-auto mt-7 max-w-md">
@@ -108,7 +108,7 @@ export default function SupportIndex() {
           <h2 className="font-display text-2xl tracking-tight">Still stuck?</h2>
           <p className="mx-auto mt-1.5 max-w-md text-sm leading-6 text-ink-soft">
             If an answer isn&apos;t here, it&apos;s our gap to fix. Tell us what you were trying to
-            do and we&apos;ll help — and write the missing guide.
+            do and we&apos;ll help, and write the missing guide.
           </p>
           <Link
             href="/support/contact"

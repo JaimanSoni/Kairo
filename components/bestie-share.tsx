@@ -48,7 +48,7 @@ export function BestieNudge({ remaining, done }: { remaining: number; done: numb
       <p className="min-w-0 flex-1 text-[13px] leading-6 text-ink-soft">
         {done === 0
           ? "Your bestie might be waiting to see your progress. Finish today and you'll have something worth sending."
-          : `${remaining} to go. Your bestie might be waiting to see how today went — clear these and you can share it.`}
+          : `${remaining} to go. Your bestie might be waiting to see how today went, clear these and you can share it.`}
       </p>
       <button
         onClick={() => setHidden(true)}
@@ -125,7 +125,7 @@ function ShareSheet({
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const caption = `${captionFor(dateLabel)}\n\n${doneCount} done today with Kairo — kairo.jaimansoni.com`;
+  const caption = `${captionFor(dateLabel)}\n\n${doneCount} done today with Kairo, kairo.jaimansoni.com`;
 
   // Drawn once, on open. The object URL is revoked on close so a big PNG isn't
   // left pinned in memory for the rest of the session.
@@ -172,7 +172,7 @@ function ShareSheet({
       await navigator.clipboard.writeText(caption);
       setCopied(true);
     } catch {
-      setError("Couldn't copy — select the text and copy it manually.");
+      setError("Couldn't copy, select the text and copy it manually.");
     }
   };
 
@@ -183,7 +183,7 @@ function ShareSheet({
           Send it to your bestie
         </h2>
         <p className="mt-1 text-[13px] leading-6 text-ink-soft">
-          Made on your device. Nothing is posted anywhere — you choose where it goes.
+          Made on your device. Nothing is posted anywhere, you choose where it goes.
         </p>
 
         <div className="mt-4 overflow-hidden rounded-2xl border border-line bg-paper-deep/40">

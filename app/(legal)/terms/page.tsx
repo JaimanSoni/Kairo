@@ -27,7 +27,7 @@ export default function TermsPage() {
         <LI>One person per account. You must be 13 or older.</LI>
         <LI>
           You may set a numeric PIN to lock lists or the whole app. That PIN cannot be recovered if
-          you forget it — it is stored only as a hash.
+          you forget it, it is stored only as a hash.
         </LI>
       </UL>
 
@@ -38,7 +38,7 @@ export default function TermsPage() {
         </LI>
         <LI>
           After that, access costs <B>₹299 per month</B>, charged as a single payment for one
-          month. <B>It does not renew automatically</B> — nothing is taken from you again unless
+          month. <B>It does not renew automatically</B> nothing is taken from you again unless
           you choose to pay for another month.
         </LI>
         <LI>
@@ -74,7 +74,7 @@ export default function TermsPage() {
       <UL>
         <LI>Use Kairo to store or share anything unlawful, or to harass anyone you share a list with.</LI>
         <LI>Try to break, overload, or gain unauthorised access to the service or other accounts.</LI>
-        <LI>Resell Kairo or pass one account around a team — share a list instead.</LI>
+        <LI>Resell Kairo or pass one account around a team, share a list instead.</LI>
         <LI>Automate use in a way that puts unreasonable load on the service.</LI>
       </UL>
       <P>
@@ -92,7 +92,7 @@ export default function TermsPage() {
       <H2>Liability</H2>
       <P>
         Kairo is provided as-is. To the extent the law allows, we are not liable for indirect or
-        consequential loss — including anything you forgot, missed, or failed to do. It is a
+        consequential loss, including anything you forgot, missed, or failed to do. It is a
         planner, not a guarantee. Where liability cannot be excluded, it is limited to the amount
         you paid us in the 12 months before the claim.
       </P>

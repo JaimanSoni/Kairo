@@ -331,9 +331,9 @@ export function FocusOverlay() {
         <div className="w-full max-w-md text-center">
           <div className="font-display break-words text-2xl leading-snug sm:text-3xl">{task.title}</div>
           {overtime ? (
-            <p className="mt-2 text-sm font-medium text-clay">Overtime — still going. Respect.</p>
+            <p className="mt-2 text-sm font-medium text-clay">Overtime, still going. Respect.</p>
           ) : (
-            !timer.running && <p className="mt-2 text-sm text-ink-faint">Paused — breathe.</p>
+            !timer.running && <p className="mt-2 text-sm text-ink-faint">Paused, breathe.</p>
           )}
           {pushOn === false && perm === "default" && !overtime && (
             <button
@@ -435,7 +435,7 @@ export function FocusOverlay() {
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
             <path d="M3 8.5l3.5 3.5L13 5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          Done — mark it finished
+          Done. Mark it finished
         </button>
       </div>
     </div>

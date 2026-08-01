@@ -165,7 +165,7 @@ export function AppLockModal({ mode, onClose }: { mode: AppLockMode; onClose: ()
           throw new Error();
         }
         setAppLockEnabled(true);
-        showToast({ message: "🔒 App lock is on — find “Lock now” in your profile" });
+        showToast({ message: "🔒 App lock is on, find “Lock now” in your profile" });
         onClose();
       } else if (mode === "remove") {
         const res = await fetch("/api/applock", {

@@ -7,7 +7,7 @@ import { VideoLaunchFilm } from "@/components/launch/video-film";
  * recorded frame by frame through `window.__seek(ms)`.
  */
 export const metadata: Metadata = {
-  title: "Kairo — kinetic launch film",
+  title: "Kairo, kinetic launch film",
   robots: { index: false, follow: false },
 };
 

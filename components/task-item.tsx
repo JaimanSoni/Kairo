@@ -302,7 +302,7 @@ export function TaskItem({
               </Chip>
             )}
             {task.repeat && !done && (
-              <Chip tone="sky" title="Repeats — completing it advances to the next date">
+              <Chip tone="sky" title="Repeats, completing it advances to the next date">
                 ↻ {repeatLabel(task.repeat)}
               </Chip>
             )}
@@ -335,7 +335,7 @@ export function TaskItem({
               </span>
             )}
             {task.carryCount >= 2 && !done && (
-              <Chip tone="lilac" title="Carried over — maybe break it down, or let it go?">
+              <Chip tone="lilac" title="Carried over, maybe break it down, or let it go?">
                 ↻ ×{task.carryCount}
               </Chip>
             )}
@@ -352,14 +352,14 @@ export function TaskItem({
                 (t) => t.spotlight && t.status !== "done"
               ).length;
               if (count >= 3) {
-                showToast({ message: "Spotlight holds 3 — that's the point ✦" });
+                showToast({ message: "Spotlight holds 3, that's the point ✦" });
                 return;
               }
             }
             updateTask(task.id, { spotlight: !task.spotlight });
           }}
           aria-label="Toggle spotlight"
-          title="Spotlight — one of today's must-wins"
+          title="Spotlight, one of today's must-wins"
           className={`shrink-0 transition-opacity ${
             task.spotlight
               ? "text-sun"

@@ -83,7 +83,7 @@ export default async function AdminSettings() {
         </div>
         <p className="mt-3 text-xs leading-5 text-ink-faint">
           Keys and the webhook secret come from the environment, so changing them means editing the
-          deployment and redeploying — they can&apos;t be edited here on purpose. The trial length is{" "}
+          deployment and redeploying, they can&apos;t be edited here on purpose. The trial length is{" "}
           <code>TRIAL_DAYS</code>, and it applies from each account&apos;s signup date the moment it
           changes.
         </p>

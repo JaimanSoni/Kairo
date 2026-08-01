@@ -41,7 +41,7 @@ function Card({ t }: { t: Testimonial }) {
           className="mb-4 w-full rounded-2xl bg-paper-deep"
         >
           <source src={t.video} />
-          Your browser can&apos;t play this recording — the transcript is below.
+          Your browser can&apos;t play this recording, the transcript is below.
         </video>
       )}
 
@@ -52,7 +52,7 @@ function Card({ t }: { t: Testimonial }) {
           </div>
           <audio controls preload="metadata" className="w-full">
             <source src={t.audio} type="audio/mpeg" />
-            Your browser can&apos;t play this recording — the transcript is below.
+            Your browser can&apos;t play this recording, the transcript is below.
           </audio>
         </div>
       )}
@@ -101,8 +101,8 @@ export function Testimonials() {
       </h2>
       <p className="mx-auto mt-3 max-w-lg text-center text-[15px] leading-7 text-ink-soft">
         {TESTIMONIALS.length === 1
-          ? "An early user on what actually stuck — press play, or read it below."
-          : "Written, anonymous, or recorded — real experiences from people who plan their days in Kairo."}
+          ? "An early user on what actually stuck, press play, or read it below."
+          : "Written, anonymous, or recorded, real experiences from people who plan their days in Kairo."}
       </p>
 
       <div className="mx-auto mt-10 grid max-w-3xl gap-4 sm:grid-cols-2">

@@ -85,7 +85,7 @@ export function Omnibar() {
     };
     rec.onerror = () => {
       setListening(false);
-      showToast({ message: "Couldn't hear that — try again, or just type" });
+      showToast({ message: "Couldn't hear that, try again, or just type" });
     };
     recRef.current = rec;
     setListening(true);
@@ -235,7 +235,7 @@ export function Omnibar() {
                 ))}
               </span>
               <span className="text-sm text-ink-soft">
-                Listening — just talk. <b className="font-medium text-ink">AI turns it into a task.</b>
+                Listening, just talk. <b className="font-medium text-ink">AI turns it into a task.</b>
               </span>
             </div>
           ) : !text.trim() ? (
@@ -244,7 +244,7 @@ export function Omnibar() {
                 <Icon3d name="sparkle" size={15} /> AI
               </span>
               <span className="text-[12px] leading-snug text-ink-soft">
-                Type or speak anything — the day, time, list and steps get filled in for you.
+                Type or speak anything, the day, time, list and steps get filled in for you.
               </span>
             </div>
           ) : (
@@ -264,7 +264,7 @@ export function Omnibar() {
               {parsed.spotlight && <Chip tone="sun">✦ spotlight</Chip>}
               {!parsed.plannedFor && !parsed.dueDate && (
                 <Chip>
-                  <Icon3d name="inbox" size={15} /> inbox — decide later
+                  <Icon3d name="inbox" size={15} /> inbox, decide later
                 </Chip>
               )}
               <span className="inline-flex items-center gap-1 text-[11px] text-ink-faint">

@@ -24,7 +24,7 @@ function warnings(input: {
 }): { tone: "bad" | "warn"; text: string }[] {
   const out: { tone: "bad" | "warn"; text: string }[] = [];
   if (input.paymentsEnabled && !input.configured) {
-    out.push({ tone: "bad", text: "Payments are on but Razorpay isn't configured — nobody can pay." });
+    out.push({ tone: "bad", text: "Payments are on but Razorpay isn't configured, nobody can pay." });
   }
   if (input.paymentsEnabled && input.keyMode === "test") {
     out.push({ tone: "bad", text: "Payments are on with test keys. Real cards will be declined." });
@@ -36,7 +36,7 @@ function warnings(input: {
     });
   }
   if (input.paymentsEnabled && input.sellablePlans === 0) {
-    out.push({ tone: "bad", text: "Payments are on but no plan is sellable — the paywall has nothing to offer." });
+    out.push({ tone: "bad", text: "Payments are on but no plan is sellable, the paywall has nothing to offer." });
   }
   return out;
 }
@@ -63,7 +63,7 @@ export default async function AdminOverview() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
       <PageHead title="Overview">
-        Kairo at a glance. {settings.paymentsEnabled ? "Payments are on" : "Payments are off — everyone is free"},
+        Kairo at a glance. {settings.paymentsEnabled ? "Payments are on" : "Payments are off, everyone is free"},
         with a {TRIAL_DAYS}-day trial.
       </PageHead>
 

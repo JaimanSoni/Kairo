@@ -53,7 +53,7 @@ export function useCheckout(user: { name: string; email: string }, mode: Mode) {
       if (!res.ok || !data.keyId || (sub ? !data.subscriptionId : !data.orderId)) {
         throw new Error(data.error ?? "Could not start the payment");
       }
-      if (!window.Razorpay) throw new Error("Checkout didn't load — check your connection");
+      if (!window.Razorpay) throw new Error("Checkout didn't load, check your connection");
 
       const rzp = new window.Razorpay({
         key: data.keyId,
@@ -61,7 +61,7 @@ export function useCheckout(user: { name: string; email: string }, mode: Mode) {
           ? { subscription_id: data.subscriptionId }
           : { order_id: data.orderId, amount: data.amount, currency: data.currency }),
         name: "Kairo",
-        description: sub ? "Kairo subscription" : "Kairo — one month",
+        description: sub ? "Kairo subscription" : "Kairo, one month",
         prefill: { name: user.name, email: user.email },
         theme: { color: "#0c9384" },
         handler: async (response: Record<string, string>) => {
@@ -125,8 +125,7 @@ export function Paywall({
                 : "Your paid month is up"}
           </h1>
           <p className="mx-auto mt-2 max-w-md text-[15px] leading-relaxed text-ink-soft">
-            Thanks for giving Kairo a proper go. Everything you&apos;ve added is safe and waiting —
-            pick a plan to carry on exactly where you left off.
+            Thanks for giving Kairo a proper go. Everything you&apos;ve added is safe and waiting, pick a plan to carry on exactly where you left off.
           </p>
         </div>
 
@@ -193,7 +192,7 @@ export function TrialBanner({
       >
         <span>
           {failing
-            ? "We couldn't take your last payment — please update your card."
+            ? "We couldn't take your last payment, please update your card."
             : access.trialDaysLeft <= 0
               ? "Your trial ends today."
               : `${access.trialDaysLeft} ${access.trialDaysLeft === 1 ? "day" : "days"} left of your free trial.`}
@@ -203,7 +202,7 @@ export function TrialBanner({
           disabled={Boolean(busy)}
           className="font-semibold underline underline-offset-2 disabled:opacity-60"
         >
-          {failing ? "Fix payment" : mode === "subscription" ? `Subscribe — ${price}/mo` : `Pay ${price} for a month`}
+          {failing ? "Fix payment" : mode === "subscription" ? `Subscribe, ${price}/mo` : `Pay ${price} for a month`}
         </button>
         {!failing && (
           <button

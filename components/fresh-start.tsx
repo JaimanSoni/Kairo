@@ -10,7 +10,7 @@ import { CoffeeButton } from "./coffee";
 
 const CHOICES: { value: SweepAction; label: string; hint: string }[] = [
   { value: "today", label: "Today", hint: "I'll do it today" },
-  { value: "later", label: "Later", hint: "Back to inbox — no date" },
+  { value: "later", label: "Later", hint: "Back to inbox, no date" },
   { value: "someday", label: "Someday", hint: "Park it, guilt-free" },
   { value: "done", label: "Did it", hint: "Actually finished it" },
   { value: "letgo", label: "Let go", hint: "It doesn't matter anymore" },
@@ -20,7 +20,7 @@ const CHOICES: { value: SweepAction; label: string; hint: string }[] = [
 const CHOICES_RECURRING: { value: SweepAction; label: string; hint: string }[] = [
   { value: "today", label: "Today", hint: "Do it today" },
   { value: "done", label: "Did it", hint: "Log the win, roll to the next date" },
-  { value: "letgo", label: "Skip", hint: "Jump to the next occurrence — no guilt" },
+  { value: "letgo", label: "Skip", hint: "Jump to the next occurrence, no guilt" },
 ];
 
 /**
@@ -47,7 +47,7 @@ export function FreshStart({ carryover }: { carryover: Task[] }) {
         <h2 className="font-display mt-2 text-3xl">Fresh start</h2>
         <p className="mt-1 text-sm text-ink-soft">
           {carryover.length === 1 ? "One thing" : `${carryover.length} things`} from before didn&apos;t
-          get done — that&apos;s what tomorrows are for. Decide once, move on.
+          get done, that&apos;s what tomorrows are for. Decide once, move on.
         </p>
 
         <div className="mt-4 flex gap-2 text-xs">
@@ -74,7 +74,7 @@ export function FreshStart({ carryover }: { carryover: Task[] }) {
               </div>
               {t.carryCount >= 2 && (
                 <p className="mt-1.5 text-xs text-lilac">
-                  Keeps carrying over — too big? Try breaking it into steps, or let it go. Both are wins.
+                  Keeps carrying over, too big? Try breaking it into steps, or let it go. Both are wins.
                 </p>
               )}
               <div className="mt-2.5 flex flex-wrap gap-1.5">

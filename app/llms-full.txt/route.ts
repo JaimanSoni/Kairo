@@ -13,7 +13,7 @@ export const dynamic = "force-static";
 
 export function GET() {
   const parts: string[] = [
-    `# ${SITE_NAME} — complete documentation`,
+    `# ${SITE_NAME}, complete documentation`,
     "",
     `> ${SITE_DESCRIPTION}`,
     "",

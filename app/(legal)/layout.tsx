@@ -30,7 +30,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
 
       <footer className="border-t border-line/80 py-8">
         <div className="mx-auto max-w-3xl px-5 text-xs text-ink-faint">
-          <Mark size={12} className="inline text-sun" /> Kairo — operated by Jaiman Soni.{" "}
+          <Mark size={12} className="inline text-sun" /> Kairo, operated by Jaiman Soni.{" "}
           <a href="mailto:jaimansoni@gmail.com" className="underline underline-offset-2 hover:text-ink-soft">
             jaimansoni@gmail.com
           </a>

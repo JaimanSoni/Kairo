@@ -90,8 +90,7 @@ export function IconLab() {
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
       <h1 className="font-display text-3xl tracking-tight sm:text-4xl">Icon lab</h1>
       <p className="mt-1 max-w-2xl text-sm text-ink-soft">
-        Eight candidates, all built from the ✱ and the real palette. Judge them on the shelves —
-        an icon lives at 48px on someone&apos;s home screen, not at 512 in a design review.
+        Eight candidates, all built from the ✱ and the real palette. Judge them on the shelves, an icon lives at 48px on someone&apos;s home screen, not at 512 in a design review.
       </p>
 
       {/* the candidates */}
@@ -174,8 +173,8 @@ export function IconLab() {
       </section>
 
       <p className="mt-6 text-xs leading-5 text-ink-faint">
-        Picking one? Say the word and it becomes <code>app/icon.svg</code>, the apple-touch icon and
-        the maskable PWA icon in one go — the exports here are the same files.
+        Picking one? Say the word and it becomes <code>app/icon.svg</code>the apple-touch icon and
+        the maskable PWA icon in one go, the exports here are the same files.
       </p>
     </div>
   );

@@ -29,7 +29,7 @@ export default async function ContactPage({
     "What happened instead:",
     "",
     "",
-    article ? `(Read: ${article}${from ? ` — /support/${from}` : ""})` : "",
+    article ? `(Read: ${article}${from ? `/support/${from}` : ""})` : "",
     q ? `(Searched for: ${q})` : "",
   ]
     .filter(Boolean)
@@ -49,7 +49,7 @@ export default async function ContactPage({
 
       <h1 className="font-display text-3xl tracking-tight sm:text-4xl">Get in touch</h1>
       <p className="mt-3 text-base leading-7 text-ink-soft">
-        Kairo is built by one person, so you&apos;ll get a real reply from a real human — usually
+        Kairo is built by one person, so you&apos;ll get a real reply from a real human, usually
         within a day or two.
       </p>
 
@@ -59,7 +59,7 @@ export default async function ContactPage({
             We&apos;ll include this
           </div>
           <p className="mt-0.5 text-ink-soft">
-            {article ? `Article: ${article}` : `Search: “${q}” — which found nothing`}
+            {article ? `Article: ${article}` : `Search: “${q}”, which found nothing`}
           </p>
         </div>
       )}
@@ -83,7 +83,7 @@ export default async function ContactPage({
       <ul className="mt-3 space-y-2">
         {[
           "What you were trying to do, and what happened instead.",
-          "Which device and browser — and whether Kairo is installed to your home screen.",
+          "Which device and browser, and whether Kairo is installed to your home screen.",
           "For sync or sharing questions: the email address of the other account.",
           "For a hiccup screen: the reference code shown under the message.",
         ].map((item) => (
