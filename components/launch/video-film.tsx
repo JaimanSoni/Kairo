@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   CaptureDemo,
   FocusDemo,
@@ -12,12 +12,19 @@ import { Mark } from "@/components/mark";
 /**
  * The kinetic launch film, at /video-launch.
  *
- * A different cut from the /launch product film: this one is motion graphics
- * in the mould of the minimal SaaS launch video — soft neumorphic rings that
- * ripple the whole way through, sentences that build word by word with one
- * slammed emphasis word, product cards on springs, a camera that punches in
- * on every landing, a teal flood for the offer, and out. Under fifty
- * seconds, made for feeds.
+ * A different cut from the /launch product film: minimal motion graphics —
+ * soft neumorphic rings breathing on paper, sentences that build word by
+ * word, product cards on springs, a gentle camera, a teal flood for the
+ * offer. Under fifty seconds, made for feeds.
+ *
+ * Two rules keep it smooth and calm:
+ *
+ * 1. Nothing animates layout or paint. Every moving thing moves by transform
+ *    and opacity only — the ring shadows are painted once and scaled on the
+ *    GPU — and there are no per-frame blur filters, which is what made the
+ *    first cut stutter in live playback.
+ * 2. Nothing is drawn with a hard line. Emphasis lands as a soft radial glow,
+ *    never a stroked circle.
  *
  * Same contract as the other film: every visible property is a function of
  * one number, the current time. In a browser it free-runs on a loop as its
@@ -30,19 +37,24 @@ import { Mark } from "@/components/mark";
 const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
 const lerp = (a: number, b: number, x: number) => a + (b - a) * x;
 const easeOut = (x: number) => 1 - Math.pow(1 - x, 3);
-const easeOutQuint = (x: number) => 1 - Math.pow(1 - x, 5);
 const easeInOut = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
-/** Overshoots to ~1.1 then settles — the spring in every pop. */
-function backOut(x: number): number {
-  const c1 = 1.70158;
-  const c3 = c1 + 1;
-  return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
+/** A mild spring: overshoots ~4% and settles. Softer than classic backOut. */
+function softOut(x: number): number {
+  x = clamp01(x);
+  return 1 + 2.2 * Math.pow(x - 1, 3) + 1.2 * Math.pow(x - 1, 2);
 }
 const seg = (t: number, from: number, dur: number) => clamp01((t - from) / dur);
 
 function beatOpacity(t: number, start: number, dur: number, fade: number): number {
   if (t < start - fade || t > start + dur + fade) return 0;
   return Math.min(seg(t, start - fade, fade), 1 - seg(t, start + dur, fade));
+}
+
+/** A smooth camera impulse: eases up from zero, peaks early, dies quietly. */
+function impulse(t: number, at: number, span = 650): number {
+  const x = (t - at) / span;
+  if (x <= 0 || x > 2.5) return 0;
+  return (x * Math.exp(-3 * x)) / 0.1226;
 }
 
 /* --------------------------------------------------------------- timeline */
@@ -67,8 +79,8 @@ type Shot = {
   from: "left" | "right";
 };
 
-/** Word cadence: how the pops are spaced. Fast — the cut lives on rhythm. */
-const CADENCE = 165;
+/** Word cadence: quick, but with room for each word to finish arriving. */
+const CADENCE = 190;
 const ACCENT_LAG = 90;
 
 const HOOKS: Kinetic[] = [
@@ -87,17 +99,18 @@ const SHOTS: Shot[] = [
   { kind: "shot", start: 31000, dur: 4500, demo: <FocusDemo />, from: "left", words: [{ text: "One" }, { text: "thing" }, { text: "at" }, { text: "a" }, { text: "time.", accent: true }] },
 ];
 
+/** The closing montage breathes now: longer holds, overlapping crossfades. */
 const RAPID: { start: number; words: Word[] }[] = [
   { start: 35900, words: [{ text: "Share" }, { text: "lists.", accent: true }] },
-  { start: 36750, words: [{ text: "Lock" }, { text: "what's" }, { text: "private.", accent: true }] },
-  { start: 37600, words: [{ text: "See" }, { text: "the" }, { text: "month.", accent: true }] },
-  { start: 38450, words: [{ text: "Never" }, { text: "feel" }, { text: "behind.", accent: true }] },
+  { start: 36950, words: [{ text: "Lock" }, { text: "what's" }, { text: "private.", accent: true }] },
+  { start: 38000, words: [{ text: "See" }, { text: "the" }, { text: "month.", accent: true }] },
+  { start: 39050, words: [{ text: "Never" }, { text: "feel" }, { text: "behind.", accent: true }] },
 ];
-const RAPID_DUR = 700;
+const RAPID_DUR = 950;
 
-const FLOOD = { start: 39500, dur: 3800 };
-const END = { start: 43600 };
-export const DURATION = 48000;
+const FLOOD = { start: 40350, dur: 3800 };
+const END = { start: 44550 };
+export const DURATION = 49500;
 
 /** How much faster the in-card demos run than they do on the landing page. */
 const DEMO_SPEED = 1.4;
@@ -105,36 +118,32 @@ const DEMO_SPEED = 1.4;
 /** Demo-bearing beats, for scrubbing their CSS animations from beat-start. */
 const SCRUB_BEATS = SHOTS.map((s) => ({ start: s.start, dur: s.dur }));
 
-/** When an accent word actually lands, for bursts and camera kicks. */
+/** When an accent word actually lands, for glows and camera impulses. */
 const accentAt = (k: Kinetic | Shot, textStart: number) => {
   const i = k.words.findIndex((w) => w.accent);
-  return textStart + i * CADENCE + ACCENT_LAG + 220;
+  return textStart + i * CADENCE + ACCENT_LAG + 260;
 };
 
-/** Ripple bursts: rings that expand from the centre and die. */
-const BURSTS: { at: number; big?: boolean; sun?: boolean }[] = [
-  { at: accentAt(HOOKS[0], HOOKS[0].start) },
-  { at: accentAt(HOOKS[1], HOOKS[1].start) },
-  { at: accentAt(HOOKS[2], HOOKS[2].start) },
-  { at: BREATHE.start + 300, big: true, sun: true },
-  { at: REVEAL.start + 250, big: true, sun: true },
-  ...RAPID.map((r) => ({ at: r.start + 150 })),
-  { at: END.start + 200, big: true, sun: true },
+/** Soft radial glows — the film's punctuation. No lines, just light. */
+const GLOWS: { at: number; sun?: boolean }[] = [
+  { at: BREATHE.start + 300, sun: true },
+  { at: REVEAL.start + 250, sun: true },
+  { at: END.start + 250, sun: true },
 ];
 
 /**
- * Camera kicks: a sharp little punch-in that decays, one per landing. The
- * sum of live kicks rides on a slow push across the whole film — the frame
- * is never quite still, which is most of what "expensive" looks like.
+ * Camera impulses: a soft push that swells and dies, one per landing, riding
+ * on a slow zoom across the whole film. Gentle on purpose — the frame should
+ * feel alive, never shaken.
  */
 const KICKS: { at: number; amp: number }[] = [
-  ...HOOKS.map((h) => ({ at: accentAt(h, h.start), amp: 0.028 })),
-  { at: BREATHE.start + 320, amp: 0.034 },
-  { at: REVEAL.start + 350, amp: 0.03 },
-  ...SHOTS.map((s) => ({ at: s.start + 280, amp: 0.024 })),
-  ...RAPID.map((r) => ({ at: r.start + 180, amp: 0.034 })),
-  { at: FLOOD.start + 400, amp: 0.045 },
-  { at: END.start + 1250, amp: 0.026 },
+  ...HOOKS.map((h) => ({ at: accentAt(h, h.start), amp: 0.014 })),
+  { at: BREATHE.start + 320, amp: 0.018 },
+  { at: REVEAL.start + 350, amp: 0.016 },
+  ...SHOTS.map((s) => ({ at: s.start + 280, amp: 0.012 })),
+  ...RAPID.map((r) => ({ at: r.start + 200, amp: 0.016 })),
+  { at: FLOOD.start + 400, amp: 0.024 },
+  { at: END.start + 1250, amp: 0.014 },
 ];
 
 /* ----------------------------------------------------------------- layout */
@@ -160,32 +169,43 @@ function useStage(): Stage {
 /* ------------------------------------------------------------------ rings */
 
 /**
- * The neumorphic field. Alternating raised and pressed circles give it the
- * depth of a soft relief; a visible breath, a slow drift of the whole
- * centre, and a ripple emitted every couple of seconds keep it alive in
- * every single frame. `zoom` lets a beat dive through the rings.
+ * The neumorphic field. Every circle is painted once at its natural size and
+ * then only ever transformed — breath, drift and the dive all ride on the
+ * compositor, which is what keeps live playback at a full frame rate.
  */
 function RingField({ t, cx, cy, unit, fade, zoom }: { t: number; cx: number; cy: number; unit: number; fade: number; zoom: number }) {
   const RINGS = [1560, 1160, 800, 470];
-  const dx = 1.6 * Math.sin(t / 5100);
-  const dy = 1.2 * Math.cos(t / 6300);
+  const driftX = 30 * unit * Math.sin(t / 5100);
+  const driftY = 22 * unit * Math.cos(t / 6300);
   return (
-    <div aria-hidden style={{ position: "absolute", inset: 0, opacity: fade }}>
+    <div
+      aria-hidden
+      style={{
+        position: "absolute",
+        left: `${cx}%`,
+        top: `${cy}%`,
+        width: 0,
+        height: 0,
+        opacity: fade,
+        transform: `translate(${driftX}px, ${driftY}px)`,
+      }}
+    >
       {RINGS.map((d, i) => {
-        const breathe = 1 + 0.05 * Math.sin((t / 4600) * Math.PI * 2 + i * 1.15);
-        const size = d * unit * breathe * zoom;
+        const breathe = 1 + 0.045 * Math.sin((t / 5200) * Math.PI * 2 + i * 1.15);
+        const size = d * unit;
         const raised = i % 2 === 0;
         return (
           <div
             key={i}
             style={{
               position: "absolute",
-              left: `calc(${cx + dx}% - ${size / 2}px)`,
-              top: `calc(${cy + dy}% - ${size / 2}px)`,
+              left: -size / 2,
+              top: -size / 2,
               width: size,
               height: size,
               borderRadius: "50%",
               background: "var(--color-paper)",
+              transform: `scale(${breathe * zoom})`,
               boxShadow: raised
                 ? `${-34 * unit}px ${-34 * unit}px ${76 * unit}px rgba(255,255,255,0.9), ${34 * unit}px ${34 * unit}px ${76 * unit}px rgba(28,38,36,0.075)`
                 : `inset ${-26 * unit}px ${-26 * unit}px ${58 * unit}px rgba(255,255,255,0.85), inset ${26 * unit}px ${26 * unit}px ${58 * unit}px rgba(28,38,36,0.06)`,
@@ -193,81 +213,54 @@ function RingField({ t, cx, cy, unit, fade, zoom }: { t: number; cx: number; cy:
           />
         );
       })}
-      {/* a soft light that orbits the field — cheap life in every frame */}
+      {/* a soft light that orbits the field — quiet life in every frame */}
       <div
         style={{
           position: "absolute",
-          left: `calc(${cx + 9 * Math.cos(t / 4200)}% - ${430 * unit}px)`,
-          top: `calc(${cy + 9 * Math.sin(t / 4200)}% - ${430 * unit}px)`,
+          left: -430 * unit,
+          top: -430 * unit,
           width: 860 * unit,
           height: 860 * unit,
           borderRadius: "50%",
           background: "radial-gradient(circle, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 62%)",
+          transform: `translate(${170 * unit * Math.cos(t / 4200)}px, ${170 * unit * Math.sin(t / 4200)}px)`,
         }}
       />
-      {/* the heartbeat: one ripple born every 2.2s, for the whole film */}
-      {Array.from({ length: Math.ceil(DURATION / 2200) }, (_, k) => {
-        const p = seg(t, k * 2200, 2600);
-        if (p <= 0 || p >= 1) return null;
-        const size = lerp(180 * unit, 1750 * unit, easeOut(p)) * zoom;
-        return (
-          <div
-            key={k}
-            style={{
-              position: "absolute",
-              left: `calc(${cx + dx}% - ${size / 2}px)`,
-              top: `calc(${cy + dy}% - ${size / 2}px)`,
-              width: size,
-              height: size,
-              borderRadius: "50%",
-              border: `${Math.max(1, 1.8 * unit)}px solid var(--color-ink)`,
-              opacity: (1 - p) * 0.07,
-            }}
-          />
-        );
-      })}
     </div>
   );
 }
 
-/** One expanding ripple ring, three echoes deep — the loud punctuation. */
-function Burst({ t, at, cx, cy, unit, big, sun }: { t: number; at: number; cx: number; cy: number; unit: number; big?: boolean; sun?: boolean }) {
-  const echoes = [0, 150, 320];
-  const reach = (big ? 2100 : 1300) * unit;
+/** A soft pulse of light, breathing out from the centre. */
+function Glow({ t, at, cx, cy, unit, sun }: { t: number; at: number; cx: number; cy: number; unit: number; sun?: boolean }) {
+  const p = seg(t, at, 1500);
+  if (p <= 0 || p >= 1) return null;
+  const size = 1100 * unit;
   return (
-    <>
-      {echoes.map((delay, i) => {
-        const p = seg(t, at + delay, big ? 1500 : 1050);
-        if (p <= 0 || p >= 1) return null;
-        const size = lerp(120 * unit, reach, easeOut(p));
-        return (
-          <div
-            key={i}
-            aria-hidden
-            style={{
-              position: "absolute",
-              left: `calc(${cx}% - ${size / 2}px)`,
-              top: `calc(${cy}% - ${size / 2}px)`,
-              width: size,
-              height: size,
-              borderRadius: "50%",
-              border: `${Math.max(1.5, 2.5 * unit)}px solid ${sun ? "var(--color-sun)" : "var(--color-ink)"}`,
-              opacity: (1 - p) * (sun ? 0.42 : 0.17),
-            }}
-          />
-        );
-      })}
-    </>
+    <div
+      aria-hidden
+      style={{
+        position: "absolute",
+        left: `calc(${cx}% - ${size / 2}px)`,
+        top: `calc(${cy}% - ${size / 2}px)`,
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        background: sun
+          ? "radial-gradient(circle, rgba(12,147,132,0.22) 0%, rgba(12,147,132,0.07) 45%, rgba(12,147,132,0) 70%)"
+          : "radial-gradient(circle, rgba(28,38,36,0.10) 0%, rgba(28,38,36,0) 65%)",
+        transform: `scale(${lerp(0.35, 2.3, easeOut(p))})`,
+        opacity: 1 - p,
+      }}
+    />
   );
 }
 
 /* ------------------------------------------------------------------ words */
 
 /**
- * A sentence that assembles itself, fast. Plain words rise in; the accent
- * word slams down from over half again its size, serif and italic, and
- * lands with a ripple and a camera kick. The contrast between the two
- * arrivals IS the style.
+ * A sentence that assembles itself. Plain words rise in on a mild spring;
+ * the accent word settles down from slightly above scale, serif and italic,
+ * and lands with a glow. Everything arrives on transform and opacity alone.
  */
 function KineticLine({
   t,
@@ -284,7 +277,8 @@ function KineticLine({
   exitAt: number;
   align?: "left" | "center";
 }) {
-  const gone = seg(t, exitAt, 300);
+  const gone = seg(t, exitAt, 420);
+  const goneEase = easeInOut(gone);
   return (
     <div
       style={{
@@ -293,17 +287,16 @@ function KineticLine({
         justifyContent: align === "left" ? "flex-start" : "center",
         columnGap: fontSize * 0.26,
         rowGap: fontSize * 0.06,
-        opacity: 1 - gone,
-        transform: `translateY(${-30 * gone}px)`,
-        filter: gone > 0 ? `blur(${gone * 7}px)` : undefined,
+        opacity: 1 - goneEase,
+        transform: `translateY(${-24 * goneEase}px)`,
       }}
     >
       {words.map((w, i) => {
         const wStart = start + i * CADENCE + (w.accent ? ACCENT_LAG : 0);
-        const p = seg(t, wStart, w.accent ? 400 : 340);
+        const p = seg(t, wStart, w.accent ? 560 : 480);
         if (p <= 0) return null;
-        const scale = w.accent ? lerp(1.6, 1, easeOutQuint(p)) : lerp(0.93, 1, backOut(p));
-        const rise = w.accent ? 0 : lerp(0.36 * fontSize, 0, easeOut(p));
+        const scale = w.accent ? lerp(1.22, 1, easeOut(p)) : lerp(0.95, 1, softOut(p));
+        const rise = w.accent ? 0 : lerp(0.3 * fontSize, 0, easeOut(p));
         return (
           <span
             key={i}
@@ -319,10 +312,9 @@ function KineticLine({
                 : w.accent
                   ? "var(--color-ink)"
                   : "var(--color-ink-faint)",
-              opacity: clamp01(p * 1.6),
+              opacity: clamp01(p * 1.35),
               transform: `translateY(${rise}px) scale(${scale})`,
               transformOrigin: align === "left" ? "left 70%" : "center 70%",
-              filter: p < 1 ? `blur(${(1 - p) * 10}px)` : undefined,
               display: "inline-block",
               whiteSpace: "pre",
             }}
@@ -340,6 +332,7 @@ function KineticLine({
 export function VideoLaunchFilm() {
   const stage = useStage();
   const [t, setT] = useState(0);
+  const frame = useRef(0);
 
   useEffect(() => {
     const w = window as unknown as {
@@ -360,7 +353,11 @@ export function VideoLaunchFilm() {
     const freeRun = (now: number) => {
       if (driven) return;
       setT((now - t0) % DURATION);
-      for (const anim of document.getAnimations()) anim.playbackRate = DEMO_SPEED;
+      // getAnimations() allocates; once a second is plenty to keep the
+      // landing-page demos at film speed
+      if (frame.current++ % 60 === 0) {
+        for (const anim of document.getAnimations()) anim.playbackRate = DEMO_SPEED;
+      }
       raf = requestAnimationFrame(freeRun);
     };
     raf = requestAnimationFrame(freeRun);
@@ -408,29 +405,27 @@ export function VideoLaunchFilm() {
   const floodOut = easeInOut(seg(t, FLOOD.start + FLOOD.dur - 600, 600));
   const floodR = lerp(0, 160, floodP) * (1 - floodOut);
 
-  /* the camera: a slow push for the whole film plus a kick on every landing */
+  /* the camera: a slow push for the whole film plus a soft swell per landing */
   let kick = 0;
-  for (const k of KICKS) {
-    if (t >= k.at && t < k.at + 1400) kick += k.amp * Math.exp(-(t - k.at) / 260);
-  }
-  const camera = lerp(1, 1.05, t / DURATION) + kick;
+  for (const k of KICKS) kick += k.amp * impulse(t, k.at);
+  const camera = lerp(1, 1.05, easeInOut(t / DURATION)) + kick;
 
-  /* the dive: rings blow up as the film passes through them */
+  /* the dive: rings swell as the film passes through them */
   const dive =
     1 +
-    1.05 * easeOut(seg(t, REVEAL.start - 500, 700)) * (1 - seg(t, REVEAL.start + 250, 900)) +
-    0.75 * easeOut(seg(t, FLOOD.start - 350, 550)) * (1 - seg(t, FLOOD.start + 300, 800));
+    1.05 * easeInOut(seg(t, REVEAL.start - 600, 900)) * (1 - easeInOut(seg(t, REVEAL.start + 300, 1100))) +
+    0.75 * easeInOut(seg(t, FLOOD.start - 450, 700)) * (1 - easeInOut(seg(t, FLOOD.start + 300, 900)));
 
   const hookSize = (portrait ? 96 : 116) * unit;
 
   /* reveal */
   const rIn = seg(t, REVEAL.start, 700);
-  const rOut = 1 - seg(t, REVEAL.start + REVEAL.dur - 400, 400);
-  const markP = backOut(seg(t, REVEAL.start + 120, 750));
+  const rOut = 1 - easeInOut(seg(t, REVEAL.start + REVEAL.dur - 450, 450));
+  const markP = softOut(seg(t, REVEAL.start + 120, 800));
 
   /* end card */
   const eIn = seg(t, END.start, 650);
-  const eMark = backOut(seg(t, END.start + 80, 750));
+  const eMark = softOut(seg(t, END.start + 80, 800));
 
   const demoScale = (portrait ? stage.w * 0.78 : stage.w * 0.34) / 420;
 
@@ -448,13 +443,13 @@ export function VideoLaunchFilm() {
       {/* everything the camera sees */}
       <div style={{ position: "absolute", inset: 0, transform: `scale(${camera})`, transformOrigin: "center 48%" }}>
         <RingField t={t} cx={ringCx} cy={ringCy} unit={unit} fade={fieldIn} zoom={dive} />
-        {BURSTS.map((b) => (
-          <Burst key={b.at} t={t} at={b.at} cx={ringCx} cy={ringCy} unit={unit} big={b.big} sun={b.sun} />
+        {GLOWS.map((g) => (
+          <Glow key={g.at} t={t} at={g.at} cx={ringCx} cy={ringCy} unit={unit} sun={g.sun} />
         ))}
 
         {/* ------------------------------------------------------ the hooks */}
         {HOOKS.map((beat, i) => {
-          const o = beatOpacity(t, beat.start, beat.dur, 200);
+          const o = beatOpacity(t, beat.start, beat.dur, 240);
           if (o <= 0.001) return null;
           return (
             <div
@@ -476,7 +471,7 @@ export function VideoLaunchFilm() {
                   start={beat.start}
                   words={beat.words}
                   fontSize={hookSize * (beat.size ?? 1)}
-                  exitAt={beat.start + beat.dur - 120}
+                  exitAt={beat.start + beat.dur - 160}
                   align={portrait ? "center" : "left"}
                 />
               </div>
@@ -492,7 +487,7 @@ export function VideoLaunchFilm() {
               inset: 0,
               display: "grid",
               placeItems: "center",
-              opacity: beatOpacity(t, BREATHE.start, BREATHE.dur, 200),
+              opacity: beatOpacity(t, BREATHE.start, BREATHE.dur, 240),
               pointerEvents: "none",
             }}
           >
@@ -504,12 +499,8 @@ export function VideoLaunchFilm() {
                 fontWeight: 500,
                 letterSpacing: "-0.02em",
                 color: "var(--color-sun)",
-                opacity: clamp01(seg(t, BREATHE.start + 90, 400) * 1.6),
-                transform: `scale(${lerp(1.6, 1, easeOutQuint(seg(t, BREATHE.start + 90, 400)))})`,
-                filter:
-                  seg(t, BREATHE.start + 90, 400) < 1
-                    ? `blur(${(1 - seg(t, BREATHE.start + 90, 400)) * 10}px)`
-                    : undefined,
+                opacity: clamp01(seg(t, BREATHE.start + 90, 520) * 1.35),
+                transform: `scale(${lerp(1.24, 1, easeOut(seg(t, BREATHE.start + 90, 520)))})`,
               }}
             >
               Breathe.
@@ -546,8 +537,8 @@ export function VideoLaunchFilm() {
                   style={{
                     fontSize: (portrait ? 104 : 118) * unit,
                     letterSpacing: "-0.03em",
-                    opacity: clamp01(seg(t, REVEAL.start + 420, 500) * 1.5),
-                    transform: `translateX(${lerp(-20, 0, easeOut(seg(t, REVEAL.start + 420, 500))) * unit}px)`,
+                    opacity: clamp01(seg(t, REVEAL.start + 420, 550) * 1.35),
+                    transform: `translateX(${lerp(-20, 0, easeOut(seg(t, REVEAL.start + 420, 550))) * unit}px)`,
                   }}
                 >
                   kairo
@@ -559,8 +550,8 @@ export function VideoLaunchFilm() {
                   fontSize: (portrait ? 40 : 36) * unit,
                   color: "var(--color-ink-soft)",
                   letterSpacing: "0.01em",
-                  opacity: clamp01(seg(t, REVEAL.start + 950, 600)),
-                  transform: `translateY(${lerp(16, 0, easeOut(seg(t, REVEAL.start + 950, 600)))}px)`,
+                  opacity: clamp01(seg(t, REVEAL.start + 950, 650)),
+                  transform: `translateY(${lerp(16, 0, easeOut(seg(t, REVEAL.start + 950, 650)))}px)`,
                 }}
               >
                 A daily planner that forgives.
@@ -571,10 +562,10 @@ export function VideoLaunchFilm() {
 
         {/* ---------------------------------------------------------- shots */}
         {SHOTS.map((shot, i) => {
-          const o = beatOpacity(t, shot.start, shot.dur, 280);
+          const o = beatOpacity(t, shot.start, shot.dur, 320);
           if (o <= 0.001) return null;
-          const inP = backOut(seg(t, shot.start, 560));
-          const float = 8 * Math.sin((t - shot.start) / 1100 + i * 2.1);
+          const inP = softOut(seg(t, shot.start, 640));
+          const float = 8 * Math.sin((t - shot.start) / 1250 + i * 2.1);
           const dir = shot.from === "left" ? -1 : 1;
           const textSize = (portrait ? 72 : 80) * unit;
           return (
@@ -599,7 +590,7 @@ export function VideoLaunchFilm() {
                   start={shot.start + 260}
                   words={shot.words}
                   fontSize={textSize}
-                  exitAt={shot.start + shot.dur - 80}
+                  exitAt={shot.start + shot.dur - 100}
                   align={portrait ? "center" : "left"}
                 />
                 {shot.sub && (
@@ -609,8 +600,8 @@ export function VideoLaunchFilm() {
                       fontSize: textSize * 0.42,
                       color: "var(--color-ink-soft)",
                       textAlign: portrait ? "center" : "left",
-                      opacity: clamp01(seg(t, shot.start + 1400, 550)),
-                      transform: `translateY(${lerp(14, 0, easeOut(seg(t, shot.start + 1400, 550)))}px)`,
+                      opacity: clamp01(seg(t, shot.start + 1400, 600)),
+                      transform: `translateY(${lerp(14, 0, easeOut(seg(t, shot.start + 1400, 600)))}px)`,
                     }}
                   >
                     {shot.sub}
@@ -620,7 +611,7 @@ export function VideoLaunchFilm() {
               {/* the card */}
               <div
                 style={{
-                  transform: `translateY(${lerp(130, 0, inP) + float}px) translateX(${lerp(dir * 90, 0, inP)}px) rotate(${lerp(dir * 7, dir * 1.2, inP)}deg) scale(${lerp(0.9, 1, inP)})`,
+                  transform: `translateY(${lerp(120, 0, inP) + float}px) translateX(${lerp(dir * 80, 0, inP)}px) rotate(${lerp(dir * 6, dir * 1.2, inP)}deg) scale(${lerp(0.92, 1, inP)})`,
                 }}
               >
                 <div
@@ -642,9 +633,9 @@ export function VideoLaunchFilm() {
           );
         })}
 
-        {/* ---------------------------------------------------- rapid burst */}
+        {/* ---------------------------------------------------- the montage */}
         {RAPID.map((r, i) => {
-          const o = beatOpacity(t, r.start, RAPID_DUR, 120);
+          const o = beatOpacity(t, r.start, RAPID_DUR, 260);
           if (o <= 0.001) return null;
           return (
             <div
@@ -657,13 +648,13 @@ export function VideoLaunchFilm() {
                 opacity: o,
               }}
             >
-              <div style={{ transform: `translateY(${(i % 2 === 0 ? -1 : 1) * 30 * unit}px)` }}>
+              <div style={{ transform: `translateY(${(i % 2 === 0 ? -1 : 1) * 18 * unit}px)` }}>
                 <KineticLine
                   t={t}
-                  start={r.start - 100}
+                  start={r.start - 140}
                   words={r.words}
                   fontSize={(portrait ? 92 : 104) * unit}
-                  exitAt={r.start + RAPID_DUR - 30}
+                  exitAt={r.start + RAPID_DUR - 40}
                 />
               </div>
             </div>
@@ -683,11 +674,11 @@ export function VideoLaunchFilm() {
             placeItems: "center",
           }}
         >
-          {/* white ripples inside the flood */}
-          {[0, 220, 460].map((delay, i) => {
-            const p = seg(t, FLOOD.start + 400 + delay, 1600);
+          {/* soft light breathing out inside the flood — no lines here either */}
+          {[0, 380].map((delay, i) => {
+            const p = seg(t, FLOOD.start + 450 + delay, 1900);
             if (p <= 0 || p >= 1) return null;
-            const size = lerp(200 * unit, 2000 * unit, easeOut(p));
+            const size = 1200 * unit;
             return (
               <div
                 key={i}
@@ -699,13 +690,15 @@ export function VideoLaunchFilm() {
                   width: size,
                   height: size,
                   borderRadius: "50%",
-                  border: `${2.5 * unit}px solid rgba(255,255,255,0.35)`,
+                  background:
+                    "radial-gradient(circle, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0) 72%)",
+                  transform: `scale(${lerp(0.4, 2.1, easeOut(p))})`,
                   opacity: 1 - p,
                 }}
               />
             );
           })}
-          <div style={{ textAlign: "center", color: "#fff", transform: `scale(${1 + kick * 1.6})` }}>
+          <div style={{ textAlign: "center", color: "#fff", transform: `scale(${1 + kick * 1.4})` }}>
             <div
               className="font-display"
               style={{
@@ -714,12 +707,8 @@ export function VideoLaunchFilm() {
                 fontWeight: 500,
                 letterSpacing: "-0.025em",
                 lineHeight: 1,
-                opacity: clamp01(seg(t, FLOOD.start + 380, 420) * 1.6),
-                transform: `scale(${lerp(1.55, 1, easeOutQuint(seg(t, FLOOD.start + 380, 460)))})`,
-                filter:
-                  seg(t, FLOOD.start + 380, 460) < 1
-                    ? `blur(${(1 - seg(t, FLOOD.start + 380, 460)) * 11}px)`
-                    : undefined,
+                opacity: clamp01(seg(t, FLOOD.start + 380, 520) * 1.35),
+                transform: `scale(${lerp(1.18, 1, easeOut(seg(t, FLOOD.start + 380, 560)))})`,
               }}
             >
               7 days free.
@@ -730,8 +719,8 @@ export function VideoLaunchFilm() {
                 fontSize: (portrait ? 44 : 42) * unit,
                 fontWeight: 600,
                 letterSpacing: "-0.01em",
-                opacity: clamp01(seg(t, FLOOD.start + 950, 450)) * 0.92,
-                transform: `translateY(${lerp(18, 0, easeOut(seg(t, FLOOD.start + 950, 450)))}px)`,
+                opacity: clamp01(seg(t, FLOOD.start + 950, 500)) * 0.92,
+                transform: `translateY(${lerp(18, 0, easeOut(seg(t, FLOOD.start + 950, 500)))}px)`,
               }}
             >
               Everything unlocked. No card.
@@ -773,7 +762,7 @@ export function VideoLaunchFilm() {
                 marginTop: 22 * unit,
                 fontSize: (portrait ? 38 : 34) * unit,
                 color: "var(--color-ink-soft)",
-                opacity: clamp01(seg(t, END.start + 700, 550)),
+                opacity: clamp01(seg(t, END.start + 700, 600)),
               }}
             >
               A daily planner that forgives.
@@ -789,8 +778,8 @@ export function VideoLaunchFilm() {
                 fontSize: (portrait ? 34 : 30) * unit,
                 fontWeight: 700,
                 letterSpacing: "-0.01em",
-                opacity: clamp01(seg(t, END.start + 1150, 550)),
-                transform: `scale(${lerp(0.9, 1, backOut(seg(t, END.start + 1150, 650)))})`,
+                opacity: clamp01(seg(t, END.start + 1150, 600)),
+                transform: `scale(${lerp(0.94, 1, softOut(seg(t, END.start + 1150, 700)))})`,
               }}
             >
               kairo.jaimansoni.com
