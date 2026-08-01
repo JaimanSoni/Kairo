@@ -1,7 +1,7 @@
-import { CalendarSection } from "@/components/calendar-section";
+import { AppViews } from "@/components/app-views";
 
 export const metadata = { title: "Calendar · Kairo" };
 
 export default function CalendarPage() {
-  return <CalendarSection />;
+  return <AppViews />;
 }

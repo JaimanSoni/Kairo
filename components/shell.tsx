@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { hiddenListIds, useApp } from "./store";
+import { navigateApp } from "./app-views";
 import { upgradeHref, useCan } from "./entitlements";
 import { registerServiceWorker } from "@/lib/push-client";
 import { playNotify } from "@/lib/sound";
@@ -77,7 +78,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         setOmnibar(true);
       }
       const nav = NAV.find((n) => n.key === e.key);
-      if (nav) router.push(nav.href);
+      if (nav) navigateApp(nav.href);
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -147,6 +148,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <Link
                 key={href}
                 href={href}
+                onClick={(e) => {
+                  // a view swap, not a server round trip; the href stays for
+                  // middle-click, copy-link and everything else a real link does
+                  e.preventDefault();
+                  navigateApp(href);
+                }}
                 className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
                   active ? "bg-card text-ink shadow-sm" : "text-ink-soft hover:bg-card/60"
                 }`}
@@ -712,6 +719,10 @@ function MobileTab({
   return (
     <Link
       href={href}
+      onClick={(e) => {
+        e.preventDefault();
+        navigateApp(href);
+      }}
       className={`flex flex-col items-center gap-0.5 py-1 text-[10px] font-medium ${
         active ? "text-sun-deep" : "text-ink-faint"
       }`}

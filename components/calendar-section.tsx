@@ -8,7 +8,7 @@ import { StepRow } from "./step-row";
 import { TaskItem } from "./task-item";
 import { AddRow } from "./today-view";
 import { Icon3d } from "./img3d";
-import { EmptyState } from "./ui";
+import { EmptyState, Modal } from "./ui";
 
 type CalendarSectionMode = "week" | "month";
 
@@ -30,6 +30,7 @@ export function CalendarSection() {
   );
   const [dragOverDay, setDragOverDay] = useState<string | null>(null);
   const [view, setView] = useState<CalendarSectionMode>("month");
+  const [syncSoon, setSyncSoon] = useState(false);
 
   /* remembered preference — read after mount so SSR and hydration agree */
   useEffect(() => {
@@ -84,21 +85,60 @@ export function CalendarSection() {
     <div className="mx-auto w-full max-w-5xl px-4 pb-32 pt-8 sm:px-6">
       <header className="anim-rise mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-4xl">Calendar</h1>
-        <div className="flex rounded-full border border-line bg-paper-deep p-0.5">
-          {(["month", "week"] as const).map((v) => (
-            <button
-              key={v}
-              onClick={() => pickView(v)}
-              aria-pressed={view === v}
-              className={`rounded-full px-3.5 py-1.5 text-xs font-semibold capitalize transition-colors ${
-                view === v ? "bg-card text-ink shadow-sm" : "text-ink-faint hover:text-ink-soft"
-              }`}
-            >
-              {v}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setSyncSoon(true)}
+            className="flex h-9 items-center gap-2 rounded-full border border-line bg-card px-3.5 text-xs font-medium text-ink-soft transition-colors hover:border-ink-faint hover:text-ink"
+          >
+            <svg width="14" height="14" viewBox="0 0 48 48" aria-hidden>
+              <path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.1 29.4 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z" />
+              <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.1 29.4 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
+              <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z" />
+              <path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C40.9 35.5 44 30.2 44 24c0-1.3-.1-2.6-.4-3.9z" />
+            </svg>
+            Sync from Google Calendar
+          </button>
+          <div className="flex rounded-full border border-line bg-paper-deep p-0.5">
+            {(["month", "week"] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => pickView(v)}
+                aria-pressed={view === v}
+                className={`rounded-full px-3.5 py-1.5 text-xs font-semibold capitalize transition-colors ${
+                  view === v ? "bg-card text-ink shadow-sm" : "text-ink-faint hover:text-ink-soft"
+                }`}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
+
+      {syncSoon && (
+        <Modal onClose={() => setSyncSoon(false)}>
+          <div className="p-6 text-center">
+            <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-paper-deep">
+              <svg width="22" height="22" viewBox="0 0 48 48" aria-hidden>
+                <path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.1 29.4 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z" />
+                <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.1 29.4 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
+                <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z" />
+                <path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C40.9 35.5 44 30.2 44 24c0-1.3-.1-2.6-.4-3.9z" />
+              </svg>
+            </div>
+            <h2 className="font-display mt-4 text-2xl">Coming soon</h2>
+            <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-ink-soft">
+              Google Calendar sync is on the way. Your events will appear right beside your tasks.
+            </p>
+            <button
+              onClick={() => setSyncSoon(false)}
+              className="mt-5 rounded-full bg-ink px-6 py-2.5 text-sm font-semibold text-paper"
+            >
+              Ok
+            </button>
+          </div>
+        </Modal>
+      )}
 
       {view === "month" && <CalendarView />}
 

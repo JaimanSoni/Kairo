@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { navigateApp } from "./app-views";
 import type { Task } from "@/lib/types";
 import { friendlyDay } from "@/lib/dates";
 import { hiddenListIds, useApp, visibleLists } from "./store";
@@ -27,7 +27,6 @@ function score(text: string, q: string): number {
  */
 export function CommandPalette({ onClose }: { onClose: () => void }) {
   const { state, setEditing, setOmnibar, lockApp } = useApp();
-  const router = useRouter();
   const [q, setQ] = useState("");
   const [sel, setSel] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
@@ -38,10 +37,10 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
   const actions = useMemo<PaletteItem[]>(() => {
     const base: { id: string; label: string; hint?: string; run: () => void }[] = [
       { id: "capture", label: "Capture a task", hint: "N", run: () => setOmnibar(true) },
-      { id: "go-today", label: "Go to Today", hint: "1", run: () => router.push("/today") },
-      { id: "go-calendar", label: "Go to Calendar", hint: "2", run: () => router.push("/calendar") },
-      { id: "go-lists", label: "Go to Lists", hint: "3", run: () => router.push("/lists") },
-      { id: "go-log", label: "Go to Log", hint: "4", run: () => router.push("/log") },
+      { id: "go-today", label: "Go to Today", hint: "1", run: () => navigateApp("/today") },
+      { id: "go-calendar", label: "Go to Calendar", hint: "2", run: () => navigateApp("/calendar") },
+      { id: "go-lists", label: "Go to Lists", hint: "3", run: () => navigateApp("/lists") },
+      { id: "go-log", label: "Go to Log", hint: "4", run: () => navigateApp("/log") },
       ...(state.user.appLockEnabled
         ? [{ id: "lock", label: "Lock Kairo now", run: lockApp }]
         : []),
@@ -49,7 +48,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
     return base
       .filter((a) => !query || a.label.toLowerCase().includes(query))
       .map((a) => ({ kind: "action" as const, ...a }));
-  }, [query, router, setOmnibar, lockApp, state.user.appLockEnabled]);
+  }, [query, setOmnibar, lockApp, state.user.appLockEnabled]);
 
   const taskItems = useMemo<PaletteItem[]>(() => {
     const candidates = Object.values(state.tasks).filter(
@@ -100,7 +99,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
     onClose();
     if (item.kind === "action") item.run();
     else if (item.kind === "task") setEditing(item.id);
-    else router.push("/lists");
+    else navigateApp("/lists");
   };
 
   const groupLabel = (idx: number): string | null => {

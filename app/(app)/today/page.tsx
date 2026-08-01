@@ -1,7 +1,7 @@
-import { TodayView } from "@/components/today-view";
+import { AppViews } from "@/components/app-views";
 
 export const metadata = { title: "Today · Kairo" };
 
 export default function TodayPage() {
-  return <TodayView />;
+  return <AppViews />;
 }

@@ -1,7 +1,7 @@
-import { ListsView } from "@/components/lists-view";
+import { AppViews } from "@/components/app-views";
 
 export const metadata = { title: "Lists · Kairo" };
 
 export default function ListsPage() {
-  return <ListsView />;
+  return <AppViews />;
 }
