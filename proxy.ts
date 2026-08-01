@@ -12,7 +12,9 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  if (pathname === "/" && hasSession) {
+  // Never bounce someone who was sent here to READ something: an auth error
+  // page that redirects away is how a stale cookie becomes a redirect loop.
+  if (pathname === "/" && hasSession && !request.nextUrl.searchParams.has("auth_error")) {
     return NextResponse.redirect(new URL("/today", request.url));
   }
 

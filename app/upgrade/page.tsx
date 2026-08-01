@@ -37,7 +37,8 @@ export default async function UpgradePage({
   const wanted = isFeatureKey(feature) ? feature : null;
 
   const user = await getUserById(session.userId);
-  if (!user || user.disabled) redirect("/?auth_error=deactivated");
+  if (!user) redirect("/api/auth/stale?reason=signin_again");
+  if (user.disabled) redirect("/api/auth/stale?reason=deactivated");
 
   const access = await accessFor({
     createdAt: user.createdAt,

@@ -35,10 +35,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }));
   const featureLabels = FEATURE_KEYS.map((k) => ({ key: k, name: FEATURES[k].name }));
 
-  // A deactivated account is turned away before anything renders. Sending them
-  // to the landing page rather than a dead end is deliberate: the sign-in
-  // attempt that follows is where the explanation lives.
-  if (!userDoc || userDoc.disabled) redirect("/?auth_error=deactivated");
+  // A cookie for an account that is gone or switched off gets signed out
+  // properly, not bounced to the landing page: the landing page sends
+  // cookie-holders back here, and that pair of redirects has no exit.
+  if (!userDoc) redirect("/api/auth/stale?reason=signin_again");
+  if (userDoc.disabled) redirect("/api/auth/stale?reason=deactivated");
 
   // Access is decided on the server every request. A client that lies about
   // being subscribed gets nowhere, because this is what renders the app.

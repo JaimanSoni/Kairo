@@ -210,6 +210,11 @@ export default async function Landing({
                   </>
                 )}
               </>
+            ) : auth_error === "signin_again" ? (
+              <>
+                <b>That session pointed at an account that no longer exists.</b> Sign in again and
+                you&apos;ll be right back in.
+              </>
             ) : auth_error === "link_expired" ? (
               <>
                 <b>That sign-in link has expired.</b> Signing in with Google using the same email
