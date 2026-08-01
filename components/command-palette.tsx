@@ -142,7 +142,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
           <Kbd>esc</Kbd>
         </div>
 
-        <div ref={listRef} className="max-h-[50vh] overflow-y-auto overscroll-contain pt-2">
+        <div ref={listRef} className="no-scrollbar max-h-[50vh] overflow-y-auto overscroll-contain pt-2">
           {items.length === 0 && (
             <p className="px-3 py-6 text-center text-sm text-ink-faint">
               Nothing matches “{q}”.

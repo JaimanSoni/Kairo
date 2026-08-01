@@ -113,7 +113,7 @@ export function Paywall({
   features: FeatureLabel[];
 }) {
   return (
-    <div className="fixed inset-0 z-[60] overflow-y-auto bg-paper px-5 py-10">
+    <div className="no-scrollbar fixed inset-0 z-[60] overflow-y-auto bg-paper px-5 py-10">
       <div className="mx-auto w-full max-w-2xl">
         <div className="text-center">
           <Icon3d name="sunrise" size={64} className="mx-auto" />

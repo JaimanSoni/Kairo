@@ -159,14 +159,10 @@ export function Modal({
   onClose,
   children,
   wide,
-  hideScrollbar,
 }: {
   onClose: () => void;
   children: React.ReactNode;
   wide?: boolean;
-  /** Hides the scrollbar on a sheet tall enough to need one. Scrolling still
-   *  works — this only stops the bar cutting through the rounded corner. */
-  hideScrollbar?: boolean;
 }) {
   // portals need a DOM; server render and first hydration pass return null
   const mounted = useSyncExternalStore(
@@ -383,6 +379,9 @@ export function Modal({
           if (e.target === e.currentTarget) animatedClose();
         }}
       />
+      {/* no-scrollbar on every sheet: a bar cutting through the rounded corner
+          reads as a glitch, and the content makes it obvious when there is
+          more to scroll */}
       <div
         ref={panelRef}
         data-modal-scroll
@@ -390,9 +389,7 @@ export function Modal({
           // only the panel's own entrance, not animations from children
           if (e.target === e.currentTarget) clearEntranceAnimation();
         }}
-        className={`anim-modal relative w-full ${wide ? "sm:max-w-2xl" : "sm:max-w-lg"} ${
-          hideScrollbar ? "no-scrollbar" : ""
-        } max-h-[92dvh] overflow-y-auto overscroll-contain rounded-t-3xl border border-line bg-card pb-[env(safe-area-inset-bottom)] shadow-2xl will-change-transform sm:rounded-2xl sm:pb-0`}
+        className={`anim-modal no-scrollbar relative w-full ${wide ? "sm:max-w-2xl" : "sm:max-w-lg"} max-h-[92dvh] overflow-y-auto overscroll-contain rounded-t-3xl border border-line bg-card pb-[env(safe-area-inset-bottom)] shadow-2xl will-change-transform sm:rounded-2xl sm:pb-0`}
         role="dialog"
         aria-modal
       >

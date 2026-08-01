@@ -59,7 +59,7 @@ export function FreshStart({ carryover }: { carryover: Task[] }) {
           </button>
         </div>
 
-        <div className="mt-4 max-h-[45vh] space-y-3 overflow-y-auto overscroll-contain pr-1">
+        <div className="no-scrollbar mt-4 max-h-[45vh] space-y-3 overflow-y-auto overscroll-contain pr-1">
           {carryover.map((t) => (
             <div key={t.id} className="rounded-xl border border-line bg-paper p-3.5">
               <div className="flex items-center gap-2">
