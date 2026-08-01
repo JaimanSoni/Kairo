@@ -40,6 +40,12 @@ function elapsedLabel(minutes: number): string {
   return `${h}h ${String(minutes % 60).padStart(2, "0")}m`;
 }
 
+/** First line of a note, cut to tooltip size. */
+function notePreview(note: string): string {
+  const line = note.split("\n")[0].trim();
+  return line.length > 64 ? `${line.slice(0, 64).trimEnd()}…` : line;
+}
+
 export function TaskItem({
   task,
   context,
@@ -339,7 +345,24 @@ export function TaskItem({
                 ↻ ×{task.carryCount}
               </Chip>
             )}
-            {task.note && <span className="text-[11px] text-ink-faint">≡</span>}
+            {task.note && (
+              /* not just a marker: hovering it reads the first line of the
+                 note, so checking a detail does not require opening the task */
+              <span
+                className="inline-flex items-center text-ink-faint"
+                data-tip={notePreview(task.note)}
+                aria-label="Has a note"
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+                  <path
+                    d="M2 3h8M2 6h8M2 9h4.5"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </span>
+            )}
           </span>
         )}
       </button>
