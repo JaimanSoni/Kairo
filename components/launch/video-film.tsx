@@ -57,20 +57,20 @@ function impulse(t: number, at: number, span = 650): number {
  */
 const T = {
   chaos: 0, //          ink   the badge counts up, "Sounds familiar?"
-  promise: 4400, //     paper "Your to-do list shouldn't make you feel bad."
-  intro: 7700, //             "Introducing" — the held breath before the name
-  reveal: 9500, //            mark + kairo + tagline
-  f1: 13200, //               Type it. AI plans it.       (capture demo)
-  f2: 17700, //               See only today.             (today demo)
-  f3: 22200, //               Nothing turns red.          (fresh start demo)
-  f4: 26700, //               One task at a time.         (focus demo)
-  m1: 31400, //         teal  Share lists.
-  m2: 32900, //         ink   Lock what's private.
-  m3: 34400, //         teal  See your month.
-  offer: 35900, //      teal  Free for 7 days.
-  end: 40200, //        paper the mark, the name, the address
+  promise: 3900, //     paper "Your to-do list shouldn't make you feel bad."
+  intro: 6600, //             "Introducing" — the held breath before the name
+  reveal: 8000, //            mark + kairo + tagline
+  f1: 11000, //               Type it. AI plans it.       (capture demo)
+  f2: 14700, //               See only today.             (today demo)
+  f3: 18400, //               Nothing turns red.          (fresh start demo)
+  f4: 22100, //               One task at a time.         (focus demo)
+  m1: 25800, //         teal  Share lists.
+  m2: 27000, //         ink   Lock what's private.
+  m3: 28200, //         teal  See your month.
+  offer: 29400, //      teal  Free for 7 days.
+  end: 32800, //        paper the mark, the name, the address
 };
-export const DURATION = 46100;
+export const DURATION = 37400;
 
 const FEATURES = [
   {
@@ -121,7 +121,7 @@ const SCRUB_BEATS = FEATURES.map((f) => ({ start: f.start, dur: f.dur }));
 
 /** Gentle camera swells, only on the moments that deserve one. */
 const KICKS: { at: number; amp: number }[] = [
-  { at: 2450, amp: 0.016 }, // the badge tops out
+  { at: 2050, amp: 0.016 }, // the badge tops out
   { at: T.reveal + 350, amp: 0.014 },
   { at: T.offer + 450, amp: 0.018 },
 ];
@@ -345,7 +345,7 @@ function Slab({
 
 /** When tick k of the badge count lands, 3 → 47 on a decelerating curve. */
 const BADGE_TICKS = 44;
-const tickTime = (k: number) => 350 + 2100 * (1 - Math.pow(1 - k / BADGE_TICKS, 1 / 3));
+const tickTime = (k: number) => 350 + 1700 * (1 - Math.pow(1 - k / BADGE_TICKS, 1 / 3));
 
 function badgeCount(lt: number): { n: number; kick: number } {
   let n = 3;
@@ -512,7 +512,7 @@ export function VideoLaunchFilm() {
               <div style={{ marginTop: 10 * unit }}>
                 <LineIn
                   lt={t}
-                  at={2750}
+                  at={2350}
                   words={[{ text: "Sounds " }, { text: "familiar?", accent: true }]}
                   fontSize={(portrait ? 76 : 84) * unit}
                   color="var(--color-paper)"
