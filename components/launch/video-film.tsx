@@ -149,9 +149,24 @@ function useStage(): Stage {
 type Word = { text: string; accent?: boolean; clay?: boolean };
 
 /**
- * A line that whips in and stops: the words share one entrance, staggered
- * 55ms, each spending its speed immediately and freezing. After ~700ms the
- * line is at perfect rest and stays there.
+ * One entrance for every piece of text in the film: a soft rise on a long
+ * deceleration, opacity leading the motion so the word is readable before
+ * it has finished travelling. One curve everywhere is most of what makes a
+ * cut feel designed rather than assembled.
+ */
+function rise(lt: number, at: number, ms = 760, dist = 30): React.CSSProperties {
+  const p = quintOut(seg(lt, at, ms));
+  const f = easeOut(seg(lt, at, ms * 0.45));
+  return { opacity: f, transform: `translateY(${lerp(dist, 0, p)}px)` };
+}
+
+/**
+ * A sentence rising into place, words staggered 70ms.
+ *
+ * Every word is in the layout from the first frame, invisible until its
+ * moment — mounting them one at a time would re-centre the line with each
+ * arrival and reflow the wrap, which reads as the text glitching sideways.
+ * Only opacity and transform ever change here.
  */
 function LineIn({
   lt,
@@ -178,30 +193,25 @@ function LineIn({
         rowGap: fontSize * 0.05,
       }}
     >
-      {words.map((w, i) => {
-        const p = expoOut(seg(lt, at + i * 55, 620));
-        if (p <= 0) return null;
-        return (
-          <span
-            key={i}
-            className={w.accent ? "font-display" : undefined}
-            style={{
-              fontSize,
-              lineHeight: 1.1,
-              fontWeight: w.accent ? 500 : 700,
-              fontStyle: w.accent ? "italic" : undefined,
-              letterSpacing: w.accent ? "-0.02em" : "-0.035em",
-              color: w.clay ? "var(--color-clay)" : (color ?? "var(--color-ink)"),
-              opacity: clamp01(p * 1.25),
-              transform: `translateY(${lerp(0.55 * fontSize, 0, p)}px)`,
-              display: "inline-block",
-              whiteSpace: "pre",
-            }}
-          >
-            {w.text}
-          </span>
-        );
-      })}
+      {words.map((w, i) => (
+        <span
+          key={i}
+          className={w.accent ? "font-display" : undefined}
+          style={{
+            fontSize,
+            lineHeight: 1.1,
+            fontWeight: w.accent ? 500 : 700,
+            fontStyle: w.accent ? "italic" : undefined,
+            letterSpacing: w.accent ? "-0.02em" : "-0.035em",
+            color: w.clay ? "var(--color-clay)" : (color ?? "var(--color-ink)"),
+            display: "inline-block",
+            whiteSpace: "pre",
+            ...rise(lt, at + i * 70, 780, 0.5 * fontSize),
+          }}
+        >
+          {w.text}
+        </span>
+      ))}
     </div>
   );
 }
@@ -430,11 +440,10 @@ export function VideoLaunchFilm() {
   const badgeIn = expoOut(seg(t, 250, 600));
 
   /* reveal */
-  const markP = expoOut(seg(t, T.reveal + 100, 800));
-  const wordP = expoOut(seg(t, T.reveal + 320, 650));
+  const markP = quintOut(seg(t, T.reveal + 100, 850));
 
   /* end */
-  const eMark = expoOut(seg(t, T.end + 250, 800));
+  const eMark = quintOut(seg(t, T.end + 250, 850));
 
   return (
     <div
@@ -596,9 +605,8 @@ export function VideoLaunchFilm() {
                       style={{
                         fontSize: (portrait ? 104 : 116) * unit,
                         letterSpacing: "-0.03em",
-                        opacity: clamp01(wordP * 1.25),
-                        transform: `translateY(${lerp(30, 0, wordP)}px)`,
                         display: "inline-block",
+                        ...rise(t, T.reveal + 320, 780, 34),
                       }}
                     >
                       kairo
@@ -610,8 +618,7 @@ export function VideoLaunchFilm() {
                       fontSize: (portrait ? 40 : 36) * unit,
                       fontWeight: 500,
                       color: "var(--color-ink-soft)",
-                      opacity: clamp01(expoOut(seg(t, T.reveal + 700, 600)) * 1.25),
-                      transform: `translateY(${lerp(24, 0, expoOut(seg(t, T.reveal + 700, 600)))}px)`,
+                      ...rise(t, T.reveal + 700, 780, 26),
                     }}
                   >
                     A daily planner that forgives.
@@ -650,8 +657,7 @@ export function VideoLaunchFilm() {
                         fontSize: headSize * 0.36,
                         fontWeight: 500,
                         color: "var(--color-ink-soft)",
-                        opacity: clamp01(expoOut(seg(lt, 900, 550)) * 1.25),
-                        transform: `translateY(${lerp(18, 0, expoOut(seg(lt, 900, 550)))}px)`,
+                        ...rise(lt, 900, 760, 20),
                       }}
                     >
                       {f.sub}
@@ -722,8 +728,7 @@ export function VideoLaunchFilm() {
                     fontWeight: 500,
                     letterSpacing: "-0.025em",
                     lineHeight: 1,
-                    opacity: clamp01(expoOut(seg(t, T.offer + 260, 620)) * 1.25),
-                    transform: `translateY(${lerp(70, 0, expoOut(seg(t, T.offer + 260, 620)))}px)`,
+                    ...rise(t, T.offer + 300, 820, 54),
                   }}
                 >
                   Free for 7 days.
@@ -733,8 +738,7 @@ export function VideoLaunchFilm() {
                     marginTop: 26 * unit,
                     fontSize: (portrait ? 42 : 40) * unit,
                     fontWeight: 600,
-                    opacity: clamp01(expoOut(seg(t, T.offer + 850, 550)) * 1.25) * 0.95,
-                    transform: `translateY(${lerp(22, 0, expoOut(seg(t, T.offer + 850, 550)))}px)`,
+                    ...rise(t, T.offer + 900, 780, 24),
                   }}
                 >
                   Everything unlocked. No card needed.
@@ -766,9 +770,8 @@ export function VideoLaunchFilm() {
                     style={{
                       fontSize: (portrait ? 92 : 100) * unit,
                       letterSpacing: "-0.03em",
-                      opacity: clamp01(expoOut(seg(t, T.end + 450, 600)) * 1.25),
-                      transform: `translateY(${lerp(26, 0, expoOut(seg(t, T.end + 450, 600)))}px)`,
                       display: "inline-block",
+                      ...rise(t, T.end + 450, 780, 30),
                     }}
                   >
                     kairo
@@ -780,8 +783,7 @@ export function VideoLaunchFilm() {
                     fontSize: (portrait ? 38 : 34) * unit,
                     fontWeight: 500,
                     color: "var(--color-ink-soft)",
-                    opacity: clamp01(expoOut(seg(t, T.end + 900, 600)) * 1.25),
-                    transform: `translateY(${lerp(18, 0, expoOut(seg(t, T.end + 900, 600)))}px)`,
+                    ...rise(t, T.end + 900, 780, 24),
                   }}
                 >
                   A daily planner that forgives.
@@ -789,7 +791,6 @@ export function VideoLaunchFilm() {
                 <div
                   style={{
                     marginTop: 40 * unit,
-                    display: "inline-block",
                     background: "var(--color-ink)",
                     color: "var(--color-paper)",
                     borderRadius: 999,
@@ -797,8 +798,8 @@ export function VideoLaunchFilm() {
                     fontSize: (portrait ? 34 : 30) * unit,
                     fontWeight: 700,
                     letterSpacing: "-0.01em",
-                    opacity: clamp01(expoOut(seg(t, T.end + 1350, 600)) * 1.25),
-                    transform: `translateY(${lerp(22, 0, expoOut(seg(t, T.end + 1350, 600)))}px)`,
+                    ...rise(t, T.end + 1350, 780, 26),
+                    display: "inline-block",
                   }}
                 >
                   kairo.jaimansoni.com
