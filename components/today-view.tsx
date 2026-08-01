@@ -215,6 +215,7 @@ export function TodayView() {
               doneCount={shareable.count}
               dateLabel={fullDate(today)}
               name={state.user.name?.split(" ")[0] || "Someone"}
+              picture={state.user.picture}
               hiddenCount={shareable.withheld}
             />
           )}

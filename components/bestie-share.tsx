@@ -68,6 +68,7 @@ export function ShareWithBestie({
   doneCount,
   dateLabel,
   name,
+  picture,
   hiddenCount,
 }: {
   /** Titles to print, already stripped of anything from a locked list. */
@@ -75,6 +76,7 @@ export function ShareWithBestie({
   doneCount: number;
   dateLabel: string;
   name: string;
+  picture?: string | null;
   /** How many finished tasks were withheld because their list is locked. */
   hiddenCount: number;
 }) {
@@ -95,6 +97,7 @@ export function ShareWithBestie({
           doneCount={doneCount}
           dateLabel={dateLabel}
           name={name}
+          picture={picture}
           hiddenCount={hiddenCount}
           onClose={() => setOpen(false)}
         />
@@ -108,6 +111,7 @@ function ShareSheet({
   doneCount,
   dateLabel,
   name,
+  picture,
   hiddenCount,
   onClose,
 }: {
@@ -115,6 +119,7 @@ function ShareSheet({
   doneCount: number;
   dateLabel: string;
   name: string;
+  picture?: string | null;
   hiddenCount: number;
   onClose: () => void;
 }) {
@@ -135,7 +140,7 @@ function ShareSheet({
 
     (async () => {
       try {
-        const canvas = await drawShareCard({ done, doneCount, dateLabel, name });
+        const canvas = await drawShareCard({ done, doneCount, dateLabel, name, picture });
         const blob = await canvasToBlob(canvas);
         if (!alive) return;
         created = URL.createObjectURL(blob);
@@ -150,7 +155,7 @@ function ShareSheet({
       alive = false;
       if (created) URL.revokeObjectURL(created);
     };
-  }, [done, doneCount, dateLabel, name]);
+  }, [done, doneCount, dateLabel, name, picture]);
 
   /** A true share sheet, where the browser has one — phones, mostly. */
   const canShareFile = Boolean(file && navigator.canShare?.({ files: [file] }));

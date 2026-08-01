@@ -21,7 +21,25 @@ export type CardInput = {
   /** "Thursday, 30 July" — passed in so nothing here reads the clock. */
   dateLabel: string;
   name: string;
+  /** Google profile picture, drawn beside the name when it loads. */
+  picture?: string | null;
 };
+
+/**
+ * The avatar for the canvas, or null. crossOrigin is the load-bearing part:
+ * without it a Google photo taints the canvas and toBlob throws at the end,
+ * which would cost the whole card rather than just the picture.
+ */
+function loadAvatar(url: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    setTimeout(() => resolve(null), 4000);
+    img.src = url;
+  });
+}
 
 /** The generated family names next/font puts on the document. */
 function families(): { display: string; body: string } {
@@ -188,13 +206,48 @@ export async function drawShareCard(input: CardInput): Promise<HTMLCanvasElement
 
   /* -------------------------------------------------------------- footer */
   const footY = cardY + cardH + 96;
+
+  // the face next to the claim: the photo when it loads, an initial otherwise
+  const R = 42;
+  const ax = 88 + R;
+  const ay = footY + 4;
+  const avatar = input.picture ? await loadAvatar(input.picture) : null;
+  ctx.save();
+  ctx.shadowColor = "rgba(28,35,32,0.14)";
+  ctx.shadowBlur = 24;
+  ctx.shadowOffsetY = 8;
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(ax, ay, R + 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  if (avatar) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(ax, ay, R, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(avatar, ax - R, ay - R, R * 2, R * 2);
+    ctx.restore();
+  } else {
+    ctx.fillStyle = "#0c9384";
+    ctx.beginPath();
+    ctx.arc(ax, ay, R, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.font = `600 42px ${display}`;
+    ctx.textAlign = "center";
+    ctx.fillText((input.name.trim()[0] || "K").toUpperCase(), ax, ay + 15);
+    ctx.textAlign = "left";
+  }
+
+  const textX = ax + R + 28;
   ctx.fillStyle = "#1c2320";
   ctx.font = `600 40px ${display}`;
-  ctx.fillText(`${input.name} finished the day.`, 88, footY);
+  ctx.fillText(fit(ctx, `${input.name} finished the day.`, CARD_W - textX - 60), textX, footY);
 
   ctx.fillStyle = "#5c6b64";
   ctx.font = `400 30px ${body}`;
-  ctx.fillText("Your turn.", 88, footY + 50);
+  ctx.fillText("Your turn.", textX, footY + 50);
 
   ctx.fillStyle = "#8a9992";
   ctx.font = `500 28px ${body}`;
