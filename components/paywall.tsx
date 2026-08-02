@@ -32,10 +32,11 @@ export function useCheckout(user: { name: string; email: string }, mode: Mode) {
   const [error, setError] = useState<string | null>(null);
 
   /**
-   * `plan` names what to buy. The price is never sent — the server reads it from
-   * that plan, so a client can choose what it wants and never what it costs.
+   * `plan` names what to buy; `promo` names a code, never an amount. The
+   * price is never sent — the server reads it from the plan, applies the
+   * code itself, and freezes the result onto the order.
    */
-  const start = async (plan?: string) => {
+  const start = async (plan?: string, promo?: string) => {
     if (busy) return;
     setBusy(plan ?? "default");
     setError(null);
@@ -44,12 +45,17 @@ export function useCheckout(user: { name: string; email: string }, mode: Mode) {
       const res = await fetch(sub ? "/api/billing/subscribe" : "/api/billing/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: plan ?? "" }),
+        body: JSON.stringify({ plan: plan ?? "", ...(promo ? { promo } : {}) }),
       });
       const data = (await res.json()) as {
         subscriptionId?: string; orderId?: string; amount?: number; currency?: string;
-        keyId?: string; error?: string;
+        keyId?: string; error?: string; free?: boolean;
       };
+      // a 100% code needs no checkout: the month is already credited
+      if (res.ok && data.free) {
+        window.location.assign("/today");
+        return;
+      }
       if (!res.ok || !data.keyId || (sub ? !data.subscriptionId : !data.orderId)) {
         throw new Error(data.error ?? "Could not start the payment");
       }

@@ -210,9 +210,9 @@ export function Omnibar() {
 
   const submit = (keepOpen: boolean) => {
     if (phase !== "input") return;
-    track("capture");
     const raw = text.trim();
     if (!raw) return;
+    track("capture");
     const local = parseQuickAdd(raw, lists);
     if (!local.title) local.title = raw;
     const idPromise = addTask(local);
@@ -235,7 +235,12 @@ export function Omnibar() {
     );
     void (async () => {
       const { notes } = await Promise.race([refined, timeout]);
-      const id = await idPromise;
+      // the save gets its own deadline: a stalled network request must not
+      // leave the panel narrating forever with the input frozen
+      const id = await Promise.race([
+        idPromise,
+        new Promise<null>((r) => setTimeout(() => r(null), 12_000)),
+      ]);
       if (!id) {
         // the save itself failed; the store already raised its toast
         setOmnibar(false);
@@ -276,7 +281,8 @@ export function Omnibar() {
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") submit(e.shiftKey);
+              // the Enter that commits an IME candidate must not also submit
+              if (e.key === "Enter" && !e.nativeEvent.isComposing) submit(e.shiftKey);
             }}
             placeholder={listening ? "Listening…" : "What's on your mind? Say it or type it."}
             className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-ink-faint sm:text-lg"
@@ -288,6 +294,7 @@ export function Omnibar() {
               onClick={toggleVoice}
               aria-label={listening ? "Stop listening" : "Speak a task"}
               data-tip={listening ? "Stop listening" : "Speak instead"}
+              data-tip-side="bottom"
               className={`grid size-10 shrink-0 place-items-center rounded-full transition-colors ${
                 listening
                   ? "anim-pulse bg-clay text-on-accent"
@@ -302,6 +309,7 @@ export function Omnibar() {
             disabled={!parsed.title}
             aria-label="Capture"
             data-tip="Capture (Enter)"
+            data-tip-side="bottom"
             className="grid size-10 shrink-0 place-items-center rounded-full bg-ink text-paper transition-opacity disabled:opacity-25"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">

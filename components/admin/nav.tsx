@@ -14,6 +14,7 @@ const SECTIONS = [
   { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/plans", label: "Plans" },
+  { href: "/admin/promos", label: "Promos" },
   { href: "/admin/payments", label: "Payments" },
   { href: "/admin/settings", label: "Settings" },
 ];

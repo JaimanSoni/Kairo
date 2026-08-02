@@ -57,26 +57,37 @@ export type IngestEvent = {
   device?: "mobile" | "desktop";
 };
 
-let indexReady: Promise<unknown> | null = null;
+// keyed by database, not module-wide: the fallback main DB and the analytics
+// cluster are different databases, and one flag for both meant whichever
+// connected first left the other without its TTL index — unbounded growth
+const indexReady = new Map<string, Promise<unknown>>();
 function ensureIndexes(db: Db): Promise<unknown> {
-  indexReady ??= Promise.all([
-    db.collection("events").createIndex({ at: 1 }, { expireAfterSeconds: TTL_DAYS * 86_400, name: "events_ttl" }),
-    db.collection("events").createIndex({ event: 1, at: -1 }, { name: "events_by_name" }),
-  ]).catch((err: unknown) => {
-    indexReady = null;
-    throw err;
-  });
-  return indexReady;
+  const key = db.databaseName;
+  let p = indexReady.get(key);
+  if (!p) {
+    p = Promise.all([
+      db.collection("events").createIndex({ at: 1 }, { expireAfterSeconds: TTL_DAYS * 86_400, name: "events_ttl" }),
+      db.collection("events").createIndex({ event: 1, at: -1 }, { name: "events_by_name" }),
+    ]).catch((err: unknown) => {
+      indexReady.delete(key);
+      throw err;
+    });
+    indexReady.set(key, p);
+  }
+  return p;
 }
 
 export async function recordEvent(e: IngestEvent): Promise<void> {
-  const db = await withDbRetry(analyticsDb);
-  try {
-    await ensureIndexes(db);
-  } catch (err) {
-    console.error("[analytics] could not create event indexes", err);
-  }
-  await db.collection("events").insertOne({ at: new Date(), ...e });
+  // the write is inside the retry, not just the connection
+  await withDbRetry(async () => {
+    const db = await analyticsDb();
+    try {
+      await ensureIndexes(db);
+    } catch (err) {
+      console.error("[analytics] could not create event indexes", err);
+    }
+    await db.collection("events").insertOne({ at: new Date(), ...e });
+  });
 }
 
 /* -------------------------------------------------------------- reporting */

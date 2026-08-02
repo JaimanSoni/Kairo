@@ -76,22 +76,24 @@ export async function sendEmail(input: {
     console.error("[email] could not create the emails unique index", err);
   }
 
+  // Dry runs claim nothing: the local server shares the production database,
+  // and a dry claim used to burn the once-per-key guarantee — the real
+  // customer's email would then be skipped forever as a "duplicate".
+  if (DRY()) {
+    console.info(`[email] DRY ${input.key} -> ${input.to}: ${input.subject}`);
+    return { sent: true, skipped: "dry" };
+  }
+
   try {
     await db.collection("emails").insertOne({
       key: input.key,
       to: input.to,
       subject: input.subject,
       at: new Date(),
-      dry: DRY(),
     });
   } catch (err) {
     if (isDuplicateKey(err)) return { sent: false, skipped: "duplicate" };
     throw err;
-  }
-
-  if (DRY()) {
-    console.info(`[email] DRY ${input.key} -> ${input.to}: ${input.subject}`);
-    return { sent: true, skipped: "dry" };
   }
 
   const res = await fetch(RESEND_API, {

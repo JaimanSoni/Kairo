@@ -3,6 +3,18 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   async headers() {
     return [
+      // Baseline security headers for a product holding sessions and PINs:
+      // no framing (clickjacking), no MIME sniffing, tight referrers, and
+      // HSTS so the session cookie never rides plain HTTP.
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+        ],
+      },
       // Static assets are served with explicit cache headers so the CDN in
       // front (Cloudflare, and Vercel's own edge) can actually hold them:
       // a day in the browser, a week at the edge, and stale served while

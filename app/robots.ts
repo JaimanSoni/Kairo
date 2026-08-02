@@ -52,6 +52,7 @@ export default function robots(): MetadataRoute.Robots {
       { userAgent: ASSISTANTS, allow: "/", disallow: PRIVATE },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,
-    host: SITE_URL,
+    // the host directive is a bare hostname, not a URL
+    host: new URL(SITE_URL).host,
   };
 }

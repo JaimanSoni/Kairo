@@ -157,7 +157,10 @@ function ShareSheet({
       alive = false;
       if (created) URL.revokeObjectURL(created);
     };
-  }, [done, doneCount, dateLabel, name, picture]);
+    // done.join, not done: the array is rebuilt by every parent render, and
+    // an identity dep made a tab refocus revoke the blob URL mid-preview
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [done.join("\n"), doneCount, dateLabel, name, picture]);
 
   /** A true share sheet, where the browser has one — phones, mostly. */
   const canShareFile = Boolean(file && navigator.canShare?.({ files: [file] }));

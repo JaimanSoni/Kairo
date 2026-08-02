@@ -249,7 +249,10 @@ export function Modal({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        e.stopPropagation();
+        // stopImmediatePropagation, not stopPropagation: every open modal
+        // listens on this same node, and plain stopPropagation let one
+        // Escape close a whole stack of sheets at once
+        e.stopImmediatePropagation();
         animatedClose();
       }
     };

@@ -40,6 +40,7 @@ export const metadata: Metadata = {
       "Plan a day you can actually finish. Voice + AI capture, a morning reset instead of overdue guilt, focus timer, shared lists, assignments and PIN locks.",
     type: "website",
     siteName: "Kairo",
+    url: "/",
     images: [{ url: "/og.png", width: 1200, height: 630, alt: "Kairo, a daily planner that forgives" }],
   },
   twitter: {
@@ -156,7 +157,9 @@ export default async function Landing({
   const signedIn = Boolean(await getSession());
 
   return (
-    <main className="mesh flex-1 overflow-x-hidden">
+    // overflow-x on main would make it a scroll container and quietly kill
+    // the sticky nav; the body already clips horizontal overflow
+    <main className="mesh flex-1">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }} />
 
       {/* nav */}

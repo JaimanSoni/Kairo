@@ -267,8 +267,12 @@ export const ARTICLES: Article[] = [
             text: "That's it. With no date, the task lands in your **Inbox**, a holding pen you triage later, when you're planning rather than thinking.",
           },
           {
+            t: "p",
+            text: "After Enter, the panel stays with you for a moment: AI reads your sentence, and the finished task appears right there, its day, time, estimate and list, with a note on what AI filled in. **Done** closes it, **Capture another** keeps going, **Open** jumps into the task.",
+          },
+          {
             t: "tip",
-            text: "Capturing several things at once? Use `Shift Enter` instead, it saves the task and keeps the box open for the next one.",
+            text: "Capturing several things at once? Use `Shift Enter` instead, it saves instantly, keeps the box open for the next one, and AI tidies in the background.",
           },
         ],
       },
@@ -1594,8 +1598,8 @@ export const ARTICLES: Article[] = [
             ],
           },
           {
-            t: "warn",
-            text: "They must have signed in to Kairo with that Google account at least once. If they haven't, you'll see *“No Kairo account with that email, they need to sign in once first.”* Ask them to sign in, then invite them again.",
+            t: "p",
+            text: "They don't need a Kairo account. If the address is new to Kairo, an invite email goes out with a sign-in link: one click and they're in, with your list already waiting. The link works for 14 days, and signing in with Google on the same address later opens the same account.",
           },
         ],
       },
@@ -1768,7 +1772,7 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "note",
-            text: "The recipient must have a Kairo account. Sending a copy doesn't send them a notification, so mention it if it's urgent.",
+            text: "The recipient doesn't need a Kairo account: a new address gets an invite email with a one-click sign-in link, and the task is already waiting inside. Existing accounts get an email telling them a task arrived.",
           },
         ],
       },
@@ -1820,6 +1824,10 @@ export const ARTICLES: Article[] = [
           {
             t: "p",
             text: "A full-screen PIN pad now guards the app. Use **🔒 Lock now** whenever you step away, and note that keyboard shortcuts are disabled while the lock screen is up.",
+          },
+          {
+            t: "tip",
+            text: "On a computer, just type: digits enter the PIN, `Backspace` deletes, `Enter` confirms. No clicking required.",
           },
         ],
       },
@@ -1877,8 +1885,22 @@ export const ARTICLES: Article[] = [
     title: "Use more than one account",
     summary: "Keep work and personal separate, and switch between them in a tap.",
     categoryId: "account",
-    keywords: ["accounts", "switch", "multiple", "work", "personal", "sign out", "add account"],
+    keywords: ["accounts", "switch", "multiple", "work", "personal", "sign out", "add account", "avatar", "profile picture"],
     sections: [
+      {
+        id: "avatar",
+        heading: "Pick your avatar",
+        blocks: [
+          {
+            t: "p",
+            text: "Open your profile and tap the little pencil on your picture. Seven choices appear: your Google photo, and six hand-drawn animals. Whichever you pick is what everyone sees, in shared lists and on assignments too.",
+          },
+          {
+            t: "note",
+            text: "No Google photo? Kairo assigns you one of the animals automatically, the same one every time.",
+          },
+        ],
+      },
       {
         id: "adding",
         heading: "Add another account",

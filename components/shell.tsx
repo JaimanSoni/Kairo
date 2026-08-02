@@ -66,10 +66,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        setPaletteOpen((v) => {
-          if (!v) track("search-open");
-          return !v;
-        });
+        // tracked out here: state updaters must stay pure, React re-invokes
+        // them and every re-invocation was another counted event
+        track("search-open");
+        setPaletteOpen((v) => !v);
         return;
       }
 
@@ -207,6 +207,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <button
               onClick={() => setPaletteOpen(true)}
               aria-label="Search"
+              data-track="search-open"
               data-tip="Search"
               data-tip-side="bottom"
               className="grid size-8 place-items-center rounded-full text-ink-soft hover:bg-paper-deep"
@@ -319,8 +320,12 @@ function ProfileSheet({
   const { state, setAvatarChoice } = useApp();
   const [picking, setPicking] = useState(false);
 
-  // which option is currently worn, read straight off the picture itself
+  // which option is currently worn, read straight off the picture itself.
+  // The Google ring lights only when the google photo is actually worn — an
+  // account with neither photo nor choice wears a hash-picked animal, and
+  // ringing "Google photo" there was a lie.
   const current = /\/avatars\/avatar-([1-6])\.png$/.exec(state.user.picture ?? "")?.[1];
+  const wearingGoogle = Boolean(state.user.googlePicture) && state.user.picture === state.user.googlePicture;
 
   return (
     <Modal onClose={onClose}>
@@ -332,6 +337,7 @@ function ProfileSheet({
               onClick={() => setPicking((v) => !v)}
               aria-label="Change avatar"
               data-tip="Change avatar"
+              data-tip-side="bottom"
               className="absolute -bottom-0.5 -right-0.5 grid size-5 place-items-center rounded-full bg-ink text-paper shadow-md transition-transform hover:scale-110"
             >
               <svg width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden>
@@ -349,7 +355,7 @@ function ProfileSheet({
             <div className="truncate text-base font-bold">{name}</div>
             <div className="truncate text-sm text-ink-soft">{email}</div>
           </div>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-ink-faint hover:bg-paper-deep" aria-label="Close" data-tip="Close">
+          <button onClick={onClose} className="rounded-lg p-1.5 text-ink-faint hover:bg-paper-deep" aria-label="Close" data-tip="Close" data-tip-side="bottom">
             <IconX />
           </button>
         </div>
@@ -365,7 +371,7 @@ function ProfileSheet({
                 aria-label="Use your Google photo"
                 data-tip="Your Google photo"
                 className={`grid size-11 place-items-center overflow-hidden rounded-full transition-transform hover:scale-105 ${
-                  !current ? "ring-2 ring-sun ring-offset-2 ring-offset-paper-deep" : ""
+                  wearingGoogle ? "ring-2 ring-sun ring-offset-2 ring-offset-paper-deep" : ""
                 }`}
               >
                 {state.user.googlePicture ? (
