@@ -19,6 +19,8 @@ export type Plan = {
   name: string;
   tagline: string;
   priceMinor: number;
+  /** The struck-through "was" price. Display only, never charged. */
+  anchorMinor: number | null;
   currency: string;
   features: FeatureKey[];
   /** Off means it can't be bought; existing holders keep it. */
@@ -31,6 +33,7 @@ export type PlanInput = {
   name: string;
   tagline?: string;
   priceMinor: number;
+  anchorMinor?: number | null;
   currency?: string;
   features: unknown;
   active?: boolean;
@@ -47,6 +50,7 @@ const DEFAULTS: Omit<Plan, "id">[] = [
     name: "Lite",
     tagline: "One account, everything you plan with.",
     priceMinor: 19900,
+    anchorMinor: 29900,
     currency: "INR",
     features: [],
     active: true,
@@ -57,6 +61,7 @@ const DEFAULTS: Omit<Plan, "id">[] = [
     name: "Full",
     tagline: "Everything Kairo does.",
     priceMinor: 29900,
+    anchorMinor: 49900,
     currency: "INR",
     features: [...FEATURE_KEYS],
     active: true,
@@ -67,12 +72,16 @@ const DEFAULTS: Omit<Plan, "id">[] = [
 export { FALLBACK_PAID_PLAN } from "./plan-constants";
 
 function toPlan(d: Document): Plan {
+  const priceMinor = Number(d.priceMinor ?? 0);
+  const anchor = Number(d.anchorMinor);
   return {
     id: (d._id as ObjectId).toHexString(),
     key: String(d.key),
     name: String(d.name ?? d.key),
     tagline: String(d.tagline ?? ""),
-    priceMinor: Number(d.priceMinor ?? 0),
+    priceMinor,
+    // an anchor that is not clearly above the price is nonsense, so it hides
+    anchorMinor: Number.isFinite(anchor) && anchor > priceMinor ? Math.round(anchor) : null,
     currency: String(d.currency ?? "INR"),
     features: sanitiseFeatures(d.features),
     active: d.active !== false,
@@ -168,6 +177,10 @@ export async function createPlan(input: PlanInput): Promise<Plan> {
       name: input.name.trim().slice(0, 60) || key,
       tagline: (input.tagline ?? "").trim().slice(0, 140),
       priceMinor: Math.max(100, Math.round(input.priceMinor)),
+      anchorMinor:
+        typeof input.anchorMinor === "number" && Number.isFinite(input.anchorMinor)
+          ? Math.round(input.anchorMinor)
+          : null,
       currency: (input.currency ?? "INR").toUpperCase().slice(0, 3),
       features: sanitiseFeatures(input.features),
       active: input.active !== false,
@@ -187,6 +200,12 @@ export async function updatePlan(id: string, patch: Partial<PlanInput>): Promise
     if (patch.name !== undefined) set.name = patch.name.trim().slice(0, 60);
     if (patch.tagline !== undefined) set.tagline = patch.tagline.trim().slice(0, 140);
     if (patch.priceMinor !== undefined) set.priceMinor = Math.max(100, Math.round(patch.priceMinor));
+    if (patch.anchorMinor !== undefined) {
+      set.anchorMinor =
+        typeof patch.anchorMinor === "number" && Number.isFinite(patch.anchorMinor)
+          ? Math.round(patch.anchorMinor)
+          : null;
+    }
     if (patch.currency !== undefined) set.currency = patch.currency.toUpperCase().slice(0, 3);
     if (patch.features !== undefined) set.features = sanitiseFeatures(patch.features);
     if (patch.active !== undefined) set.active = Boolean(patch.active);

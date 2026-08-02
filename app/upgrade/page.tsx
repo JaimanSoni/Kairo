@@ -54,6 +54,7 @@ export default async function UpgradePage({
       name: p.name,
       tagline: p.tagline,
       priceMinor: p.priceMinor,
+      anchorMinor: p.anchorMinor,
       currency: p.currency,
       features: p.features,
     }));

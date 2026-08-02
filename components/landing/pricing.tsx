@@ -51,8 +51,20 @@ export async function Pricing({ signedIn }: { signedIn: boolean }) {
                   Everything
                 </span>
               )}
-              <div className="text-sm font-semibold">{plan.name}</div>
-              <div className="mt-1 flex items-baseline gap-1.5">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold">{plan.name}</span>
+                {plan.anchorMinor && (
+                  <span className="rounded-full bg-sun-soft px-2 py-0.5 text-[10px] font-bold text-sun-deep">
+                    {Math.round((1 - plan.priceMinor / plan.anchorMinor) * 100)}% off
+                  </span>
+                )}
+              </div>
+              <div className="mt-1 flex items-baseline gap-2">
+                {plan.anchorMinor && (
+                  <span className="text-xl font-medium text-ink-faint line-through decoration-ink-faint/60">
+                    {money(plan.anchorMinor, plan.currency)}
+                  </span>
+                )}
                 <span className="font-display text-5xl tracking-tight">
                   {money(plan.priceMinor, plan.currency)}
                 </span>

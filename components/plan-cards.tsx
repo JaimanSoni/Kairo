@@ -19,6 +19,8 @@ export type PublicPlan = {
   name: string;
   tagline: string;
   priceMinor: number;
+  /** The struck-through "was" price. Display only, never charged. */
+  anchorMinor?: number | null;
   currency: string;
   features: FeatureKey[];
 };
@@ -95,7 +97,12 @@ export function PlanCards({
                 )}
               </div>
 
-              <div className="mt-1.5 flex items-baseline gap-1">
+              <div className="mt-1.5 flex items-baseline gap-1.5">
+                {plan.anchorMinor ? (
+                  <span className="text-sm font-medium text-ink-faint line-through decoration-ink-faint/60">
+                    {money(plan.anchorMinor, plan.currency)}
+                  </span>
+                ) : null}
                 <span className="font-display text-3xl tracking-tight">
                   {money(plan.priceMinor, plan.currency)}
                 </span>

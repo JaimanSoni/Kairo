@@ -128,15 +128,18 @@ function PlanCard({
   const [name, setName] = useState(plan.name);
   const [tagline, setTagline] = useState(plan.tagline);
   const [price, setPrice] = useState((plan.priceMinor / 100).toString());
+  const [anchor, setAnchor] = useState(plan.anchorMinor ? (plan.anchorMinor / 100).toString() : "");
+  const anchorMinor = anchor.trim() ? Math.round(Number(anchor) * 100) : null;
   const dirty =
     name !== plan.name ||
     tagline !== plan.tagline ||
-    Math.round(Number(price) * 100) !== plan.priceMinor;
+    Math.round(Number(price) * 100) !== plan.priceMinor ||
+    anchorMinor !== (plan.anchorMinor ?? null);
 
   const save = () => {
     const major = Number(price);
     if (!Number.isFinite(major) || major < 1) return;
-    void onSave({ name, tagline, priceMinor: Math.round(major * 100) });
+    void onSave({ name, tagline, priceMinor: Math.round(major * 100), anchorMinor });
   };
 
   return (
@@ -158,6 +161,16 @@ function PlanCard({
           />
         </div>
         <div className="flex items-center gap-1.5">
+          {/* the "was" price shown struck through on every pricing surface */}
+          <input
+            value={anchor}
+            onChange={(e) => setAnchor(e.target.value.replace(/[^\d.]/g, ""))}
+            inputMode="decimal"
+            placeholder="was"
+            aria-label="Struck-through anchor price"
+            data-tip="Struck-through 'was' price. Empty = no discount shown"
+            className="w-20 rounded-lg border border-line bg-paper px-3 py-1.5 text-right text-ink-faint line-through tabular-nums"
+          />
           <span className="text-sm text-ink-faint">{plan.currency}</span>
           <input
             value={price}

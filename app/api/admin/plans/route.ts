@@ -40,6 +40,7 @@ export async function POST(request: Request) {
     name,
     tagline: typeof body.tagline === "string" ? body.tagline : "",
     priceMinor: Math.round(priceMinor),
+    anchorMinor: Number.isFinite(Number(body.anchorMinor)) ? Number(body.anchorMinor) : null,
     currency: typeof body.currency === "string" ? body.currency : "INR",
     features: body.features,
     active: body.active !== false,
@@ -72,6 +73,9 @@ export async function PATCH(request: Request) {
     ...(typeof body.name === "string" ? { name: body.name } : {}),
     ...(typeof body.tagline === "string" ? { tagline: body.tagline } : {}),
     ...(body.priceMinor !== undefined ? { priceMinor: Math.round(Number(body.priceMinor)) } : {}),
+    ...(body.anchorMinor !== undefined
+      ? { anchorMinor: Number.isFinite(Number(body.anchorMinor)) ? Number(body.anchorMinor) : null }
+      : {}),
     ...(typeof body.currency === "string" ? { currency: body.currency } : {}),
     ...(body.features !== undefined ? { features: body.features } : {}),
     ...(body.active !== undefined ? { active: Boolean(body.active) } : {}),

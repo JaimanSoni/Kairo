@@ -62,6 +62,11 @@ export default async function PricingPage() {
             <div key={plan.key} className="rounded-2xl border border-line bg-card p-6">
               <div className="text-sm font-semibold">{plan.name}</div>
               <div className="mt-1 flex flex-wrap items-baseline gap-x-2">
+                {plan.anchorMinor && (
+                  <span className="text-lg font-medium text-ink-faint line-through decoration-ink-faint/60">
+                    {money(plan.anchorMinor, plan.currency)}
+                  </span>
+                )}
                 <span className="font-display text-4xl tracking-tight">
                   {money(plan.priceMinor, plan.currency)}
                 </span>

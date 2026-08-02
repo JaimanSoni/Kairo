@@ -31,6 +31,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     name: p.name,
     tagline: p.tagline,
     priceMinor: p.priceMinor,
+    anchorMinor: p.anchorMinor,
     currency: p.currency,
     features: p.features,
   }));
