@@ -216,6 +216,11 @@ export default async function Landing({
                 <b>That session pointed at an account that no longer exists.</b> Sign in again and
                 you&apos;ll be right back in.
               </>
+            ) : auth_error === "signout_first" ? (
+              <>
+                <b>You&apos;re already signed in on this browser.</b> That sign-in link is for a
+                different account. Sign out first, or open the link in a private window.
+              </>
             ) : auth_error === "link_expired" ? (
               <>
                 <b>That sign-in link has expired.</b> Signing in with Google using the same email

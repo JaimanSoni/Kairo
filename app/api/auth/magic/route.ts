@@ -4,7 +4,6 @@ import { getDb } from "@/lib/db";
 import { resolveMagicToken } from "@/lib/invites";
 import { activatePendingUser, type DbUser } from "@/lib/users";
 import { addAccountSession, getSessionData } from "@/lib/session";
-import { hasFeature } from "@/lib/entitlements";
 import { originFromRequest } from "@/lib/google";
 
 /**
@@ -37,25 +36,24 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${origin}/?auth_error=deactivated`);
     }
 
+    // A signed-in browser must never have a NEW account injected into it by
+    // following a link: that is login CSRF — an attacker could mail out a
+    // magic link for an account they control and quietly become the active
+    // account of anyone who clicks it. A magic link signs in on a
+    // signed-out browser, or re-selects an account already on the roster;
+    // it never adds one.
+    const userId = user._id.toHexString();
+    const existing = await getSessionData();
+    if (existing && !existing.accounts.some((a) => a.userId === userId)) {
+      return NextResponse.redirect(`${origin}/?auth_error=signout_first`);
+    }
+
     if (user.pending) {
       user = await activatePendingUser(user);
     } else {
       await db
         .collection("users")
         .updateOne({ _id: new ObjectId(user._id) }, { $set: { lastLoginAt: new Date() } });
-    }
-
-    // Same rule as the Google callback: ADDING a second account to the roster
-    // is the gated part, and it is the account currently in use whose plan
-    // has to allow it.
-    const userId = user._id.toHexString();
-    const existing = await getSessionData();
-    const isNewToRoster = existing && !existing.accounts.some((a) => a.userId === userId);
-    if (isNewToRoster) {
-      const current = existing.accounts[existing.active];
-      if (current && !(await hasFeature(current.userId, "multi-account"))) {
-        return NextResponse.redirect(`${origin}/upgrade?feature=multi-account`);
-      }
     }
 
     await addAccountSession({

@@ -11,6 +11,17 @@ export function todayStr(): string {
   return toDateStr(new Date());
 }
 
+/**
+ * The LOCAL day an ISO instant fell on. `iso.slice(0, 10)` reads the UTC
+ * day, which for anyone east of Greenwich shifts early-morning completions
+ * onto yesterday — in India, everything finished before 05:30 vanished from
+ * "Done today".
+ */
+export function localDayOf(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? iso.slice(0, 10) : toDateStr(d);
+}
+
 export function addDays(dateStr: string, days: number): string {
   const [y, m, d] = dateStr.split("-").map(Number);
   const date = new Date(y, m - 1, d);

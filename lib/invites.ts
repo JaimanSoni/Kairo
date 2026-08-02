@@ -4,7 +4,7 @@ import { getDb, withDbRetry } from "./db";
 import { sendEmail } from "./email";
 import { inviteEmail } from "./email-templates";
 import { SITE_URL } from "./site";
-import type { DbUser } from "./users";
+import { ensureUserEmailIndex, type DbUser } from "./users";
 
 /**
  * Sharing with an address that has no Kairo account.
@@ -96,14 +96,18 @@ export async function inviteUserByEmail(input: {
   email: string;
   inviterId: string;
   inviterName: string;
-  /** One send per item+address — re-sharing the same thing never spams. */
-  emailKey: string;
   invite: { kind: "task" | "list"; itemName: string; when?: string | null };
 }): Promise<InviteResult> {
   const email = input.email.trim().toLowerCase();
   if (!looksLikeEmail(email)) {
     return { ok: false, error: "That doesn't look like a full email address" };
   }
+
+  // One invite email per address per day, whatever is being shared. Keying
+  // per item let anyone turn the invite flow into an email cannon (new list,
+  // new key, unlimited sends from our own domain); repeat shares within a
+  // day still attach silently below.
+  const emailKey = `invite:${email}:${new Date().toISOString().slice(0, 10)}`;
 
   const { url, tokenHash } = await mintMagicLink(email);
   const mail = inviteEmail({
@@ -117,7 +121,7 @@ export async function inviteUserByEmail(input: {
     recipientName: nameFromEmail(email),
   });
 
-  const result = await sendEmail({ key: input.emailKey, to: email, ...mail });
+  const result = await sendEmail({ key: emailKey, to: email, ...mail });
 
   // A refused send creates nothing — and its unused token has no business
   // outliving it. A duplicate claim means an earlier invite for this exact
@@ -137,23 +141,33 @@ export async function inviteUserByEmail(input: {
 
   const user = await withDbRetry(async () => {
     const db = await getDb();
+    await ensureUserEmailIndex(db).catch(() => {});
     const now = new Date();
-    // upsert by email: two racing invites to the same address make one account
-    return db.collection<DbUser>("users").findOneAndUpdate(
-      { email },
-      {
-        $setOnInsert: {
-          email,
-          name: nameFromEmail(email),
-          createdAt: now,
-          lastLoginAt: now,
-          pending: true,
-          invitedAt: now,
-          invitedBy: new ObjectId(input.inviterId),
+    try {
+      // upsert by email; the unique index (not luck) makes two racing
+      // invites to the same address produce exactly one account
+      return await db.collection<DbUser>("users").findOneAndUpdate(
+        { email },
+        {
+          $setOnInsert: {
+            email,
+            name: nameFromEmail(email),
+            createdAt: now,
+            lastLoginAt: now,
+            pending: true,
+            invitedAt: now,
+            invitedBy: new ObjectId(input.inviterId),
+          },
         },
-      },
-      { upsert: true, returnDocument: "after" }
-    );
+        { upsert: true, returnDocument: "after" }
+      );
+    } catch (err) {
+      // the racing loser's upsert trips the unique index; the winner's row
+      // is the account we wanted anyway
+      const dup = typeof err === "object" && err !== null && (err as { code?: number }).code === 11000;
+      if (!dup) throw err;
+      return db.collection<DbUser>("users").findOne({ email });
+    }
   });
   if (!user) return { ok: false, error: "Couldn't set up the invite, try again" };
   return { ok: true, user };

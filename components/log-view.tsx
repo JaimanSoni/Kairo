@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { Subtask, Task } from "@/lib/types";
-import { addDays, friendlyDay, todayStr } from "@/lib/dates";
+import { addDays, friendlyDay, localDayOf, todayStr } from "@/lib/dates";
 import { hiddenListIds, useApp } from "./store";
 import { TaskItem } from "./task-item";
 import { ListMark } from "./img3d";
@@ -113,7 +113,7 @@ export function LogView() {
 
     const map = new Map<string, Win[]>();
     for (const w of wins) {
-      const day = w.at.slice(0, 10);
+      const day = localDayOf(w.at);
       if (!day) continue;
       if (!map.has(day)) map.set(day, []);
       map.get(day)!.push(w);
@@ -124,8 +124,8 @@ export function LogView() {
   const today = todayStr();
   const weekStart = addDays(today, -6);
   const doneThisWeek =
-    done.filter((t) => (t.completedAt ?? "").slice(0, 10) >= weekStart).length +
-    stepWins.filter((w) => w.at.slice(0, 10) >= weekStart).length;
+    done.filter((t) => t.completedAt && localDayOf(t.completedAt) >= weekStart).length +
+    stepWins.filter((w) => localDayOf(w.at) >= weekStart).length;
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 pb-32 pt-8 sm:px-6">

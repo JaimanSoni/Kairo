@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { Task } from "@/lib/types";
-import { fullDate, fmtMinutes } from "@/lib/dates";
+import { fullDate, fmtMinutes, localDayOf } from "@/lib/dates";
 import { parseQuickAdd } from "@/lib/nlp";
 import Link from "next/link";
 import { byOrder, hiddenListIds, useApp, visibleLists } from "./store";
@@ -40,7 +40,9 @@ export function TodayView() {
   const carryover = useMemo(
     () =>
       all
-        .filter((t) => t.status === "planned" && t.plannedFor && t.plannedFor < today)
+        // repeating tasks roll themselves forward (see the store); the sweep
+        // is only for one-off plans that need an actual decision
+        .filter((t) => t.status === "planned" && t.plannedFor && t.plannedFor < today && !t.repeat)
         .sort(byOrder),
     [all, today]
   );
@@ -53,7 +55,7 @@ export function TodayView() {
   const doneToday = useMemo(
     () =>
       all
-        .filter((t) => t.status === "done" && t.completedAt && t.completedAt.slice(0, 10) === today)
+        .filter((t) => t.status === "done" && t.completedAt && localDayOf(t.completedAt) === today)
         .sort((a, b) => (b.completedAt ?? "").localeCompare(a.completedAt ?? "")),
     [all, today]
   );

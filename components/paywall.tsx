@@ -168,11 +168,16 @@ export function TrialBanner({
   user,
   mode,
   price,
+  planKey,
 }: {
   access: Access;
   user: { name: string; email: string };
   mode: Mode;
   price: string;
+  /** The plan the shown price belongs to. The button must charge THIS plan:
+   *  an empty start() used to fall back to the dearest plan while the label
+   *  showed the cheapest price. */
+  planKey?: string;
 }) {
   const { start, busy } = useCheckout(user, mode);
   const [dismissed, setDismissed] = useState(false);
@@ -198,7 +203,7 @@ export function TrialBanner({
               : `${access.trialDaysLeft} ${access.trialDaysLeft === 1 ? "day" : "days"} left of your free trial.`}
         </span>
         <button
-          onClick={() => start()}
+          onClick={() => start(planKey)}
           disabled={Boolean(busy)}
           className="font-semibold underline underline-offset-2 disabled:opacity-60"
         >

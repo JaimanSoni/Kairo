@@ -52,6 +52,9 @@ export function track(event: string, props?: Props): void {
   try {
     // the admin's own poking around is noise, not signal
     if (location.pathname.startsWith("/admin")) return;
+    // dev servers and preview deploys share the production sink; counting
+    // them would make launch-day numbers a mirror of the team's own tabs
+    if (process.env.NODE_ENV !== "production") return;
 
     const body = JSON.stringify({
       e: event,

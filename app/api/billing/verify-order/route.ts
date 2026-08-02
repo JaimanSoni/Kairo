@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireSession, badRequest, unauthorized } from "@/lib/api-auth";
-import { creditOneMonth } from "@/lib/billing";
+import { creditOneMonth, getOrderRecord } from "@/lib/billing";
+import { redeemPromo } from "@/lib/promos";
 import { fetchPayment, verifyOrderSignature } from "@/lib/razorpay";
 import { planForPendingPayment } from "@/lib/pending-plan";
 
@@ -53,17 +54,38 @@ export async function POST(request: Request) {
     if (payment.status !== "captured" && payment.status !== "authorized") {
       return NextResponse.json({ error: `Payment is ${payment.status}` }, { status: 400 });
     }
-    // Checked against the plan this order was opened for, not a global price —
-    // plans set their own, and the cheaper one must not buy the dearer.
-    const plan = await planForPendingPayment(session.userId);
-    if (!plan) {
-      return NextResponse.json({ error: "No plan to credit this against" }, { status: 500 });
+    // Validated against our own frozen record of the order: whose it is,
+    // which plan, and exactly what it should cost. Immune to admin price
+    // edits mid-checkout, cache skew across instances, and a second tab
+    // repointing the pending slot. Orders opened before this record existed
+    // fall back to the old pending-plan bookkeeping.
+    const rec = await getOrderRecord(orderId);
+    if (rec && rec.userId !== session.userId) {
+      // a signed confirmation for someone else's order credits nobody here
+      console.warn("[billing] order ownership mismatch", { orderId, userId: session.userId });
+      return NextResponse.json({ error: "This payment belongs to another account" }, { status: 403 });
     }
-    if (payment.amount !== plan.priceMinor || payment.currency !== plan.currency) {
+    let expectedMinor: number;
+    let expectedCurrency: string;
+    let planKey: string;
+    if (rec) {
+      expectedMinor = rec.amountMinor;
+      expectedCurrency = rec.currency;
+      planKey = rec.planKey;
+    } else {
+      const plan = await planForPendingPayment(session.userId);
+      if (!plan) {
+        return NextResponse.json({ error: "No plan to credit this against" }, { status: 500 });
+      }
+      expectedMinor = plan.priceMinor;
+      expectedCurrency = plan.currency;
+      planKey = plan.key;
+    }
+    if (payment.amount !== expectedMinor || payment.currency !== expectedCurrency) {
       console.warn("[billing] amount mismatch", {
         paid: payment.amount,
-        expected: plan.priceMinor,
-        plan: plan.key,
+        expected: expectedMinor,
+        plan: planKey,
       });
       return NextResponse.json({ error: "Unexpected amount" }, { status: 400 });
     }
@@ -73,8 +95,15 @@ export async function POST(request: Request) {
       orderId: payment.order_id,
       amount: payment.amount,
       currency: payment.currency,
-      planKey: plan.key,
+      planKey,
     });
+    if (rec?.promoCode) {
+      void redeemPromo(rec.promoCode, session.userId, {
+        paymentId: payment.id,
+        planKey,
+        amountMinor: payment.amount,
+      }).catch((err) => console.error("[billing] promo redemption failed", err));
+    }
     if (credited) {
       console.info("[billing] %s paid %s %s, access to %s", session.email, payment.amount, payment.currency, new Date(coversUntil).toISOString());
     } else {

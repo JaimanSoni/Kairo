@@ -37,8 +37,10 @@ export async function POST(request: Request) {
 
   const user = await getUserById(session.userId);
   const billing = (user as { billing?: UserBilling } | null)?.billing ?? {};
-  // the signature proves Razorpay sent it; this proves it's *this* user's
-  if (billing.subscriptionId && billing.subscriptionId !== subscriptionId) {
+  // the signature proves Razorpay sent it; this proves it's *this* user's.
+  // Strict equality on purpose: an account with no recorded subscription must
+  // not be able to adopt someone else's id and inherit its "active" status.
+  if (billing.subscriptionId !== subscriptionId) {
     return NextResponse.json({ error: "Subscription does not belong to this account" }, { status: 403 });
   }
 

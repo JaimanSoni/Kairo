@@ -8,6 +8,7 @@ import {
   sanitizeTaskPatch,
   buildTaskUpdate,
   taskAccessFilter,
+  accessibleListIds,
 } from "@/lib/tasks";
 import { sendToUser } from "@/lib/push";
 import { getUserById } from "@/lib/users";
@@ -35,6 +36,17 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/tasks/[id]
   const tasks = await tasksCollection();
   const existing = await tasks.findOne({ _id: new ObjectId(id), ...(await taskAccessFilter(userId)) });
   if (!existing) return notFound();
+
+  // Moving a task to a list requires access to THAT list. Owning the task
+  // proves nothing about the destination: without this check a task could be
+  // planted inside a stranger's list, or smuggled into a private one to keep
+  // reading it after a share is revoked.
+  if (patch.listId !== undefined && patch.listId !== null) {
+    const allowed = await accessibleListIds(userId);
+    if (!allowed.some((l) => l.toHexString() === patch.listId)) {
+      return badRequest("Unknown list");
+    }
+  }
 
   // Assigning is only valid to a member of the task's shared list.
   let notifyAssignee: ObjectId | null = null;

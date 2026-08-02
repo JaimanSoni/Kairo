@@ -3,9 +3,11 @@ import {
   creditOneMonth,
   findUserByOrderId,
   findUserBySubscriptionId,
+  getOrderRecord,
   updateUserBilling,
   type SubStatus,
 } from "@/lib/billing";
+import { redeemPromo } from "@/lib/promos";
 import { verifyWebhookSignature, webhookConfigured } from "@/lib/razorpay";
 import { planForPendingPayment } from "@/lib/pending-plan";
 import { sendEmail } from "@/lib/email";
@@ -87,20 +89,36 @@ export async function POST(request: Request) {
     const orderId = pay?.order_id ?? body.payload?.order?.entity?.id;
     if (!orderId) return NextResponse.json({ ok: true, ignored: event });
 
-    const payer = await findUserByOrderId(orderId);
+    // Our frozen record of the order names the payer, the plan and the exact
+    // expected charge — even for an order superseded by a newer checkout,
+    // which the single pending slot used to forget entirely.
+    const rec = await getOrderRecord(orderId);
+    const payer = rec ? { id: rec.userId } : await findUserByOrderId(orderId);
     if (!payer) return NextResponse.json({ ok: true, unknown: true });
 
     // The signature proves Razorpay sent this; this proves it is the price of
     // the plan the payer actually opened checkout for.
     const amount = pay?.amount ?? body.payload?.order?.entity?.amount;
     const currency = pay?.currency ?? body.payload?.order?.entity?.currency;
-    const plan = await planForPendingPayment(payer.id);
-    if (!plan) {
-      console.error("[billing] webhook with no plan to credit", { event, orderId });
-      return NextResponse.json({ error: "No plan" }, { status: 500 });
+    let expectedMinor: number;
+    let expectedCurrency: string;
+    let planKey: string;
+    if (rec) {
+      expectedMinor = rec.amountMinor;
+      expectedCurrency = rec.currency;
+      planKey = rec.planKey;
+    } else {
+      const plan = await planForPendingPayment(payer.id);
+      if (!plan) {
+        console.error("[billing] webhook with no plan to credit", { event, orderId });
+        return NextResponse.json({ error: "No plan" }, { status: 500 });
+      }
+      expectedMinor = plan.priceMinor;
+      expectedCurrency = plan.currency;
+      planKey = plan.key;
     }
-    if (amount !== plan.priceMinor || currency !== plan.currency) {
-      console.warn("[billing] webhook amount mismatch", { amount, currency, plan: plan.key });
+    if (amount !== expectedMinor || currency !== expectedCurrency) {
+      console.warn("[billing] webhook amount mismatch", { amount, currency, plan: planKey });
       // this is the paid-but-not-credited case. A console.warn on a
       // serverless function is invisible; an email to the admin is not.
       if (pay?.id) {
@@ -109,8 +127,8 @@ export async function POST(request: Request) {
           orderId,
           amount,
           currency,
-          expectedMinor: plan.priceMinor,
-          expectedCurrency: plan.currency,
+          expectedMinor,
+          expectedCurrency,
         });
         void sendEmail({ key: `mismatch:${pay.id}`, to: ADMIN_EMAIL, ...mail }).catch(() => {});
       }
@@ -127,9 +145,16 @@ export async function POST(request: Request) {
         paymentId: pay.id,
         orderId,
         amount: amount ?? 0,
-        currency: currency ?? plan.currency,
-        planKey: plan.key,
+        currency: currency ?? expectedCurrency,
+        planKey,
       });
+      if (rec?.promoCode) {
+        void redeemPromo(rec.promoCode, payer.id, {
+          paymentId: pay.id,
+          planKey,
+          amountMinor: amount ?? 0,
+        }).catch((err) => console.error("[billing] promo redemption failed", err));
+      }
       console.info(
         "[billing] %s -> user %s %s through %s",
         event,

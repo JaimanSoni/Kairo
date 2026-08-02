@@ -75,12 +75,18 @@ export async function exchangeCode(code: string, origin: string): Promise<Google
     audience: process.env.GOOGLE_CLIENT_ID!,
   });
 
-  const { sub, email, name, picture } = payload as {
+  const { sub, email, email_verified, name, picture } = payload as {
     sub: string;
     email?: string;
+    email_verified?: boolean;
     name?: string;
     picture?: string;
   };
   if (!sub || !email) throw new Error("Google profile missing sub/email");
-  return { sub, email, name: name || email.split("@")[0], picture };
+  // The email is used as an authorization key: it claims invited accounts.
+  // An unverified address must never be allowed to claim anything — Google's
+  // own guidance is to treat email as an identifier only when verified.
+  if (email_verified === false) throw new Error("Google account email is not verified");
+  // one identity model: emails are compared lowercase everywhere
+  return { sub, email: email.toLowerCase(), name: name || email.split("@")[0], picture };
 }

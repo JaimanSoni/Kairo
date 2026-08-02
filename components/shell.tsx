@@ -97,7 +97,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       !state.sweepDismissed &&
       pathname.startsWith("/today") &&
       Object.values(state.tasks).some(
-        (t) => t.status === "planned" && t.plannedFor && t.plannedFor < state.today
+        (t) => t.status === "planned" && t.plannedFor && t.plannedFor < state.today && !t.repeat
       ),
     [state.tasks, state.sweepDismissed, state.today, pathname]
   );

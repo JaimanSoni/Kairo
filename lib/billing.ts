@@ -107,19 +107,98 @@ export async function findUserBySubscriptionId(
 async function extendPaidPeriod(userId: string, from = Date.now()): Promise<number> {
   return withDbRetry(async () => {
     const db = await getDb();
-    const doc = await db
-      .collection("users")
-      .findOne({ _id: new ObjectId(userId) }, { projection: { billing: 1 } });
-    const current = (doc?.billing?.currentPeriodEnd as number | undefined) ?? 0;
-    const base = Math.max(current, from);
-    const next = new Date(base);
-    next.setMonth(next.getMonth() + 1);
-    const currentPeriodEnd = next.getTime();
-    await db.collection("users").updateOne(
+    // One atomic pipeline update, for two reasons that are both money:
+    // a read-modify-write here let two *different* payments read the same
+    // period and grant one month between them; and setMonth() overflowed
+    // month ends (31 Jan + 1 month = 3 Mar). $dateAdd is atomic on the
+    // document and clamps to real calendar months.
+    //
+    // What it deliberately does NOT write any more: billing.status. Credit
+    // used to stamp "active", and the access rules trust "active" before
+    // looking at the period end — which made one payment permanent access.
+    // In one-off mode the period end IS the truth; status belongs to real
+    // subscriptions only.
+    const res = await db.collection("users").findOneAndUpdate(
       { _id: new ObjectId(userId) },
-      { $set: { "billing.currentPeriodEnd": currentPeriodEnd, "billing.status": "active", "billing.updatedAt": new Date() } }
+      [
+        {
+          $set: {
+            "billing.currentPeriodEnd": {
+              $toLong: {
+                $dateAdd: {
+                  startDate: {
+                    $toDate: { $max: [{ $ifNull: ["$billing.currentPeriodEnd", 0] }, from] },
+                  },
+                  unit: "month",
+                  amount: 1,
+                },
+              },
+            },
+            "billing.updatedAt": "$$NOW",
+          },
+        },
+      ],
+      { returnDocument: "after", projection: { billing: 1 } }
     );
-    return currentPeriodEnd;
+    const end = res?.billing?.currentPeriodEnd as number | undefined;
+    if (typeof end !== "number") throw new Error(`extendPaidPeriod: user ${userId} not found`);
+    return end;
+  });
+}
+
+/* ----------------------------------------------------------------- orders */
+
+/**
+ * Our own frozen record of every order we open: who it is for, what plan,
+ * and exactly what it should cost. Both confirmation paths validate against
+ * this row — never against the live plan price (an admin edit or a stale
+ * cache mid-checkout used to reject honest payments) and never against the
+ * mutable pending slot on the user (a second tab used to repoint it).
+ */
+let orderIndexReady: Promise<unknown> | null = null;
+function ensureOrderIndex(db: Awaited<ReturnType<typeof getDb>>): Promise<unknown> {
+  orderIndexReady ??= db
+    .collection("orders")
+    .createIndex({ orderId: 1 }, { unique: true, name: "orderId_unique" })
+    .catch((err: unknown) => {
+      orderIndexReady = null;
+      throw err;
+    });
+  return orderIndexReady;
+}
+
+export type OrderRecord = {
+  orderId: string;
+  userId: string;
+  planKey: string;
+  amountMinor: number;
+  currency: string;
+  promoCode: string | null;
+};
+
+export async function recordOrder(o: OrderRecord): Promise<void> {
+  await withDbRetry(async () => {
+    const db = await getDb();
+    await ensureOrderIndex(db);
+    await db
+      .collection("orders")
+      .insertOne({ ...o, userId: new ObjectId(o.userId), createdAt: new Date() });
+  });
+}
+
+export async function getOrderRecord(orderId: string): Promise<OrderRecord | null> {
+  return withDbRetry(async () => {
+    const db = await getDb();
+    const doc = await db.collection("orders").findOne({ orderId });
+    if (!doc) return null;
+    return {
+      orderId: String(doc.orderId),
+      userId: (doc.userId as ObjectId).toHexString(),
+      planKey: String(doc.planKey),
+      amountMinor: Number(doc.amountMinor),
+      currency: String(doc.currency),
+      promoCode: typeof doc.promoCode === "string" ? doc.promoCode : null,
+    };
   });
 }
 
@@ -181,6 +260,12 @@ function isDuplicateKey(err: unknown): boolean {
  * the winner granted. The unique index makes that insert the arbiter even when
  * the racers are running in different serverless instances.
  */
+/** How long a crediting claim may sit unfinished before another confirmer
+ *  may adopt it — long enough for a slow Atlas write, short enough that a
+ *  killed lambda doesn't strand a paid customer for more than seconds. */
+const CREDIT_LOCK_MS = 15_000;
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 export async function creditOneMonth(
   userId: string,
   p: {
@@ -192,56 +277,98 @@ export async function creditOneMonth(
     planKey: string;
   }
 ): Promise<{ coversUntil: number; credited: boolean }> {
-  return withDbRetry(async () => {
-    const db = await getDb();
-    try {
-      await ensurePaymentIndex(db);
-    } catch (err) {
-      // Losing the index costs us the guarantee, not the payment — carry on and
-      // make it loud, because the duplicates it lets through are real money.
-      console.error("[billing] could not create the payments unique index", err);
-    }
+  const db = await withDbRetry(getDb);
+  // Fail CLOSED without the index: crediting without the replay defence is
+  // how one signed confirmation buys a month per POST. A thrown error here
+  // 5xxes the confirmer, and both Razorpay and the browser retry.
+  await ensurePaymentIndex(db);
 
-    try {
-      await db.collection("payments").insertOne({
-        paymentId: p.paymentId,
-        userId: new ObjectId(userId),
-        orderId: p.orderId ?? null,
-        amount: p.amount,
-        currency: p.currency,
-        planKey: p.planKey,
-        paidAt: new Date(),
-        coversUntil: null,
-      });
-    } catch (err) {
-      if (!isDuplicateKey(err)) throw err;
-      // Someone else already credited this payment. Report what they granted,
-      // falling back to the account's own period if they're mid-write.
-      const [receipt, user] = await Promise.all([
-        db.collection("payments").findOne({ paymentId: p.paymentId }, { projection: { coversUntil: 1 } }),
-        db.collection("users").findOne({ _id: new ObjectId(userId) }, { projection: { billing: 1 } }),
-      ]);
-      const covers =
-        (receipt?.coversUntil as number | null) ??
-        (user?.billing?.currentPeriodEnd as number | undefined) ??
-        Date.now();
-      return { coversUntil: covers, credited: false };
-    }
+  // The receipt is the claim. Whoever inserts it first owns the payment;
+  // everyone else finds it already there. NOT wrapped in a retry loop as a
+  // unit — retrying a body that already inserted would find its own row and
+  // misreport the credit as someone else's.
+  try {
+    await db.collection("payments").insertOne({
+      paymentId: p.paymentId,
+      userId: new ObjectId(userId),
+      orderId: p.orderId ?? null,
+      amount: p.amount,
+      currency: p.currency,
+      planKey: p.planKey,
+      paidAt: new Date(),
+      coversUntil: null,
+      creditingAt: new Date(),
+    });
+  } catch (err) {
+    if (!isDuplicateKey(err)) throw err;
+    // Another confirmer holds the claim. Wait for its result; if the claim
+    // has been sitting unfinished past the lock window, its holder died
+    // mid-credit — adopt it, because the alternative is a customer who paid
+    // and holds nothing while every retry reports success.
+    const tryAdopt = () =>
+      db.collection("payments").findOneAndUpdate(
+        {
+          paymentId: p.paymentId,
+          coversUntil: null,
+          creditingAt: { $lt: new Date(Date.now() - CREDIT_LOCK_MS) },
+        },
+        { $set: { creditingAt: new Date() } }
+      );
 
-    const coversUntil = await extendPaidPeriod(userId);
-    await db
-      .collection("payments")
-      .updateOne({ paymentId: p.paymentId }, { $set: { coversUntil } });
-    // planKey is set from the payment, so an upgrade takes effect on the same
-    // write that extends the period — never one without the other.
-    await updateUserBilling(userId, { pendingOrderId: "", pendingPlanKey: "", planKey: p.planKey });
-    // the receipt is a side effect, never a dependency: a mail failure must
-    // not fail the credit, and the key makes the racing confirmers send once
-    void sendReceipt(userId, p, coversUntil).catch((err) =>
-      console.error("[email] receipt failed", err)
-    );
-    return { coversUntil, credited: true };
-  });
+    let adopted = false;
+    for (let i = 0; i < 6 && !adopted; i++) {
+      const receipt = await db
+        .collection("payments")
+        .findOne({ paymentId: p.paymentId }, { projection: { coversUntil: 1, creditingAt: 1 } });
+      const covers = receipt?.coversUntil as number | null | undefined;
+      if (typeof covers === "number") return { coversUntil: covers, credited: false };
+      const heldSince = (receipt?.creditingAt as Date | undefined)?.getTime() ?? 0;
+      if (Date.now() - heldSince > CREDIT_LOCK_MS && (await tryAdopt())) {
+        adopted = true; // the claim is ours; fall through and finish the credit
+        break;
+      }
+      await sleep(500);
+    }
+    if (!adopted) {
+      const final = await db
+        .collection("payments")
+        .findOne({ paymentId: p.paymentId }, { projection: { coversUntil: 1 } });
+      const finalCovers = final?.coversUntil as number | null | undefined;
+      if (typeof finalCovers === "number") return { coversUntil: finalCovers, credited: false };
+      if (!(await tryAdopt())) {
+        // still actively being credited by someone alive; the caller's retry
+        // (webhook redelivery, user refresh) will pick up the result
+        return {
+          coversUntil: (await currentPeriodEndOf(db, userId)) ?? Date.now(),
+          credited: false,
+        };
+      }
+    }
+  }
+
+  const coversUntil = await withDbRetry(() => extendPaidPeriod(userId));
+  await withDbRetry(async () =>
+    db.collection("payments").updateOne({ paymentId: p.paymentId }, { $set: { coversUntil } })
+  );
+  // planKey is set from the payment, so an upgrade takes effect on the same
+  // write that extends the period — never one without the other.
+  await updateUserBilling(userId, { pendingOrderId: "", pendingPlanKey: "", planKey: p.planKey });
+  // the receipt is a side effect, never a dependency: a mail failure must
+  // not fail the credit, and the key makes the racing confirmers send once
+  void sendReceipt(userId, p, coversUntil).catch((err) =>
+    console.error("[email] receipt failed", err)
+  );
+  return { coversUntil, credited: true };
+}
+
+async function currentPeriodEndOf(
+  db: Awaited<ReturnType<typeof getDb>>,
+  userId: string
+): Promise<number | null> {
+  const user = await db
+    .collection("users")
+    .findOne({ _id: new ObjectId(userId) }, { projection: { "billing.currentPeriodEnd": 1 } });
+  return (user?.billing?.currentPeriodEnd as number | undefined) ?? null;
 }
 
 /** Fire-and-forget receipt. Keyed on the payment id, like the credit itself. */

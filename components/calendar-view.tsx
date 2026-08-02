@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { List, Task } from "@/lib/types";
-import { addDays, friendlyDay, fmtMinutes, fullDate, toDateStr } from "@/lib/dates";
+import { addDays, friendlyDay, fmtMinutes, fullDate, localDayOf, toDateStr } from "@/lib/dates";
 import { byOrder, hiddenListIds, useApp } from "./store";
 import { StepRow } from "./step-row";
 import { TaskItem } from "./task-item";
@@ -219,7 +219,7 @@ export function CalendarView() {
         planned.get(t.plannedFor)!.push(t);
       }
       if (t.status === "done" && t.completedAt) {
-        const day = t.completedAt.slice(0, 10);
+        const day = localDayOf(t.completedAt);
         if (!done.has(day)) done.set(day, []);
         done.get(day)!.push(t);
       }

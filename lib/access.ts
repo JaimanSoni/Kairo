@@ -120,7 +120,14 @@ export function resolveAccess(input: {
   if (billing.comped) {
     return { ...base, allowed: true, reason: "comped", features: ALL_FEATURES };
   }
-  if (billing.status === "active" || billing.status === "authenticated") {
+  // "active" is only believed while the paid-for period is still running.
+  // One-off credits used to stamp this status and never clear it, which made
+  // a single payment permanent access; a real subscription keeps its period
+  // end fresh through webhooks, so this check costs it nothing.
+  if (
+    (billing.status === "active" || billing.status === "authenticated") &&
+    (!billing.currentPeriodEnd || billing.currentPeriodEnd > now)
+  ) {
     return { ...base, allowed: true, reason: "subscribed", planKey, features: paidFeatures };
   }
   // cancelled or halted but already paid through — let them finish the period

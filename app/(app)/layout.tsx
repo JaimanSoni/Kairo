@@ -97,6 +97,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         access={access}
         user={identity}
         mode={mode}
+        planKey={sellable[0]?.key}
         price={
           sellable.length > 0
             ? new Intl.NumberFormat("en-IN", {

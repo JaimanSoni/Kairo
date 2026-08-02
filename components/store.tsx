@@ -222,7 +222,10 @@ export function hiddenListIds(state: { lists: List[]; unlockedLists: string[] })
 
 /** Lists safe to show/offer right now (unlocked or never locked). */
 export function visibleLists(state: { lists: List[]; unlockedLists: string[] }): List[] {
-  return state.lists.filter((l) => !l.locked || state.unlockedLists.includes(l.id));
+  // pending lists are excluded: their temp id is not a real ObjectId, and a
+  // capture filed into one ("#newlist milk") would be rejected by the server
+  // and silently destroyed
+  return state.lists.filter((l) => !l.pending && (!l.locked || state.unlockedLists.includes(l.id)));
 }
 
 /** Resolves an assignee id to a person (checks the directory, then the current user). */
@@ -308,6 +311,7 @@ export function AppProvider({
       window.removeEventListener("focus", check);
     };
   }, []);
+
 
   const addTask = useCallback(
     (input: ParsedInput, opts?: { status?: Task["status"] }) => {
@@ -397,6 +401,25 @@ export function AppProvider({
     },
     [syncError]
   );
+
+  /**
+   * A missed repeating task moves on by itself. The Fresh Start sweep is for
+   * one-off plans that deserve a decision; a daily habit missed yesterday
+   * has an obvious answer — today — and asking would be nagging. Runs on
+   * boot and again whenever the day rolls over.
+   */
+  useEffect(() => {
+    const today = state.today;
+    for (const t of Object.values(stateRef.current.tasks)) {
+      if (!t.repeat || t.status !== "planned" || !t.plannedFor || t.plannedFor >= today) continue;
+      if (t.id.startsWith("temp-")) continue;
+      // walk the rule forward to its first occurrence on or after today
+      let next = t.plannedFor;
+      for (let i = 0; i < 400 && next < today; i++) next = nextOccurrence(t.repeat, next);
+      if (next < today) continue; // a rule that never advances must not loop
+      updateTask(t.id, { plannedFor: next });
+    }
+  }, [state.today, updateTask]);
 
   /**
    * Completing a repeating task logs a finished copy (for Today/Log) and
@@ -515,7 +538,10 @@ export function AppProvider({
         const today = stateRef.current.today;
         const nowIso = new Date().toISOString();
 
-        // 1) the finished copy that lands in Done today / the Log
+        // 1) the finished copy that lands in Done today / the Log. It keeps
+        //    today as its planned day so un-completing it brings it back to
+        //    Today as a plain task — not into the inbox, and never touching
+        //    the series card that has already moved on.
         const tempId = `temp-${crypto.randomUUID()}`;
         const instance: Task = {
           ...t,
@@ -524,6 +550,7 @@ export function AppProvider({
           dueDate: null,
           status: "done",
           spotlight: false,
+          plannedFor: today,
           completedAt: nowIso,
           createdAt: nowIso,
           order: Date.now(),
@@ -535,6 +562,8 @@ export function AppProvider({
             title: instance.title,
             note: instance.note,
             status: "done",
+            plannedFor: today,
+            plannedTime: instance.plannedTime,
             listId: instance.listId,
             estimateMin: instance.estimateMin,
             subtasks: instance.subtasks,
@@ -679,7 +708,12 @@ export function AppProvider({
         if (action === "letgo") {
           dispatch({ type: "REMOVE_TASK", id });
           if (!id.startsWith("temp-")) {
-            api(`/api/tasks/${id}`, { method: "DELETE" }).catch(() => syncError());
+            // rollback restores the task the sweep removed; without it a
+            // dropped connection made "let go" silently permanent on screen
+            // while the server still held the task
+            api(`/api/tasks/${id}`, { method: "DELETE" }).catch(() =>
+              syncError(() => dispatch({ type: "UPSERT_TASK", task: t }))
+            );
           }
           continue;
         }
@@ -704,8 +738,19 @@ export function AppProvider({
         if (!id.startsWith("temp-")) updates.push({ id, ...patch });
       }
 
-      if (upserts.length) dispatch({ type: "BULK_UPSERT", tasks: upserts });
-      if (updates.length) {
+      if (upserts.length) {
+        // keep the pre-sweep versions so a failed batch can put the morning
+        // back the way it was instead of lying about a clean slate
+        const before = upserts
+          .map((u) => stateRef.current.tasks[u.id])
+          .filter((x): x is Task => Boolean(x));
+        dispatch({ type: "BULK_UPSERT", tasks: upserts });
+        if (updates.length) {
+          api("/api/tasks/batch", { method: "POST", body: JSON.stringify({ updates }) }).catch(() =>
+            syncError(() => dispatch({ type: "BULK_UPSERT", tasks: before }))
+          );
+        }
+      } else if (updates.length) {
         api("/api/tasks/batch", { method: "POST", body: JSON.stringify({ updates }) }).catch(() =>
           syncError()
         );

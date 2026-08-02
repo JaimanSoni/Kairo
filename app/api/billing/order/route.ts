@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { requireSession, unauthorized } from "@/lib/api-auth";
+import { requireSession, unauthorized, badRequest } from "@/lib/api-auth";
 import { getUserById } from "@/lib/users";
-import { updateUserBilling } from "@/lib/billing";
+import { creditOneMonth, recordOrder, updateUserBilling } from "@/lib/billing";
 import { listSellablePlans } from "@/lib/plans";
+import { discountedMinor, redeemPromo, validatePromo } from "@/lib/promos";
 import { RAZORPAY_KEY_ID, createOrder, razorpayConfigured } from "@/lib/razorpay";
 
 /**
@@ -10,7 +11,9 @@ import { RAZORPAY_KEY_ID, createOrder, razorpayConfigured } from "@/lib/razorpay
  *
  * Used when the account can't create subscriptions. The amount and currency
  * are fixed server-side and never read from the request — a client that could
- * name its own price would name zero.
+ * name its own price would name zero. A promo code arrives as a code only;
+ * the discount it earns is computed here and frozen onto the order record,
+ * which is exactly what the payment will later be validated against.
  */
 export async function POST(request: Request) {
   const session = await requireSession();
@@ -25,9 +28,11 @@ export async function POST(request: Request) {
   // The request names a plan; the *price* is then read from that plan on the
   // server. A client can choose what to buy, never what it costs.
   let wanted = "";
+  let promoRaw = "";
   try {
-    const body = (await request.json()) as { plan?: unknown };
+    const body = (await request.json()) as { plan?: unknown; promo?: unknown };
     if (typeof body.plan === "string") wanted = body.plan;
+    if (typeof body.promo === "string") promoRaw = body.promo;
   } catch {
     /* no body — fall through to the default plan below */
   }
@@ -36,19 +41,60 @@ export async function POST(request: Request) {
   if (sellable.length === 0) {
     return NextResponse.json({ error: "No plans are available" }, { status: 503 });
   }
-  const plan = sellable.find((p) => p.key === wanted) ?? sellable[sellable.length - 1];
+  // An unnamed plan falls back to the CHEAPEST: this used to pick the dearest
+  // while the trial banner displayed the cheapest price, and the difference
+  // was charged without ever being shown.
+  const plan = sellable.find((p) => p.key === wanted) ?? sellable[0];
+
+  let promoCode: string | null = null;
+  let amountMinor = plan.priceMinor;
+  if (promoRaw) {
+    const check = await validatePromo(promoRaw, plan.key, session.userId);
+    if (!check.ok) return badRequest(check.error);
+    promoCode = check.promo.code;
+    amountMinor = discountedMinor(plan.priceMinor, check.promo.percentOff);
+  }
 
   try {
+    // A 100% code needs no checkout at all: the month is credited directly,
+    // keyed so the same code+account can never credit twice.
+    if (amountMinor === 0 && promoCode) {
+      const paymentId = `promo_${promoCode}_${session.userId}`;
+      const { coversUntil } = await creditOneMonth(session.userId, {
+        paymentId,
+        orderId: null,
+        amount: 0,
+        currency: plan.currency,
+        planKey: plan.key,
+      });
+      await redeemPromo(promoCode, session.userId, {
+        paymentId,
+        planKey: plan.key,
+        amountMinor: 0,
+      });
+      return NextResponse.json({ free: true, currentPeriodEnd: coversUntil });
+    }
+
     const order = await createOrder({
       // receipts are capped at 40 chars by Razorpay
       receipt: `kairo_${session.userId}`.slice(0, 40),
-      amountMinor: plan.priceMinor,
+      amountMinor,
       currency: plan.currency,
       notes: { userId: session.userId, email: user.email, plan: plan.key },
     });
-    // Both recorded so the webhook can finish the job if the browser never comes
-    // back to confirm — a closed laptop must not cost someone their month, and
-    // it has to know which plan was being bought.
+    // The frozen row both confirmers validate against: whose order, which
+    // plan, and exactly what it should cost — immune to admin price edits,
+    // cache skew and second tabs repointing the pending slot.
+    await recordOrder({
+      orderId: order.id,
+      userId: session.userId,
+      planKey: plan.key,
+      amountMinor,
+      currency: plan.currency,
+      promoCode,
+    });
+    // Kept as well so the webhook can still resolve legacy in-flight orders
+    // and the settings sheet can show what is pending.
     await updateUserBilling(session.userId, { pendingOrderId: order.id, pendingPlanKey: plan.key });
 
     return NextResponse.json({

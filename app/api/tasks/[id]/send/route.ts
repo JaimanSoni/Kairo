@@ -72,7 +72,6 @@ export async function POST(request: Request, ctx: RouteContext<"/api/tasks/[id]/
       email,
       inviterId: session.userId,
       inviterName: session.name,
-      emailKey: `invite-task:${id}:${email}`,
       invite: { kind: "task", itemName: String(task.title), when },
     });
     if (!invite.ok) return badRequest(invite.error);

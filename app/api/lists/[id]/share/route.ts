@@ -91,7 +91,6 @@ export async function POST(request: Request, ctx: RouteContext<"/api/lists/[id]/
       email,
       inviterId: session.userId,
       inviterName: session.name,
-      emailKey: `invite-list:${id}:${email}`,
       invite: { kind: "list", itemName: String(owned.name) },
     });
     if (!invite.ok) return badRequest(invite.error);

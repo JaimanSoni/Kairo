@@ -24,7 +24,13 @@ declare global {
 async function analyticsDb(): Promise<Db> {
   const uri = process.env.ANALYTICS_MONGODB_URI;
   if (!uri) return getDb();
-  global._kairoAnalyticsClient ??= new MongoClient(uri, { maxPoolSize: 5 })
+  global._kairoAnalyticsClient ??= new MongoClient(uri, {
+    maxPoolSize: 5,
+    // an unreachable analytics cluster must fail in seconds, not the
+    // driver's 30s default — beacons are fire-and-forget, never worth a wait
+    serverSelectionTimeoutMS: 5000,
+    connectTimeoutMS: 5000,
+  })
     .connect()
     .catch((err) => {
       // a failed connect must not be cached forever

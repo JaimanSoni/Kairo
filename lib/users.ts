@@ -303,10 +303,32 @@ function sendWelcome(user: DbUser): void {
   })().catch((err) => console.error("[email] welcome failed", err));
 }
 
+/**
+ * Every account-by-email lookup in the identity model — invites, magic
+ * links, the Google claim — assumes one account per address. The unique
+ * index is what makes that true under concurrency rather than by luck.
+ */
+let emailIndexReady: Promise<unknown> | null = null;
+export function ensureUserEmailIndex(db: Awaited<ReturnType<typeof getDb>>): Promise<unknown> {
+  emailIndexReady ??= db
+    .collection("users")
+    .createIndex({ email: 1 }, { unique: true, name: "user_email_unique" })
+    .catch((err: unknown) => {
+      emailIndexReady = null;
+      throw err;
+    });
+  return emailIndexReady;
+}
+
 async function upsertGoogleUserOnce(profile: GoogleProfile): Promise<DbUser> {
   const db = await getDb();
   const users = db.collection<DbUser>("users");
   const now = new Date();
+  try {
+    await ensureUserEmailIndex(db);
+  } catch (err) {
+    console.error("[users] could not create the email unique index", err);
+  }
 
   // The usual case: this Google account has signed in before.
   const known = await users.findOneAndUpdate(
