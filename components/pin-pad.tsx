@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+
 export const MIN_PIN = 4;
 export const MAX_PIN = 8;
 
@@ -24,6 +26,37 @@ export function PinPad({
     } catch {}
     onPinChange(pin + d);
   };
+
+  /**
+   * The physical keyboard works too: digits type, Backspace deletes, Enter
+   * confirms. Capture phase on purpose — the app's single-key shortcuts
+   * listen on the document, and typing "1" into a PIN must never navigate
+   * to Today underneath the lock. No dependency array: the listener re-binds
+   * each render so its closures are never stale.
+   */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+
+      if (/^[0-9]$/.test(e.key)) {
+        e.preventDefault();
+        e.stopPropagation();
+        press(e.key);
+      } else if (e.key === "Backspace") {
+        e.preventDefault();
+        e.stopPropagation();
+        onPinChange(pin.slice(0, -1));
+      } else if (e.key === "Enter" && pin.length >= MIN_PIN && !busy) {
+        e.preventDefault();
+        e.stopPropagation();
+        onSubmit();
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  });
 
   return (
     <>
