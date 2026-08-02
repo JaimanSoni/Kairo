@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { canvasToBlob, drawShareCard } from "@/lib/share-card";
 import { track } from "@/lib/analytics-client";
 import { Modal } from "./ui";
@@ -32,14 +32,40 @@ function captionFor(date: string): string {
 
 /* --------------------------------------------------------------- the nudge */
 
+const NUDGE_KEY = "kairo-bestie-nudge-hidden";
+
+// hidden during SSR and hydration, then whatever the browser remembers; the
+// dismissal itself re-renders through setHidden, so no subscription is needed
+const subscribeNever = () => () => {};
+function nudgeDismissed(): boolean {
+  try {
+    return Boolean(localStorage.getItem(NUDGE_KEY));
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Shown while the day is unfinished. Dismissible, and quiet by design — Kairo's
  * whole argument is that a list shouldn't make you feel bad, so this can be a
- * reason to finish but never a reproach for not having.
+ * reason to finish but never a reproach for not having. Closing it is final:
+ * the dismissal is remembered in localStorage, so it never comes back on a
+ * refresh or another day.
  */
 export function BestieNudge({ remaining, done }: { remaining: number; done: number }) {
   const [hidden, setHidden] = useState(false);
-  if (hidden || remaining <= 0) return null;
+  const dismissed = useSyncExternalStore(subscribeNever, nudgeDismissed, () => true);
+
+  const dismiss = () => {
+    setHidden(true);
+    try {
+      localStorage.setItem(NUDGE_KEY, "1");
+    } catch {
+      // no storage means it returns next visit; the close still works now
+    }
+  };
+
+  if (hidden || dismissed || remaining <= 0) return null;
 
   return (
     <div className="anim-rise mt-4 flex items-start gap-3 rounded-2xl border border-sun/25 bg-sun-soft/40 px-4 py-3">
@@ -52,7 +78,7 @@ export function BestieNudge({ remaining, done }: { remaining: number; done: numb
           : `${remaining} to go. Your bestie might be waiting to see how today went, clear these and you can share it.`}
       </p>
       <button
-        onClick={() => setHidden(true)}
+        onClick={dismiss}
         aria-label="Hide this"
         className="shrink-0 text-ink-faint transition-opacity hover:opacity-70"
       >

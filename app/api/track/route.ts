@@ -1,4 +1,5 @@
 import { getSession } from "@/lib/session";
+import { isAdminEmail } from "@/lib/admin";
 import { recordEvent, type IngestEvent } from "@/lib/analytics";
 
 /**
@@ -81,6 +82,10 @@ export async function POST(request: Request) {
     }
 
     const session = await getSession().catch(() => null);
+    // the admin's own clicks are noise even from a browser the client-side
+    // opt-out flag hasn't reached yet; the email lives in the JWT, so this
+    // costs no lookup
+    if (session && isAdminEmail(session.email)) return done;
 
     await recordEvent({
       event,

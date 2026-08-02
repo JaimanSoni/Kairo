@@ -1,5 +1,6 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import Script from "next/script";
 import { usePathname } from "next/navigation";
 
@@ -20,8 +21,28 @@ const loader = (id: string) => `(function(c,l,a,r,i,t,y){
   y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
 })(window, document, "clarity", "script", "${id}");`;
 
+// neither the hostname nor the opt-out flag changes within a page's lifetime
+const subscribeNever = () => () => {};
+
+function trackable(): boolean {
+  // a production build served on localhost is still the team, not a visitor
+  if (/^(localhost|127\.|\[?::1)/.test(location.hostname)) return false;
+  try {
+    if (localStorage.getItem("kairo-notrack")) return false;
+  } catch {
+    // storage blocked is a visitor, not the team
+  }
+  return true;
+}
+
 export function Analytics() {
   const pathname = usePathname();
+
+  // False during SSR and hydration, the real answer right after: both facts
+  // live in the browser (the hostname, and the opt-out flag stamped by any
+  // browser the admin has signed in with). The scripts loaded afterInteractive
+  // anyway, so nothing arrives later than it used to.
+  const on = useSyncExternalStore(subscribeNever, trackable, () => false);
 
   // Local runs would otherwise fill the recordings with development noise.
   if (process.env.NODE_ENV !== "production") return null;
@@ -30,6 +51,8 @@ export function Analytics() {
   // third-party recorder would hand over other people's data, so it is the
   // one place analytics must not run.
   if (pathname.startsWith("/admin")) return null;
+
+  if (!on) return null;
 
   return (
     <>

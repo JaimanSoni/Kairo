@@ -55,6 +55,11 @@ export function track(event: string, props?: Props): void {
     // dev servers and preview deploys share the production sink; counting
     // them would make launch-day numbers a mirror of the team's own tabs
     if (process.env.NODE_ENV !== "production") return;
+    // a production build served on localhost is still the team, not a visitor
+    if (/^(localhost|127\.|\[?::1)/.test(location.hostname)) return;
+    // stamped by any browser the admin has signed in with; outlives sign-out
+    // on purpose, so the admin's landing-page visits aren't counted either
+    if (localStorage.getItem("kairo-notrack")) return;
 
     const body = JSON.stringify({
       e: event,

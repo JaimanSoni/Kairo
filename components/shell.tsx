@@ -48,6 +48,19 @@ export function Shell({ children }: { children: React.ReactNode }) {
     registerServiceWorker();
   }, []);
 
+  // The admin's browser opts itself out of every tracker, first-party and
+  // third-party alike. The flag deliberately outlives sign-out: the same
+  // machine browsing the landing page later is still the team.
+  const isAdmin = state.user.isAdmin;
+  useEffect(() => {
+    if (!isAdmin) return;
+    try {
+      localStorage.setItem("kairo-notrack", "1");
+    } catch {
+      // private mode without storage just falls back to the server-side guard
+    }
+  }, [isAdmin]);
+
   // when a push arrives while a tab is open, play the in-app chime
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
