@@ -299,6 +299,13 @@ export function FocusOverlay() {
   const R = 118;
   const CIRC = 2 * Math.PI * R;
 
+  // The clock must stay inside the ring at any length. "12:34" wears the big
+  // size; once hours arrive ("1:29:38", or "+1:29:38" in overtime) the string
+  // no longer fits at 60px inside a 236px circle, so the type steps down.
+  const clock = `${overtime ? "+" : ""}${fmtClock(remaining)}`;
+  const clockSize =
+    clock.length <= 5 ? "text-6xl" : clock.length <= 7 ? "text-[2.9rem]" : "text-[2.35rem]";
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-paper">
       {/* top bar */}
@@ -384,12 +391,11 @@ export function FocusOverlay() {
           <div className="absolute inset-0 grid place-items-center">
             <div className="text-center">
               <div
-                className={`font-mono text-6xl font-bold tabular-nums tracking-tight ${
+                className={`font-mono font-bold tabular-nums tracking-tight ${clockSize} ${
                   overtime ? "text-clay" : ""
                 }`}
               >
-                {overtime ? "+" : ""}
-                {fmtClock(remaining)}
+                {clock}
               </div>
               <div className="mt-1 text-xs text-ink-faint">of {fmtClock(timer.totalMs)}</div>
             </div>
