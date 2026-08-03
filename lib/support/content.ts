@@ -1719,60 +1719,57 @@ export const ARTICLES: Article[] = [
   },
   {
     slug: "send-copy",
-    title: "Send a copy of a task",
+    title: "Share a task, or send a copy",
     summary:
-      "Hand a task to someone without sharing a whole list. They get their own independent copy.",
+      "Put people on one live task the way you'd invite guests to a calendar event, or hand someone their own independent copy.",
     categoryId: "sharing",
-    keywords: ["send", "copy", "handoff", "forward", "give", "delegate"],
+    keywords: ["send", "copy", "handoff", "forward", "give", "delegate", "share task", "people", "collaborate"],
     sections: [
       {
-        id: "how",
-        heading: "Send one",
+        id: "share-live",
+        heading: "Put people on a task",
         blocks: [
           {
             t: "ol",
             items: [
-              "Open a task's **⋯** menu.",
-              "Choose **📤 Send a copy**.",
-              "Enter their email and click **Send**.",
+              "Open a task's **⋯** menu and choose **Share**.",
+              "Add people by email, anyone already on the task can add more, like guests on a calendar invite.",
+              "Everyone now sees the same live task. Edits sync, and when anyone finishes it, it's done for everyone.",
             ],
           },
           {
             t: "p",
-            text: "It lands in their Inbox, marked `↪ from your name` in the notes, and they plan it however they like.",
+            text: "A shared task shows a small 👥 count on its row. The owner can remove anyone from the People sheet; everyone else can leave whenever they like, and leaving (or choosing Let it go) removes the task from your world without touching the owner's.",
           },
         ],
       },
       {
         id: "difference",
-        heading: "Copy vs share",
+        heading: "Share vs send a copy",
         blocks: [
           {
             t: "table",
-            head: ["Send a copy", "Share a list"],
+            head: ["Share a task", "Send a copy"],
             rows: [
-              ["One task", "A whole list"],
-              ["Independent, changes don't sync", "The same tasks for everyone"],
-              ["They own their copy", "Shared ownership"],
-              ["Good for handoffs", "Good for ongoing collaboration"],
+              ["One live task for everyone", "Two independent tasks"],
+              ["Edits and completion sync", "Changes don't sync"],
+              ["Do something together", "Hand something off"],
+              ["Plan and time are shared", "They plan it their way"],
             ],
+          },
+          {
+            t: "p",
+            text: "**Send a copy** lives inside the same Share sheet. The copy lands in their Inbox marked `↪ from your name`, carrying the title, notes, deadline, estimate, and step titles (unticked). Your Spotlight star, list, repeat rule, and reminders stay yours. For sharing a whole project rather than one task, see [shared lists](/support/sharing-lists).",
           },
         ],
       },
       {
-        id: "carried",
-        heading: "What travels with it",
+        id: "no-account",
+        heading: "They don't need an account",
         blocks: [
           {
-            t: "ul",
-            items: [
-              "**Carried over:** title, notes, deadline, estimate, and the step titles (unticked).",
-              "**Not carried:** your planned day and time, Spotlight star, list, repeat rule, reminders and assignee, those are yours, not theirs.",
-            ],
-          },
-          {
             t: "note",
-            text: "The recipient doesn't need a Kairo account: a new address gets an invite email with a one-click sign-in link, and the task is already waiting inside. Existing accounts get an email telling them a task arrived.",
+            text: "Either way, the recipient doesn't need Kairo yet: a new address gets an invite email with a one-click sign-in link, and the task is already waiting inside. Existing accounts get an email, and a notification if they've turned those on.",
           },
         ],
       },

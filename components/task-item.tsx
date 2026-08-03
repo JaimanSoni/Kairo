@@ -7,7 +7,7 @@ import { repeatLabel } from "@/lib/repeat";
 import { personById, useApp } from "./store";
 import { playComplete } from "@/lib/sound";
 import { useStepToggle } from "./step-row";
-import { SendTaskModal } from "./share-modal";
+import { SendTaskModal, ShareTaskModal } from "./share-modal";
 import { Icon3d, ListMark } from "./img3d";
 import { PersonAvatar } from "./person-avatar";
 import { Chip, IconCheck, IconDots, IconStar } from "./ui";
@@ -69,6 +69,7 @@ export function TaskItem({
   const [checking, setChecking] = useState(false);
   const [stepsOpen, setStepsOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuUp, setMenuUp] = useState(false);
   const [askEstimate, setAskEstimate] = useState(false);
@@ -255,7 +256,7 @@ export function TaskItem({
         <span className={`w-full truncate text-[15px] leading-snug ${done ? "strike-done" : ""}`}>
           {task.title}
         </span>
-        {(running || list || assignee || task.plannedTime || task.estimateMin || task.dueDate || task.repeat || task.reminderAt || task.carryCount >= 2 || task.subtasks.length > 0 || task.note) && (
+        {(running || list || assignee || task.memberIds.length > 0 || task.plannedTime || task.estimateMin || task.dueDate || task.repeat || task.reminderAt || task.carryCount >= 2 || task.subtasks.length > 0 || task.note) && (
           <span className="flex flex-wrap items-center gap-1.5">
             {running && (
               <Chip tone="sky" title="In progress">
@@ -300,6 +301,11 @@ export function TaskItem({
               >
                 <PersonAvatar name={assignee.name} picture={assignee.picture} size={13} />
                 {assignee.id === state.user.id ? "You" : assignee.name.split(" ")[0]}
+              </Chip>
+            )}
+            {task.memberIds.length > 0 && (
+              <Chip tone="sun" title={`${task.memberIds.length + 1} people are on this task`}>
+                👥 {task.memberIds.length + 1}
               </Chip>
             )}
             {task.estimateMin != null && <Chip>~{fmtMinutes(task.estimateMin)}</Chip>}
@@ -448,8 +454,8 @@ export function TaskItem({
                 </MenuBtn>
               )}
               {!done && !task.id.startsWith("temp-") && (
-                <MenuBtn onClick={() => { setMenuOpen(false); setSendOpen(true); }}>
-                  <Icon3d name="bird" size={15} /> Send a copy
+                <MenuBtn onClick={() => { setMenuOpen(false); setShareOpen(true); }}>
+                  <Icon3d name="bird" size={15} /> Share
                 </MenuBtn>
               )}
               <div className="my-1 border-t border-line" />
@@ -462,6 +468,16 @@ export function TaskItem({
       )}
       </div>
 
+      {shareOpen && (
+        <ShareTaskModal
+          task={task}
+          onClose={() => setShareOpen(false)}
+          onSendCopy={() => {
+            setShareOpen(false);
+            setSendOpen(true);
+          }}
+        />
+      )}
       {sendOpen && <SendTaskModal task={task} onClose={() => setSendOpen(false)} />}
 
       {/* inline checklist — check steps off without opening the editor */}

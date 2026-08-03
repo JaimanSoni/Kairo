@@ -161,12 +161,186 @@ export function ShareListModal({ list, onClose }: { list: List; onClose: () => v
             </div>
             {error && <p className="mt-2 text-xs text-clay">{error}</p>}
             <p className="mt-2 text-xs text-ink-faint">
-              They need to have signed in to Kairo with Google at least once.
+              No account needed, the invite email signs them straight in.
             </p>
           </div>
         )}
 
         <div className="mt-5 flex justify-end border-t border-line pt-4">
+          <button
+            onClick={onClose}
+            className="rounded-full bg-ink px-5 py-2 text-sm font-semibold text-paper hover:opacity-90"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+/**
+ * People on a task — the calendar-invite model. One live task: everyone on it
+ * sees the same thing, edits sync, and anyone finishing it finishes it for
+ * all. The roster and the invite input mirror the list modal above so the
+ * two kinds of sharing feel like one feature.
+ */
+export function ShareTaskModal({
+  task,
+  onClose,
+  onSendCopy,
+}: {
+  task: Task;
+  onClose: () => void;
+  /** Switches to the send-a-copy flow, for handoffs rather than collaboration. */
+  onSendCopy: () => void;
+}) {
+  const { state, showToast, refreshData } = useApp();
+  const [people, setPeople] = useState<MemberInfo[] | null>(null);
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const isOwner = task.ownerId === state.user.id;
+
+  const loadPeople = async () => {
+    try {
+      const res = await fetch(`/api/tasks/${task.id}/share`);
+      if (res.ok) setPeople(((await res.json()) as { people: MemberInfo[] }).people);
+    } catch {}
+  };
+
+  useEffect(() => {
+    queueMicrotask(loadPeople);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [task.id]);
+
+  const add = async () => {
+    const target = email.trim();
+    if (!target || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/tasks/${task.id}/share`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: target }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(String(data.error ?? "Couldn't add them"));
+      } else {
+        setEmail("");
+        track("task-share-live");
+        showToast({ message: `👥 ${data.person.name || data.person.email} is on it too` });
+        loadPeople();
+        refreshData();
+      }
+    } catch {
+      setError("Couldn't reach the server");
+    }
+    setBusy(false);
+  };
+
+  const remove = async (memberId: string) => {
+    const leavingSelf = memberId === state.user.id;
+    try {
+      const res = await fetch(`/api/tasks/${task.id}/share`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId }),
+      });
+      if (!res.ok) return;
+      if (leavingSelf) {
+        showToast({ message: "You left the task" });
+        onClose();
+      } else {
+        loadPeople();
+      }
+      refreshData();
+    } catch {}
+  };
+
+  return (
+    <Modal onClose={onClose}>
+      <div className="p-6">
+        <h2 className="font-display text-2xl">People on this task</h2>
+        <p className="mt-1 truncate text-sm text-ink-soft">“{task.title}”</p>
+        <p className="mt-2 text-xs text-ink-faint">
+          Like a calendar invite: everyone here sees the same task, and when anyone finishes it,
+          it&apos;s done for everyone.
+        </p>
+
+        {/* roster */}
+        <div className="mt-4 space-y-2">
+          {people === null ? (
+            <p className="text-sm text-ink-faint">Loading people…</p>
+          ) : (
+            people.map((m) => (
+              <div key={m.id} className="flex items-center gap-2.5 rounded-xl border border-line bg-paper px-3 py-2">
+                {m.picture ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={m.picture} alt="" className="size-7 rounded-full" referrerPolicy="no-referrer" />
+                ) : (
+                  <span className="grid size-7 place-items-center rounded-full bg-sun-soft text-xs font-bold text-sun-deep">
+                    {(m.name || m.email).charAt(0).toUpperCase()}
+                  </span>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium">
+                    {m.name || m.email}
+                    {m.id === state.user.id && <span className="text-ink-faint"> (you)</span>}
+                  </div>
+                  <div className="truncate text-xs text-ink-faint">{m.email}</div>
+                </div>
+                {m.role === "owner" ? (
+                  <span className="shrink-0 rounded-md bg-paper-deep px-2 py-0.5 text-[10px] font-semibold uppercase text-ink-soft">
+                    owner
+                  </span>
+                ) : isOwner || m.id === state.user.id ? (
+                  <button
+                    onClick={() => remove(m.id)}
+                    className="shrink-0 text-xs font-medium text-ink-faint hover:text-clay"
+                  >
+                    {m.id === state.user.id ? "Leave" : "Remove"}
+                  </button>
+                ) : null}
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* invite — anyone on the task can add people, like calendar guests */}
+        <div className="mt-4">
+          <div className="flex items-center gap-2">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && add()}
+              placeholder="their@email.com"
+              className="min-w-0 flex-1 rounded-xl border border-line bg-paper px-3 py-2 text-base outline-none focus:border-sun sm:text-sm"
+            />
+            <button
+              onClick={add}
+              disabled={busy || !email.trim()}
+              className="shrink-0 rounded-full bg-sun px-4 py-2 text-sm font-semibold text-on-accent shadow-lg shadow-sun/25 disabled:opacity-40"
+            >
+              {busy ? "…" : "Add"}
+            </button>
+          </div>
+          {error && <p className="mt-2 text-xs text-clay">{error}</p>}
+          <p className="mt-2 text-xs text-ink-faint">
+            No account needed, the invite email signs them straight in.
+          </p>
+        </div>
+
+        <div className="mt-5 flex items-center justify-between gap-3 border-t border-line pt-4">
+          <button
+            onClick={onSendCopy}
+            className="text-xs font-medium text-ink-faint underline underline-offset-2 hover:text-ink-soft"
+          >
+            Send a copy instead
+          </button>
           <button
             onClick={onClose}
             className="rounded-full bg-ink px-5 py-2 text-sm font-semibold text-paper hover:opacity-90"

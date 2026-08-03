@@ -48,6 +48,14 @@ export type Task = {
   reminderAt: number | null;
   /** In a shared list, the member this task is assigned to (their user id) or null. */
   assigneeId: string | null;
+  /** Who created the task. Everyone else on it is in memberIds. */
+  ownerId: string;
+  /**
+   * People this single task is shared with, like guests on a calendar event:
+   * one live task everyone sees, edits, and completes together. Distinct from
+   * list sharing, which shares a whole list.
+   */
+  memberIds: string[];
   subtasks: Subtask[];
   completedAt: string | null;
   createdAt: string;

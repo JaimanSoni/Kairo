@@ -45,6 +45,10 @@ export function toTask(doc: WithId<Document>): Task {
     startedAt: doc.startedAt ? (doc.startedAt as Date).toISOString() : null,
     reminderAt: typeof doc.reminderAt === "number" ? doc.reminderAt : null,
     assigneeId: doc.assigneeId ? (doc.assigneeId as ObjectId).toHexString() : null,
+    ownerId: (doc.userId as ObjectId).toHexString(),
+    memberIds: Array.isArray(doc.memberIds)
+      ? (doc.memberIds as ObjectId[]).map((m) => m.toHexString())
+      : [],
     subtasks: Array.isArray(doc.subtasks) ? (doc.subtasks as Subtask[]) : [],
     completedAt: doc.completedAt ? (doc.completedAt as Date).toISOString() : null,
     createdAt: doc.createdAt ? (doc.createdAt as Date).toISOString() : new Date(0).toISOString(),
@@ -76,10 +80,10 @@ export async function accessibleListIds(userId: ObjectId): Promise<ObjectId[]> {
   return docs.map((d) => d._id);
 }
 
-/** Mongo filter matching tasks the user can access (own, or in an accessible list). */
+/** Mongo filter matching tasks the user can access (own, shared with them, or in an accessible list). */
 export async function taskAccessFilter(userId: ObjectId): Promise<Document> {
   const listIds = await accessibleListIds(userId);
-  return { $or: [{ userId }, { listId: { $in: listIds } }] };
+  return { $or: [{ userId }, { memberIds: userId }, { listId: { $in: listIds } }] };
 }
 
 export async function tasksCollection() {
@@ -126,19 +130,9 @@ export async function loadUserData(
     }
 
     const listIds = listDocs.map((d) => d._id);
-    const access = { $or: [{ userId }, { listId: { $in: listIds } }] };
+    const access = { $or: [{ userId }, { memberIds: userId }, { listId: { $in: listIds } }] };
 
-    // everyone reachable through a shared list (owners + members), for assignee display
-    const peopleIds = new Map<string, ObjectId>();
-    for (const l of listDocs) {
-      const members = Array.isArray(l.memberIds) ? (l.memberIds as ObjectId[]) : [];
-      if (members.length > 0) {
-        peopleIds.set((l.userId as ObjectId).toHexString(), l.userId as ObjectId);
-        for (const m of members) peopleIds.set(m.toHexString(), m);
-      }
-    }
-
-    const [liveTasks, recentDone, peopleDocs] = await Promise.all([
+    const [liveTasks, recentDone] = await Promise.all([
       tasks
         .find({ ...access, status: { $in: ["inbox", "planned", "someday"] } })
         .sort({ order: 1, createdAt: 1 })
@@ -147,14 +141,35 @@ export async function loadUserData(
         .find({ ...access, status: "done", completedAt: { $gte: recentCutoff } })
         .sort({ completedAt: -1 })
         .toArray(),
+    ]);
+
+    // Everyone visible through sharing: shared-list rosters, plus the owner
+    // and guests of every directly-shared task. Fetched after the tasks so
+    // the roster of a task shared TO this user can be rendered too.
+    const peopleIds = new Map<string, ObjectId>();
+    for (const l of listDocs) {
+      const members = Array.isArray(l.memberIds) ? (l.memberIds as ObjectId[]) : [];
+      if (members.length > 0) {
+        peopleIds.set((l.userId as ObjectId).toHexString(), l.userId as ObjectId);
+        for (const m of members) peopleIds.set(m.toHexString(), m);
+      }
+    }
+    for (const t of [...liveTasks, ...recentDone]) {
+      const members = Array.isArray(t.memberIds) ? (t.memberIds as ObjectId[]) : [];
+      if (members.length > 0) {
+        peopleIds.set((t.userId as ObjectId).toHexString(), t.userId as ObjectId);
+        for (const m of members) peopleIds.set(m.toHexString(), m);
+      }
+    }
+
+    const peopleDocs =
       peopleIds.size > 0
-        ? db
+        ? await db
             .collection("users")
             .find({ _id: { $in: [...peopleIds.values()] } })
             .project({ name: 1, email: 1, picture: 1, avatarChoice: 1 })
             .toArray()
-        : Promise.resolve([]),
-    ]);
+        : [];
 
     return {
       tasks: [...liveTasks, ...recentDone].map(toTask),

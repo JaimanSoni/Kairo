@@ -128,11 +128,23 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/tasks/[i
   const { id } = await ctx.params;
   if (!ObjectId.isValid(id)) return badRequest("Invalid task id");
 
+  const userId = new ObjectId(session.userId);
   const tasks = await tasksCollection();
-  const result = await tasks.deleteOne({
-    _id: new ObjectId(id),
-    ...(await taskAccessFilter(new ObjectId(session.userId))),
-  });
-  if (result.deletedCount === 0) return notFound();
+  const task = await tasks.findOne({ _id: new ObjectId(id), ...(await taskAccessFilter(userId)) });
+  if (!task) return notFound();
+
+  // Calendar-guest semantics: someone who can see this task ONLY because it
+  // was shared with them deletes it from their own world, not from the
+  // owner's. Owners and shared-list members delete it for real, as before.
+  const isOwner = (task.userId as ObjectId).equals(userId);
+  const viaList =
+    task.listId != null &&
+    (await accessibleListIds(userId)).some((l) => l.equals(task.listId as ObjectId));
+  if (!isOwner && !viaList) {
+    await tasks.updateOne({ _id: task._id }, { $pull: { memberIds: userId } as never });
+    return NextResponse.json({ ok: true, left: true });
+  }
+
+  await tasks.deleteOne({ _id: task._id });
   return NextResponse.json({ ok: true });
 }

@@ -211,6 +211,36 @@ export function taskSentEmail(input: {
 }
 
 /**
+ * Someone was added to a live shared task, calendar-guest style: one task,
+ * everyone sees and edits the same thing. Distinct from taskSentEmail, which
+ * hands over an independent copy.
+ */
+export function taskSharedEmail(input: {
+  sharerName: string;
+  taskTitle: string;
+  /** "1 August at 20:00" when the task has a plan, else null. */
+  when?: string | null;
+  recipientName?: string;
+}): Rendered {
+  const reason = `You received this because ${h(input.sharerName)} added you to a task on Kairo.`;
+  const first = firstName(input.recipientName);
+  const planLine = input.when ? ` It is planned for ${strong(h(input.when))}.` : "";
+  const planLineText = input.when ? ` It is planned for ${input.when}.` : "";
+  return {
+    subject: `${input.sharerName} added you to: ${input.taskTitle}`,
+    html: shell(
+      heading(`Hey ${h(first)}, ${h(input.sharerName)} added you to a task.`) +
+        para(
+          `You are now on ${strong(h(input.taskTitle))} together.${planLine} You both see the same task, and when either of you finishes it, it is done for everyone.`
+        ) +
+        button("See it in Kairo", `${SITE_URL}/today`),
+      reason
+    ),
+    text: `Hey ${first}, ${input.sharerName} added you to a task.\n\nYou are now on "${input.taskTitle}" together.${planLineText} You both see the same task, and when either of you finishes it, it is done for everyone.\n\nSee it: ${SITE_URL}/today${footerText(reason)}`,
+  };
+}
+
+/**
  * A share sent to an address with no Kairo account. The account already
  * exists by the time this is read (created right after the send was
  * accepted), so the magic link is a plain sign-in, nothing to set up.

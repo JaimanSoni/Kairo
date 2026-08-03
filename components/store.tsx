@@ -336,6 +336,8 @@ export function AppProvider({
         reminderAt: null,
         startedAt: null,
         assigneeId: null,
+        ownerId: user.id,
+        memberIds: [],
         subtasks: [],
         completedAt: null,
         createdAt: now,
@@ -366,7 +368,7 @@ export function AppProvider({
           return null;
         });
     },
-    [syncError]
+    [syncError, user.id]
   );
 
   const getTask = useCallback((id: string) => stateRef.current.tasks[id], []);
@@ -461,6 +463,9 @@ export function AppProvider({
         status: src.plannedFor ? "planned" : src.status === "done" ? "inbox" : src.status,
         spotlight: false,
         assigneeId: null,
+        // the duplicate is yours alone; sharing never travels with a copy
+        ownerId: user.id,
+        memberIds: [],
         subtasks,
         // +1 keeps the copy adjacent to the original instead of at the end
         order: src.order + 1,
@@ -496,7 +501,7 @@ export function AppProvider({
           showToast({ message: "Couldn't duplicate that. Try again." });
         });
     },
-    [showToast]
+    [showToast, user.id]
   );
 
   /** Starts one task and stops every other — see toggleStarted. */
