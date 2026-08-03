@@ -121,7 +121,7 @@ export function TodayView() {
           {totalEstimate > 0 && (
             <span className={overCapacity ? "font-medium text-sun-deep" : ""}>
               holds ~{fmtMinutes(totalEstimate)}
-              {overCapacity ? "that's a lot. Trim one?" : " · fits ✓"}
+              {overCapacity ? ", that's a lot. Trim one?" : " · fits ✓"}
             </span>
           )}
           {carryover.length > 0 && state.sweepDismissed && (

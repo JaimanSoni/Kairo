@@ -194,18 +194,19 @@ export function TaskItem({
                 ? `Focus for ~${fmtMinutes(task.estimateMin)}`
                 : "Start, pick how long first"
           }
-          className={`grid size-6 shrink-0 place-items-center rounded-full transition-colors ${
+          className={`grid size-6 shrink-0 place-items-center rounded-full border-2 transition-colors ${
             running
-              ? "bg-sky text-on-accent"
-              : "text-ink-faint hover:bg-sky-soft hover:text-sky"
+              ? "border-sky bg-sky text-on-accent"
+              : "border-ink-faint/70 text-ink-faint hover:border-sky hover:bg-sky-soft hover:text-sky"
           }`}
         >
           {running ? (
-            <svg width="9" height="9" viewBox="0 0 12 12" fill="currentColor" aria-hidden>
+            <svg width="8" height="8" viewBox="0 0 12 12" fill="currentColor" aria-hidden>
               <rect x="2.5" y="2.5" width="7" height="7" rx="1.5" />
             </svg>
           ) : (
-            <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor" aria-hidden>
+            // nudged right: an optically centred triangle sits a hair off-centre
+            <svg width="9" height="9" viewBox="0 0 12 12" fill="currentColor" aria-hidden className="translate-x-px">
               <path d="M3 1.8v8.4a.6.6 0 00.92.5l6.3-4.2a.6.6 0 000-1L3.92 1.3a.6.6 0 00-.92.5z" />
             </svg>
           )}
