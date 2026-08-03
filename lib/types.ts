@@ -48,6 +48,13 @@ export type Task = {
   reminderAt: number | null;
   /** In a shared list, the member this task is assigned to (their user id) or null. */
   assigneeId: string | null;
+  /**
+   * For the done copy a repeating task leaves in the log: the id of the
+   * series it came from. Un-completing such a copy rejoins the series
+   * instead of resurrecting a repeat-less twin that the morning sweep
+   * would interrogate tomorrow.
+   */
+  instanceOf: string | null;
   /** Who created the task. Everyone else on it is in memberIds. */
   ownerId: string;
   /**

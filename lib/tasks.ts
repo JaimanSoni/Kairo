@@ -45,6 +45,7 @@ export function toTask(doc: WithId<Document>): Task {
     startedAt: doc.startedAt ? (doc.startedAt as Date).toISOString() : null,
     reminderAt: typeof doc.reminderAt === "number" ? doc.reminderAt : null,
     assigneeId: doc.assigneeId ? (doc.assigneeId as ObjectId).toHexString() : null,
+    instanceOf: doc.instanceOf ? (doc.instanceOf as ObjectId).toHexString() : null,
     ownerId: (doc.userId as ObjectId).toHexString(),
     memberIds: Array.isArray(doc.memberIds)
       ? (doc.memberIds as ObjectId[]).map((m) => m.toHexString())

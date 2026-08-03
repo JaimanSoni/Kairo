@@ -336,6 +336,7 @@ export function AppProvider({
         reminderAt: null,
         startedAt: null,
         assigneeId: null,
+        instanceOf: null,
         ownerId: user.id,
         memberIds: [],
         subtasks: [],
@@ -463,6 +464,7 @@ export function AppProvider({
         status: src.plannedFor ? "planned" : src.status === "done" ? "inbox" : src.status,
         spotlight: false,
         assigneeId: null,
+        instanceOf: null,
         // the duplicate is yours alone; sharing never travels with a copy
         ownerId: user.id,
         memberIds: [],
@@ -556,6 +558,8 @@ export function AppProvider({
           status: "done",
           spotlight: false,
           plannedFor: today,
+          // the way back: un-completing this copy rejoins the series
+          instanceOf: id.startsWith("temp-") ? null : id,
           completedAt: nowIso,
           createdAt: nowIso,
           order: Date.now(),
@@ -573,6 +577,7 @@ export function AppProvider({
             estimateMin: instance.estimateMin,
             subtasks: instance.subtasks,
             order: instance.order,
+            ...(instance.instanceOf ? { instanceOf: instance.instanceOf } : {}),
           }),
         })
           .then(({ task: saved }) => dispatch({ type: "REPLACE_TASK", tempId, task: saved }))
@@ -608,12 +613,31 @@ export function AppProvider({
     (id: string) => {
       const t = stateRef.current.tasks[id];
       if (!t) return;
+
+      // A done copy of a repeating task rejoins its series: resurrecting the
+      // copy would leave a repeat-less twin, and by tomorrow the sweep would
+      // be asking about a "daily" task it has no business questioning.
+      const series = t.instanceOf ? stateRef.current.tasks[t.instanceOf] : null;
+      if (series?.repeat) {
+        dispatch({ type: "REMOVE_TASK", id });
+        if (!id.startsWith("temp-")) {
+          api(`/api/tasks/${id}`, { method: "DELETE" }).catch(() =>
+            syncError(() => dispatch({ type: "UPSERT_TASK", task: t }))
+          );
+        }
+        updateTask(series.id, {
+          plannedFor: t.plannedFor ?? stateRef.current.today,
+          status: "planned",
+        });
+        return;
+      }
+
       updateTask(id, {
         status: t.plannedFor ? "planned" : "inbox",
         completedAt: null,
       });
     },
-    [updateTask]
+    [updateTask, syncError]
   );
 
   const deleteTask = useCallback(

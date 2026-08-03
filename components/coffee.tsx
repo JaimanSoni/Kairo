@@ -1,114 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import Script from "next/script";
-import { COFFEE, coffeeEnabled, upiIntentLink, upiLink } from "@/lib/coffee";
+import { COFFEE, coffeeEnabled } from "@/lib/coffee";
 import { markAsked, shouldAsk } from "@/lib/coffee-nudge";
 import { track } from "@/lib/analytics-client";
 import { CHECKOUT_SRC } from "./plan-cards";
 import { IconX, Modal } from "./ui";
 import { Icon3d } from "./img3d";
-
-/**
- * Can this device hand off to a UPI app at all?
- *
- * This used to ask `(hover: none) and (pointer: coarse)`, which is a question
- * about the *input*, not about the platform — and real phones do answer it
- * "no" (a Samsung with an S Pen advertises hover, and some Android builds
- * report a fine pointer). DevTools emulation fakes those features, so mobile
- * emulation looked right while actual phones fell through to the QR.
- *
- * UPI apps only exist on Android and iOS, so that is the thing to ask about.
- * A Windows laptop with a touchscreen answers the old query "yes" and still
- * has nothing to open.
- */
-function useIsMobile() {
-  return useSyncExternalStore(
-    () => () => {},
-    () => {
-      const ua = navigator.userAgent;
-      // iPadOS 13+ claims to be a Mac; the touch points give it away
-      const iOS =
-        /iPad|iPhone|iPod/.test(ua) ||
-        (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
-      return /Android/i.test(ua) || iOS;
-    },
-    () => false
-  );
-}
-
-/** Android, where a bare upi:// link is unreliable and an intent URL isn't. */
-function useIsAndroid() {
-  return useSyncExternalStore(
-    () => () => {},
-    () => /android/i.test(navigator.userAgent),
-    () => false
-  );
-}
-
-/**
- * Renders the UPI string as a QR. Always dark-on-white regardless of theme —
- * an inverted QR defeats some scanners, and a tip nobody can scan is worse
- * than an ugly one. The 4-module quiet zone lives in the viewBox so it can't
- * be squeezed out by CSS.
- */
-function QrCode({ value }: { value: string }) {
-  const [qr, setQr] = useState<{ d: string; count: number } | null>(null);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    // loaded on demand: the encoder never ships to anyone who doesn't tip
-    import("qrcode-generator")
-      .then(({ default: qrcode }) => {
-        if (cancelled) return;
-        const code = qrcode(0, "M");
-        code.addData(value);
-        code.make();
-        const count = code.getModuleCount();
-        let d = "";
-        for (let r = 0; r < count; r++) {
-          for (let c = 0; c < count; c++) {
-            if (code.isDark(r, c)) d += `M${c} ${r}h1v1h-1z`;
-          }
-        }
-        setQr({ d, count });
-      })
-      .catch(() => {
-        if (!cancelled) setFailed(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [value]);
-
-  if (failed) {
-    return (
-      <div className="grid aspect-square w-full place-items-center rounded-2xl bg-paper-deep p-6 text-center text-xs text-ink-soft">
-        Couldn&apos;t draw the QR, the UPI ID below works just as well.
-      </div>
-    );
-  }
-
-  if (!qr) {
-    return <div className="aspect-square w-full animate-pulse rounded-2xl bg-paper-deep" />;
-  }
-
-  const pad = 4;
-  const span = qr.count + pad * 2;
-  return (
-    <svg
-      viewBox={`${-pad} ${-pad} ${span} ${span}`}
-      className="aspect-square w-full rounded-2xl"
-      shapeRendering="crispEdges"
-      role="img"
-      aria-label="UPI payment QR code for Kairo"
-    >
-      <rect x={-pad} y={-pad} width={span} height={span} fill="#ffffff" />
-      <path d={qr.d} fill="#0f1413" />
-    </svg>
-  );
-}
 
 /** Max a tip jar should ever accept — a typo like 99999 is a typo, not a tip. */
 const MAX_AMOUNT = 20000;
@@ -117,9 +16,6 @@ function CoffeeModal({ onClose, earned }: { onClose: () => void; earned?: boolea
   const [amount, setAmount] = useState<number | null>(COFFEE.amounts[0]);
   const [custom, setCustom] = useState(false);
   const [customText, setCustomText] = useState("");
-  const isMobile = useIsMobile();
-  const isAndroid = useIsAndroid();
-  const [showQr, setShowQr] = useState(false);
   const [cardBusy, setCardBusy] = useState(false);
   const [cardError, setCardError] = useState<string | null>(null);
   const [paid, setPaid] = useState(false);
@@ -127,16 +23,13 @@ function CoffeeModal({ onClose, earned }: { onClose: () => void; earned?: boolea
   const customAmount = Number.parseInt(customText, 10);
   const customValid = Number.isFinite(customAmount) && customAmount > 0 && customAmount <= MAX_AMOUNT;
   const effective = custom ? (customValid ? customAmount : null) : amount;
-  const link = upiLink(effective);
-  // the QR always encodes the plain upi:// string — scanners expect that
-  const tapLink = isAndroid ? upiIntentLink(effective) : link;
   const canPay = effective != null;
 
   /**
-   * The card rail, for everyone UPI can't reach: desktops with no phone at
-   * hand, phones with no UPI app, anyone who just prefers a card. Same
-   * Razorpay Checkout as the paywall, but against /api/coffee/order — a tip
-   * order that credits nothing and works signed out.
+   * The one payment path: Razorpay Checkout against /api/coffee/order, a tip
+   * order that credits nothing and works signed out. Checkout itself offers
+   * UPI, cards, netbanking and wallets, which is why the old direct-UPI QR
+   * and deep links could retire.
    */
   const payByCard = async () => {
     const rupees = effective;
@@ -314,85 +207,25 @@ function CoffeeModal({ onClose, earned }: { onClose: () => void; earned?: boolea
           )}
         </fieldset>
 
-        {isMobile ? (
-          <div className="mt-6">
-            <a
-              href={tapLink}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-sun px-5 py-3.5 text-base font-semibold text-on-accent shadow-lg shadow-sun/25 transition-transform active:scale-[0.98]"
-            >
-              {canPay ? `Pay ₹${effective}` : "Pay with any UPI app"}
-            </a>
-            <p className="mt-2 text-center text-xs text-ink-faint">
-              Opens GPay, PhonePe or Paytm, whichever you prefer.
-            </p>
-
-            {/* Some browsers simply won't hand off to an app — an in-app
-                browser, a phone with no UPI app, iOS without one installed.
-                There is always a way through from here. */}
-            {showQr ? (
-              <div className="anim-rise mt-4">
-                <div className="mx-auto max-w-[12rem] rounded-2xl bg-white p-3 shadow-sm ring-1 ring-line">
-                  <QrCode value={link} />
-                </div>
-                <p className="mt-2 text-center text-xs text-ink-faint">
-                  Scan this from another device
-                  {canPay && <> it&apos;ll prefill ₹{effective}</>}
-                </p>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowQr(true)}
-                className="mt-2 w-full text-center text-xs font-medium text-sun-deep underline underline-offset-2"
-              >
-                Nothing opened? Show a QR instead
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="mt-6">
-            <div className="mx-auto max-w-[13rem] rounded-2xl bg-white p-3 shadow-sm ring-1 ring-line">
-              <QrCode value={link} />
-            </div>
-            <p className="mt-3 text-center text-xs text-ink-faint">
-              Scan with any UPI app
-              {canPay && <> it&apos;ll prefill ₹{effective}</>}
-            </p>
-            {/* Detection is a guess about someone else's device, and this one
-                has been wrong before. If we guessed wrong, the app link is
-                still one tap away rather than unreachable. */}
-            <a
-              href={tapLink}
-              className="mt-2 block text-center text-xs font-medium text-sun-deep underline underline-offset-2"
-            >
-              On a phone? Open your UPI app
-            </a>
-          </div>
-        )}
-
-        <div className="mt-5 flex items-center gap-3" aria-hidden>
-          <span className="h-px flex-1 bg-line" />
-          <span className="text-[11px] font-medium uppercase tracking-wide text-ink-faint">or</span>
-          <span className="h-px flex-1 bg-line" />
+        <div className="mt-6">
+          <button
+            type="button"
+            onClick={() => void payByCard()}
+            disabled={!canPay || cardBusy}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-sun px-5 py-3.5 text-base font-semibold text-on-accent shadow-lg shadow-sun/25 transition-transform active:scale-[0.98] disabled:opacity-50"
+          >
+            {cardBusy ? "Opening checkout…" : canPay ? `Pay ₹${effective}` : "Pick an amount"}
+          </button>
+          <p className="mt-2 text-center text-xs text-ink-faint">
+            UPI, card, netbanking or wallet, through Razorpay.
+          </p>
+          {cardError && <p className="mt-2 text-center text-xs text-clay">{cardError}</p>}
         </div>
-
-        <button
-          type="button"
-          onClick={() => void payByCard()}
-          disabled={!canPay || cardBusy}
-          className="mt-4 w-full rounded-2xl border border-line bg-card px-5 py-3 text-sm font-semibold text-ink transition-colors hover:border-sun hover:text-sun-deep disabled:opacity-50"
-        >
-          {cardBusy ? "Opening checkout…" : canPay ? `Pay ₹${effective} by card` : "Pay by card"}
-        </button>
-        <p className="mt-1.5 text-center text-[11px] text-ink-faint">
-          Card, netbanking or wallet, through Razorpay.
-        </p>
-        {cardError && <p className="mt-2 text-center text-xs text-clay">{cardError}</p>}
 
         <p className="mt-4 text-center text-[11px] leading-relaxed text-ink-faint">
           {/* one string, not text-around-an-expression: JSX drops the space when a
               line wrap lands between the two, which silently ate it once already */}
-          {`Goes straight to ${COFFEE.payeeName}, by UPI or card. It's a thank-you, not a purchase, nothing unlocks, and Kairo stays exactly the same either way.`}
+          {`Goes straight to ${COFFEE.payeeName}. It's a thank-you, not a purchase, nothing unlocks, and Kairo stays exactly the same either way.`}
         </p>
 
         {/* loaded when the modal opens, never on the pages behind it */}

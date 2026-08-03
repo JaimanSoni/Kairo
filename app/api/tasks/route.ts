@@ -25,6 +25,13 @@ export async function POST(request: Request) {
     }
   }
 
+  // creation-only: links a done copy back to the repeating series it came
+  // from, so un-completing it later can rejoin the series
+  let instanceOf: ObjectId | null = null;
+  if (typeof body.instanceOf === "string" && ObjectId.isValid(body.instanceOf)) {
+    instanceOf = new ObjectId(body.instanceOf);
+  }
+
   const now = new Date();
   const status = patch.status ?? "inbox";
   const doc = {
@@ -43,6 +50,7 @@ export async function POST(request: Request) {
     repeat: patch.repeat ?? null,
     reminderAt: patch.reminderAt ?? null,
     assigneeId: null,
+    instanceOf,
     subtasks: patch.subtasks ?? [],
     // completed-instance copies of recurring tasks are created already done
     completedAt: status === "done" ? now : null,
