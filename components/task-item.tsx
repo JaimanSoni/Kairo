@@ -128,6 +128,13 @@ export function TaskItem({
   const dueSoon =
     task.dueDate && !done && task.dueDate <= addDays(today, 2);
   const assignee = personById(state, task.assigneeId);
+  // faces for the shared chip: owner first, then guests, unresolved ids skipped
+  const sharedPeople =
+    task.memberIds.length > 0
+      ? [task.ownerId, ...task.memberIds]
+          .map((pid) => personById(state, pid))
+          .filter((p): p is NonNullable<typeof p> => p !== null)
+      : [];
 
   const plan = (patch: Partial<Task>) => {
     updateTask(task.id, patch);
@@ -305,7 +312,20 @@ export function TaskItem({
             )}
             {task.memberIds.length > 0 && (
               <Chip tone="sun" title={`${task.memberIds.length + 1} people are on this task`}>
-                👥 {task.memberIds.length + 1}
+                {sharedPeople.length > 0 ? (
+                  <>
+                    <span className="flex -space-x-1">
+                      {sharedPeople.slice(0, 3).map((p) => (
+                        <span key={p.id} className="rounded-full ring-1 ring-card">
+                          <PersonAvatar name={p.name || p.email} picture={p.picture} size={14} />
+                        </span>
+                      ))}
+                    </span>
+                    {task.memberIds.length + 1 > 3 && <span>+{task.memberIds.length + 1 - 3}</span>}
+                  </>
+                ) : (
+                  <>👥 {task.memberIds.length + 1}</>
+                )}
               </Chip>
             )}
             {task.estimateMin != null && <Chip>~{fmtMinutes(task.estimateMin)}</Chip>}
