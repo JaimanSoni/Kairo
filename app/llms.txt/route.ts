@@ -1,4 +1,5 @@
 import { ARTICLES, CATEGORIES } from "@/lib/support/content";
+import { KINDS, postsOf } from "@/lib/blog/content";
 import { TRIAL_DAYS } from "@/lib/access";
 import { PRICE_LABEL } from "@/lib/razorpay";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL, SUPPORT_EMAIL } from "@/lib/site";
@@ -53,6 +54,15 @@ export function GET() {
         ),
       ]);
     }),
+    ...KINDS.flatMap((k) =>
+      section(`Blog: ${k.name}`, [
+        k.description,
+        "",
+        ...postsOf(k.kind).map(
+          (p) => `- [${p.title}](${SITE_URL}/blog/${p.slug}): ${p.description}`
+        ),
+      ])
+    ),
     ...section("Policies", [
       `- [Terms of Service](${SITE_URL}/terms): the agreement covering use of Kairo.`,
       `- [Privacy Policy](${SITE_URL}/privacy): exactly what is stored and what leaves our servers.`,

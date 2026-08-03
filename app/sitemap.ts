@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { ARTICLES, DOCS_UPDATED } from "@/lib/support/content";
+import { BLOG_UPDATED, POSTS } from "@/lib/blog/content";
 import { SITE_URL } from "@/lib/site";
 
 /**
@@ -30,6 +31,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: DOCS_UPDATED,
       changeFrequency: "monthly" as const,
       priority: 0.6,
+    })),
+    { url: `${SITE_URL}/blog`, lastModified: BLOG_UPDATED, changeFrequency: "weekly", priority: 0.8 },
+    ...POSTS.map((p) => ({
+      url: `${SITE_URL}/blog/${p.slug}`,
+      lastModified: p.updated,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
     })),
     { url: `${SITE_URL}/terms`, lastModified: LEGAL_UPDATED, changeFrequency: "yearly", priority: 0.3 },
     { url: `${SITE_URL}/privacy`, lastModified: PRIVACY_UPDATED, changeFrequency: "yearly", priority: 0.3 },

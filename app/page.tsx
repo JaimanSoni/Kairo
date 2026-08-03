@@ -474,6 +474,10 @@ export default async function Landing({
           Help
         </Link>
         {" · "}
+        <Link href="/blog" className="underline underline-offset-2 hover:text-ink-soft">
+          Blog
+        </Link>
+        {" · "}
         <Link href="/pricing" className="underline underline-offset-2 hover:text-ink-soft">
           Pricing
         </Link>
