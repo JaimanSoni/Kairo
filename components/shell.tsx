@@ -735,6 +735,12 @@ function AccountSwitcher() {
         body: JSON.stringify({ userId }),
       });
       if (res.ok) {
+        // Leaving an account ends its unlocked session: without this, someone
+        // on account B could switch to a locked A and have A's earlier
+        // session-unlock silently open it without a PIN.
+        try {
+          sessionStorage.removeItem(`kairo-applock:${state.user.id}`);
+        } catch {}
         // full reload: the new account's data, lock state, and theme apply cleanly
         window.location.assign("/today");
         return;

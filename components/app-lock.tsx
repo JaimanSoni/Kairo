@@ -65,7 +65,14 @@ export function AppLockGate() {
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({ userId: a.id }),
                     });
-                    if (res.ok) window.location.assign("/today");
+                    if (res.ok) {
+                      // leaving the locked account ends any unlocked session
+                      // it may still have had in this tab
+                      try {
+                        sessionStorage.removeItem(`kairo-applock:${state.user.id}`);
+                      } catch {}
+                      window.location.assign("/today");
+                    }
                   } catch {}
                 }}
                 className="flex items-center gap-1.5 rounded-full border border-line bg-card px-3 py-1.5 text-xs font-medium text-ink-soft hover:border-ink-faint"

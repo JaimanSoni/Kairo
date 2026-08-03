@@ -393,7 +393,11 @@ export function Modal({
       panel.removeEventListener("touchend", onEnd);
       panel.removeEventListener("touchcancel", onEnd);
     };
-  }, [dismiss, top]);
+    // `mounted` is load-bearing: a modal alive during hydration renders null
+    // on its first pass, so this effect finds no panel and bails — without
+    // re-running on the mounted flip, such a sheet (Fresh Start is the one
+    // that auto-opens with the page) never gets its drag listeners at all
+  }, [dismiss, top, mounted]);
 
   if (!mounted) return null;
 

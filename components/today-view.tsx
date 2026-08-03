@@ -105,7 +105,11 @@ export function TodayView() {
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 pb-32 pt-8 sm:px-6">
-      {carryover.length > 0 && !state.sweepDismissed && <FreshStart carryover={carryover} />}
+      {/* never while locked: the sweep is a portal, so it would mount above the
+          lock gate and read out yesterday's task titles to whoever is looking */}
+      {carryover.length > 0 && !state.sweepDismissed && !state.appLocked && (
+        <FreshStart carryover={carryover} />
+      )}
 
       {/* header */}
       <header className="anim-rise mb-6">
