@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import Script from "next/script";
 import { COFFEE, coffeeEnabled, upiIntentLink, upiLink } from "@/lib/coffee";
 import { markAsked, shouldAsk } from "@/lib/coffee-nudge";
+import { track } from "@/lib/analytics-client";
+import { CHECKOUT_SRC } from "./plan-cards";
 import { IconX, Modal } from "./ui";
 import { Icon3d } from "./img3d";
 
@@ -117,6 +120,9 @@ function CoffeeModal({ onClose, earned }: { onClose: () => void; earned?: boolea
   const isMobile = useIsMobile();
   const isAndroid = useIsAndroid();
   const [showQr, setShowQr] = useState(false);
+  const [cardBusy, setCardBusy] = useState(false);
+  const [cardError, setCardError] = useState<string | null>(null);
+  const [paid, setPaid] = useState(false);
 
   const customAmount = Number.parseInt(customText, 10);
   const customValid = Number.isFinite(customAmount) && customAmount > 0 && customAmount <= MAX_AMOUNT;
@@ -125,6 +131,81 @@ function CoffeeModal({ onClose, earned }: { onClose: () => void; earned?: boolea
   // the QR always encodes the plain upi:// string — scanners expect that
   const tapLink = isAndroid ? upiIntentLink(effective) : link;
   const canPay = effective != null;
+
+  /**
+   * The card rail, for everyone UPI can't reach: desktops with no phone at
+   * hand, phones with no UPI app, anyone who just prefers a card. Same
+   * Razorpay Checkout as the paywall, but against /api/coffee/order — a tip
+   * order that credits nothing and works signed out.
+   */
+  const payByCard = async () => {
+    const rupees = effective;
+    if (rupees == null || cardBusy) return;
+    setCardBusy(true);
+    setCardError(null);
+    try {
+      const res = await fetch("/api/coffee/order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: rupees }),
+      });
+      const data = (await res.json()) as {
+        orderId?: string; amount?: number; currency?: string; keyId?: string; error?: string;
+      };
+      if (!res.ok || !data.orderId || !data.keyId) {
+        throw new Error(data.error ?? "Couldn't start the payment");
+      }
+      if (!window.Razorpay) throw new Error("Checkout didn't load, check your connection");
+
+      const rzp = new window.Razorpay({
+        key: data.keyId,
+        order_id: data.orderId,
+        amount: data.amount,
+        currency: data.currency,
+        name: "Kairo",
+        description: "Buy me a coffee",
+        theme: { color: "#0c9384" },
+        // nothing to verify or unlock: the webhook keeps the books, the
+        // browser only gets to say thank you
+        handler: () => {
+          track("coffee-paid", { via: "card", amount: rupees });
+          setPaid(true);
+        },
+        modal: { ondismiss: () => setCardBusy(false) },
+      });
+      rzp.on?.("payment.failed", (e: { error?: { description?: string } }) => {
+        setCardError(e?.error?.description ?? "That payment didn't go through. Please try again.");
+        setCardBusy(false);
+      });
+      rzp.open();
+    } catch (err) {
+      setCardError(err instanceof Error ? err.message : "Something went wrong");
+      setCardBusy(false);
+    }
+  };
+
+  if (paid) {
+    return (
+      <Modal onClose={onClose}>
+        <div className="p-8 text-center">
+          <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-sun-soft" aria-hidden>
+            <Icon3d name="coffee" size={30} />
+          </span>
+          <h2 className="mt-4 font-display text-2xl tracking-tight">Thank you, truly</h2>
+          <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-ink-soft">
+            The coffee landed, and it genuinely made my day. Kairo stays exactly the same, only
+            now it runs on slightly better fuel.
+          </p>
+          <button
+            onClick={onClose}
+            className="mt-6 rounded-full bg-ink px-6 py-2.5 text-sm font-semibold text-paper transition-transform active:scale-[0.98]"
+          >
+            Back to it
+          </button>
+        </div>
+      </Modal>
+    );
+  }
 
   return (
     <Modal onClose={onClose}>
@@ -289,11 +370,33 @@ function CoffeeModal({ onClose, earned }: { onClose: () => void; earned?: boolea
           </div>
         )}
 
+        <div className="mt-5 flex items-center gap-3" aria-hidden>
+          <span className="h-px flex-1 bg-line" />
+          <span className="text-[11px] font-medium uppercase tracking-wide text-ink-faint">or</span>
+          <span className="h-px flex-1 bg-line" />
+        </div>
+
+        <button
+          type="button"
+          onClick={() => void payByCard()}
+          disabled={!canPay || cardBusy}
+          className="mt-4 w-full rounded-2xl border border-line bg-card px-5 py-3 text-sm font-semibold text-ink transition-colors hover:border-sun hover:text-sun-deep disabled:opacity-50"
+        >
+          {cardBusy ? "Opening checkout…" : canPay ? `Pay ₹${effective} by card` : "Pay by card"}
+        </button>
+        <p className="mt-1.5 text-center text-[11px] text-ink-faint">
+          Card, netbanking or wallet, through Razorpay.
+        </p>
+        {cardError && <p className="mt-2 text-center text-xs text-clay">{cardError}</p>}
+
         <p className="mt-4 text-center text-[11px] leading-relaxed text-ink-faint">
           {/* one string, not text-around-an-expression: JSX drops the space when a
               line wrap lands between the two, which silently ate it once already */}
-          {`Goes straight to ${COFFEE.payeeName} over UPI. It's a thank-you, not a purchase, nothing unlocks, and Kairo stays exactly the same either way.`}
+          {`Goes straight to ${COFFEE.payeeName}, by UPI or card. It's a thank-you, not a purchase, nothing unlocks, and Kairo stays exactly the same either way.`}
         </p>
+
+        {/* loaded when the modal opens, never on the pages behind it */}
+        <Script src={CHECKOUT_SRC} strategy="afterInteractive" />
       </div>
     </Modal>
   );

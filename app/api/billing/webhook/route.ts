@@ -8,6 +8,7 @@ import {
   type SubStatus,
 } from "@/lib/billing";
 import { redeemPromo } from "@/lib/promos";
+import { markTipPaid } from "@/lib/tips";
 import { verifyWebhookSignature, webhookConfigured } from "@/lib/razorpay";
 import { planForPendingPayment } from "@/lib/pending-plan";
 import { sendEmail } from "@/lib/email";
@@ -88,6 +89,14 @@ export async function POST(request: Request) {
     const pay = body.payload?.payment?.entity;
     const orderId = pay?.order_id ?? body.payload?.order?.entity?.id;
     if (!orderId) return NextResponse.json({ ok: true, ignored: event });
+
+    // A coffee tip rides the same gateway but is a thank-you, not a purchase:
+    // mark it paid for the books and stop before any crediting machinery,
+    // mismatch alarms or payer lookups can see it.
+    if (await markTipPaid(orderId, pay?.id ?? null)) {
+      console.info("[coffee] tip captured", orderId);
+      return NextResponse.json({ ok: true, tip: true });
+    }
 
     // Our frozen record of the order names the payer, the plan and the exact
     // expected charge — even for an order superseded by a newer checkout,
