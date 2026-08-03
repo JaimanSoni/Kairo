@@ -305,21 +305,28 @@ export function Modal({
       setDrag(pendingY, false);
     };
 
-    /* a touch inside a nested scrollable (estimate wheel, sweep list…) belongs to it */
-    const insideNestedScroller = (el: HTMLElement | null): boolean => {
+    /* Scrollables between the touch and the panel (estimate wheel, sweep
+       list…). They own the gesture only while they can still scroll up: the
+       old version refused the sheet-drag outright, which made a sheet whose
+       body is one tall scroller — Fresh Start — impossible to swipe closed. */
+    let scrollers: HTMLElement[] = [];
+    const scrollersBetween = (el: HTMLElement | null): HTMLElement[] => {
+      const found: HTMLElement[] = [];
       while (el && el !== panel) {
         const style = getComputedStyle(el);
-        if (/(auto|scroll)/.test(style.overflowY) && el.scrollHeight > el.clientHeight) return true;
+        if (/(auto|scroll)/.test(style.overflowY) && el.scrollHeight > el.clientHeight) {
+          found.push(el);
+        }
         el = el.parentElement;
       }
-      return false;
+      return found;
     };
 
     const onStart = (e: TouchEvent) => {
       if (window.innerWidth >= 640 || closingRef.current) return;
       const target = e.target as HTMLElement;
       const fromHandle = target.closest("[data-sheet-handle]") !== null;
-      if (!fromHandle && insideNestedScroller(target)) return;
+      scrollers = fromHandle ? [] : scrollersBetween(target);
       active = true;
       dragging = false;
       grabOffset = 0;
@@ -342,7 +349,11 @@ export function Modal({
       lastT = e.timeStamp;
 
       if (!dragging) {
-        if (dy > 4 && panel.scrollTop <= 0) {
+        // every scroller on the way up must be at its top for the pull to be
+        // the sheet's; checked per-move, so a gesture that scrolls a list to
+        // its top and keeps pulling hands over mid-stroke without a jump
+        const atTop = panel.scrollTop <= 0 && scrollers.every((s) => s.scrollTop <= 0);
+        if (dy > 4 && atTop) {
           dragging = true;
           grabOffset = dy; // translation starts at 0 from here — no jump
         } else if (dy < -6) {

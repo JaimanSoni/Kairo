@@ -8,6 +8,7 @@ import { cancelPush, enablePush, pushEnabled, schedulePush } from "@/lib/push-cl
 import { personById, useApp, visibleLists } from "./store";
 import { Icon3d, ListMark } from "./img3d";
 import { PersonAvatar } from "./person-avatar";
+import { SendTaskModal, ShareTaskModal } from "./share-modal";
 import { DatePicker } from "./date-picker";
 import { DurationWheel } from "./wheel";
 import { IconCheck, IconPlus, IconX, Modal } from "./ui";
@@ -34,10 +35,19 @@ export function TaskEditor({ task }: { task: Task }) {
   const [stepMenu, setStepMenu] = useState<string | null>(null);
   const [open, setOpen] = useState<Section>(null);
   const [members, setMembers] = useState<Member[] | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
   const today = state.today;
   const list = task.listId ? state.lists.find((l) => l.id === task.listId) : null;
   const isShared = Boolean(list && (list.memberCount > 0 || list.role === "member"));
   const assignee = personById(state, task.assigneeId);
+  // faces for the People row: owner first, unresolved ids skipped
+  const sharedFaces =
+    task.memberIds.length > 0
+      ? [task.ownerId, ...task.memberIds]
+          .map((pid) => personById(state, pid))
+          .filter((p): p is NonNullable<typeof p> => p !== null)
+      : [];
 
   /* pull the list's members when the assignee picker opens */
   useEffect(() => {
@@ -578,7 +588,6 @@ export function TaskEditor({ task }: { task: Task }) {
             open={open === "list"}
             onClick={() => toggleSection("list")}
             icon={list ? <ListMark value={list.emoji} size={18} /> : <Icon3d name="list-folder" size={18} />}
-            last={!isShared}
           />
           {open === "list" && (
             <div className="anim-rise border-b border-line bg-paper px-4 py-4">
@@ -626,7 +635,6 @@ export function TaskEditor({ task }: { task: Task }) {
                     <span className="text-base">👥</span>
                   )
                 }
-                last
               />
               {open === "assignee" && (
                 <div className="anim-rise bg-paper px-4 py-4">
@@ -671,6 +679,30 @@ export function TaskEditor({ task }: { task: Task }) {
               )}
             </>
           )}
+
+          {/* opens the share sheet rather than a fold-out: adding people has
+              its own richer surface, and the row is the doorway to it */}
+          <PropRow
+            label="People"
+            value={task.memberIds.length === 0 ? "Just you" : `${task.memberIds.length + 1} on it`}
+            active={task.memberIds.length > 0}
+            open={false}
+            onClick={() => setShareOpen(true)}
+            icon={
+              sharedFaces.length > 0 ? (
+                <span className="flex -space-x-1">
+                  {sharedFaces.slice(0, 2).map((p) => (
+                    <span key={p.id} className="rounded-full ring-1 ring-card">
+                      <PersonAvatar name={p.name || p.email} picture={p.picture} size={16} />
+                    </span>
+                  ))}
+                </span>
+              ) : (
+                <Icon3d name="bird" size={18} />
+              )
+            }
+            last
+          />
         </div>
 
         {/* footer */}
@@ -708,6 +740,18 @@ export function TaskEditor({ task }: { task: Task }) {
           </div>
         </div>
       </div>
+
+      {shareOpen && (
+        <ShareTaskModal
+          task={task}
+          onClose={() => setShareOpen(false)}
+          onSendCopy={() => {
+            setShareOpen(false);
+            setSendOpen(true);
+          }}
+        />
+      )}
+      {sendOpen && <SendTaskModal task={task} onClose={() => setSendOpen(false)} />}
     </Modal>
   );
 }
