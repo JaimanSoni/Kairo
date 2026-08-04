@@ -532,9 +532,9 @@ export const ARTICLES: Article[] = [
     slug: "ai",
     title: "How AI tidies your captures",
     summary:
-      "After you capture, AI reads the raw sentence and fills in details you didn't type, without ever overruling you.",
+      "After you capture, AI reads the raw sentence, splits it into as many tasks as it holds, and fills in details you didn't type.",
     categoryId: "capture",
-    keywords: ["ai", "gemma", "ollama", "smart", "parsing", "automatic", "magic"],
+    keywords: ["ai", "gemini", "smart", "parsing", "automatic", "magic", "split", "multiple tasks"],
     sections: [
       {
         id: "what-happens",
@@ -547,6 +547,10 @@ export const ARTICLES: Article[] = [
           {
             t: "p",
             text: "It can set: a cleaner title, a planned day, a real deadline, a time estimate, a list, Spotlight, and a list of steps.",
+          },
+          {
+            t: "p",
+            text: "One breath can hold several tasks. Say \"call the bank tomorrow at 11 and gym today at 7\" and AI files **two** tasks, each with its own day and time, and shows you every one it created. Things that belong to the same errand stay together: \"go shopping and buy fruits\" stays one task.",
           },
         ],
       },
@@ -572,11 +576,11 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "If the service is slow or offline, Kairo gives up after about nine seconds and simply keeps what its own parser understood. Nothing breaks, nothing is lost, and no error interrupts you, you just don't get the extra polish on that one task.",
+            text: "If the service is slow or offline, Kairo gives up after about twelve seconds and simply keeps what its own parser understood. Nothing breaks, nothing is lost, and no error interrupts you, you just don't get the extra polish on that one capture.",
           },
           {
             t: "note",
-            text: "AI never sets a repeat rule or a time of day. Those come only from what you type or pick yourself.",
+            text: "AI never sets a repeat rule. Repeats come only from what you type or pick yourself.",
           },
         ],
       },

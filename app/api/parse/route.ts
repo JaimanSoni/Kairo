@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { requireSession, unauthorized, badRequest } from "@/lib/api-auth";
 import { listsCollection, listAccessFilter, toList, isDateString } from "@/lib/tasks";
-import { aiParseTask } from "@/lib/ai";
+import { aiParseTasks } from "@/lib/ai";
 import { requireFeature } from "@/lib/entitlements";
 
 /**
- * AI-assisted capture parsing via Ollama cloud.
+ * AI-assisted capture parsing via Gemini. One capture can contain several
+ * tasks ("call the bank and hit the gym"), so `parsed` is an array.
  * Returns 502 on any AI failure — the client falls back to the local parser.
  */
 export async function POST(request: Request) {
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
     .map((d) => toList(d, session.userId))
     .filter((l) => !l.locked);
 
-  const parsed = await aiParseTask(body.text, today, time, userLists);
+  const parsed = await aiParseTasks(body.text, today, time, userLists);
   if (!parsed) {
     return NextResponse.json({ error: "AI parse unavailable" }, { status: 502 });
   }

@@ -56,9 +56,10 @@ type AiParsed = {
 type Phase = "input" | "thinking" | "done";
 
 const THINKING_LINES = [
-  "Categorizing your task…",
-  "Reading the day and time…",
-  "Choosing the right list…",
+  "Reading what you meant…",
+  "Splitting it into tasks…",
+  "Filling in days and times…",
+  "Choosing the right lists…",
   "Polishing the details…",
 ];
 
@@ -68,7 +69,7 @@ export function Omnibar() {
   const [listening, setListening] = useState(false);
   const [phase, setPhase] = useState<Phase>("input");
   const [thinkLine, setThinkLine] = useState(0);
-  const [result, setResult] = useState<{ task: Task; notes: string[] } | null>(null);
+  const [result, setResult] = useState<{ tasks: Task[]; notes: string[] } | null>(null);
   const recRef = useRef<SpeechRec | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const speechSupported = useMemo(() => getSpeechRecognition() !== null, []);
@@ -129,22 +130,52 @@ export function Omnibar() {
     local: ParsedInput,
     idPromise: Promise<string | null>,
     toast: boolean
-  ): Promise<{ notes: string[] }> => {
+  ): Promise<{ notes: string[]; extraIds: string[] }> => {
     const today = state.today;
     const now = new Date();
     const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    const nothing = { notes: [] as string[], extraIds: [] as string[] };
     return fetch("/api/parse", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text: raw, today, time }),
     })
       .then(async (res) => {
-        if (!res.ok) return { notes: [] }; // AI unavailable → local parse stands
-        const { parsed: ai }: { parsed: AiParsed } = await res.json();
+        if (!res.ok) return nothing; // AI unavailable → local parse stands
+        const { parsed: all }: { parsed: AiParsed[] } = await res.json();
+        if (!Array.isArray(all) || all.length === 0) return nothing;
+
+        // The first parsed task refines the one already captured; the rest
+        // are NEW tasks the AI found in the same breath ("call the bank and
+        // hit the gym" is two things), each filed with its own details.
+        const [ai, ...extras] = all;
+        const extraIdPromises = extras.map((x) => {
+          const created = addTask({
+            title: x.title,
+            plannedFor: x.plannedFor,
+            plannedTime: x.plannedTime,
+            dueDate: x.dueDate,
+            estimateMin: x.estimateMin,
+            listId: x.listId,
+            listName: x.listName,
+            spotlight: false,
+            repeat: null,
+          });
+          if (x.subtasks.length > 0) {
+            void created.then((newId) => {
+              if (!newId) return;
+              updateTask(newId, {
+                subtasks: x.subtasks.map((t) => ({ id: crypto.randomUUID(), title: t, done: false })),
+              });
+            });
+          }
+          return created;
+        });
+
         const id = await idPromise;
-        if (!id) return { notes: [] };
+        if (!id) return nothing;
         const current = getTask(id);
-        if (!current || current.status === "done") return { notes: [] };
+        if (!current || current.status === "done") return nothing;
 
         // Apply an AI value only when it adds something and the user hasn't
         // already changed that field since capture.
@@ -200,12 +231,21 @@ export function Omnibar() {
           notes.push(`${ai.subtasks.length} steps`);
         }
 
-        if (Object.keys(patch).length === 0) return { notes: [] };
-        updateTask(id, patch);
-        if (toast) showToast({ message: `✨ ${notes.length ? notes.join(" · ") : "Tidied it up"}` });
-        return { notes };
+        if (Object.keys(patch).length > 0) updateTask(id, patch);
+
+        const extraIds = (await Promise.all(extraIdPromises)).filter(
+          (x): x is string => x !== null
+        );
+        if (toast) {
+          const message =
+            extraIds.length > 0
+              ? `✨ Split into ${extraIds.length + 1} tasks`
+              : `✨ ${notes.length ? notes.join(" · ") : "Tidied it up"}`;
+          showToast({ message });
+        }
+        return { notes, extraIds };
       })
-      .catch(() => ({ notes: [] })); // offline / AI down → local parse already did its job
+      .catch(() => nothing); // offline / AI down → local parse already did its job
   };
 
   const submit = (keepOpen: boolean) => {
@@ -230,11 +270,13 @@ export function Omnibar() {
     setPhase("thinking");
     const started = Date.now();
     const refined = refine(raw, local, idPromise, false);
-    const timeout = new Promise<{ notes: string[] }>((r) =>
-      setTimeout(() => r({ notes: [] }), 9000)
+    // Wide enough for the free-tier model's slow days; a capture that beats
+    // it still reveals early, and one that loses it still files its tasks.
+    const timeout = new Promise<{ notes: string[]; extraIds: string[] }>((r) =>
+      setTimeout(() => r({ notes: [], extraIds: [] }), 12000)
     );
     void (async () => {
-      const { notes } = await Promise.race([refined, timeout]);
+      const { notes, extraIds } = await Promise.race([refined, timeout]);
       // the save gets its own deadline: a stalled network request must not
       // leave the panel narrating forever with the input frozen
       const id = await Promise.race([
@@ -246,15 +288,20 @@ export function Omnibar() {
         setOmnibar(false);
         return;
       }
-      // the animation needs a beat to read, even when AI answers instantly
-      const wait = Math.max(0, 1600 - (Date.now() - started));
-      if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+      // The animation needs a beat to read, even when AI answers instantly.
+      // Never below 150ms: tasks the AI just filed reach the store through a
+      // React render, and reading synchronously would miss the newest ones.
+      const wait = Math.max(150, 1600 - (Date.now() - started));
+      await new Promise((r) => setTimeout(r, wait));
       const task = getTask(id);
       if (!task) {
         setOmnibar(false);
         return;
       }
-      setResult({ task, notes });
+      const extras = extraIds
+        .map((x) => getTask(x))
+        .filter((t): t is Task => t !== undefined);
+      setResult({ tasks: [task, ...extras], notes });
       setPhase("done");
     })();
   };
@@ -339,51 +386,65 @@ export function Omnibar() {
             )}
             {phase === "done" && result && (
               <div className="anim-pop py-3">
-                <div className="rounded-2xl border border-line bg-paper-deep/40 p-3.5">
-                  <div className="flex items-start gap-2.5">
-                    <span className="mt-0.5 grid size-[20px] shrink-0 place-items-center rounded-full bg-moss text-on-accent">
-                      <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden>
-                        <path d="M2 6l3 3 5-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[15px] font-medium leading-snug">{result.task.title}</div>
-                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                        {result.task.plannedFor ? (
-                          <Chip tone="sun">
-                            <Icon3d name="sun" size={15} /> {friendlyDay(result.task.plannedFor, state.today)}
-                          </Chip>
-                        ) : result.task.status === "someday" ? (
-                          <Chip>
-                            <Icon3d name="moon" size={15} /> someday
-                          </Chip>
-                        ) : (
-                          <Chip>
-                            <Icon3d name="inbox" size={15} /> inbox
-                          </Chip>
-                        )}
-                        {result.task.plannedTime && <Chip tone="sun">🕐 {fmtTime12(result.task.plannedTime)}</Chip>}
-                        {result.task.dueDate && <Chip tone="clay">due {friendlyDay(result.task.dueDate, state.today)}</Chip>}
-                        {result.task.estimateMin != null && <Chip>~{fmtMinutes(result.task.estimateMin)}</Chip>}
-                        {result.task.listId && (
-                          <Chip>#{lists.find((l) => l.id === result.task.listId)?.name ?? "list"}</Chip>
-                        )}
-                        {result.task.repeat && (
-                          <Chip tone="sky">
-                            <Icon3d name="repeat" size={15} /> {repeatLabel(result.task.repeat)}
-                          </Chip>
-                        )}
-                        {result.task.spotlight && <Chip tone="sun">✦ spotlight</Chip>}
-                        {result.task.subtasks.length > 0 && <Chip>{result.task.subtasks.length} steps</Chip>}
+                {result.tasks.length > 1 && (
+                  <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-sun-deep">
+                    <Icon3d name="sparkle" size={15} /> That was {result.tasks.length} things. Filed
+                    each one:
+                  </p>
+                )}
+                <div className="space-y-2">
+                  {result.tasks.map((task, i) => (
+                    <div
+                      key={task.clientId ?? task.id}
+                      className="anim-rise rounded-2xl border border-line bg-paper-deep/40 p-3.5"
+                      style={{ animationDelay: `${i * 110}ms` }}
+                    >
+                      <div className="flex items-start gap-2.5">
+                        <span className="mt-0.5 grid size-[20px] shrink-0 place-items-center rounded-full bg-moss text-on-accent">
+                          <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden>
+                            <path d="M2 6l3 3 5-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[15px] font-medium leading-snug">{task.title}</div>
+                          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                            {task.plannedFor ? (
+                              <Chip tone="sun">
+                                <Icon3d name="sun" size={15} /> {friendlyDay(task.plannedFor, state.today)}
+                              </Chip>
+                            ) : task.status === "someday" ? (
+                              <Chip>
+                                <Icon3d name="moon" size={15} /> someday
+                              </Chip>
+                            ) : (
+                              <Chip>
+                                <Icon3d name="inbox" size={15} /> inbox
+                              </Chip>
+                            )}
+                            {task.plannedTime && <Chip tone="sun">🕐 {fmtTime12(task.plannedTime)}</Chip>}
+                            {task.dueDate && <Chip tone="clay">due {friendlyDay(task.dueDate, state.today)}</Chip>}
+                            {task.estimateMin != null && <Chip>~{fmtMinutes(task.estimateMin)}</Chip>}
+                            {task.listId && (
+                              <Chip>#{lists.find((l) => l.id === task.listId)?.name ?? "list"}</Chip>
+                            )}
+                            {task.repeat && (
+                              <Chip tone="sky">
+                                <Icon3d name="repeat" size={15} /> {repeatLabel(task.repeat)}
+                              </Chip>
+                            )}
+                            {task.spotlight && <Chip tone="sun">✦ spotlight</Chip>}
+                            {task.subtasks.length > 0 && <Chip>{task.subtasks.length} steps</Chip>}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  {result.notes.length > 0 && (
-                    <p className="mt-2.5 flex items-center gap-1 text-[11px] text-ink-faint">
-                      <Icon3d name="sparkle" size={14} /> AI filled in: {result.notes.join(" · ")}
-                    </p>
-                  )}
+                  ))}
                 </div>
+                {result.notes.length > 0 && (
+                  <p className="mt-2.5 flex items-center gap-1 text-[11px] text-ink-faint">
+                    <Icon3d name="sparkle" size={14} /> AI filled in: {result.notes.join(" · ")}
+                  </p>
+                )}
                 <div className="mt-3 flex gap-2">
                   <button
                     onClick={() => setOmnibar(false)}
@@ -398,16 +459,18 @@ export function Omnibar() {
                   >
                     Capture another
                   </button>
-                  <button
-                    onClick={() => {
-                      const id = result.task.id;
-                      setOmnibar(false);
-                      setEditing(id);
-                    }}
-                    className="rounded-full border border-line bg-card px-4 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:border-sun hover:text-sun-deep"
-                  >
-                    Open
-                  </button>
+                  {result.tasks.length === 1 && (
+                    <button
+                      onClick={() => {
+                        const id = result.tasks[0].id;
+                        setOmnibar(false);
+                        setEditing(id);
+                      }}
+                      className="rounded-full border border-line bg-card px-4 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:border-sun hover:text-sun-deep"
+                    >
+                      Open
+                    </button>
+                  )}
                 </div>
               </div>
             )}
