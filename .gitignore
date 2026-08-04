@@ -46,3 +46,6 @@ assets-src/
 
 # rendered launch films — reproducible from /launch via scripts/record-launch.mjs
 out/
+
+# local tool settings
+.commandcode/
