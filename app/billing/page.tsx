@@ -5,6 +5,7 @@ import { getSession } from "@/lib/session";
 import { getUserById } from "@/lib/users";
 import { loadBillingView, TRIAL_DAYS, type UserBilling } from "@/lib/billing";
 import { PRICE_LABEL, billingMode } from "@/lib/razorpay";
+import { listSellablePlans } from "@/lib/plans";
 import { BillingActions } from "@/components/billing-actions";
 
 export const metadata: Metadata = {
@@ -44,6 +45,8 @@ export default async function BillingPage() {
   const billing = (user as { billing?: UserBilling }).billing ?? {};
   const { access, payments, now } = await loadBillingView(session.userId, user.createdAt, billing);
   const mode = billingMode();
+  // the plan the pay button will actually charge (the order route's default)
+  const defaultPlan = (await listSellablePlans())[0] ?? null;
 
   /* One sentence that says exactly where this account stands. */
   const headline =
@@ -96,7 +99,9 @@ export default async function BillingPage() {
           <dl className="mt-5 grid gap-4 border-t border-line/60 pt-4 sm:grid-cols-3">
             <div>
               <dt className="text-[11px] font-semibold uppercase tracking-wide text-ink-faint">Price</dt>
-              <dd className="mt-0.5 text-sm font-semibold">{PRICE_LABEL} / month</dd>
+              <dd className="mt-0.5 text-sm font-semibold">
+                {defaultPlan ? fmtMoney(defaultPlan.priceMinor, defaultPlan.currency) : PRICE_LABEL} / month
+              </dd>
             </div>
             <div>
               <dt className="text-[11px] font-semibold uppercase tracking-wide text-ink-faint">
@@ -124,7 +129,10 @@ export default async function BillingPage() {
         {access.paymentsEnabled && !billing.comped && (
           <BillingActions
             mode={mode}
-            price={PRICE_LABEL}
+            // the label must belong to the plan the button will charge; the
+            // env-derived PRICE_LABEL only covers a deploy with no plans yet
+            price={defaultPlan ? fmtMoney(defaultPlan.priceMinor, defaultPlan.currency) : PRICE_LABEL}
+            planKey={defaultPlan?.key}
             user={{ name: session.name, email: session.email }}
             canCancel={mode === "subscription" && (access.status === "active" || access.status === "authenticated")}
           />

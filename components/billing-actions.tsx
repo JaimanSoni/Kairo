@@ -30,6 +30,52 @@ export function BillingActions({
   const { start, busy, error } = useCheckout(user, mode);
   const [cancelling, setCancelling] = useState(false);
 
+  // a promo names a code, never a price: the server prices it, this only
+  // previews what the server already decided
+  const [promoOpen, setPromoOpen] = useState(false);
+  const [promoInput, setPromoInput] = useState("");
+  const [promoBusy, setPromoBusy] = useState(false);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promo, setPromo] = useState<{
+    code: string;
+    discounts: Record<string, { amountMinor: number; percentOff: number }>;
+  } | null>(null);
+
+  const applyPromo = async () => {
+    const code = promoInput.trim();
+    if (!code || promoBusy) return;
+    setPromoBusy(true);
+    setPromoError(null);
+    try {
+      const res = await fetch("/api/billing/promo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      const data = (await res.json()) as {
+        code?: string;
+        discounts?: Record<string, { amountMinor: number; percentOff: number }>;
+        error?: string;
+      };
+      if (!res.ok || !data.code || !data.discounts) {
+        throw new Error(data.error ?? "That code isn't valid right now");
+      }
+      setPromo({ code: data.code, discounts: data.discounts });
+    } catch (err) {
+      setPromoError(err instanceof Error ? err.message : "That code isn't valid right now");
+    }
+    setPromoBusy(false);
+  };
+
+  const discount = promo && planKey ? promo.discounts[planKey] : undefined;
+  const shownPrice = discount
+    ? new Intl.NumberFormat("en-IN", {
+        style: "currency",
+        currency: "INR",
+        minimumFractionDigits: discount.amountMinor % 100 === 0 ? 0 : 2,
+      }).format(discount.amountMinor / 100)
+    : price;
+
   const cancel = async () => {
     if (!confirm("Cancel your subscription? You'll keep access until the end of the period you've already paid for.")) return;
     setCancelling(true);
@@ -49,15 +95,15 @@ export function BillingActions({
       {/* preloaded so checkout opens instantly; ensureCheckout is the net */}
       <Script src={CHECKOUT_SRC} strategy="afterInteractive" />
       <button
-        onClick={() => start(planKey)}
+        onClick={() => start(planKey, discount ? promo?.code : undefined)}
         disabled={Boolean(busy)}
         className="rounded-full bg-sun px-5 py-2.5 text-sm font-semibold text-on-accent shadow-lg shadow-sun/25 transition-transform active:scale-[0.99] disabled:opacity-60"
       >
         {busy
           ? "Opening checkout…"
           : mode === "subscription"
-            ? `Subscribe, ${price}/mo`
-            : `Pay ${price} for a month`}
+            ? `Subscribe, ${shownPrice}/mo`
+            : `Pay ${shownPrice} for a month`}
       </button>
       {canCancel && (
         <button
@@ -68,6 +114,53 @@ export function BillingActions({
           {cancelling ? "Cancelling…" : "Cancel subscription"}
         </button>
       )}
+
+      {/* promo entry — the same flow the paywall's plan cards carry */}
+      <div className="w-full">
+        {promo && discount ? (
+          <p className="text-xs text-ink-soft">
+            Code <b className="font-mono">{promo.code}</b> applied, {discount.percentOff}% off.{" "}
+            <button
+              onClick={() => {
+                setPromo(null);
+                setPromoInput("");
+              }}
+              className="underline underline-offset-2 hover:text-ink"
+            >
+              Remove it
+            </button>
+          </p>
+        ) : promoOpen ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              value={promoInput}
+              onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void applyPromo();
+              }}
+              placeholder="PROMO CODE"
+              autoFocus
+              className="w-40 rounded-full border border-line bg-paper px-4 py-2 font-mono text-sm uppercase outline-none placeholder:font-sans focus:border-sun"
+            />
+            <button
+              onClick={() => void applyPromo()}
+              disabled={promoBusy || !promoInput.trim()}
+              className="rounded-full bg-ink px-4 py-2 text-sm font-semibold text-paper disabled:opacity-50"
+            >
+              {promoBusy ? "Checking…" : "Apply"}
+            </button>
+            {promoError && <span className="text-xs text-clay">{promoError}</span>}
+          </div>
+        ) : (
+          <button
+            onClick={() => setPromoOpen(true)}
+            className="text-xs text-ink-faint underline underline-offset-2 hover:text-ink-soft"
+          >
+            Have a promo code?
+          </button>
+        )}
+      </div>
+
       {error && <p className="w-full text-sm text-clay">{error}</p>}
     </div>
   );

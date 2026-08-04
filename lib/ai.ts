@@ -72,11 +72,16 @@ function systemPrompt(today: string, time: string, lists: List[]): string {
 Reply with ONLY a raw JSON object, no markdown fences, no commentary, of EXACTLY this shape:
 {"tasks": [{"title": string, "plannedFor": "YYYY-MM-DD" or null, "plannedTime": "HH:MM" or null, "dueDate": "YYYY-MM-DD" or null, "estimateMin": integer or null, "listName": string or null, "spotlight": boolean, "subtasks": [strings]}]}
 
+CRITICAL — ANTI-HALLUCINATION
+Use ONLY words, dates, and actions the user actually said. NEVER invent a task that isn't mentioned in the input. If the input is unclear or you can't parse it, return a single task with the raw text as title and null for everything else. It is ALWAYS better to return one safe task than to guess.
+
 HOW MANY TASKS
 One capture often contains SEVERAL distinct tasks joined by "and", "also", "then", "after that", or just run together. Output one task object per distinct action, in the order spoken, at most ${MAX_TASKS}.
-Split when the actions are independent things someone would tick off separately (different places, people, topics or times).
+Split when the actions are independent things someone would tick off separately — DIFFERENT action verbs, different times, different days, different people, different places.
+Examples of 2-task splits: "call mom and go to gym", "pay rent tomorrow and buy groceries", "call the bank today at 11 and gym at 7"
 Do NOT split when the extra words are part of the same errand or steps of one job — those stay ONE task, with the steps in "subtasks" only when they are concrete.
-Shared context distributes: a date, time or place said once applies to every task it plainly covers ("tomorrow call mom and pay rent" = both tomorrow).
+Examples that stay ONE: "go shopping and buy fruits", "write report and email it", "clean the kitchen and mop the floor"
+Shared context distributes: a date, time or place said once applies to EVERY task it plainly covers. "tomorrow call mom and pay rent" → both tasks get tomorrow. But when each action has its OWN time or day, that overrides the shared one.
 
 CURRENT MOMENT
 Right now it is ${WEEKDAYS[dow]} ${today} at ${time} (the user's local time).
@@ -90,10 +95,10 @@ Anchors:
   "tonight" / "this evening" = today
 
 FIELD RULES (each task)
-title: clean sentence-case imperative. Strip filler ("umm", "I have to", "remind me to", "I want to") but keep every meaningful detail.
+title: clean sentence-case imperative. Strip filler ("umm", "I have to", "remind me to", "I want to") but keep every meaningful detail from the user's words.
 plannedFor: the day the user intends to DO the task.
 plannedTime: 24h clock, only when the user says a time ("at 6", "6 pm", "in the evening"). Word times: morning=09:00, noon=12:00, afternoon=15:00, evening=19:00, night=21:00. "at 6" with no am/pm: pick the next sensible occurrence given the current time.
-A day-part word WITHOUT a day ("in the morning", "in the evening") also sets plannedFor: today if that part of the day is still ahead of the current time, otherwise tomorrow.
+A day-part word WITHOUT a day ("in the morning", "in the evening") also sets plannedFor: today if that part of the day is still ahead of the current time, otherwise tomorrow. Each task gets its OWN day-part resolution — if task A says "today evening" set both plannedFor=today and plannedTime=19:00, and if task B says "tomorrow morning" set plannedFor=tomorrow and plannedTime=09:00.
 dueDate: ONLY a hard deadline ("by", "before", "due", "deadline"). A deadline alone does not set plannedFor.
 estimateMin: any stated or implied duration: "within 30 mins"=30, "half an hour"=30, "couple of hours"=120, "quick call"=10. Otherwise null.
 listName: pick the ONE list whose MEANING fits (fruits or supermarket goes to a groceries-style list, gym or run to a fitness-style list, office work to a work-style list). Copy the name EXACTLY from: [${listNames}]. If none fits, null. NEVER invent a list.
@@ -104,10 +109,13 @@ Never invent dates, times, durations or steps. When unsure, use null.
 EXAMPLES (dates resolved with the calendar above; lists here are illustrative, always use the user's actual list names)
 "go for shopping next weekend and buy some fruits"
 -> {"tasks":[{"title":"Go shopping and buy fruits","plannedFor":"${fmt(nextWeekendSat)}","plannedTime":null,"dueDate":null,"estimateMin":null,"listName":"Groceries","spotlight":false,"subtasks":[]}]}
-(one errand, not two tasks: the fruits are part of the shopping)
+(one errand, not two tasks: the fruits are part of the shopping trip)
 "call the bank tomorrow at 11 and gym today at 7"
 -> {"tasks":[{"title":"Call the bank","plannedFor":"${fmt(plus(1))}","plannedTime":"11:00","dueDate":null,"estimateMin":null,"listName":null,"spotlight":false,"subtasks":[]},{"title":"Gym session","plannedFor":"${today}","plannedTime":"19:00","dueDate":null,"estimateMin":null,"listName":"Fitness","spotlight":false,"subtasks":[]}]}
-(two independent actions with their own times)
+(two independent actions, each with its own day and time)
+"call mom today evening 6pm and go to gym tomorrow morning"
+-> {"tasks":[{"title":"Call mom","plannedFor":"${today}","plannedTime":"18:00","dueDate":null,"estimateMin":null,"listName":null,"spotlight":false,"subtasks":[]},{"title":"Go to gym","plannedFor":"${fmt(plus(1))}","plannedTime":"09:00","dueDate":null,"estimateMin":null,"listName":"Fitness","spotlight":false,"subtasks":[]}]}
+(two tasks, different days, each with its own day-part time)
 "call mom in the morning and go to college tomorrow"
 -> {"tasks":[{"title":"Call mom","plannedFor":"${time < "09:00" ? today : fmt(plus(1))}","plannedTime":"09:00","dueDate":null,"estimateMin":null,"listName":null,"spotlight":false,"subtasks":[]},{"title":"Go to college","plannedFor":"${fmt(plus(1))}","plannedTime":null,"dueDate":null,"estimateMin":null,"listName":null,"spotlight":false,"subtasks":[]}]}
 (two tasks; "in the morning" with no day means the next morning from right now)
