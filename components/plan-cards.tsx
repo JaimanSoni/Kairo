@@ -260,8 +260,12 @@ export function PlanCards({
         ) : (
           <button
             onClick={() => setPromoOpen(true)}
-            className="text-xs text-ink-faint underline underline-offset-2 hover:text-ink-soft"
+            className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-sun/60 bg-sun-soft/40 px-4 py-2 text-[13px] font-semibold text-sun-deep transition-colors hover:bg-sun-soft"
           >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
+              <path d="M8.6 1.5H13a1.5 1.5 0 011.5 1.5v4.4a1.5 1.5 0 01-.44 1.06l-6.1 6.1a1.5 1.5 0 01-2.12 0l-4.4-4.4a1.5 1.5 0 010-2.12l6.1-6.1A1.5 1.5 0 018.6 1.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+              <circle cx="11.2" cy="4.8" r="1.1" fill="currentColor" />
+            </svg>
             Have a promo code?
           </button>
         )}
