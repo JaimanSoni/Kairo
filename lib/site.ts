@@ -16,4 +16,4 @@ export const SITE_DESCRIPTION =
   "Plan a day you can actually finish, no red badges, no overdue guilt, no infinite lists.";
 
 /** Where a human should write to — matches the legal pages and /support/contact. */
-export const SUPPORT_EMAIL = "jaimansoni@gmail.com";
+export const SUPPORT_EMAIL = "kairo.support@jaimansoni.com";

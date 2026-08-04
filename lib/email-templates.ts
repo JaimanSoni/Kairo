@@ -1,4 +1,4 @@
-import { SITE_URL, SUPPORT_EMAIL } from "./site";
+import { SITE_URL } from "./site";
 
 /**
  * Where a human should write. The sender address is not monitored and carries
@@ -338,4 +338,9 @@ export function adminMismatchEmail(input: {
   };
 }
 
-export const ADMIN_EMAIL = SUPPORT_EMAIL;
+/**
+ * Internal alerts (payment mismatches) go to the founder's real inbox, not
+ * the public support alias — an alias whose forwarding breaks would
+ * otherwise swallow the one email that says money went missing.
+ */
+export const ADMIN_EMAIL = "jaimansoni@gmail.com";

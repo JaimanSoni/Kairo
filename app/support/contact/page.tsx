@@ -1,13 +1,12 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { SUPPORT_EMAIL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Contact support",
   description: "Get help with Kairo, report a bug, or request a feature.",
   alternates: { canonical: "/support/contact" },
 };
-
-const SUPPORT_EMAIL = "jaimansoni@gmail.com";
 
 export default async function ContactPage({
   searchParams,

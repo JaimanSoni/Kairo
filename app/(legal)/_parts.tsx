@@ -1,3 +1,5 @@
+import { SUPPORT_EMAIL } from "@/lib/site";
+
 /** Shared bits for the policy pages, so they read as one document set. */
 
 export function PageHead({ title, updated }: { title: string; updated: string }) {
@@ -37,10 +39,10 @@ export function B({ children }: { children: React.ReactNode }) {
 export function Mail() {
   return (
     <a
-      href="mailto:jaimansoni@gmail.com"
+      href={`mailto:${SUPPORT_EMAIL}`}
       className="font-medium text-sun-deep underline decoration-sun/40 underline-offset-2 hover:decoration-sun"
     >
-      jaimansoni@gmail.com
+      {SUPPORT_EMAIL}
     </a>
   );
 }
