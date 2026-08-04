@@ -78,6 +78,8 @@ Use ONLY words, dates, and actions the user actually said. NEVER invent a task t
 HOW MANY TASKS
 One capture often contains SEVERAL distinct tasks joined by "and", "also", "then", "after that", or just run together. Output one task object per distinct action, in the order spoken, at most ${MAX_TASKS}.
 Split when the actions are independent things someone would tick off separately — DIFFERENT action verbs, different times, different days, different people, different places.
+Semicolons, commas between clauses, and line breaks are STRONG separators: each segment is its own task unless it is plainly a step of the segment before it.
+Two work items are still two tasks when they are different pieces of work ("fix the login bug; refactor the parser" is TWO) — sharing a project or a list never merges them.
 Examples of 2-task splits: "call mom and go to gym", "pay rent tomorrow and buy groceries", "call the bank today at 11 and gym at 7"
 Do NOT split when the extra words are part of the same errand or steps of one job — those stay ONE task, with the steps in "subtasks" only when they are concrete.
 Examples that stay ONE: "go shopping and buy fruits", "write report and email it", "clean the kitchen and mop the floor"
@@ -119,6 +121,9 @@ EXAMPLES (dates resolved with the calendar above; lists here are illustrative, a
 "call mom in the morning and go to college tomorrow"
 -> {"tasks":[{"title":"Call mom","plannedFor":"${time < "09:00" ? today : fmt(plus(1))}","plannedTime":"09:00","dueDate":null,"estimateMin":null,"listName":null,"spotlight":false,"subtasks":[]},{"title":"Go to college","plannedFor":"${fmt(plus(1))}","plannedTime":null,"dueDate":null,"estimateMin":null,"listName":null,"spotlight":false,"subtasks":[]}]}
 (two tasks; "in the morning" with no day means the next morning from right now)
+"i want to add a new feature in the linkedin agent; call mom at 7 pm to remind her for dinner; build a new agent"
+-> {"tasks":[{"title":"Add a new feature in the LinkedIn agent","plannedFor":null,"plannedTime":null,"dueDate":null,"estimateMin":null,"listName":"Work","spotlight":false,"subtasks":[]},{"title":"Call mom to remind her for dinner","plannedFor":"${today}","plannedTime":"19:00","dueDate":null,"estimateMin":null,"listName":null,"spotlight":false,"subtasks":[]},{"title":"Build a new agent","plannedFor":null,"plannedTime":null,"dueDate":null,"estimateMin":null,"listName":"Work","spotlight":false,"subtasks":[]}]}
+(three tasks: semicolons separate them, and the two work items are different pieces of work, so they never merge)
 "umm I have to finish the client report we have to complete it within 30 mins also book flights for goa"
 -> {"tasks":[{"title":"Finish the client report","plannedFor":null,"plannedTime":null,"dueDate":null,"estimateMin":30,"listName":"Work","spotlight":false,"subtasks":[]},{"title":"Book flights for Goa","plannedFor":null,"plannedTime":null,"dueDate":null,"estimateMin":null,"listName":null,"spotlight":false,"subtasks":[]}]}
 "submit the tax file by friday"
@@ -194,6 +199,9 @@ async function callOllama(system: string, user: string): Promise<string | null> 
       body: JSON.stringify({
         model,
         stream: false,
+        // near-greedy: parsing is extraction, and the default temperature
+        // made the split-vs-merge judgment wobble between identical runs
+        options: { temperature: 0.1 },
         messages: [
           { role: "system", content: system },
           { role: "user", content: user },
@@ -279,7 +287,12 @@ export async function aiParseTasks(
   const system = systemPrompt(today, time, lists);
   const user = text.slice(0, 2000);
 
-  const content = (await callOllama(system, user)) ?? (await callGemini(system, user));
+  // a fast Ollama failure (429, 5xx, network blip) deserves one more try —
+  // but a timeout does not, because 8s + 8s would blow the reveal's budget
+  const t0 = Date.now();
+  let content = await callOllama(system, user);
+  if (!content && Date.now() - t0 < 2500) content = await callOllama(system, user);
+  if (!content) content = await callGemini(system, user);
   if (!content) return null;
 
   const raw = extractJson(content);

@@ -72,10 +72,14 @@ export function Omnibar() {
   const [phase, setPhase] = useState<Phase>("input");
   const [thinkLine, setThinkLine] = useState(0);
   const [result, setResult] = useState<AiParsed[] | null>(null);
+  // true when the preview is the local fallback, not an AI answer — the
+  // difference must be visible, or a failed call looks like a bad parse
+  const [aiFell, setAiFell] = useState(false);
   const [filing, setFiling] = useState(false);
   // the real reentry guard: state commits a render late, and a double-click's
   // second click arrives inside that gap — a ref flips synchronously
   const filingRef = useRef(false);
+  const lastRawRef = useRef("");
   const recRef = useRef<SpeechRec | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const speechSupported = useMemo(() => getSpeechRecognition() !== null, []);
@@ -177,7 +181,10 @@ export function Omnibar() {
             }
           }
         }
-        showToast({ message: `✨ Captured` });
+        showToast({
+          message:
+            parsed.length > 0 ? `✨ Captured` : "Captured. AI couldn't refine it this time",
+        });
       });
       return;
     }
@@ -188,8 +195,15 @@ export function Omnibar() {
     const local = parseQuickAdd(raw, lists);
     if (!local.title) local.title = raw;
     setText("");
+    lastRawRef.current = raw;
+    runReveal(raw, local);
+  };
+
+  /** The reveal pipeline, reusable so a failed AI call can be retried. */
+  const runReveal = (raw: string, local: ParsedInput) => {
     setThinkLine(0);
     setPhase("thinking");
+    setAiFell(false);
     const parsed = aiParse(raw);
     const timeout = new Promise<AiParsed[] | null>((r) =>
       setTimeout(() => r(null), 12000)
@@ -197,7 +211,9 @@ export function Omnibar() {
     void (async () => {
       const started = Date.now();
       let tasks = await Promise.race([parsed, timeout]);
-      // if AI returned nothing or timed out, fall back to local single-task parse
+      // if AI returned nothing or timed out, fall back to local single-task
+      // parse — and say so, because a silent fallback looks like a bad parse
+      const fell = !tasks || tasks.length === 0;
       if (!tasks || tasks.length === 0) {
         tasks = [{
           title: local.title,
@@ -218,9 +234,20 @@ export function Omnibar() {
       }
       const wait = Math.max(150, 1600 - (Date.now() - started));
       await new Promise((r) => setTimeout(r, wait));
+      setAiFell(fell);
       setResult(tasks);
       setPhase("done");
     })();
+  };
+
+  /** Re-run the AI on the same capture after a failed call. */
+  const retryAi = () => {
+    const raw = lastRawRef.current;
+    if (!raw || filingRef.current) return;
+    const local = parseQuickAdd(raw, lists);
+    if (!local.title) local.title = raw;
+    setResult(null);
+    runReveal(raw, local);
   };
 
   /**
@@ -322,6 +349,7 @@ export function Omnibar() {
   const again = () => {
     filingRef.current = false;
     setResult(null);
+    setAiFell(false);
     setFiling(false);
     setPhase("input");
     queueMicrotask(() => inputRef.current?.focus());
@@ -453,9 +481,21 @@ export function Omnibar() {
                     </div>
                   ))}
                 </div>
-                {result.some((p) => p.plannedFor || p.plannedTime || p.listId || p.subtasks.length > 0) && (
+                {!aiFell &&
+                  result.some((p) => p.plannedFor || p.plannedTime || p.listId || p.subtasks.length > 0) && (
                   <p className="mt-2.5 flex items-center gap-1 text-[11px] text-ink-faint">
                     <Icon3d name="sparkle" size={14} /> AI filled in dates, times, and lists
+                  </p>
+                )}
+                {aiFell && (
+                  <p className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-ink-faint">
+                    <span>AI couldn&apos;t be reached, so this is the plain capture.</span>
+                    <button
+                      onClick={retryAi}
+                      className="font-semibold text-sun-deep underline underline-offset-2 hover:text-sun"
+                    >
+                      Try AI again
+                    </button>
                   </p>
                 )}
                 <div className="mt-3 flex gap-2">
