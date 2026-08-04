@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import type { Task } from "@/lib/types";
 import { addDays, friendlyDay, fmtMinutes, fmtReminder, fmtTime12 } from "@/lib/dates";
 import { repeatLabel } from "@/lib/repeat";
@@ -71,7 +72,11 @@ export function TaskItem({
   const [sendOpen, setSendOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [menuUp, setMenuUp] = useState(false);
+  /** Fixed-position coordinates for the portaled menu, set at open time. */
+  const [menuPos, setMenuPos] = useState<{ left: number; top?: number; bottom?: number }>({
+    left: 0,
+  });
+  const popRef = useRef<HTMLDivElement>(null);
   const [askEstimate, setAskEstimate] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const askRef = useRef<HTMLDivElement>(null);
@@ -104,10 +109,21 @@ export function TaskItem({
   useEffect(() => {
     if (!menuOpen) return;
     const close = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+      // the menu lives in a portal, so both homes count as "inside"
+      const t = e.target as Node;
+      if (menuRef.current?.contains(t) || popRef.current?.contains(t)) return;
+      setMenuOpen(false);
     };
+    // a fixed-position menu cannot follow its button, so scrolling closes it
+    const closeNow = () => setMenuOpen(false);
     document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
+    document.addEventListener("scroll", closeNow, true);
+    window.addEventListener("resize", closeNow);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("scroll", closeNow, true);
+      window.removeEventListener("resize", closeNow);
+    };
   }, [menuOpen]);
 
   const toggle = () => {
@@ -425,9 +441,18 @@ export function TaskItem({
         <div className="relative shrink-0" ref={menuRef}>
           <button
             onClick={(e) => {
-              // near the bottom of the screen the menu flips upward rather
-              // than opening into space that is not there
-              setMenuUp(window.innerHeight - e.currentTarget.getBoundingClientRect().bottom < 330);
+              // The menu is portaled to <body> and positioned off the button:
+              // an absolute menu inside a short bottom sheet used to open into
+              // the sheet's overflow and be clipped half-invisible. Near the
+              // bottom of the screen it still flips upward.
+              const r = e.currentTarget.getBoundingClientRect();
+              const up = window.innerHeight - r.bottom < 330;
+              setMenuPos({
+                left: Math.max(8, r.right - 176),
+                ...(up
+                  ? { bottom: window.innerHeight - r.top + 6 }
+                  : { top: r.bottom + 6 }),
+              });
               setMenuOpen((v) => !v);
             }}
             aria-label="Task actions"
@@ -438,8 +463,13 @@ export function TaskItem({
           >
             <IconDots size={16} />
           </button>
-          {menuOpen && (
-            <div className={`anim-pop absolute right-0 z-30 w-44 rounded-xl border border-line bg-card p-1.5 shadow-lg ${menuUp ? "bottom-8" : "top-8"}`}>
+          {menuOpen &&
+            createPortal(
+              <div
+                ref={popRef}
+                className="anim-pop fixed z-[60] w-44 rounded-xl border border-line bg-card p-1.5 shadow-lg"
+                style={menuPos}
+              >
               {!done && task.plannedFor !== today && (
                 <MenuBtn onClick={() => plan({ plannedFor: today, status: "planned" })}>
                   <Icon3d name="sun" size={15} /> Do today
@@ -479,12 +509,13 @@ export function TaskItem({
                   <Icon3d name="bird" size={15} /> Share
                 </MenuBtn>
               )}
-              <div className="my-1 border-t border-line" />
-              <MenuBtn onClick={() => { setMenuOpen(false); deleteTask(task.id); }}>
-                <Icon3d name="leaf" size={15} /> Let it go
-              </MenuBtn>
-            </div>
-          )}
+                <div className="my-1 border-t border-line" />
+                <MenuBtn onClick={() => { setMenuOpen(false); deleteTask(task.id); }}>
+                  <Icon3d name="leaf" size={15} /> Let it go
+                </MenuBtn>
+              </div>,
+              document.body
+            )}
         </div>
       )}
       </div>
