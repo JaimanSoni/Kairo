@@ -48,20 +48,20 @@ function popOut(x: number): number {
 const T = {
   chaos: 0, //         ink    a swarm of red, "Your day shouldn't feel like this."
   calm: 3400, //       paper  "There is a calmer way." — one quick breath
-  intro: 4800, //             "Introducing" — a beat, not a hold
-  reveal: 5700, //            mark + kairo + tagline, arriving with a bang
-  dash: 8600, //              the dashboard dollies in
-  capture: 13600, //          the capture bar types, AI files two tasks
-  choose: 19600, //           the cursor stars what matters
-  plan: 24600, //             times land on the day
-  win: 29400, //              checks, ripples, confetti, "Day: won."
-  m1: 35000, //        sun    AI capture.
-  m2: 35850, //        ink    Fresh starts.
-  m3: 36700, //        deep   Focus timer.
-  m4: 37550, //        sky    Share with anyone.
-  end: 38400, //       paper  Own your day.
+  intro: 4800, //             "Introducing" rises fast, then holds a true beat
+  reveal: 6300, //            after the 800ms held breath, kairo lands
+  dash: 9200, //              the dashboard dollies in
+  capture: 14200, //          the capture bar types, AI files two tasks
+  choose: 20200, //           the cursor stars what matters
+  plan: 25200, //             times land on the day
+  win: 30000, //              checks, ripples, confetti, "Day: won."
+  m1: 35600, //        sun    AI capture.
+  m2: 36450, //        ink    Fresh starts.
+  m3: 37300, //        deep   Focus timer.
+  m4: 38150, //        sky    Share with anyone.
+  end: 39000, //       paper  Own your day.
 };
-export const DURATION = 43600;
+export const DURATION = 44200;
 
 /** Gentle camera swells, only where a landing deserves one. */
 const KICKS: { at: number; amp: number }[] = [
