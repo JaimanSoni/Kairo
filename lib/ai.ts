@@ -13,13 +13,9 @@ export type AiParsed = {
 };
 
 const OLLAMA_URL = "https://ollama.com/api/chat";
-const GEMINI_URL = (model: string) =>
-  `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-// Gemma answers first on a short leash; Gemini only runs if Gemma failed, so
-// the combined worst case still lands near the reveal's 12 second budget,
-// and a slow answer that misses it still files its tasks late.
+// a short leash: one answer plus one fast-failure retry must both fit
+// inside the reveal's 12 second budget
 const OLLAMA_TIMEOUT_MS = 8000;
-const GEMINI_TIMEOUT_MS = 10000;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 const MAX_TASKS = 5;
@@ -223,59 +219,8 @@ async function callOllama(system: string, user: string): Promise<string | null> 
 }
 
 /**
- * Gemini, as the understudy when Gemma is down. No retries on 429 or 503:
- * on a 10-requests-per-minute free tier, retrying a rate limit only spends
- * the next caller's request making this caller's problem worse.
- */
-async function callGemini(system: string, user: string): Promise<string | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
-  const model = process.env.GEMINI_MODEL || "gemini-3.5-flash";
-
-  const attempt = async (withThinkingOff: boolean) => {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
-    try {
-      return await fetch(GEMINI_URL(model), {
-        method: "POST",
-        headers: { "x-goog-api-key": apiKey, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: system }] },
-          contents: [{ role: "user", parts: [{ text: user }] }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            temperature: 0.1,
-            // thinking is wasted latency here; some variants reject the
-            // knob, hence the schema-retry below
-            ...(withThinkingOff ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
-          },
-        }),
-        signal: controller.signal,
-      });
-    } finally {
-      clearTimeout(timer);
-    }
-  };
-
-  try {
-    let res = await attempt(true);
-    if (res.status === 400) res = await attempt(false);
-    if (!res.ok) {
-      console.error("[ai] gemini answered", res.status);
-      return null;
-    }
-    const data: { candidates?: { content?: { parts?: { text?: string }[] } }[] } =
-      await res.json();
-    return data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Parses capture text into one or more tasks: Gemma first, Gemini as the
- * fallback. Returns null on ANY failure — callers must fall back to the
- * local token parser.
+ * Parses capture text into one or more tasks, via Gemma only. Returns null
+ * on ANY failure — callers must fall back to the local token parser.
  */
 export async function aiParseTasks(
   text: string,
@@ -292,7 +237,6 @@ export async function aiParseTasks(
   const t0 = Date.now();
   let content = await callOllama(system, user);
   if (!content && Date.now() - t0 < 2500) content = await callOllama(system, user);
-  if (!content) content = await callGemini(system, user);
   if (!content) return null;
 
   const raw = extractJson(content);

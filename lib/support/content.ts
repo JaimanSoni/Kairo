@@ -534,7 +534,7 @@ export const ARTICLES: Article[] = [
     summary:
       "After you capture, AI reads the raw sentence, splits it into as many tasks as it holds, and fills in details you didn't type.",
     categoryId: "capture",
-    keywords: ["ai", "gemini", "smart", "parsing", "automatic", "magic", "split", "multiple tasks"],
+    keywords: ["ai", "gemma", "smart", "parsing", "automatic", "magic", "split", "multiple tasks"],
     sections: [
       {
         id: "what-happens",

@@ -6,7 +6,7 @@ import { aiParseTasks } from "@/lib/ai";
 import { requireFeature } from "@/lib/entitlements";
 
 /**
- * AI-assisted capture parsing via Gemini. One capture can contain several
+ * AI-assisted capture parsing via Gemma. One capture can contain several
  * tasks ("call the bank and hit the gym"), so `parsed` is an array.
  * Returns 502 on any AI failure — the client falls back to the local parser.
  */
