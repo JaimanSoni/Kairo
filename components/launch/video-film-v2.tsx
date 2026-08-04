@@ -46,26 +46,26 @@ function popOut(x: number): number {
 /* --------------------------------------------------------------- timeline */
 
 const T = {
-  chaos: 0, //         ink    drifting mess, "Your day shouldn't feel like this."
-  calm: 4600, //       paper  "There is a calmer way."
-  intro: 7200, //             "Introducing"
-  reveal: 8500, //            mark + kairo + tagline
-  dash: 11800, //             the dashboard dollies in
-  capture: 16800, //          the capture bar types, AI files two tasks
-  choose: 22800, //           the cursor stars what matters
-  plan: 27800, //             blocks land on the day's timeline
-  win: 32600, //              checks, ripples, confetti, "Day: won."
-  m1: 38200, //        sun    AI capture.
-  m2: 39050, //        ink    Fresh starts.
-  m3: 39900, //        deep   Focus timer.
-  m4: 40750, //        sky    Share with anyone.
-  end: 41600, //       paper  Own your day.
+  chaos: 0, //         ink    a swarm of red, "Your day shouldn't feel like this."
+  calm: 3400, //       paper  "There is a calmer way." — one quick breath
+  intro: 4800, //             "Introducing" — a beat, not a hold
+  reveal: 5700, //            mark + kairo + tagline, arriving with a bang
+  dash: 8600, //              the dashboard dollies in
+  capture: 13600, //          the capture bar types, AI files two tasks
+  choose: 19600, //           the cursor stars what matters
+  plan: 24600, //             times land on the day
+  win: 29400, //              checks, ripples, confetti, "Day: won."
+  m1: 35000, //        sun    AI capture.
+  m2: 35850, //        ink    Fresh starts.
+  m3: 36700, //        deep   Focus timer.
+  m4: 37550, //        sky    Share with anyone.
+  end: 38400, //       paper  Own your day.
 };
-export const DURATION = 46800;
+export const DURATION = 43600;
 
 /** Gentle camera swells, only where a landing deserves one. */
 const KICKS: { at: number; amp: number }[] = [
-  { at: T.reveal + 350, amp: 0.014 },
+  { at: T.reveal + 250, amp: 0.022 },
   { at: T.win + 2850, amp: 0.02 },
   { at: T.end + 500, amp: 0.012 },
 ];
@@ -624,22 +624,38 @@ function Confetti({ lt, at, ox, oy }: { lt: number; at: number; ox: number; oy: 
 
 /** The mess: real-sounding tasks drifting in the dark, none of them done. */
 const CHAOS = [
-  { text: "Finish the deck!!", top: "16%", left: "9%", tilt: -7, depth: 0.7, badge: "overdue 4d" },
+  { text: "Finish the deck!!", top: "16%", left: "9%", tilt: -7, depth: 0.7, badge: "overdue 4d", hot: true },
   { text: "Reply to 47 emails", top: "64%", left: "10%", tilt: 5, depth: 1, badge: "today??" },
-  { text: "Call the bank", top: "23%", left: "66%", tilt: 6, depth: 0.85, badge: "missed" },
-  { text: "URGENT: invoices", top: "70%", left: "63%", tilt: -5, depth: 0.6, badge: "overdue 12d" },
+  { text: "Call the bank", top: "23%", left: "66%", tilt: 6, depth: 0.85, badge: "missed", hot: true },
+  { text: "URGENT: invoices", top: "70%", left: "63%", tilt: -5, depth: 0.6, badge: "overdue 12d", hot: true },
   { text: "Gym (lol)", top: "44%", left: "80%", tilt: 8, depth: 1.15, badge: "skipped x9" },
   { text: "Plan the sprint", top: "8%", left: "40%", tilt: -4, depth: 0.9, badge: "overdue" },
   { text: "Mom's birthday gift", top: "80%", left: "36%", tilt: 4, depth: 1.25, badge: "3 apps ago" },
+  { text: "Taxes. Actual taxes.", top: "36%", left: "22%", tilt: -6, depth: 0.65, badge: "overdue 30d", hot: true },
+  { text: "Renew the domain", top: "54%", left: "58%", tilt: 5, depth: 0.75, badge: "expired!", hot: true },
+];
+
+/** The swarm: red notification counts raining in like a bad Monday. */
+const RED_BADGES = [
+  { top: "10%", left: "27%", text: "12", size: 54, at: 260 },
+  { top: "31%", left: "13%", text: "4", size: 44, at: 420 },
+  { top: "18%", left: "85%", text: "47", size: 64, at: 340 },
+  { top: "58%", left: "89%", text: "9+", size: 46, at: 560 },
+  { top: "77%", left: "21%", text: "!!", size: 50, at: 500 },
+  { top: "87%", left: "75%", text: "31", size: 58, at: 640 },
+  { top: "6%", left: "59%", text: "8", size: 40, at: 700 },
+  { top: "43%", left: "5%", text: "22", size: 48, at: 760 },
+  { top: "67%", left: "46%", text: "5", size: 42, at: 820 },
+  { top: "28%", left: "45%", text: "99+", size: 52, at: 880 },
 ];
 
 function ChaosField({ t, unit }: { t: number; unit: number }) {
   return (
     <>
       {CHAOS.map((c, i) => {
-        const inP = quintOut(seg(t, 300 + i * 130, 800));
-        const driftX = Math.sin((t / 6400) * Math.PI * 2 + i * 1.7) * 9 * c.depth * unit;
-        const driftY = Math.cos((t / 7600) * Math.PI * 2 + i * 2.3) * 11 * c.depth * unit;
+        const inP = quintOut(seg(t, 200 + i * 90, 650));
+        const driftX = Math.sin((t / 5200) * Math.PI * 2 + i * 1.7) * 10 * c.depth * unit;
+        const driftY = Math.cos((t / 6200) * Math.PI * 2 + i * 2.3) * 12 * c.depth * unit;
         const blur = c.depth < 0.8 ? 2.5 : 0;
         return (
           <div
@@ -656,8 +672,9 @@ function ChaosField({ t, unit }: { t: number; unit: number }) {
             <div
               style={{
                 borderRadius: 14 * unit,
-                background: "rgba(244,247,246,0.09)",
-                border: "1px solid rgba(244,247,246,0.14)",
+                background: c.hot ? "rgba(217,99,84,0.16)" : "rgba(244,247,246,0.09)",
+                border: c.hot ? "1px solid rgba(217,99,84,0.45)" : "1px solid rgba(244,247,246,0.14)",
+                boxShadow: c.hot ? `0 0 ${34 * unit}px rgba(217,99,84,0.2)` : undefined,
                 padding: `${13 * unit}px ${18 * unit}px`,
                 display: "flex",
                 alignItems: "center",
@@ -669,7 +686,7 @@ function ChaosField({ t, unit }: { t: number; unit: number }) {
                   width: 17 * unit,
                   height: 17 * unit,
                   borderRadius: "50%",
-                  border: `2px solid rgba(244,247,246,0.4)`,
+                  border: `2px solid ${c.hot ? "rgba(217,99,84,0.7)" : "rgba(244,247,246,0.4)"}`,
                   flexShrink: 0,
                 }}
               />
@@ -690,6 +707,38 @@ function ChaosField({ t, unit }: { t: number; unit: number }) {
                 {c.badge}
               </span>
             </div>
+          </div>
+        );
+      })}
+
+      {RED_BADGES.map((b, i) => {
+        const p = popOut(seg(t, b.at, 420));
+        if (p <= 0) return null;
+        const driftX = Math.sin((t / 4600) * Math.PI * 2 + i * 2.1) * 8 * unit;
+        const driftY = Math.cos((t / 5400) * Math.PI * 2 + i * 1.3) * 10 * unit;
+        // a slow angry pulse, out of phase per badge so the field shimmers red
+        const pulse = 1 + 0.05 * Math.sin((t / 900) * Math.PI * 2 + i * 1.9);
+        return (
+          <div
+            key={i}
+            aria-hidden
+            style={{
+              position: "absolute",
+              top: b.top,
+              left: b.left,
+              width: b.size * unit,
+              height: b.size * unit,
+              borderRadius: "50%",
+              background: "var(--color-clay)",
+              display: "grid",
+              placeItems: "center",
+              transform: `translate3d(${driftX}px, ${driftY}px, 0) scale(${p * pulse})`,
+              boxShadow: `0 0 ${26 * unit}px rgba(217,99,84,0.45)`,
+            }}
+          >
+            <span style={{ fontSize: b.size * 0.42 * unit, fontWeight: 800, color: "#fff", letterSpacing: "-0.02em" }}>
+              {b.text}
+            </span>
           </div>
         );
       })}
@@ -1100,7 +1149,7 @@ export function VideoLaunchFilmV2() {
   const slabSize = (portrait ? 100 : 122) * unit;
   const mockScale = (portrait ? stage.w * 0.78 : stage.w * 0.3) / CARD_W;
 
-  const markP = quintOut(seg(t, T.reveal + 100, 850));
+  const markP = quintOut(seg(t, T.reveal + 60, 600));
   const eMark = quintOut(seg(t, T.end + 250, 850));
 
   return (
@@ -1133,18 +1182,20 @@ export function VideoLaunchFilmV2() {
                 <div style={{ textAlign: "center" }}>
                   <LineIn
                     lt={t}
-                    at={1450}
+                    at={850}
                     words={[{ text: "Your day shouldn't" }]}
                     fontSize={headSize * 1.04}
                     color="var(--color-paper)"
+                    riseMs={620}
                   />
                   <div style={{ height: 8 * unit }} />
                   <LineIn
                     lt={t}
-                    at={1810}
+                    at={1150}
                     words={[{ text: "feel like " }, { text: "this.", accent: true }]}
                     fontSize={headSize * 1.04}
                     color="var(--color-paper)"
+                    riseMs={620}
                   />
                 </div>
               </div>
@@ -1184,13 +1235,14 @@ export function VideoLaunchFilmV2() {
                 }}
               >
                 <div style={{ textAlign: "center", maxWidth: portrait ? "96%" : "78%" }}>
-                  <LineIn lt={t} at={T.calm} words={[{ text: "There is a" }]} fontSize={headSize * 1.06} />
+                  <LineIn lt={t} at={T.calm} words={[{ text: "There is a" }]} fontSize={headSize * 1.06} riseMs={600} />
                   <div style={{ height: 8 * unit }} />
                   <LineIn
                     lt={t}
-                    at={T.calm + 240}
+                    at={T.calm + 180}
                     words={[{ text: "calmer way ", accent: true }, { text: "to plan." }]}
                     fontSize={headSize * 1.06}
+                    riseMs={600}
                   />
                 </div>
               </div>
@@ -1199,7 +1251,7 @@ export function VideoLaunchFilmV2() {
             {/* the held breath */}
             {t >= T.intro - 100 && t < T.reveal + 400 && (
               <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", ...exitLift(t, T.reveal - 280) }}>
-                <LineIn lt={t} at={T.intro} words={[{ text: "Introducing", accent: true }]} fontSize={headSize * 0.92} />
+                <LineIn lt={t} at={T.intro} words={[{ text: "Introducing", accent: true }]} fontSize={headSize * 0.92} riseMs={480} />
               </div>
             )}
 
@@ -1223,7 +1275,7 @@ export function VideoLaunchFilmV2() {
                         fontSize: (portrait ? 104 : 116) * unit,
                         letterSpacing: "-0.03em",
                         display: "inline-block",
-                        ...rise(t, T.reveal + 320, 780, 34),
+                        ...rise(t, T.reveal + 200, 620, 34),
                       }}
                     >
                       kairo
@@ -1235,7 +1287,7 @@ export function VideoLaunchFilmV2() {
                       fontSize: (portrait ? 40 : 36) * unit,
                       fontWeight: 500,
                       color: "var(--color-ink-soft)",
-                      ...rise(t, T.reveal + 700, 780, 26),
+                      ...rise(t, T.reveal + 480, 640, 26),
                     }}
                   >
                     A daily planner that forgives.
