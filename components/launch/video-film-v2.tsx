@@ -47,28 +47,26 @@ function popOut(x: number): number {
 
 const T = {
   chaos: 0, //         ink    drifting mess, "Your day shouldn't feel like this."
-  calm: 6200, //       paper  "There is a calmer way."
-  intro: 9300, //             "Introducing"
-  reveal: 10700, //           mark + kairo + tagline
-  dash: 14600, //             the dashboard dollies in
-  capture: 21600, //          the capture bar types, AI files two tasks
-  choose: 30200, //           the cursor stars what matters
-  plan: 37200, //             blocks land on the day's timeline
-  win: 44200, //              checks, ripples, confetti, "Day: won."
-  m1: 51400, //        sun    AI capture.
-  m2: 52400, //        ink    Fresh starts.
-  m3: 53400, //        deep   Focus timer.
-  m4: 54400, //        sky    Share with anyone.
-  offer: 55400, //     sun    Free for 7 days.
-  end: 58600, //       paper  Own your day.
+  calm: 4600, //       paper  "There is a calmer way."
+  intro: 7200, //             "Introducing"
+  reveal: 8500, //            mark + kairo + tagline
+  dash: 11800, //             the dashboard dollies in
+  capture: 16800, //          the capture bar types, AI files two tasks
+  choose: 22800, //           the cursor stars what matters
+  plan: 27800, //             blocks land on the day's timeline
+  win: 32600, //              checks, ripples, confetti, "Day: won."
+  m1: 38200, //        sun    AI capture.
+  m2: 39050, //        ink    Fresh starts.
+  m3: 39900, //        deep   Focus timer.
+  m4: 40750, //        sky    Share with anyone.
+  end: 41600, //       paper  Own your day.
 };
-export const DURATION = 64200;
+export const DURATION = 46800;
 
 /** Gentle camera swells, only where a landing deserves one. */
 const KICKS: { at: number; amp: number }[] = [
   { at: T.reveal + 350, amp: 0.014 },
-  { at: T.win + 3550, amp: 0.02 },
-  { at: T.offer + 450, amp: 0.018 },
+  { at: T.win + 2850, amp: 0.02 },
   { at: T.end + 500, amp: 0.012 },
 ];
 
@@ -708,10 +706,10 @@ function DashboardUI({ lt }: { lt: number }) {
 
 /** Scene: capture. A sentence types itself; the AI files two tasks. */
 const SENTENCE = "call the bank tomorrow at 11 and gym today at 7";
-const TYPE_START = 700;
-const TYPE_MS = 2600;
-const THINK_AT = TYPE_START + TYPE_MS + 350;
-const FILED_AT = THINK_AT + 900;
+const TYPE_START = 500;
+const TYPE_MS = 1900;
+const THINK_AT = TYPE_START + TYPE_MS + 300;
+const FILED_AT = THINK_AT + 750;
 
 function CaptureUI({ lt }: { lt: number }) {
   const typedChars = Math.floor(easeInOut(seg(lt, TYPE_START, TYPE_MS)) * SENTENCE.length);
@@ -789,9 +787,9 @@ const CHOOSE_ROWS = [
   { title: "Write the launch post", chips: [{ label: "~1h" }] },
   { title: "Book flights for Goa", chips: [{ label: "~15m" }] },
 ];
-const STAR1 = 1500; // launch post
-const SWAP1 = STAR1 + 420;
-const STAR2 = 3300; // flights
+const STAR1 = 1100; // launch post
+const SWAP1 = STAR1 + 380;
+const STAR2 = 2450; // flights
 const ROW_H = 57;
 
 function ChooseUI({ lt }: { lt: number }) {
@@ -801,13 +799,13 @@ function ChooseUI({ lt }: { lt: number }) {
   // row 1 rises to slot 0, row 0 steps down to slot 1
   const yFor = (i: number) => (i === 0 ? swap * ROW_H : i === 1 ? -swap * ROW_H : 0);
   const cursorPath: Waypoint[] = [
-    { t: 300, x: 430, y: 150 },
-    { t: 1250, x: 404, y: ROW_H + 51 },
-    { t: STAR1 + 500, x: 404, y: ROW_H + 51 },
-    { t: STAR1 + 560, x: 404, y: 51 },
-    { t: 3050, x: 404, y: 2 * ROW_H + 51 },
-    { t: STAR2 + 700, x: 404, y: 2 * ROW_H + 51 },
-    { t: STAR2 + 1300, x: 452, y: 2 * ROW_H + 130 },
+    { t: 250, x: 430, y: 150 },
+    { t: 950, x: 404, y: ROW_H + 51 },
+    { t: STAR1 + 420, x: 404, y: ROW_H + 51 },
+    { t: STAR1 + 480, x: 404, y: 51 },
+    { t: 2250, x: 404, y: 2 * ROW_H + 51 },
+    { t: STAR2 + 550, x: 404, y: 2 * ROW_H + 51 },
+    { t: STAR2 + 1050, x: 540, y: 2 * ROW_H + 60 },
   ];
   return (
     <Shell>
@@ -891,19 +889,19 @@ const WIN_ROWS = [
   { title: "Write the launch post", chips: [{ label: "~1h" }] },
   { title: "Gym session", chips: [{ label: "~40m" }] },
 ];
-const CHECKS = [900, 1900, 2900];
-const WON_AT = 3550;
+const CHECKS = [700, 1450, 2200];
+const WON_AT = 2850;
 
 function WinUI({ lt }: { lt: number }) {
   const cursorPath: Waypoint[] = [
-    { t: 250, x: 440, y: 30 },
-    { t: 800, x: 36, y: 30 },
-    { t: 1300, x: 36, y: 30 + ROW_H },
-    { t: 1800, x: 36, y: 30 + ROW_H },
-    { t: 2300, x: 36, y: 30 + 2 * ROW_H },
-    { t: 2800, x: 36, y: 30 + 2 * ROW_H },
+    { t: 200, x: 440, y: 30 },
+    { t: 620, x: 36, y: 30 },
+    { t: 1050, x: 36, y: 30 + ROW_H },
+    { t: 1400, x: 36, y: 30 + ROW_H },
+    { t: 1800, x: 36, y: 30 + 2 * ROW_H },
+    { t: 2150, x: 36, y: 30 + 2 * ROW_H },
     // done with its work, the hand leaves the frame before the celebration
-    { t: 3500, x: 540, y: 30 + 2 * ROW_H },
+    { t: 2800, x: 540, y: 30 + 2 * ROW_H },
   ];
   const wonP = popOut(seg(lt, WON_AT, 650));
   return (
@@ -1000,7 +998,7 @@ const MONTAGE = [
   { start: T.m1, dur: T.m2 - T.m1, bg: "var(--color-sun)", text: "AI capture." },
   { start: T.m2, dur: T.m3 - T.m2, bg: "var(--color-ink)", text: "Fresh starts." },
   { start: T.m3, dur: T.m4 - T.m3, bg: "var(--color-sun-deep)", text: "Focus timer." },
-  { start: T.m4, dur: T.offer - T.m4, bg: "#4b6cc9", text: "Share with anyone." },
+  { start: T.m4, dur: T.end - T.m4, bg: "#4b6cc9", text: "Share with anyone." },
 ];
 
 /* ------------------------------------------------------------------- film */
@@ -1090,7 +1088,7 @@ export function VideoLaunchFilmV2() {
                 <div style={{ textAlign: "center" }}>
                   <LineIn
                     lt={t}
-                    at={1900}
+                    at={1450}
                     words={[{ text: "Your day shouldn't" }]}
                     fontSize={headSize * 1.04}
                     color="var(--color-paper)"
@@ -1098,7 +1096,7 @@ export function VideoLaunchFilmV2() {
                   <div style={{ height: 8 * unit }} />
                   <LineIn
                     lt={t}
-                    at={2260}
+                    at={1810}
                     words={[{ text: "feel like " }, { text: "this.", accent: true }]}
                     fontSize={headSize * 1.04}
                     color="var(--color-paper)"
@@ -1253,33 +1251,7 @@ export function VideoLaunchFilmV2() {
           );
         })}
 
-        {/* --------------------------------------------- 4 · offer (teal) */}
-        {t >= T.offer - 100 && t < T.end + 700 && (
-          <Slab t={t} at={T.offer} bg="var(--color-sun)" from="circle" wipeMs={800}>
-            <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", padding: "0 6%" }}>
-              <div style={{ textAlign: "center", color: "#fff", transform: `scale(${1 + kick * 1.3})` }}>
-                <div
-                  className="font-display"
-                  style={{
-                    fontSize: (portrait ? 122 : 142) * unit,
-                    fontStyle: "italic",
-                    fontWeight: 500,
-                    letterSpacing: "-0.025em",
-                    lineHeight: 1,
-                    ...rise(t, T.offer + 300, 820, 54),
-                  }}
-                >
-                  Free for 7 days.
-                </div>
-                <p style={{ marginTop: 26 * unit, fontSize: (portrait ? 42 : 40) * unit, fontWeight: 600, ...rise(t, T.offer + 900, 780, 24) }}>
-                  Everything unlocked. No card needed.
-                </p>
-              </div>
-            </div>
-          </Slab>
-        )}
-
-        {/* ----------------------------------------------- 5 · end (paper) */}
+        {/* ----------------------------------------------- 4 · end (paper) */}
         {t >= T.end - 100 && (
           <Slab t={t} at={T.end} bg="var(--color-paper)" from="circle" wipeMs={800}>
             <RingField t={t} cx={50} cy={portrait ? 44 : 46} unit={unit} />
