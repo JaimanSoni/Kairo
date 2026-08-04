@@ -429,7 +429,8 @@ function RowUI({
   highlight = 0,
 }: {
   title: string;
-  chips: { label: string; tone?: "neutral" | "sun" | "sky" | "lilac" }[];
+  /** `p` makes a chip pop in on cue; its width is reserved from the start. */
+  chips: { label: string; tone?: "neutral" | "sun" | "sky" | "lilac"; p?: number }[];
   done?: boolean;
   /** 0..1 pop of the check filling in. */
   checkP?: number;
@@ -513,7 +514,15 @@ function RowUI({
       )}
       <span style={{ display: "flex", gap: 6, flexShrink: 0 }}>
         {chips.map((c, i) => (
-          <ChipUI key={i} tone={c.tone}>
+          <ChipUI
+            key={i}
+            tone={c.tone}
+            style={
+              c.p !== undefined
+                ? { opacity: clamp01(c.p * 2), transform: `scale(${popOut(c.p)})` }
+                : undefined
+            }
+          >
             {c.label}
           </ChipUI>
         ))}
@@ -805,7 +814,8 @@ function ChooseUI({ lt }: { lt: number }) {
     { t: STAR1 + 480, x: 404, y: 51 },
     { t: 2250, x: 404, y: 2 * ROW_H + 51 },
     { t: STAR2 + 550, x: 404, y: 2 * ROW_H + 51 },
-    { t: STAR2 + 1050, x: 540, y: 2 * ROW_H + 60 },
+    // exits through the right edge at row height, never under the card
+    { t: STAR2 + 1000, x: 560, y: 2 * ROW_H + 30 },
   ];
   return (
     <Shell>
@@ -829,55 +839,65 @@ function ChooseUI({ lt }: { lt: number }) {
   );
 }
 
-/** Scene: plan. Blocks glide onto the day's timeline; a ripple on landing. */
-const PLAN_BLOCKS = [
-  { title: "Deep work: the deck", time: "9:00", span: 2, at: 700, tone: "rgba(12,147,132,0.14)", edge: "var(--color-sun)" },
-  { title: "Lunch + walk", time: "12:30", span: 1, at: 1250, tone: "rgba(122,162,247,0.14)", edge: "#7aa2f7" },
-  { title: "Review + replies", time: "2:00", span: 1.4, at: 1800, tone: "rgba(178,148,235,0.15)", edge: "#b294eb" },
+/**
+ * Scene: plan, in the product's own language. The rows are already there;
+ * planning is times landing on them one by one while the Today header's
+ * capacity line counts up, and the day answers with "fits ✓" — the exact
+ * header every Kairo user reads each morning.
+ */
+const PLAN_ROWS = [
+  { title: "Deep work on the deck", est: "~2h", time: "9 AM", rowAt: 250, timeAt: 1450 },
+  { title: "Review the handoff", est: "~45m", time: "2 PM", rowAt: 430, timeAt: 1950 },
+  { title: "Evening run, 5k", est: "~40m", time: "7 PM", rowAt: 610, timeAt: 2450 },
 ];
+const HOLDS = [
+  { at: 1450, text: "holds ~2h" },
+  { at: 1950, text: "holds ~2h 45m" },
+  { at: 2450, text: "holds ~3h 25m" },
+];
+const FITS_AT = 3050;
 
 function PlanUI({ lt }: { lt: number }) {
-  const HOURS = ["9 AM", "11 AM", "1 PM", "3 PM", "5 PM"];
+  const holds = [...HOLDS].reverse().find((h) => lt >= h.at);
+  const fitsP = popOut(seg(lt, FITS_AT, 500));
   return (
     <Shell>
-      <div style={{ display: "flex", gap: 14 }}>
-        <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", paddingTop: 4, paddingBottom: 4 }}>
-          {HOURS.map((h, i) => (
-            <span key={i} style={{ fontSize: 11, fontWeight: 600, color: "rgba(28,38,36,0.4)", ...rise(lt, 150 + i * 70, 600, 10) }}>
-              {h}
-            </span>
-          ))}
-        </div>
-        <div style={{ flex: 1, position: "relative", borderLeft: "1.5px solid rgba(28,38,36,0.09)", paddingLeft: 14, minHeight: 250 }}>
-          {PLAN_BLOCKS.map((b, i) => {
-            const p = quintOut(seg(lt, b.at, 800));
-            const top = i === 0 ? 2 : i === 1 ? 106 : 158;
-            return (
-              <div
-                key={i}
-                style={{
-                  position: "absolute",
-                  left: 14,
-                  right: 0,
-                  top,
-                  height: b.span * 46,
-                  borderRadius: 13,
-                  background: b.tone,
-                  border: "1px solid rgba(255,255,255,0.75)",
-                  backdropFilter: "blur(10px)",
-                  WebkitBackdropFilter: "blur(10px)",
-                  borderLeft: `3.5px solid ${b.edge}`,
-                  padding: "9px 12px",
-                  opacity: easeOut(seg(lt, b.at, 400)),
-                  transform: `translateX(${lerp(70, 0, p)}px)`,
-                }}
-              >
-                <div style={{ fontSize: 13.5, fontWeight: 650, color: "var(--color-ink)" }}>{b.title}</div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(28,38,36,0.45)", marginTop: 2 }}>{b.time}</div>
-              </div>
-            );
-          })}
-        </div>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", ...rise(lt, 100, 650, 16) }}>
+        <span className="font-display" style={{ fontSize: 30, letterSpacing: "-0.02em" }}>
+          Today
+        </span>
+        <span style={{ fontSize: 12.5, fontWeight: 600, color: "rgba(28,38,36,0.45)" }}>Monday, 3 Aug</span>
+      </div>
+      <div style={{ marginTop: 4, minHeight: 18, fontSize: 12, fontWeight: 600, color: "rgba(28,38,36,0.45)", display: "flex", alignItems: "center", gap: 6 }}>
+        {holds && <span key={holds.at}>{holds.text}</span>}
+        {lt >= FITS_AT && (
+          <span
+            style={{
+              color: "var(--color-sun-deep)",
+              display: "inline-block",
+              opacity: clamp01(fitsP * 2),
+              transform: `scale(${fitsP})`,
+            }}
+          >
+            · fits ✓
+          </span>
+        )}
+      </div>
+      <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 9, position: "relative" }}>
+        {PLAN_ROWS.map((r, i) => {
+          const p = quintOut(seg(lt, r.rowAt, 750));
+          return (
+            <div key={i} style={{ opacity: easeOut(seg(lt, r.rowAt, 380)), transform: `translateY(${lerp(24, 0, p)}px)` }}>
+              <RowUI
+                title={r.title}
+                chips={[
+                  { label: r.time, tone: "sun", p: seg(lt, r.timeAt, 450) },
+                  { label: r.est },
+                ]}
+              />
+            </div>
+          );
+        })}
       </div>
     </Shell>
   );
@@ -949,6 +969,8 @@ type Feature = {
   tilt: number;
   head: Word[];
   sub: string;
+  /** Optional shot choreography: replaces the default dolly-in. */
+  zoom?: (lt: number) => { scale: number; origin: string };
 };
 
 const FEATURES: Feature[] = [
@@ -959,6 +981,8 @@ const FEATURES: Feature[] = [
     tilt: -1.2,
     head: [{ text: "Your whole day, " }, { text: "on one page.", accent: true }],
     sub: "A short list you chose. Never the endless backlog.",
+    // opens tight on the header, pulls back to reveal the day
+    zoom: (lt) => ({ scale: lerp(1.2, 1, quintOut(seg(lt, 200, 1500))), origin: "50% 26%" }),
   },
   {
     start: T.capture,
@@ -982,7 +1006,9 @@ const FEATURES: Feature[] = [
     ui: (lt) => <PlanUI lt={lt} />,
     tilt: 1.2,
     head: [{ text: "Plan " }, { text: "your day.", accent: true }],
-    sub: "Times and estimates keep the plan honest.",
+    sub: "Give each thing a time. The day says if it fits.",
+    // pushes in on the capacity line for the "fits" verdict
+    zoom: (lt) => ({ scale: 1 + 0.13 * quintOut(seg(lt, 2900, 850)), origin: "50% 30%" }),
   },
   {
     start: T.win,
@@ -1193,8 +1219,14 @@ export function VideoLaunchFilmV2() {
               if (t < f.start - 100 || t > f.start + f.dur + 400) return null;
               const lt = t - f.start;
               const cardP = quintOut(seg(lt, 320, 950));
-              // each shot begins a breath closer and settles back: the dolly
-              const dolly = lerp(1.05, 1, quintOut(seg(lt, 0, 1250)));
+              // each shot begins a breath closer and settles back: the dolly.
+              // a scene with its own zoom choreography takes the wheel instead.
+              const shot = f.zoom
+                ? f.zoom(lt)
+                : { scale: lerp(1.05, 1, quintOut(seg(lt, 0, 1250))), origin: "center 48%" };
+              // merged, not spread: the exit's translate must compose with the
+              // shot's zoom, or a zoomed scene would snap flat as it leaves
+              const exit = exitLift(lt, f.dur - 280);
               return (
                 <div
                   key={i}
@@ -1207,8 +1239,9 @@ export function VideoLaunchFilmV2() {
                     justifyContent: "center",
                     gap: portrait ? 40 * unit : 34 * unit,
                     padding: portrait ? "0 5%" : "0 8%",
-                    transform: `scale(${dolly})`,
-                    ...exitLift(lt, f.dur - 280),
+                    opacity: exit.opacity,
+                    transform: `${exit.transform ?? ""} scale(${shot.scale})`,
+                    transformOrigin: shot.origin,
                   }}
                 >
                   <div style={{ textAlign: "center" }}>
