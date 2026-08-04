@@ -243,10 +243,24 @@ function GradientPools({ t, unit }: { t: number; unit: number }) {
 }
 
 /** The neumorphic ring field from v1, for the reveal and the close. */
-function RingField({ t, cx, cy, unit }: { t: number; cx: number; cy: number; unit: number }) {
+function RingField({
+  t,
+  cx,
+  cy,
+  unit,
+  opacity = 1,
+}: {
+  t: number;
+  cx: number;
+  cy: number;
+  unit: number;
+  /** Faded by the caller: a background that pops in reads as a glitch. */
+  opacity?: number;
+}) {
   const RINGS = [1560, 1160, 800, 470];
+  if (opacity <= 0) return null;
   return (
-    <div aria-hidden style={{ position: "absolute", left: `${cx}%`, top: `${cy}%`, width: 0, height: 0 }}>
+    <div aria-hidden style={{ position: "absolute", left: `${cx}%`, top: `${cy}%`, width: 0, height: 0, opacity }}>
       {RINGS.map((d, i) => {
         const breathe = 1 + 0.016 * Math.sin((t / 7400) * Math.PI * 2 + i * 1.1);
         const size = d * unit;
@@ -1142,8 +1156,19 @@ export function VideoLaunchFilmV2() {
         {t >= T.calm - 600 && t < T.m1 + 700 && (
           <Slab t={t} at={T.calm - 560} bg="var(--color-paper)" from="right">
             <GradientPools t={t} unit={unit} />
-            {t >= T.reveal - 900 && t < T.dash + 900 && (
-              <RingField t={t} cx={portrait ? 50 : 58} cy={portrait ? 42 : 46} unit={unit} />
+            {t >= T.reveal - 1200 && t < T.dash + 1000 && (
+              <RingField
+                t={t}
+                cx={portrait ? 50 : 58}
+                cy={portrait ? 42 : 46}
+                unit={unit}
+                // breathes in through the Introducing hold, breathes out as
+                // the dashboard arrives — never a hard cut in the background
+                opacity={
+                  easeInOut(seg(t, T.reveal - 1200, 1100)) *
+                  (1 - easeInOut(seg(t, T.dash + 100, 800)))
+                }
+              />
             )}
 
             {/* the calmer way */}
