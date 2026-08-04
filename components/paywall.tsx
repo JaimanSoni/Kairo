@@ -18,6 +18,45 @@ declare global {
   }
 }
 
+/**
+ * Makes sure Razorpay Checkout is loaded, injecting the script on demand.
+ *
+ * The pages that sell preload it with a <Script> tag, but any surface that
+ * forgets — the billing page did — used to throw "check your connection" at
+ * someone whose connection was fine. Money buttons don't get to depend on a
+ * sibling remembering a script tag.
+ */
+export function ensureCheckout(timeoutMs = 8000): Promise<boolean> {
+  if (typeof window === "undefined") return Promise.resolve(false);
+  if (window.Razorpay) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    let script = document.querySelector<HTMLScriptElement>(`script[src="${CHECKOUT_SRC}"]`);
+    if (!script) {
+      script = document.createElement("script");
+      script.src = CHECKOUT_SRC;
+      script.async = true;
+      document.head.appendChild(script);
+    }
+    const timer = setTimeout(() => {
+      clearInterval(poll);
+      resolve(Boolean(window.Razorpay));
+    }, timeoutMs);
+    // poll rather than onload: the tag may already exist in any load state
+    const poll = setInterval(() => {
+      if (window.Razorpay) {
+        clearTimeout(timer);
+        clearInterval(poll);
+        resolve(true);
+      }
+    }, 100);
+    script.addEventListener("error", () => {
+      clearTimeout(timer);
+      clearInterval(poll);
+      resolve(false);
+    });
+  });
+}
+
 type Mode = "subscription" | "one-off";
 
 /**
@@ -59,7 +98,9 @@ export function useCheckout(user: { name: string; email: string }, mode: Mode) {
       if (!res.ok || !data.keyId || (sub ? !data.subscriptionId : !data.orderId)) {
         throw new Error(data.error ?? "Could not start the payment");
       }
-      if (!window.Razorpay) throw new Error("Checkout didn't load, check your connection");
+      if (!(await ensureCheckout()) || !window.Razorpay) {
+        throw new Error("Checkout didn't load, check your connection");
+      }
 
       const rzp = new window.Razorpay({
         key: data.keyId,

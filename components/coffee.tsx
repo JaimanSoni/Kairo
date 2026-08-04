@@ -48,7 +48,10 @@ function CoffeeModal({ onClose, earned }: { onClose: () => void; earned?: boolea
       if (!res.ok || !data.orderId || !data.keyId) {
         throw new Error(data.error ?? "Couldn't start the payment");
       }
-      if (!window.Razorpay) throw new Error("Checkout didn't load, check your connection");
+      const { ensureCheckout } = await import("./paywall");
+      if (!(await ensureCheckout()) || !window.Razorpay) {
+        throw new Error("Checkout didn't load, check your connection");
+      }
 
       const rzp = new window.Razorpay({
         key: data.keyId,

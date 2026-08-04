@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Script from "next/script";
 import { useCheckout } from "./paywall";
+import { CHECKOUT_SRC } from "./plan-cards";
 
 /**
  * Pay / cancel, for the billing page.
@@ -44,6 +46,8 @@ export function BillingActions({
 
   return (
     <div className="mt-5 flex flex-wrap items-center gap-3">
+      {/* preloaded so checkout opens instantly; ensureCheckout is the net */}
+      <Script src={CHECKOUT_SRC} strategy="afterInteractive" />
       <button
         onClick={() => start(planKey)}
         disabled={Boolean(busy)}
