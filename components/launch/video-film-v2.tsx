@@ -316,6 +316,9 @@ function Cursor({
   const inP = quintOut(seg(lt, path[0].t - 200, 500));
   return (
     <>
+      {/* z-index 10: the rows carry their own z for the reorder shuffle, and
+          a hand that slips underneath the thing it is clicking breaks the
+          illusion completely */}
       <div
         aria-hidden
         style={{
@@ -329,6 +332,7 @@ function Cursor({
           border: "1px solid rgba(12,147,132,0.25)",
           opacity: inP,
           transform: `scale(${1 + press * 0.35})`,
+          zIndex: 10,
         }}
       />
       <div
@@ -345,6 +349,7 @@ function Cursor({
           boxShadow: "0 4px 14px rgba(28,38,36,0.35)",
           opacity: inP,
           transform: `scale(${1 - press * 0.25})`,
+          zIndex: 10,
         }}
       />
     </>
