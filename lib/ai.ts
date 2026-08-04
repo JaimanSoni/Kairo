@@ -12,12 +12,14 @@ export type AiParsed = {
   subtasks: string[];
 };
 
+const OLLAMA_URL = "https://ollama.com/api/chat";
 const GEMINI_URL = (model: string) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-// Longer than the capture reveal's own 9s budget on purpose: a slow answer
-// stops narrating but still files the tasks when it lands. Only a dead
-// answer helps nobody.
-const TIMEOUT_MS = 15000;
+// Gemma answers first on a short leash; Gemini only runs if Gemma failed, so
+// the combined worst case still lands near the reveal's 12 second budget,
+// and a slow answer that misses it still files its tasks late.
+const OLLAMA_TIMEOUT_MS = 8000;
+const GEMINI_TIMEOUT_MS = 10000;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 const MAX_TASKS = 5;
@@ -91,6 +93,7 @@ FIELD RULES (each task)
 title: clean sentence-case imperative. Strip filler ("umm", "I have to", "remind me to", "I want to") but keep every meaningful detail.
 plannedFor: the day the user intends to DO the task.
 plannedTime: 24h clock, only when the user says a time ("at 6", "6 pm", "in the evening"). Word times: morning=09:00, noon=12:00, afternoon=15:00, evening=19:00, night=21:00. "at 6" with no am/pm: pick the next sensible occurrence given the current time.
+A day-part word WITHOUT a day ("in the morning", "in the evening") also sets plannedFor: today if that part of the day is still ahead of the current time, otherwise tomorrow.
 dueDate: ONLY a hard deadline ("by", "before", "due", "deadline"). A deadline alone does not set plannedFor.
 estimateMin: any stated or implied duration: "within 30 mins"=30, "half an hour"=30, "couple of hours"=120, "quick call"=10. Otherwise null.
 listName: pick the ONE list whose MEANING fits (fruits or supermarket goes to a groceries-style list, gym or run to a fitness-style list, office work to a work-style list). Copy the name EXACTLY from: [${listNames}]. If none fits, null. NEVER invent a list.
@@ -105,6 +108,9 @@ EXAMPLES (dates resolved with the calendar above; lists here are illustrative, a
 "call the bank tomorrow at 11 and gym today at 7"
 -> {"tasks":[{"title":"Call the bank","plannedFor":"${fmt(plus(1))}","plannedTime":"11:00","dueDate":null,"estimateMin":null,"listName":null,"spotlight":false,"subtasks":[]},{"title":"Gym session","plannedFor":"${today}","plannedTime":"19:00","dueDate":null,"estimateMin":null,"listName":"Fitness","spotlight":false,"subtasks":[]}]}
 (two independent actions with their own times)
+"call mom in the morning and go to college tomorrow"
+-> {"tasks":[{"title":"Call mom","plannedFor":"${time < "09:00" ? today : fmt(plus(1))}","plannedTime":"09:00","dueDate":null,"estimateMin":null,"listName":null,"spotlight":false,"subtasks":[]},{"title":"Go to college","plannedFor":"${fmt(plus(1))}","plannedTime":null,"dueDate":null,"estimateMin":null,"listName":null,"spotlight":false,"subtasks":[]}]}
+(two tasks; "in the morning" with no day means the next morning from right now)
 "umm I have to finish the client report we have to complete it within 30 mins also book flights for goa"
 -> {"tasks":[{"title":"Finish the client report","plannedFor":null,"plannedTime":null,"dueDate":null,"estimateMin":30,"listName":"Work","spotlight":false,"subtasks":[]},{"title":"Book flights for Goa","plannedFor":null,"plannedTime":null,"dueDate":null,"estimateMin":null,"listName":null,"spotlight":false,"subtasks":[]}]}
 "submit the tax file by friday"
@@ -166,41 +172,65 @@ function sanitizeOne(raw: Record<string, unknown>, lists: List[]): AiParsed | nu
   };
 }
 
+/** Gemma over Ollama cloud: the workhorse, no meaningful rate limits. */
+async function callOllama(system: string, user: string): Promise<string | null> {
+  const apiKey = process.env.OLLAMA_API_KEY;
+  if (!apiKey) return null;
+  const model = process.env.OLLAMA_MODEL || "gemma4:31b";
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), OLLAMA_TIMEOUT_MS);
+  try {
+    const res = await fetch(OLLAMA_URL, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model,
+        stream: false,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+      }),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      console.error("[ai] ollama answered", res.status);
+      return null;
+    }
+    const data: { message?: { content?: string } } = await res.json();
+    return data.message?.content ?? null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /**
- * Asks Gemini to parse capture text into one or more tasks.
- * Returns null on ANY failure (no key, timeout, bad response) — callers must
- * fall back to the local token parser.
+ * Gemini, as the understudy when Gemma is down. No retries on 429 or 503:
+ * on a 10-requests-per-minute free tier, retrying a rate limit only spends
+ * the next caller's request making this caller's problem worse.
  */
-export async function aiParseTasks(
-  text: string,
-  today: string,
-  time: string,
-  lists: List[]
-): Promise<AiParsed[] | null> {
+async function callGemini(system: string, user: string): Promise<string | null> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || !text.trim()) return null;
+  if (!apiKey) return null;
   const model = process.env.GEMINI_MODEL || "gemini-3.5-flash";
 
-  const call = async (withThinkingOff: boolean) => {
+  const attempt = async (withThinkingOff: boolean) => {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    const timer = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
     try {
       return await fetch(GEMINI_URL(model), {
         method: "POST",
-        headers: {
-          "x-goog-api-key": apiKey,
-          "Content-Type": "application/json",
-        },
+        headers: { "x-goog-api-key": apiKey, "Content-Type": "application/json" },
         body: JSON.stringify({
-          system_instruction: { parts: [{ text: systemPrompt(today, time, lists) }] },
-          contents: [{ role: "user", parts: [{ text: text.slice(0, 2000) }] }],
+          system_instruction: { parts: [{ text: system }] },
+          contents: [{ role: "user", parts: [{ text: user }] }],
           generationConfig: {
-            // JSON out, and no creative temperature: parsing is transcription
             responseMimeType: "application/json",
             temperature: 0.1,
-            // thinking would be wasted here and costs seconds of latency;
-            // capture races a 9 second budget before the client falls back.
-            // Some variants (flash-lite) reject the field, hence the retry.
+            // thinking is wasted latency here; some variants reject the
+            // knob, hence the schema-retry below
             ...(withThinkingOff ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
           },
         }),
@@ -212,37 +242,48 @@ export async function aiParseTasks(
   };
 
   try {
-    let res = await call(true);
-    if (res.status === 400) res = await call(false);
-    // free-tier congestion answers 503, and bursts answer 429; both are
-    // usually gone a moment later, so one short-fused retry is worth it
-    if (res.status === 503 || res.status === 429) {
-      await new Promise((r) => setTimeout(r, 700));
-      res = await call(true);
-      if (res.status === 400) res = await call(false);
-    }
+    let res = await attempt(true);
+    if (res.status === 400) res = await attempt(false);
     if (!res.ok) {
-      console.error("[ai] gemini answered", res.status, (await res.text()).slice(0, 200));
+      console.error("[ai] gemini answered", res.status);
       return null;
     }
-
-    const data: {
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
-    } = await res.json();
-    const content = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
-    const raw = extractJson(content);
-    if (!raw) return null;
-
-    // accept both the asked-for {tasks:[...]} and a bare single object
-    const items = Array.isArray(raw.tasks) ? raw.tasks : [raw];
-    const tasks = items
-      .filter((x): x is Record<string, unknown> => typeof x === "object" && x !== null)
-      .slice(0, MAX_TASKS)
-      .map((x) => sanitizeOne(x, lists))
-      .filter((x): x is AiParsed => x !== null);
-
-    return tasks.length > 0 ? tasks : null;
+    const data: { candidates?: { content?: { parts?: { text?: string }[] } }[] } =
+      await res.json();
+    return data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? null;
   } catch {
     return null;
   }
+}
+
+/**
+ * Parses capture text into one or more tasks: Gemma first, Gemini as the
+ * fallback. Returns null on ANY failure — callers must fall back to the
+ * local token parser.
+ */
+export async function aiParseTasks(
+  text: string,
+  today: string,
+  time: string,
+  lists: List[]
+): Promise<AiParsed[] | null> {
+  if (!text.trim()) return null;
+  const system = systemPrompt(today, time, lists);
+  const user = text.slice(0, 2000);
+
+  const content = (await callOllama(system, user)) ?? (await callGemini(system, user));
+  if (!content) return null;
+
+  const raw = extractJson(content);
+  if (!raw) return null;
+
+  // accept both the asked-for {tasks:[...]} and a bare single object
+  const items = Array.isArray(raw.tasks) ? raw.tasks : [raw];
+  const tasks = items
+    .filter((x): x is Record<string, unknown> => typeof x === "object" && x !== null)
+    .slice(0, MAX_TASKS)
+    .map((x) => sanitizeOne(x, lists))
+    .filter((x): x is AiParsed => x !== null);
+
+  return tasks.length > 0 ? tasks : null;
 }
