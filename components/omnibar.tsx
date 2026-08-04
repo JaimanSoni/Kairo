@@ -63,6 +63,7 @@ const THINKING_LINES = [
   "Filling in days and times…",
   "Choosing the right lists…",
   "Polishing the details…",
+  "Taking a moment, still on it…",
 ];
 
 export function Omnibar() {
@@ -205,8 +206,10 @@ export function Omnibar() {
     setPhase("thinking");
     setAiFell(false);
     const parsed = aiParse(raw);
+    // must outlast the server's Ollama leash (15s) plus overhead, or the
+    // client gives up on answers that were still coming
     const timeout = new Promise<AiParsed[] | null>((r) =>
-      setTimeout(() => r(null), 12000)
+      setTimeout(() => r(null), 20000)
     );
     void (async () => {
       const started = Date.now();

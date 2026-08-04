@@ -13,9 +13,10 @@ export type AiParsed = {
 };
 
 const OLLAMA_URL = "https://ollama.com/api/chat";
-// a short leash: one answer plus one fast-failure retry must both fit
-// inside the reveal's 12 second budget
-const OLLAMA_TIMEOUT_MS = 8000;
+// Vercel-to-Ollama round trips measure 2-4x slower than a home connection's,
+// so the leash is set for the datacenter path; the omnibar's reveal budget
+// (20s) must stay above this plus the fast-failure retry.
+const OLLAMA_TIMEOUT_MS = 15000;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 const MAX_TASKS = 5;
@@ -188,6 +189,7 @@ async function callOllama(system: string, user: string): Promise<string | null> 
   const model = process.env.OLLAMA_MODEL || "gemma4:31b";
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), OLLAMA_TIMEOUT_MS);
+  const t0 = Date.now();
   try {
     const res = await fetch(OLLAMA_URL, {
       method: "POST",
@@ -206,12 +208,14 @@ async function callOllama(system: string, user: string): Promise<string | null> 
       signal: controller.signal,
     });
     if (!res.ok) {
-      console.error("[ai] ollama answered", res.status);
+      console.error("[ai] ollama answered", res.status, "in", Date.now() - t0, "ms");
       return null;
     }
     const data: { message?: { content?: string } } = await res.json();
+    console.log("[ai] ollama ok in", Date.now() - t0, "ms");
     return data.message?.content ?? null;
   } catch {
+    console.error("[ai] ollama timed out or failed after", Date.now() - t0, "ms");
     return null;
   } finally {
     clearTimeout(timer);
