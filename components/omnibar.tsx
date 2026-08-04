@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Task } from "@/lib/types";
 import { parseQuickAdd, type ParsedInput } from "@/lib/nlp";
 import { friendlyDay, fmtMinutes, fmtTime12 } from "@/lib/dates";
-import { repeatLabel } from "@/lib/repeat";
+import { repeatLabel, type Repeat } from "@/lib/repeat";
 import { useApp, visibleLists } from "./store";
 import { track } from "@/lib/analytics-client";
 import { Icon3d } from "./img3d";
@@ -45,6 +45,8 @@ type AiParsed = {
   listName: string | null;
   spotlight: boolean;
   subtasks: string[];
+  /** Never set by AI — carried over from the local parse ("every monday"). */
+  repeat?: Repeat | null;
 };
 
 /**
@@ -64,12 +66,16 @@ const THINKING_LINES = [
 ];
 
 export function Omnibar() {
-  const { state, addTask, getTask, updateTask, setOmnibar, setEditing, showToast } = useApp();
+  const { state, addTask, getTask, updateTask, setOmnibar, showToast } = useApp();
   const [text, setText] = useState("");
   const [listening, setListening] = useState(false);
   const [phase, setPhase] = useState<Phase>("input");
   const [thinkLine, setThinkLine] = useState(0);
-  const [result, setResult] = useState<{ tasks: Task[]; notes: string[] } | null>(null);
+  const [result, setResult] = useState<AiParsed[] | null>(null);
+  const [filing, setFiling] = useState(false);
+  // the real reentry guard: state commits a render late, and a double-click's
+  // second click arrives inside that gap — a ref flips synchronously
+  const filingRef = useRef(false);
   const recRef = useRef<SpeechRec | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const speechSupported = useMemo(() => getSpeechRecognition() !== null, []);
@@ -120,132 +126,26 @@ export function Omnibar() {
   };
 
   /**
-   * After instant capture, let AI tidy details. Any failure = keep local
-   * parse. Resolves with what it changed, so the capture flow can show the
-   * outcome in place; `toast` announces it instead, for rapid-entry captures
-   * where the panel has already moved on.
+   * Ask the AI to parse raw text into structured tasks. Returns the parsed
+   * results (no side effects on the store). Falls back to local parse on any
+   * failure — the caller decides what to file.
    */
-  const refine = (
-    raw: string,
-    local: ParsedInput,
-    idPromise: Promise<string | null>,
-    toast: boolean
-  ): Promise<{ notes: string[]; extraIds: string[] }> => {
-    const today = state.today;
+  const aiParse = async (raw: string): Promise<AiParsed[]> => {
     const now = new Date();
     const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-    const nothing = { notes: [] as string[], extraIds: [] as string[] };
-    return fetch("/api/parse", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: raw, today, time }),
-    })
-      .then(async (res) => {
-        if (!res.ok) return nothing; // AI unavailable → local parse stands
-        const { parsed: all }: { parsed: AiParsed[] } = await res.json();
-        if (!Array.isArray(all) || all.length === 0) return nothing;
-
-        // The first parsed task refines the one already captured; the rest
-        // are NEW tasks the AI found in the same breath ("call the bank and
-        // hit the gym" is two things), each filed with its own details.
-        const [ai, ...extras] = all;
-        const extraIdPromises = extras.map((x) => {
-          const created = addTask({
-            title: x.title,
-            plannedFor: x.plannedFor,
-            plannedTime: x.plannedTime,
-            dueDate: x.dueDate,
-            estimateMin: x.estimateMin,
-            listId: x.listId,
-            listName: x.listName,
-            spotlight: false,
-            repeat: null,
-          });
-          if (x.subtasks.length > 0) {
-            void created.then((newId) => {
-              if (!newId) return;
-              updateTask(newId, {
-                subtasks: x.subtasks.map((t) => ({ id: crypto.randomUUID(), title: t, done: false })),
-              });
-            });
-          }
-          return created;
-        });
-
-        const id = await idPromise;
-        if (!id) return nothing;
-        const current = getTask(id);
-        if (!current || current.status === "done") return nothing;
-
-        // Apply an AI value only when it adds something and the user hasn't
-        // already changed that field since capture.
-        const patch: Partial<Task> = {};
-        const notes: string[] = [];
-        const untouched = <K extends keyof Task>(k: K, localVal: Task[K]) =>
-          current[k] === localVal;
-
-        if (ai.title && ai.title !== current.title && untouched("title", local.title)) {
-          patch.title = ai.title;
-        }
-        if (ai.plannedFor && ai.plannedFor !== current.plannedFor && untouched("plannedFor", local.plannedFor)) {
-          patch.plannedFor = ai.plannedFor;
-          if (current.status === "inbox") patch.status = "planned";
-          notes.push(friendlyDay(ai.plannedFor, today));
-        }
-        if (
-          ai.plannedTime &&
-          ai.plannedTime !== current.plannedTime &&
-          untouched("plannedTime", local.plannedTime) &&
-          (patch.plannedFor || current.plannedFor)
-        ) {
-          patch.plannedTime = ai.plannedTime;
-          notes.push(fmtTime12(ai.plannedTime));
-        }
-        if (ai.dueDate && ai.dueDate !== current.dueDate && untouched("dueDate", local.dueDate)) {
-          patch.dueDate = ai.dueDate;
-          notes.push(`due ${friendlyDay(ai.dueDate, today)}`);
-        }
-        if (ai.estimateMin && ai.estimateMin !== current.estimateMin && untouched("estimateMin", local.estimateMin)) {
-          patch.estimateMin = ai.estimateMin;
-          notes.push(`~${fmtMinutes(ai.estimateMin)}`);
-        }
-        if (ai.listId && ai.listId !== current.listId && untouched("listId", local.listId)) {
-          patch.listId = ai.listId;
-          if (ai.listName) notes.push(`#${ai.listName}`);
-        }
-        if (ai.spotlight && !current.spotlight && untouched("spotlight", local.spotlight)) {
-          const spotCount = Object.values(state.tasks).filter(
-            (t) => t.spotlight && t.status !== "done"
-          ).length;
-          if (spotCount < 3) {
-            patch.spotlight = true;
-            notes.push("✦ spotlight");
-          }
-        }
-        if (ai.subtasks.length > 0 && current.subtasks.length === 0) {
-          patch.subtasks = ai.subtasks.map((t) => ({
-            id: crypto.randomUUID(),
-            title: t,
-            done: false,
-          }));
-          notes.push(`${ai.subtasks.length} steps`);
-        }
-
-        if (Object.keys(patch).length > 0) updateTask(id, patch);
-
-        const extraIds = (await Promise.all(extraIdPromises)).filter(
-          (x): x is string => x !== null
-        );
-        if (toast) {
-          const message =
-            extraIds.length > 0
-              ? `✨ Split into ${extraIds.length + 1} tasks`
-              : `✨ ${notes.length ? notes.join(" · ") : "Tidied it up"}`;
-          showToast({ message });
-        }
-        return { notes, extraIds };
-      })
-      .catch(() => nothing); // offline / AI down → local parse already did its job
+    try {
+      const res = await fetch("/api/parse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: raw, today: state.today, time }),
+      });
+      if (!res.ok) return [];
+      const { parsed }: { parsed: AiParsed[] } = await res.json();
+      if (!Array.isArray(parsed) || parsed.length === 0) return [];
+      return parsed;
+    } catch {
+      return [];
+    }
   };
 
   const submit = (keepOpen: boolean) => {
@@ -253,64 +153,182 @@ export function Omnibar() {
     const raw = text.trim();
     if (!raw) return;
     track("capture");
-    const local = parseQuickAdd(raw, lists);
-    if (!local.title) local.title = raw;
-    const idPromise = addTask(local);
-    setText("");
 
-    // rapid entry: capture, stay in the input, AI tidies in the background
+    // rapid entry (shift+enter): instant local-parse capture + bg AI refine
     if (keepOpen) {
-      void refine(raw, local, idPromise, true);
+      const local = parseQuickAdd(raw, lists);
+      if (!local.title) local.title = raw;
+      const idPromise = addTask(local);
+      setText("");
+      void aiParse(raw).then(async (parsed) => {
+        const id = await idPromise;
+        if (!id) return;
+        const current = getTask(id);
+        if (!current || current.status === "done") return;
+        if (parsed.length > 0) {
+          const [first, ...extras] = parsed;
+          applyAiToTask(first, current, id, local);
+          for (const x of extras) {
+            const newId = await createTaskFromAiPreset(x);
+            if (newId && x.subtasks.length > 0) {
+              updateTask(newId, {
+                subtasks: x.subtasks.map((t) => ({ id: crypto.randomUUID(), title: t, done: false })),
+              });
+            }
+          }
+        }
+        showToast({ message: `✨ Captured` });
+      });
       return;
     }
 
-    // the show: the panel grows, AI narrates, and the finished task appears
-    // right here rather than vanishing to somewhere unseen
+    // full reveal: AI parses → show preview → user clicks Done to create.
+    // Closing the panel before Done files NOTHING, by design: the preview is
+    // a consent screen, and consent withheld means no writes.
+    const local = parseQuickAdd(raw, lists);
+    if (!local.title) local.title = raw;
+    setText("");
     setThinkLine(0);
     setPhase("thinking");
-    const started = Date.now();
-    const refined = refine(raw, local, idPromise, false);
-    // Wide enough for the free-tier model's slow days; a capture that beats
-    // it still reveals early, and one that loses it still files its tasks.
-    const timeout = new Promise<{ notes: string[]; extraIds: string[] }>((r) =>
-      setTimeout(() => r({ notes: [], extraIds: [] }), 12000)
+    const parsed = aiParse(raw);
+    const timeout = new Promise<AiParsed[] | null>((r) =>
+      setTimeout(() => r(null), 12000)
     );
     void (async () => {
-      const { notes, extraIds } = await Promise.race([refined, timeout]);
-      // the save gets its own deadline: a stalled network request must not
-      // leave the panel narrating forever with the input frozen
-      const id = await Promise.race([
-        idPromise,
-        new Promise<null>((r) => setTimeout(() => r(null), 12_000)),
-      ]);
-      if (!id) {
-        // the save itself failed; the store already raised its toast
-        setOmnibar(false);
-        return;
+      const started = Date.now();
+      let tasks = await Promise.race([parsed, timeout]);
+      // if AI returned nothing or timed out, fall back to local single-task parse
+      if (!tasks || tasks.length === 0) {
+        tasks = [{
+          title: local.title,
+          plannedFor: local.plannedFor,
+          plannedTime: local.plannedTime,
+          dueDate: local.dueDate,
+          estimateMin: local.estimateMin,
+          listId: local.listId,
+          listName: local.listName,
+          spotlight: local.spotlight,
+          subtasks: [],
+        }];
       }
-      // The animation needs a beat to read, even when AI answers instantly.
-      // Never below 150ms: tasks the AI just filed reach the store through a
-      // React render, and reading synchronously would miss the newest ones.
+      // AI never sets repeats, so "every monday" would silently vanish here:
+      // the local parse's rule rides on the first task it plainly belongs to
+      if (local.repeat && !tasks[0].repeat) {
+        tasks = [{ ...tasks[0], repeat: local.repeat }, ...tasks.slice(1)];
+      }
       const wait = Math.max(150, 1600 - (Date.now() - started));
       await new Promise((r) => setTimeout(r, wait));
-      const task = getTask(id);
-      if (!task) {
-        setOmnibar(false);
-        return;
-      }
-      const extras = extraIds
-        .map((x) => getTask(x))
-        .filter((t): t is Task => t !== undefined);
-      setResult({ tasks: [task, ...extras], notes });
+      setResult(tasks);
       setPhase("done");
     })();
   };
 
+  /**
+   * File every previewed task, exactly once. The guard matters: Done is a
+   * money-shot button people double-click, and each extra click used to file
+   * the whole preview again.
+   */
+  const fileAll = async () => {
+    if (!result || filingRef.current) return;
+    filingRef.current = true;
+    setFiling(true);
+    for (const p of result) {
+      await createTaskFromAiPreset(p);
+    }
+    setOmnibar(false);
+  };
+
+  /** Files the preview, then stays open for the next thought. */
+  const fileAndCaptureAnother = async () => {
+    if (!result || filingRef.current) return;
+    filingRef.current = true;
+    setFiling(true);
+    for (const p of result) {
+      await createTaskFromAiPreset(p);
+    }
+    showToast({ message: `✨ Filed ${result.length} ${result.length === 1 ? "task" : "tasks"}` });
+    again();
+  };
+
+  /** Creates a single task from an AI parsed preset. Returns its id. */
+  const createTaskFromAiPreset = (p: AiParsed): Promise<string | null> => {
+    return addTask({
+      title: p.title,
+      plannedFor: p.plannedFor,
+      plannedTime: p.plannedTime,
+      dueDate: p.dueDate,
+      estimateMin: p.estimateMin,
+      listId: p.listId,
+      listName: p.listName,
+      spotlight: p.spotlight,
+      repeat: p.repeat ?? null,
+    }).then(async (newId) => {
+      if (newId && p.subtasks.length > 0) {
+        updateTask(newId, {
+          subtasks: p.subtasks.map((t) => ({ id: crypto.randomUUID(), title: t, done: false })),
+        });
+      }
+      return newId;
+    });
+  };
+
+  /** Apply AI parsed values to an already-created task (rapid-entry path). */
+  const applyAiToTask = (ai: AiParsed, task: Task, id: string, local: ParsedInput) => {
+    const patch: Partial<Task> = {};
+    const untouched = <K extends keyof Task>(k: K, localVal: Task[K]) =>
+      task[k] === localVal;
+
+    if (ai.title && ai.title !== task.title && untouched("title", local.title)) {
+      patch.title = ai.title;
+    }
+    if (ai.plannedFor && ai.plannedFor !== task.plannedFor && untouched("plannedFor", local.plannedFor)) {
+      patch.plannedFor = ai.plannedFor;
+      if (task.status === "inbox") patch.status = "planned";
+    }
+    if (
+      ai.plannedTime &&
+      ai.plannedTime !== task.plannedTime &&
+      untouched("plannedTime", local.plannedTime) &&
+      (patch.plannedFor || task.plannedFor)
+    ) {
+      patch.plannedTime = ai.plannedTime;
+    }
+    if (ai.dueDate && ai.dueDate !== task.dueDate && untouched("dueDate", local.dueDate)) {
+      patch.dueDate = ai.dueDate;
+    }
+    if (ai.estimateMin && ai.estimateMin !== task.estimateMin && untouched("estimateMin", local.estimateMin)) {
+      patch.estimateMin = ai.estimateMin;
+    }
+    if (ai.listId && ai.listId !== task.listId && untouched("listId", local.listId)) {
+      patch.listId = ai.listId;
+    }
+    if (ai.spotlight && !task.spotlight && untouched("spotlight", local.spotlight)) {
+      const spotCount = Object.values(state.tasks).filter(
+        (t) => t.spotlight && t.status !== "done"
+      ).length;
+      if (spotCount < 3) patch.spotlight = true;
+    }
+    if (ai.subtasks.length > 0 && task.subtasks.length === 0) {
+      patch.subtasks = ai.subtasks.map((t) => ({
+        id: crypto.randomUUID(),
+        title: t,
+        done: false,
+      }));
+    }
+    if (Object.keys(patch).length > 0) updateTask(id, patch);
+  };
+
   /** Back to a fresh input, same panel — for capturing the next one. */
   const again = () => {
+    filingRef.current = false;
     setResult(null);
+    setFiling(false);
     setPhase("input");
     queueMicrotask(() => inputRef.current?.focus());
+  };
+
+  const dismiss = () => {
+    setOmnibar(false);
   };
 
   return (
@@ -386,16 +404,15 @@ export function Omnibar() {
             )}
             {phase === "done" && result && (
               <div className="anim-pop py-3">
-                {result.tasks.length > 1 && (
+                {result.length > 1 && (
                   <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-sun-deep">
-                    <Icon3d name="sparkle" size={15} /> That was {result.tasks.length} things. Filed
-                    each one:
+                    <Icon3d name="sparkle" size={15} /> That was {result.length} things. Here&apos;s how they&apos;ll be filed:
                   </p>
                 )}
                 <div className="space-y-2">
-                  {result.tasks.map((task, i) => (
+                  {result.map((p, i) => (
                     <div
-                      key={task.clientId ?? task.id}
+                      key={`preview-${i}`}
                       className="anim-rise rounded-2xl border border-line bg-paper-deep/40 p-3.5"
                       style={{ animationDelay: `${i * 110}ms` }}
                     >
@@ -406,71 +423,68 @@ export function Omnibar() {
                           </svg>
                         </span>
                         <div className="min-w-0 flex-1">
-                          <div className="text-[15px] font-medium leading-snug">{task.title}</div>
+                          <div className="text-[15px] font-medium leading-snug">{p.title}</div>
                           <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                            {task.plannedFor ? (
+                            {p.plannedFor ? (
                               <Chip tone="sun">
-                                <Icon3d name="sun" size={15} /> {friendlyDay(task.plannedFor, state.today)}
-                              </Chip>
-                            ) : task.status === "someday" ? (
-                              <Chip>
-                                <Icon3d name="moon" size={15} /> someday
+                                <Icon3d name="sun" size={15} /> {friendlyDay(p.plannedFor, state.today)}
                               </Chip>
                             ) : (
                               <Chip>
                                 <Icon3d name="inbox" size={15} /> inbox
                               </Chip>
                             )}
-                            {task.plannedTime && <Chip tone="sun">🕐 {fmtTime12(task.plannedTime)}</Chip>}
-                            {task.dueDate && <Chip tone="clay">due {friendlyDay(task.dueDate, state.today)}</Chip>}
-                            {task.estimateMin != null && <Chip>~{fmtMinutes(task.estimateMin)}</Chip>}
-                            {task.listId && (
-                              <Chip>#{lists.find((l) => l.id === task.listId)?.name ?? "list"}</Chip>
+                            {p.plannedTime && <Chip tone="sun">🕐 {fmtTime12(p.plannedTime)}</Chip>}
+                            {p.dueDate && <Chip tone="clay">due {friendlyDay(p.dueDate, state.today)}</Chip>}
+                            {p.estimateMin != null && <Chip>~{fmtMinutes(p.estimateMin)}</Chip>}
+                            {p.listId && (
+                              <Chip>#{lists.find((l) => l.id === p.listId)?.name ?? "list"}</Chip>
                             )}
-                            {task.repeat && (
+                            {p.spotlight && <Chip tone="sun">✦ spotlight</Chip>}
+                            {p.repeat && (
                               <Chip tone="sky">
-                                <Icon3d name="repeat" size={15} /> {repeatLabel(task.repeat)}
+                                <Icon3d name="repeat" size={15} /> {repeatLabel(p.repeat)}
                               </Chip>
                             )}
-                            {task.spotlight && <Chip tone="sun">✦ spotlight</Chip>}
-                            {task.subtasks.length > 0 && <Chip>{task.subtasks.length} steps</Chip>}
+                            {p.subtasks.length > 0 && <Chip>{p.subtasks.length} steps</Chip>}
                           </div>
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
-                {result.notes.length > 0 && (
+                {result.some((p) => p.plannedFor || p.plannedTime || p.listId || p.subtasks.length > 0) && (
                   <p className="mt-2.5 flex items-center gap-1 text-[11px] text-ink-faint">
-                    <Icon3d name="sparkle" size={14} /> AI filled in: {result.notes.join(" · ")}
+                    <Icon3d name="sparkle" size={14} /> AI filled in dates, times, and lists
                   </p>
                 )}
                 <div className="mt-3 flex gap-2">
                   <button
-                    onClick={() => setOmnibar(false)}
+                    onClick={() => void fileAll()}
                     autoFocus
-                    className="flex-1 rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-paper"
+                    disabled={filing}
+                    className="flex-1 rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-paper disabled:opacity-60"
                   >
-                    Done
+                    {filing
+                      ? "Filing…"
+                      : `Done — file ${result.length} ${result.length === 1 ? "task" : "tasks"}`}
                   </button>
                   <button
-                    onClick={again}
-                    className="rounded-full border border-line bg-card px-4 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:border-sun hover:text-sun-deep"
+                    onClick={dismiss}
+                    disabled={filing}
+                    className="rounded-full border border-line bg-card px-4 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:border-ink/10 disabled:opacity-50"
                   >
-                    Capture another
+                    Cancel
                   </button>
-                  {result.tasks.length === 1 && (
-                    <button
-                      onClick={() => {
-                        const id = result.tasks[0].id;
-                        setOmnibar(false);
-                        setEditing(id);
-                      }}
-                      className="rounded-full border border-line bg-card px-4 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:border-sun hover:text-sun-deep"
-                    >
-                      Open
-                    </button>
-                  )}
+                </div>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    onClick={() => void fileAndCaptureAnother()}
+                    disabled={filing}
+                    className="flex-1 rounded-full border border-line bg-card px-4 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:border-sun hover:text-sun-deep disabled:opacity-50"
+                  >
+                    File these &amp; capture another
+                  </button>
                 </div>
               </div>
             )}

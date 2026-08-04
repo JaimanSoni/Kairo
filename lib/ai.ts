@@ -293,5 +293,42 @@ export async function aiParseTasks(
     .map((x) => sanitizeOne(x, lists))
     .filter((x): x is AiParsed => x !== null);
 
-  return tasks.length > 0 ? tasks : null;
+  if (tasks.length === 0) return null;
+
+  // reject responses where every task title looks unrelated to the input
+  const validated = validateAgainstInput(text, tasks);
+  return validated.length > 0 ? validated : null;
+}
+
+/**
+ * Rejects AI tasks whose titles have zero word overlap with the original
+ * input. Also drops any task with a future date more than 90 days out (unless
+ * the input explicitly mentions that timeframe).
+ */
+function validateAgainstInput(input: string, tasks: AiParsed[]): AiParsed[] {
+  const inputWords = new Set(
+    input.toLowerCase().split(/\s+/).filter((w) => w.length >= 3)
+  );
+  const hasFarDate = /\b\d{1,2}\s*(?:months?|years?)\b/i.test(input);
+
+  return tasks.filter((t) => {
+    const titleWords = t.title.toLowerCase().split(/\s+/).filter((w) => w.length >= 3);
+    const overlap = titleWords.filter((w) => inputWords.has(w));
+    // at least one meaningful word must overlap, unless the input is very short
+    if (inputWords.size >= 3 && overlap.length === 0) {
+      console.warn("[ai] rejected hallucinated task:", t.title);
+      return false;
+    }
+    // reject dates far in the future that weren't mentioned in input
+    if (t.plannedFor && !hasFarDate) {
+      const maxDate = new Date();
+      maxDate.setDate(maxDate.getDate() + 90);
+      const taskDate = new Date(t.plannedFor);
+      if (taskDate > maxDate) {
+        console.warn("[ai] rejected far-future date:", t.plannedFor, "for:", t.title);
+        return false;
+      }
+    }
+    return true;
+  });
 }
