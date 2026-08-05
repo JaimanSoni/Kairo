@@ -55,9 +55,12 @@ for (const lead of harvested) {
   if (lead.estimated_fit_score < MIN_SCORE) { skipped++; continue; }
   if (lead.platform === "Hacker News" && !ON_TOPIC.test(lead.review_summary)) { skipped++; continue; }
   const key = `${lead.platform}:${lead.username}`;
-  if (seenUser.has(key) || seenPost.has(lead.post_url)) { skipped++; continue; }
+  // Product Hunt reviewers share one reviews-page URL, so URL dedup would
+  // keep only the first person per product; the username is the identity
+  const postUnique = lead.platform !== "Product Hunt";
+  if (seenUser.has(key) || (postUnique && seenPost.has(lead.post_url))) { skipped++; continue; }
   seenUser.add(key);
-  seenPost.add(lead.post_url);
+  if (postUnique) seenPost.add(lead.post_url);
   const { _score, ...doc } = lead;
   await col.insertOne({
     ...doc,
