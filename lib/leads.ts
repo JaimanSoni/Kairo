@@ -75,6 +75,8 @@ export async function listLeads(opts?: {
   limit?: number;
   offset?: number;
   sort?: "score" | "created" | "updated";
+  /** Quarantined rows stay out unless explicitly asked for by status. */
+  hideInvalid?: boolean;
 }): Promise<{ leads: GtmLead[]; total: number }> {
   return withDbRetry(async () => {
     const db = await getDb();
@@ -82,6 +84,7 @@ export async function listLeads(opts?: {
 
     const filter: Record<string, unknown> = {};
     if (opts?.status) filter.status = opts.status;
+    else if (opts?.hideInvalid) filter.status = { $ne: "invalid" };
     if (opts?.competitor) filter.competitor = opts.competitor;
     if (opts?.minScore) filter.estimated_fit_score = { $gte: opts.minScore };
 
@@ -119,10 +122,14 @@ export async function getLeadStats(): Promise<{
     const db = await getDb();
     const col = db.collection<GtmLead>(COLLECTION);
 
-    const total = await col.countDocuments();
+    // quarantined rows poison every stat except the status card itself,
+    // which is exactly where the invalid count should stay visible
+    const live = { status: { $ne: "invalid" as const } };
+    const total = await col.countDocuments(live);
 
     const byCompetitor = await col
       .aggregate([
+        { $match: live },
         { $group: { _id: "$competitor", count: { $sum: 1 } } },
         { $sort: { count: -1 } },
       ])
@@ -137,19 +144,22 @@ export async function getLeadStats(): Promise<{
 
     const bySentiment = await col
       .aggregate([
+        { $match: live },
         { $group: { _id: "$sentiment", count: { $sum: 1 } } },
         { $sort: { count: -1 } },
       ])
       .toArray() as { _id: string; count: number }[];
 
-    const highScore = await col.countDocuments({ estimated_fit_score: { $gte: 80 } });
+    const highScore = await col.countDocuments({ ...live, estimated_fit_score: { $gte: 80 } });
     const mediumScore = await col.countDocuments({
+      ...live,
       estimated_fit_score: { $gte: 60, $lt: 80 },
     });
-    const lowScore = await col.countDocuments({ estimated_fit_score: { $lt: 60 } });
+    const lowScore = await col.countDocuments({ ...live, estimated_fit_score: { $lt: 60 } });
 
     const topPainPoints = await col
       .aggregate([
+        { $match: live },
         { $unwind: "$pain_points" },
         { $group: { _id: "$pain_points", count: { $sum: 1 } } },
         { $sort: { count: -1 } },

@@ -89,19 +89,30 @@ function PainBar({ title, rows, total }: { title: string; rows: { _id: string; c
   );
 }
 
-export default async function AdminLeadsPage() {
+const PER_PAGE = 200;
+
+export default async function AdminLeadsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   await requireAdmin();
+
+  const { page: pageParam } = await searchParams;
+  const page = Math.max(1, Number(pageParam) || 1);
 
   const [stats, { leads, total }] = await Promise.all([
     getLeadStats(),
-    listLeads({ sort: "score", limit: 200 }),
+    listLeads({ sort: "score", limit: PER_PAGE, offset: (page - 1) * PER_PAGE, hideInvalid: true }),
   ]);
+  const pages = Math.max(1, Math.ceil(total / PER_PAGE));
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
       <PageHead title="GTM Leads">
-        High-intent users actively unhappy with competing productivity tools. Research-sourced from
-        Reddit, Trustpilot, Product Hunt, G2, and other platforms. Sorted by fit score.
+        Real people harvested from public complaint threads: Reddit, Product Hunt reviews, and
+        Hacker News. Every row is a verified username with a link to their actual post. Sorted by
+        fit score; work the hot tier first.
       </PageHead>
 
       <Stats
@@ -216,6 +227,11 @@ export default async function AdminLeadsPage() {
                       >
                         {lead.estimated_fit_score}
                       </span>
+                      {lead.notes?.startsWith("Tier: hot") && (
+                        <span className="ml-1.5 rounded-full bg-clay-soft px-2 py-0.5 text-[10px] font-semibold uppercase text-clay">
+                          hot
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-2.5">
                       <span
@@ -313,6 +329,29 @@ export default async function AdminLeadsPage() {
             </p>
           )}
         </ul>
+
+        {/* ------------------------------------------------- pagination */}
+        {pages > 1 && (
+          <div className="mt-6 flex items-center justify-between text-sm">
+            {page > 1 ? (
+              <a href={`?page=${page - 1}`} className="font-medium underline underline-offset-2 hover:text-ink">
+                Previous
+              </a>
+            ) : (
+              <span />
+            )}
+            <span className="text-xs text-ink-faint">
+              Page {page} of {pages} · {total} leads
+            </span>
+            {page < pages ? (
+              <a href={`?page=${page + 1}`} className="font-medium underline underline-offset-2 hover:text-ink">
+                Next
+              </a>
+            ) : (
+              <span />
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
