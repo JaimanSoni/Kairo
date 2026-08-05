@@ -1,0 +1,9 @@
+{
+  "name": "kairo-leads-pipeline",
+  "private": true,
+  "type": "module",
+  "description": "GTM lead harvester: real people from real public posts, never invented contacts. Run npm install here first (puppeteer-core drives the installed Edge browser).",
+  "dependencies": {
+    "puppeteer-core": "^23.0.0"
+  }
+}

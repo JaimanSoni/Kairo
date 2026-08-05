@@ -49,3 +49,7 @@ out/
 
 # local tool settings
 .commandcode/
+
+# leads pipeline: local artifacts stay out of the public repo
+scripts/leads/node_modules/
+scripts/leads/leads-harvest*.json
