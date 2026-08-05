@@ -92,12 +92,10 @@ function PainBar({ title, rows, total }: { title: string; rows: { _id: string; c
 export default async function AdminLeadsPage() {
   await requireAdmin();
 
-  const [stats, { leads: rawLeads, total }] = await Promise.all([
+  const [stats, { leads, total }] = await Promise.all([
     getLeadStats(),
     listLeads({ sort: "score", limit: 200 }),
   ]);
-
-  const leads = rawLeads.map(({ _id, ...rest }) => rest) as typeof rawLeads;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">

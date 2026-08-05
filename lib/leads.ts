@@ -94,12 +94,14 @@ export async function listLeads(opts?: {
           ? { updatedAt: -1 }
           : { createdAt: -1 };
 
-    const leads = await col
+    const rawLeads = await col
       .find(filter)
       .sort(sort)
       .skip(opts?.offset ?? 0)
       .limit(opts?.limit ?? 100)
       .toArray();
+
+    const leads = rawLeads.map(({ _id, ...rest }) => rest) as GtmLead[];
 
     return { leads, total };
   });
