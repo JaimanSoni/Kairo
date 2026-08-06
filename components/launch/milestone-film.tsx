@@ -82,60 +82,6 @@ function landsAt(i: number): number {
   return t;
 }
 
-const TASK_TEXT = [
-  "Call mom at 7pm",
-  "Gym, tomorrow morning",
-  "Pay rent before Friday",
-  "Finish the client report",
-  "Book flights for Goa",
-  "Water the plants",
-  "Reply to Sarah",
-  "Buy groceries",
-  "Draft the launch post",
-  "Renew the domain",
-  "Dentist, Tuesday 4pm",
-  "Read 20 pages",
-  "Fix the login bug",
-  "Send the invoice",
-  "Plan the weekend trip",
-  "Backup the laptop",
-  "Call the bank at 11",
-  "Walk the dog",
-  "Review the pull request",
-  "Meditate, 10 minutes",
-  "Cancel the subscription",
-  "Write in the journal",
-  "Order the birthday gift",
-  "Clean the desk",
-  "Schedule the standup",
-  "Stretch for 15 minutes",
-  "Email the landlord",
-  "Refill the prescription",
-  "Update the résumé",
-  "Text Dad back",
-  "Wash the car",
-  "Prep Monday's slides",
-  "Pick up the parcel",
-  "Change the AC filter",
-  "Book the haircut",
-  "Pay the electricity bill",
-  "Sort the photo album",
-  "Practice guitar",
-  "Return the library book",
-  "Check the tyre pressure",
-];
-
-const CHIPS: { label: string; tone: keyof typeof CHIP_TONE }[] = [
-  { label: "today", tone: "sun" },
-  { label: "7 PM", tone: "sun" },
-  { label: "tomorrow", tone: "sky" },
-  { label: "#work", tone: "plain" },
-  { label: "#life", tone: "plain" },
-  { label: "~30m", tone: "plain" },
-  { label: "✦ spotlight", tone: "sun" },
-  { label: "friday", tone: "clay" },
-];
-
 const CHIP_TONE = {
   sun: { bg: C.sunSoft, fg: C.sunDeep },
   sky: { bg: "#e3f0f9", fg: "#2f6f9f" },
@@ -143,8 +89,70 @@ const CHIP_TONE = {
   plain: { bg: C.paperDeep, fg: C.inkSoft },
 };
 
+type Chip = { label: string; tone: keyof typeof CHIP_TONE };
+type TaskLine = { title: string; chips: Chip[] };
+
+/**
+ * The pile. The first four are the ones the eye actually reads while the
+ * pace is still slow, so they carry the story; the rest are the ordinary
+ * business of a life, which is the point.
+ *
+ * Chips belong to their task rather than being picked by index — a row
+ * tagged both "today" and "tomorrow" is a detail that quietly says nobody
+ * looked.
+ */
+const TASKS: TaskLine[] = [
+  { title: "Call Mom at 7", chips: [{ label: "today", tone: "sun" }, { label: "7 PM", tone: "sun" }] },
+  { title: "Practice DSA", chips: [{ label: "today", tone: "sun" }, { label: "~1h", tone: "plain" }] },
+  { title: "Instagram post for launch", chips: [{ label: "tomorrow", tone: "sky" }, { label: "#work", tone: "plain" }] },
+  { title: "Finish the client report", chips: [{ label: "friday", tone: "clay" }, { label: "~2h", tone: "plain" }] },
+  { title: "Book flights for Goa", chips: [{ label: "#life", tone: "plain" }] },
+  { title: "Water the plants", chips: [{ label: "today", tone: "sun" }] },
+  { title: "Reply to Sarah", chips: [{ label: "✦ spotlight", tone: "sun" }] },
+  { title: "Buy groceries", chips: [{ label: "tomorrow", tone: "sky" }, { label: "#life", tone: "plain" }] },
+  { title: "Pay rent before Friday", chips: [{ label: "friday", tone: "clay" }] },
+  { title: "Renew the domain", chips: [{ label: "~15m", tone: "plain" }] },
+  { title: "Dentist, Tuesday 4pm", chips: [{ label: "tuesday", tone: "sky" }] },
+  { title: "Read 20 pages", chips: [{ label: "tonight", tone: "sun" }] },
+  { title: "Fix the login bug", chips: [{ label: "today", tone: "sun" }, { label: "#work", tone: "plain" }] },
+  { title: "Send the invoice", chips: [{ label: "✦ spotlight", tone: "sun" }] },
+  { title: "Plan the weekend trip", chips: [{ label: "saturday", tone: "sky" }] },
+  { title: "Back up the laptop", chips: [{ label: "~20m", tone: "plain" }] },
+  { title: "Call the bank at 11", chips: [{ label: "tomorrow", tone: "sky" }, { label: "11 AM", tone: "sky" }] },
+  { title: "Walk the dog", chips: [{ label: "today", tone: "sun" }] },
+  { title: "Review the pull request", chips: [{ label: "#work", tone: "plain" }] },
+  { title: "Meditate, 10 minutes", chips: [{ label: "every day", tone: "sky" }] },
+  { title: "Cancel the subscription", chips: [{ label: "~5m", tone: "plain" }] },
+  { title: "Write in the journal", chips: [{ label: "tonight", tone: "sun" }] },
+  { title: "Order the birthday gift", chips: [{ label: "thursday", tone: "clay" }] },
+  { title: "Clean the desk", chips: [{ label: "#life", tone: "plain" }] },
+  { title: "Schedule the standup", chips: [{ label: "#work", tone: "plain" }] },
+  { title: "Stretch for 15 minutes", chips: [{ label: "every day", tone: "sky" }] },
+  { title: "Email the landlord", chips: [{ label: "today", tone: "sun" }] },
+  { title: "Refill the prescription", chips: [{ label: "~10m", tone: "plain" }] },
+  { title: "Update the résumé", chips: [{ label: "sunday", tone: "sky" }] },
+  { title: "Text Dad back", chips: [{ label: "today", tone: "sun" }] },
+  { title: "Wash the car", chips: [{ label: "saturday", tone: "sky" }] },
+  { title: "Prep Monday's slides", chips: [{ label: "monday", tone: "clay" }, { label: "#work", tone: "plain" }] },
+  { title: "Pick up the parcel", chips: [{ label: "tomorrow", tone: "sky" }] },
+  { title: "Change the AC filter", chips: [{ label: "#life", tone: "plain" }] },
+  { title: "Book the haircut", chips: [{ label: "~5m", tone: "plain" }] },
+  { title: "Pay the electricity bill", chips: [{ label: "friday", tone: "clay" }] },
+  { title: "Sort the photo album", chips: [{ label: "someday", tone: "plain" }] },
+  { title: "Practice guitar", chips: [{ label: "every day", tone: "sky" }] },
+  { title: "Return the library book", chips: [{ label: "wednesday", tone: "sky" }] },
+  { title: "Check the tyre pressure", chips: [{ label: "~10m", tone: "plain" }] },
+];
+
 /* Deterministic per-index jitter so the stack breathes without randomness. */
 const wob = (i: number, k: number) => Math.sin(i * 12.9898 + k * 78.233) * 0.5 + 0.5;
+
+/**
+ * The row pitch, in design units. It must clear the card's own height —
+ * title, chips and padding — or rows sit on each other and eat their tags.
+ * One constant, because the stack maths and the rows must never disagree.
+ */
+const ROW_H = 138;
 
 /* ------------------------------------------------------------------ rows */
 
@@ -165,14 +173,10 @@ function TaskRow({
   const fade = easeOut(seg(t, at - 240, 200));
 
   // rows slide up the stack as newer ones arrive below the pointer
-  const rowH = 104 * unit;
+  const rowH = ROW_H * unit;
   const settle = quintOut(seg(t, at, 420));
 
-  const chip = CHIPS[i % CHIPS.length];
-  const chip2 = CHIPS[(i * 3 + 2) % CHIPS.length];
-  const tone = CHIP_TONE[chip.tone];
-  const tone2 = CHIP_TONE[chip2.tone];
-  const showSecond = wob(i, 5) > 0.45;
+  const task = TASKS[i % TASKS.length];
 
   // the collapse: every row rushes toward the centre and dissolves
   const col = quintOut(seg(t, T.collapse, 420));
@@ -230,35 +234,27 @@ function TaskRow({
               textOverflow: "ellipsis",
             }}
           >
-            {TASK_TEXT[i % TASK_TEXT.length]}
+            {task.title}
           </span>
           <span style={{ display: "flex", gap: 10 * unit, marginTop: 10 * unit }}>
-            <span
-              style={{
-                background: tone.bg,
-                color: tone.fg,
-                borderRadius: 999,
-                padding: `${5 * unit}px ${14 * unit}px`,
-                fontSize: 20 * unit,
-                fontWeight: 700,
-              }}
-            >
-              {chip.label}
-            </span>
-            {showSecond && (
-              <span
-                style={{
-                  background: tone2.bg,
-                  color: tone2.fg,
-                  borderRadius: 999,
-                  padding: `${5 * unit}px ${14 * unit}px`,
-                  fontSize: 20 * unit,
-                  fontWeight: 700,
-                }}
-              >
-                {chip2.label}
-              </span>
-            )}
+            {task.chips.map((c) => {
+              const tone = CHIP_TONE[c.tone];
+              return (
+                <span
+                  key={c.label}
+                  style={{
+                    background: tone.bg,
+                    color: tone.fg,
+                    borderRadius: 999,
+                    padding: `${5 * unit}px ${14 * unit}px`,
+                    fontSize: 20 * unit,
+                    fontWeight: 700,
+                  }}
+                >
+                  {c.label}
+                </span>
+              );
+            })}
           </span>
         </span>
       </div>
@@ -321,8 +317,10 @@ export function MilestoneFilm() {
   /* The newest row is the one being read, so it holds the eye: centred while
      the first few land alone, sliding down as the pile builds until the
      frame is full of tasks above it. */
-  const rowH = 104 * unit;
-  const anchor = lerp(size * 0.5, size * 0.88, quintOut(clamp01(count / 7)));
+  const rowH = ROW_H * unit;
+  // eased IN, not out: the first few tasks must hold their high perch, and
+  // only once the pile is real does the anchor slide down to make room
+  const anchor = lerp(size * 0.4, size * 0.88, Math.pow(clamp01(count / 8), 1.7));
   const stackY = anchor - count * rowH;
 
   /* the blur only arrives when the pace does — motion the eye can't hold */
@@ -479,20 +477,29 @@ export function MilestoneFilm() {
               >
                 thanks for all the love
               </div>
+              {/* the lockup, as the app wears it: teal mark, ink wordmark.
+                  The mark's bars fill barely half its viewBox, so it needs to
+                  be drawn oversized to sit level with the word beside it. */}
               <div
                 style={{
                   marginTop: 34 * unit,
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: 14 * unit,
+                  gap: 6 * unit,
+                  // the mark's bars sit inside a square of empty margin, so a
+                  // geometrically centred lockup reads right of centre
+                  transform: `translateX(${-22 * unit}px)`,
                   opacity: quintOut(seg(t, T.thanks + 380, 700)),
                 }}
               >
-                <Mark size={46 * unit} />
+                <span style={{ color: C.sun, display: "inline-flex", marginTop: -2 * unit }}>
+                  <Mark size={92 * unit} />
+                </span>
                 <span
                   className="font-display"
                   style={{
-                    fontSize: 54 * unit,
+                    fontSize: 62 * unit,
+                    lineHeight: 1,
                     letterSpacing: "-0.03em",
                     color: C.ink,
                   }}
