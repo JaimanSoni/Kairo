@@ -87,6 +87,12 @@ function GuestOverlays({ authError }: { authError?: string }) {
 
   const taskCount = useMemo(() => Object.keys(state.tasks).length, [state.tasks]);
 
+  // one line in the ledger per guest: fired on every visit, counted as
+  // unique browsers server-side, so no client-side dedup state is needed
+  useEffect(() => {
+    track("guest-visit");
+  }, []);
+
   // the hard gate: any blocked creation fires this event from the store, so
   // the modal appears exactly when someone runs into the wall — no counters,
   // no flags, nothing stored that could drift out of sync

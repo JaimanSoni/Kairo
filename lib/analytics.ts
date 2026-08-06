@@ -100,6 +100,8 @@ export type AnalyticsSnapshot = {
   todayUniques: number;
   daily: { day: string; visits: number; uniques: number }[];
   events: { name: string; count: number }[];
+  /** Unique browsers per step of the try-before-signup journey, in order. */
+  guestFunnel: { name: string; count: number }[];
   referrers: { name: string; count: number }[];
   sources: { name: string; count: number }[];
   campaigns: { name: string; count: number }[];
@@ -145,6 +147,22 @@ export async function loadAnalytics(days = 30): Promise<AnalyticsSnapshot> {
               { $group: { _id: "$event", count: { $sum: 1 } } },
               { $sort: { count: -1 } },
               { $limit: 20 },
+            ],
+            // unique browsers, not raw event counts: a guest who captured
+            // eight times is one person trying Kairo, not eight
+            guestFunnel: [
+              {
+                $match: {
+                  event: {
+                    $in: [
+                      "guest-visit", "guest-capture", "guest-signup-nudge",
+                      "guest-cap-hit", "guest-signin", "guest-sync",
+                    ],
+                  },
+                },
+              },
+              { $group: { _id: "$event", vids: { $addToSet: "$vid" } } },
+              { $project: { count: { $size: "$vids" } } },
             ],
             referrers: [
               { $match: { ref: { $type: "string" } } },
@@ -205,6 +223,20 @@ export async function loadAnalytics(days = 30): Promise<AnalyticsSnapshot> {
       todayUniques: todayRow?.uniques ?? 0,
       daily,
       events: named((facets?.events ?? []) as Bucket[]),
+      guestFunnel: (() => {
+        const by = new Map(
+          ((facets?.guestFunnel ?? []) as Bucket[]).map((r) => [r._id, r.count])
+        );
+        const step = (event: string, name: string) => ({ name, count: by.get(event) ?? 0 });
+        return [
+          step("guest-visit", "Tried Kairo without an account"),
+          step("guest-capture", "Captured at least one task"),
+          step("guest-signup-nudge", "Saw the 5-task invitation"),
+          step("guest-cap-hit", "Hit the 10-task cap"),
+          step("guest-signin", "Clicked sign in"),
+          step("guest-sync", "Signed up, tasks carried over"),
+        ];
+      })(),
       referrers: named((facets?.referrers ?? []) as Bucket[]),
       sources: named((facets?.sources ?? []) as Bucket[]),
       campaigns: named((facets?.campaigns ?? []) as Bucket[]),

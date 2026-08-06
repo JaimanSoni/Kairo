@@ -178,7 +178,8 @@ export function Omnibar() {
     if (!raw) return;
     // the guest slate is bounded; the cap modal makes the case for signing in
     if (guestCapReached()) return;
-    track("capture");
+    // separate names so the funnel can count guests who actually tried it
+    track(state.user.guest ? "guest-capture" : "capture");
 
     // rapid entry (shift+enter): instant local-parse capture + bg AI refine
     if (keepOpen) {

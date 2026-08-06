@@ -91,6 +91,7 @@ export default async function AnalyticsPage() {
 
       {/* ------------------------------------------------- what and wherefrom */}
       <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <Top title="Guest funnel · unique browsers" rows={a.guestFunnel} />
         <Top title="Events" rows={a.events} />
         <Top title="Referrers" rows={a.referrers} />
         <Top title="UTM sources" rows={a.sources} />
