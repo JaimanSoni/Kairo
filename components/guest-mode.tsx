@@ -36,7 +36,6 @@ const GUEST_LISTS: List[] = [
   { id: "guest-list-work", name: "Work", emoji: "💼", order: 2, locked: false, role: "owner", memberCount: 0 },
 ];
 
-const INTRO_SEEN_KEY = "kairo-guest-intro";
 const NUDGE_AT_KEY = "kairo-guest-nudged-at";
 /** First invitation after this many tasks; again every RENUDGE_EVERY after. */
 const NUDGE_AFTER = 5;
@@ -79,8 +78,7 @@ export function GuestExperience({ authError }: { authError?: string }) {
 }
 
 function GuestOverlays({ authError }: { authError?: string }) {
-  const { state, setOmnibar } = useApp();
-  const [intro, setIntro] = useState(false);
+  const { state } = useApp();
   const [nudge, setNudge] = useState(false);
   const [capOpen, setCapOpen] = useState(false);
   const [errorShown, setErrorShown] = useState(Boolean(authError));
@@ -105,37 +103,10 @@ function GuestOverlays({ authError }: { authError?: string }) {
     return () => window.removeEventListener(GUEST_CAP_EVENT, onCap);
   }, []);
 
-  // first visit with an empty slate gets the tour; anything else doesn't.
-  // The beat of delay lets the app render behind it, so the tour visibly
-  // introduces a real product instead of a blank screen.
-  useEffect(() => {
-    if (authError) return;
-    try {
-      if (localStorage.getItem(INTRO_SEEN_KEY)) return;
-      if (localStorage.getItem("kairo-guest-v1")) return;
-    } catch {}
-    const t = setTimeout(() => {
-      setIntro(true);
-      track("guest-intro-shown");
-    }, 500);
-    return () => clearTimeout(t);
-  }, [authError]);
-
-  const closeIntro = (thenCapture: boolean) => {
-    try {
-      localStorage.setItem(INTRO_SEEN_KEY, "1");
-    } catch {}
-    setIntro(false);
-    if (thenCapture) {
-      track("guest-intro-capture");
-      setOmnibar(true);
-    }
-  };
-
   // the invitation: at five tasks, then again every few more. The pause lets
   // the capture panel finish closing before the invitation slides in.
   useEffect(() => {
-    if (taskCount < NUDGE_AFTER || state.omnibarOpen || state.editingId || intro) return;
+    if (taskCount < NUDGE_AFTER || state.omnibarOpen || state.editingId) return;
     let lastNudgedAt = 0;
     try {
       lastNudgedAt = Number(localStorage.getItem(NUDGE_AT_KEY)) || 0;
@@ -149,7 +120,7 @@ function GuestOverlays({ authError }: { authError?: string }) {
       } catch {}
     }, 700);
     return () => clearTimeout(t);
-  }, [taskCount, state.omnibarOpen, state.editingId, intro]);
+  }, [taskCount, state.omnibarOpen, state.editingId]);
 
   return (
     <>
@@ -169,46 +140,6 @@ function GuestOverlays({ authError }: { authError?: string }) {
             </button>
           </div>
         </div>
-      )}
-
-      {intro && (
-        <Modal onClose={() => closeIntro(false)}>
-          <div className="p-6 text-center">
-            <Icon3d name="sparkle" size={44} className="mx-auto" />
-            <h2 className="font-display mt-3 text-2xl tracking-tight">This is Kairo. Try it.</h2>
-            <p className="mx-auto mt-1.5 max-w-sm text-sm leading-6 text-ink-soft">
-              No account needed, your tasks live in this browser until you want them everywhere.
-            </p>
-            <div className="mt-5 space-y-2.5 text-left">
-              {[
-                { icon: "sparkle", title: "AI capture, 3 free runs", body: "Type “call mom at 7 and gym tomorrow” and AI files it as separate tasks with days and times. Try it right now." },
-                { icon: "sun", title: "Pick 3 that matter", body: "Today holds what you chose for today. Never the whole pile." },
-                { icon: "sunrise", title: "Mornings forgive", body: "Yesterday's leftovers come back once, gently. Nothing ever turns red." },
-              ].map((f) => (
-                <div key={f.title} className="flex items-start gap-3 rounded-2xl border border-line bg-paper-deep/40 p-3.5">
-                  <Icon3d name={f.icon} size={26} className="mt-0.5 shrink-0" />
-                  <div>
-                    <div className="text-sm font-semibold">{f.title}</div>
-                    <div className="text-[13px] leading-5 text-ink-soft">{f.body}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <button
-              onClick={() => closeIntro(true)}
-              autoFocus
-              className="mt-5 w-full rounded-full bg-sun px-5 py-3 text-sm font-semibold text-on-accent shadow-lg shadow-sun/25 transition-transform active:scale-[0.99]"
-            >
-              Capture your first thought
-            </button>
-            <button
-              onClick={() => closeIntro(false)}
-              className="mt-2 w-full rounded-full px-5 py-2 text-sm font-medium text-ink-faint hover:text-ink"
-            >
-              Just look around
-            </button>
-          </div>
-        </Modal>
       )}
 
       {capOpen && (
