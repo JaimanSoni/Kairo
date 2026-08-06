@@ -11,6 +11,7 @@ import { FEATURES, FEATURE_KEYS } from "@/lib/features";
 import { AppProvider } from "@/components/store";
 import { resolveAvatar } from "@/lib/avatars";
 import { EntitlementsProvider } from "@/components/entitlements";
+import { GuestSync } from "@/components/guest-sync";
 import { Shell } from "@/components/shell";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -93,6 +94,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       initialPeople={people}
     >
       <EntitlementsProvider features={access.features}>
+      {/* tasks made as a guest on "/" walk in with their owner */}
+      <GuestSync />
       <TrialBanner
         access={access}
         user={identity}

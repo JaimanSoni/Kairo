@@ -106,4 +106,7 @@ export type UserProfile = {
   /** True when this account is actually paying us. Suppresses the tip jar —
    *  asking a paying customer for a coffee is asking twice. */
   isPaying: boolean;
+  /** True for the try-before-signup visitor on "/": tasks live in
+   *  localStorage, and signing in carries them into a real account. */
+  guest?: boolean;
 };

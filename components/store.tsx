@@ -141,7 +141,71 @@ function reducer(state: State, action: Action): State {
 
 /* ---------------- api helpers ---------------- */
 
+/** Where a guest's whole world lives until they sign in. */
+export const GUEST_STORAGE_KEY = "kairo-guest-v1";
+
+/**
+ * Guest mode: the same store, but the network is a mirror. Every mutator in
+ * this file already builds its optimistic state and only needs the server to
+ * echo agreement (plus a real id on creates), so a guest can run the entire
+ * app against this emulator while localStorage plays the database.
+ */
+let guestMode = false;
+
+function guestApi<T>(url: string, options?: RequestInit): T {
+  const method = (options?.method ?? "GET").toUpperCase();
+  const body: Record<string, unknown> =
+    typeof options?.body === "string" ? JSON.parse(options.body) : {};
+
+  if (method === "POST" && url === "/api/tasks") {
+    const now = new Date().toISOString();
+    const status = (body.status as Task["status"]) ?? "inbox";
+    const task: Task = {
+      id: `local-${crypto.randomUUID()}`,
+      title: String(body.title ?? ""),
+      note: String(body.note ?? ""),
+      status,
+      plannedFor: (body.plannedFor as string | null) ?? null,
+      plannedTime: body.plannedFor ? ((body.plannedTime as string | null) ?? null) : null,
+      dueDate: (body.dueDate as string | null) ?? null,
+      spotlight: body.spotlight === true,
+      listId: (body.listId as string | null) ?? null,
+      estimateMin: (body.estimateMin as number | null) ?? null,
+      order: typeof body.order === "number" ? body.order : Date.now(),
+      carryCount: 0,
+      repeat: (body.repeat as Task["repeat"]) ?? null,
+      reminderAt: (body.reminderAt as number | null) ?? null,
+      startedAt: null,
+      assigneeId: null,
+      instanceOf: (body.instanceOf as string | null) ?? null,
+      ownerId: "guest",
+      memberIds: [],
+      subtasks: Array.isArray(body.subtasks) ? (body.subtasks as Task["subtasks"]) : [],
+      completedAt: status === "done" ? now : null,
+      createdAt: now,
+    };
+    return { task } as T;
+  }
+
+  if (method === "POST" && url === "/api/lists") {
+    const list: List = {
+      id: `local-list-${crypto.randomUUID()}`,
+      name: String(body.name ?? "List"),
+      emoji: String(body.emoji ?? "📌"),
+      order: Date.now(),
+      locked: false,
+      role: "owner",
+      memberCount: 0,
+    };
+    return { list } as T;
+  }
+
+  // every other call (PATCH, DELETE, batch, order) only needs a nod
+  return {} as T;
+}
+
 async function api<T>(url: string, options?: RequestInit): Promise<T> {
+  if (guestMode) return guestApi<T>(url, options);
   const res = await fetch(url, {
     headers: { "Content-Type": "application/json" },
     ...options,
@@ -248,6 +312,7 @@ export function AppProvider({
   initialTasks,
   initialLists,
   initialPeople,
+  guest = false,
   children,
 }: {
   user: UserProfile;
@@ -255,8 +320,17 @@ export function AppProvider({
   initialTasks: Task[];
   initialLists: List[];
   initialPeople: AccountInfo[];
+  /** Try-mode: no network, localStorage is the database. */
+  guest?: boolean;
   children: React.ReactNode;
 }) {
+  // effects run before any user interaction can call a mutator, so the flag
+  // is always set by the time the first api() fires; only one provider is
+  // ever mounted, so a module flag is safe
+  useEffect(() => {
+    guestMode = guest;
+  }, [guest]);
+
   /* unlock state is scoped per account — switching users never leaks an unlock */
   const unlockedListsKey = `kairo-unlocked:${user.id}`;
   const appLockKey = `kairo-applock:${user.id}`;
@@ -297,6 +371,41 @@ export function AppProvider({
     },
     [showToast]
   );
+
+  /* guest hydrate: the browser's saved world replaces the empty initial one.
+     Runs in an effect (not the reducer init) so SSR and first client render
+     agree, which is what keeps hydration from tearing. */
+  useEffect(() => {
+    if (!guest) return;
+    try {
+      const raw = localStorage.getItem(GUEST_STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as { tasks?: Task[]; lists?: List[] };
+      const tasks = Array.isArray(saved.tasks) ? saved.tasks.filter((t) => t && t.id && t.title) : [];
+      const lists = Array.isArray(saved.lists) && saved.lists.length ? saved.lists : stateRef.current.lists;
+      if (tasks.length || saved.lists?.length) {
+        dispatch({ type: "REPLACE_ALL", tasks, lists, people: [] });
+      }
+    } catch {
+      /* a corrupt save never blocks a fresh start */
+    }
+  }, [guest]);
+
+  /* guest persist: every settled change lands in localStorage, debounced */
+  useEffect(() => {
+    if (!guest) return;
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem(
+          GUEST_STORAGE_KEY,
+          JSON.stringify({ tasks: Object.values(state.tasks), lists: state.lists })
+        );
+      } catch {
+        /* storage full or blocked — the session still works in memory */
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [guest, state.tasks, state.lists]);
 
   /* keep "today" fresh across midnight / tab refocus */
   useEffect(() => {
@@ -954,6 +1063,7 @@ export function AppProvider({
   }, [appLockKey]);
 
   const refreshData = useCallback(async () => {
+    if (guestMode) return; // a guest's truth is already in this browser
     // don't clobber optimistic creates that are still in flight
     if (Object.keys(stateRef.current.tasks).some((id) => id.startsWith("temp-"))) return;
     try {

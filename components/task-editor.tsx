@@ -681,7 +681,9 @@ export function TaskEditor({ task }: { task: Task }) {
           )}
 
           {/* opens the share sheet rather than a fold-out: adding people has
-              its own richer surface, and the row is the doorway to it */}
+              its own richer surface, and the row is the doorway to it.
+              Guests have nobody to invite yet, so the doorway waits. */}
+          {!state.user.guest && (
           <PropRow
             label="People"
             value={task.memberIds.length === 0 ? "Just you" : `${task.memberIds.length + 1} on it`}
@@ -703,6 +705,7 @@ export function TaskEditor({ task }: { task: Task }) {
             }
             last
           />
+          )}
         </div>
 
         {/* footer */}

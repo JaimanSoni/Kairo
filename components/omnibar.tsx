@@ -165,6 +165,11 @@ export function Omnibar() {
       if (!local.title) local.title = raw;
       const idPromise = addTask(local);
       setText("");
+      if (state.user.guest) {
+        // guests have no AI behind them; the local parse is the whole story
+        showToast({ message: `✨ Captured` });
+        return;
+      }
       void aiParse(raw).then(async (parsed) => {
         const id = await idPromise;
         if (!id) return;
@@ -205,7 +210,9 @@ export function Omnibar() {
     setThinkLine(0);
     setPhase("thinking");
     setAiFell(false);
-    const parsed = aiParse(raw);
+    // guests skip the AI entirely: the preview shows the local parse, and the
+    // note under it says what signing in would have done with the sentence
+    const parsed = state.user.guest ? Promise.resolve<AiParsed[]>([]) : aiParse(raw);
     // must outlast the server's Ollama leash (15s) plus overhead, or the
     // client gives up on answers that were still coming
     const timeout = new Promise<AiParsed[] | null>((r) =>
@@ -490,7 +497,15 @@ export function Omnibar() {
                     <Icon3d name="sparkle" size={14} /> AI filled in dates, times, and lists
                   </p>
                 )}
-                {aiFell && (
+                {aiFell && state.user.guest && (
+                  <p className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-ink-faint">
+                    <span>
+                      Filed as typed. Sign in and AI splits sentences like this into separate
+                      tasks with days, times and lists.
+                    </span>
+                  </p>
+                )}
+                {aiFell && !state.user.guest && (
                   <p className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-ink-faint">
                     <span>AI couldn&apos;t be reached, so this is the plain capture.</span>
                     <button
