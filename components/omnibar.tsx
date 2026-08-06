@@ -5,7 +5,7 @@ import type { Task } from "@/lib/types";
 import { parseQuickAdd, type ParsedInput } from "@/lib/nlp";
 import { friendlyDay, fmtMinutes, fmtTime12 } from "@/lib/dates";
 import { repeatLabel, type Repeat } from "@/lib/repeat";
-import { GUEST_CAP_EVENT, GUEST_TASK_CAP, useApp, visibleLists } from "./store";
+import { guestCapReached, useApp, visibleLists } from "./store";
 import { track } from "@/lib/analytics-client";
 import { Icon3d } from "./img3d";
 import { Chip, Kbd, Modal } from "./ui";
@@ -177,10 +177,7 @@ export function Omnibar() {
     const raw = text.trim();
     if (!raw) return;
     // the guest slate is bounded; the cap modal makes the case for signing in
-    if (state.user.guest && Object.keys(state.tasks).length >= GUEST_TASK_CAP) {
-      window.dispatchEvent(new Event(GUEST_CAP_EVENT));
-      return;
-    }
+    if (guestCapReached()) return;
     track("capture");
 
     // rapid entry (shift+enter): instant local-parse capture + bg AI refine

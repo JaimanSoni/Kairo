@@ -210,12 +210,12 @@ function GuestOverlays({ authError }: { authError?: string }) {
           <div className="p-6 text-center">
             <Icon3d name="lock" size={44} className="mx-auto" />
             <h2 className="font-display mt-3 text-2xl tracking-tight">
-              Your guest slate is full.
+              That was your {GUEST_TASK_CAP}th task.
             </h2>
             <p className="mx-auto mt-1.5 max-w-sm text-sm leading-6 text-ink-soft">
-              {GUEST_TASK_CAP} tasks is the limit in this browser. Sign in free and everything
-              opens up: unlimited tasks, AI capture, sync on every device, reminders and sharing.
-              Every task you made comes with you.
+              The guest slate covers {GUEST_TASK_CAP} tasks, and letting some go doesn&apos;t mint
+              new ones. Sign in free and everything opens up: unlimited tasks, AI capture, sync
+              on every device, reminders and sharing. Everything you made comes with you.
             </p>
             <a
               href="/api/auth/google"
