@@ -145,6 +145,20 @@ function reducer(state: State, action: Action): State {
 export const GUEST_STORAGE_KEY = "kairo-guest-v1";
 
 /**
+ * The guest slate holds this many tasks. The cap is measured against the
+ * live store — the tasks ARE the counter, so nothing can drift or be edited
+ * out of sync. Hitting it fires this event; the sign-in gate listens.
+ */
+export const GUEST_TASK_CAP = 10;
+export const GUEST_CAP_EVENT = "kairo-guest-cap";
+
+function guestAtCap(taskCount: number): boolean {
+  if (!guestMode || taskCount < GUEST_TASK_CAP) return false;
+  window.dispatchEvent(new Event(GUEST_CAP_EVENT));
+  return true;
+}
+
+/**
  * Guest mode: the same store, but the network is a mirror. Every mutator in
  * this file already builds its optimistic state and only needs the server to
  * echo agreement (plus a real id on creates), so a guest can run the entire
@@ -424,6 +438,7 @@ export function AppProvider({
 
   const addTask = useCallback(
     (input: ParsedInput, opts?: { status?: Task["status"] }) => {
+      if (guestAtCap(Object.keys(stateRef.current.tasks).length)) return Promise.resolve(null);
       const tempId = `temp-${crypto.randomUUID()}`;
       const status = opts?.status ?? (input.plannedFor ? "planned" : "inbox");
       const now = new Date().toISOString();
@@ -558,6 +573,7 @@ export function AppProvider({
     (id: string) => {
       const src = stateRef.current.tasks[id];
       if (!src) return;
+      if (guestAtCap(Object.keys(stateRef.current.tasks).length)) return;
       const tempId = `temp-${crypto.randomUUID()}`;
       const now = new Date().toISOString();
       const subtasks = src.subtasks.map((st) => ({

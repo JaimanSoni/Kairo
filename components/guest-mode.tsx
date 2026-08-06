@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { List, UserProfile } from "@/lib/types";
 import { FEATURE_KEYS } from "@/lib/features";
 import { track } from "@/lib/analytics-client";
-import { AppProvider, useApp } from "./store";
+import { AppProvider, GUEST_CAP_EVENT, GUEST_TASK_CAP, useApp } from "./store";
 import { EntitlementsProvider } from "./entitlements";
 import { Shell } from "./shell";
 import { AppViews } from "./app-views";
@@ -82,9 +82,22 @@ function GuestOverlays({ authError }: { authError?: string }) {
   const { state, setOmnibar } = useApp();
   const [intro, setIntro] = useState(false);
   const [nudge, setNudge] = useState(false);
+  const [capOpen, setCapOpen] = useState(false);
   const [errorShown, setErrorShown] = useState(Boolean(authError));
 
   const taskCount = useMemo(() => Object.keys(state.tasks).length, [state.tasks]);
+
+  // the hard gate: any blocked creation fires this event from the store, so
+  // the modal appears exactly when someone runs into the wall — no counters,
+  // no flags, nothing stored that could drift out of sync
+  useEffect(() => {
+    const onCap = () => {
+      setCapOpen(true);
+      track("guest-cap-hit");
+    };
+    window.addEventListener(GUEST_CAP_EVENT, onCap);
+    return () => window.removeEventListener(GUEST_CAP_EVENT, onCap);
+  }, []);
 
   // first visit with an empty slate gets the tour; anything else doesn't.
   // The beat of delay lets the app render behind it, so the tour visibly
@@ -162,7 +175,7 @@ function GuestOverlays({ authError }: { authError?: string }) {
             </p>
             <div className="mt-5 space-y-2.5 text-left">
               {[
-                { icon: "feather", title: "Say it messy", body: "One sentence, even several things at once. Kairo files it into real tasks." },
+                { icon: "sparkle", title: "AI capture, 3 free runs", body: "Type “call mom at 7 and gym tomorrow” and AI files it as separate tasks with days and times. Try it right now." },
                 { icon: "sun", title: "Pick 3 that matter", body: "Today holds what you chose for today. Never the whole pile." },
                 { icon: "sunrise", title: "Mornings forgive", body: "Yesterday's leftovers come back once, gently. Nothing ever turns red." },
               ].map((f) => (
@@ -192,7 +205,36 @@ function GuestOverlays({ authError }: { authError?: string }) {
         </Modal>
       )}
 
-      {nudge && (
+      {capOpen && (
+        <Modal onClose={() => setCapOpen(false)}>
+          <div className="p-6 text-center">
+            <Icon3d name="lock" size={44} className="mx-auto" />
+            <h2 className="font-display mt-3 text-2xl tracking-tight">
+              Your guest slate is full.
+            </h2>
+            <p className="mx-auto mt-1.5 max-w-sm text-sm leading-6 text-ink-soft">
+              {GUEST_TASK_CAP} tasks is the limit in this browser. Sign in free and everything
+              opens up: unlimited tasks, AI capture, sync on every device, reminders and sharing.
+              Every task you made comes with you.
+            </p>
+            <a
+              href="/api/auth/google"
+              data-track="guest-signin"
+              className="mt-5 flex w-full items-center justify-center gap-3 rounded-full bg-sun py-2.5 pl-2.5 pr-6 text-sm font-semibold text-on-accent shadow-lg shadow-sun/25 transition-transform active:scale-[0.99]"
+            >
+              <GoogleBadge size={30} /> Continue with Google, keep my tasks
+            </a>
+            <button
+              onClick={() => setCapOpen(false)}
+              className="mt-2 w-full rounded-full px-5 py-2 text-sm font-medium text-ink-faint hover:text-ink"
+            >
+              Keep browsing
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {nudge && !capOpen && (
         <Modal onClose={() => setNudge(false)}>
           <div className="p-6 text-center">
             <Icon3d name="party" size={44} className="mx-auto" />

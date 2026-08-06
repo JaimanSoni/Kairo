@@ -5,7 +5,7 @@ import type { Task } from "@/lib/types";
 import { parseQuickAdd, type ParsedInput } from "@/lib/nlp";
 import { friendlyDay, fmtMinutes, fmtTime12 } from "@/lib/dates";
 import { repeatLabel, type Repeat } from "@/lib/repeat";
-import { useApp, visibleLists } from "./store";
+import { GUEST_CAP_EVENT, GUEST_TASK_CAP, useApp, visibleLists } from "./store";
 import { track } from "@/lib/analytics-client";
 import { Icon3d } from "./img3d";
 import { Chip, Kbd, Modal } from "./ui";
@@ -76,6 +76,10 @@ export function Omnibar() {
   // true when the preview is the local fallback, not an AI answer — the
   // difference must be visible, or a failed call looks like a bad parse
   const [aiFell, setAiFell] = useState(false);
+  // guest bookkeeping, straight from the server's mouth: how many free AI
+  // runs remain, and whether the well is dry (429)
+  const [aiLeft, setAiLeft] = useState<number | null>(null);
+  const [aiLimited, setAiLimited] = useState(false);
   const [filing, setFiling] = useState(false);
   // the real reentry guard: state commits a render late, and a double-click's
   // second click arrives inside that gap — a ref flips synchronously
@@ -132,24 +136,39 @@ export function Omnibar() {
 
   /**
    * Ask the AI to parse raw text into structured tasks. Returns the parsed
-   * results (no side effects on the store). Falls back to local parse on any
+   * results (no side effects on the store) plus, for guests, the server's
+   * word on how many free runs remain. Falls back to local parse on any
    * failure — the caller decides what to file.
    */
-  const aiParse = async (raw: string): Promise<AiParsed[]> => {
+  type AiOutcome = { tasks: AiParsed[]; left: number | null; limited: boolean };
+  const aiParse = async (raw: string): Promise<AiOutcome> => {
     const now = new Date();
     const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
     try {
       const res = await fetch("/api/parse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: raw, today: state.today, time }),
+        body: JSON.stringify({
+          text: raw,
+          today: state.today,
+          time,
+          // a guest's lists exist only here, so they ride along for filing
+          ...(state.user.guest ? { lists: lists.map((l) => ({ id: l.id, name: l.name })) } : {}),
+        }),
       });
-      if (!res.ok) return [];
-      const { parsed }: { parsed: AiParsed[] } = await res.json();
-      if (!Array.isArray(parsed) || parsed.length === 0) return [];
-      return parsed;
+      if (res.status === 429) return { tasks: [], left: 0, limited: true };
+      if (!res.ok) return { tasks: [], left: null, limited: false };
+      const { parsed, guestRunsLeft } = (await res.json()) as {
+        parsed?: AiParsed[];
+        guestRunsLeft?: number;
+      };
+      return {
+        tasks: Array.isArray(parsed) ? parsed : [],
+        left: typeof guestRunsLeft === "number" ? guestRunsLeft : null,
+        limited: false,
+      };
     } catch {
-      return [];
+      return { tasks: [], left: null, limited: false };
     }
   };
 
@@ -157,6 +176,11 @@ export function Omnibar() {
     if (phase !== "input") return;
     const raw = text.trim();
     if (!raw) return;
+    // the guest slate is bounded; the cap modal makes the case for signing in
+    if (state.user.guest && Object.keys(state.tasks).length >= GUEST_TASK_CAP) {
+      window.dispatchEvent(new Event(GUEST_CAP_EVENT));
+      return;
+    }
     track("capture");
 
     // rapid entry (shift+enter): instant local-parse capture + bg AI refine
@@ -166,11 +190,12 @@ export function Omnibar() {
       const idPromise = addTask(local);
       setText("");
       if (state.user.guest) {
-        // guests have no AI behind them; the local parse is the whole story
+        // rapid entry stays local for guests: burning a free AI run on a
+        // background refine nobody watched would be a waste of the three
         showToast({ message: `✨ Captured` });
         return;
       }
-      void aiParse(raw).then(async (parsed) => {
+      void aiParse(raw).then(async ({ tasks: parsed }) => {
         const id = await idPromise;
         if (!id) return;
         const current = getTask(id);
@@ -210,17 +235,17 @@ export function Omnibar() {
     setThinkLine(0);
     setPhase("thinking");
     setAiFell(false);
-    // guests skip the AI entirely: the preview shows the local parse, and the
-    // note under it says what signing in would have done with the sentence
-    const parsed = state.user.guest ? Promise.resolve<AiParsed[]>([]) : aiParse(raw);
+    // guests get the real AI too — the server counts their 3 free runs
+    const parsed = aiParse(raw);
     // must outlast the server's Ollama leash (15s) plus overhead, or the
     // client gives up on answers that were still coming
-    const timeout = new Promise<AiParsed[] | null>((r) =>
+    const timeout = new Promise<AiOutcome | null>((r) =>
       setTimeout(() => r(null), 20000)
     );
     void (async () => {
       const started = Date.now();
-      let tasks = await Promise.race([parsed, timeout]);
+      const outcome = await Promise.race([parsed, timeout]);
+      let tasks: AiParsed[] | null = outcome?.tasks ?? null;
       // if AI returned nothing or timed out, fall back to local single-task
       // parse — and say so, because a silent fallback looks like a bad parse
       const fell = !tasks || tasks.length === 0;
@@ -244,6 +269,8 @@ export function Omnibar() {
       }
       const wait = Math.max(150, 1600 - (Date.now() - started));
       await new Promise((r) => setTimeout(r, wait));
+      setAiLeft(outcome?.left ?? null);
+      setAiLimited(outcome?.limited ?? false);
       setAiFell(fell);
       setResult(tasks);
       setPhase("done");
@@ -360,6 +387,8 @@ export function Omnibar() {
     filingRef.current = false;
     setResult(null);
     setAiFell(false);
+    setAiLeft(null);
+    setAiLimited(false);
     setFiling(false);
     setPhase("input");
     queueMicrotask(() => inputRef.current?.focus());
@@ -497,15 +526,35 @@ export function Omnibar() {
                     <Icon3d name="sparkle" size={14} /> AI filled in dates, times, and lists
                   </p>
                 )}
-                {aiFell && state.user.guest && (
+                {state.user.guest && aiLimited && (
                   <p className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-ink-faint">
-                    <span>
-                      Filed as typed. Sign in and AI splits sentences like this into separate
-                      tasks with days, times and lists.
-                    </span>
+                    <span>Your 3 free AI captures are used, so this filed as typed.</span>
+                    <a
+                      href="/api/auth/google"
+                      data-track="guest-signin"
+                      className="font-semibold text-sun-deep underline underline-offset-2 hover:text-sun"
+                    >
+                      Sign in for unlimited AI
+                    </a>
                   </p>
                 )}
-                {aiFell && !state.user.guest && (
+                {state.user.guest && !aiLimited && !aiFell && aiLeft != null && (
+                  <p className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-ink-faint">
+                    <span>
+                      {aiLeft === 0
+                        ? "That was your last free AI capture."
+                        : `${aiLeft} free AI ${aiLeft === 1 ? "capture" : "captures"} left.`}
+                    </span>
+                    <a
+                      href="/api/auth/google"
+                      data-track="guest-signin"
+                      className="font-semibold text-sun-deep underline underline-offset-2 hover:text-sun"
+                    >
+                      Sign in for unlimited
+                    </a>
+                  </p>
+                )}
+                {aiFell && !aiLimited && (
                   <p className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-ink-faint">
                     <span>AI couldn&apos;t be reached, so this is the plain capture.</span>
                     <button
