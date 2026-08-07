@@ -271,6 +271,75 @@ export async function setUserDisabled(
   });
 }
 
+/** What a deletion actually removed, so the admin is told rather than trusted. */
+export type DeletionReport = {
+  email: string;
+  tasks: number;
+  lists: number;
+  sharedListsLeft: number;
+  sharedTasksLeft: number;
+  pushSubscriptions: number;
+  magicLinks: number;
+  /** Kept on purpose: money records outlive the account that made them. */
+  paymentsKept: number;
+};
+
+/**
+ * Erases an account and everything personal it owns.
+ *
+ * What goes: the user record, every task and list they own, their push
+ * subscriptions and scheduled notifications, their unused sign-in links, and
+ * their membership of other people's shared lists and tasks — a stale id in
+ * someone else's memberIds renders as a ghost collaborator.
+ *
+ * What stays: payments, orders and tips. Those are money that changed hands,
+ * and tax rules outlive the account (our privacy policy says exactly this).
+ * Promo redemptions stay too, so deleting an account can't recycle a
+ * once-per-person code.
+ *
+ * There is no undo. Deactivation is the reversible door.
+ */
+export async function deleteUserCompletely(idHex: string): Promise<DeletionReport | null> {
+  return withDbRetry(async () => {
+    const db = await getDb();
+    const _id = new ObjectId(idHex);
+
+    const user = await db.collection("users").findOne({ _id });
+    if (!user) return null;
+
+    const [tasks, lists, pushSubs, magic, sharedLists, sharedTasks, paymentsKept] =
+      await Promise.all([
+        db.collection("tasks").deleteMany({ userId: _id }),
+        db.collection("lists").deleteMany({ userId: _id }),
+        db.collection("push_subscriptions").deleteMany({ userId: _id }),
+        db.collection("magic_links").deleteMany({ email: user.email }),
+        // membership of other people's lists, and the tasks shared with them
+        db.collection("lists").updateMany({ memberIds: _id }, { $pull: { memberIds: _id } as never }),
+        db.collection("tasks").updateMany({ memberIds: _id }, { $pull: { memberIds: _id } as never }),
+        db.collection("payments").countDocuments({ userId: _id }),
+      ]);
+
+    // work assigned to someone who no longer exists belongs to nobody
+    await db.collection("tasks").updateMany({ assigneeId: _id }, { $set: { assigneeId: null } });
+    await db.collection("scheduled_pushes").deleteMany({ userId: _id });
+    await db.collection("users").deleteOne({ _id });
+
+    // the disabled-check cache would otherwise answer for a ghost
+    disabledCache().delete(idHex);
+
+    return {
+      email: String(user.email ?? ""),
+      tasks: tasks.deletedCount,
+      lists: lists.deletedCount,
+      sharedListsLeft: sharedLists.modifiedCount,
+      sharedTasksLeft: sharedTasks.modifiedCount,
+      pushSubscriptions: pushSubs.deletedCount,
+      magicLinks: magic.deletedCount,
+      paymentsKept,
+    };
+  });
+}
+
 export async function upsertGoogleUser(profile: GoogleProfile): Promise<DbUser> {
   return withDbRetry(() => upsertGoogleUserOnce(profile));
 }

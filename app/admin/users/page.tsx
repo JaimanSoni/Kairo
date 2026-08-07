@@ -4,7 +4,7 @@ import { loadAdminUsers, type AdminUserRow } from "@/lib/users";
 import { getBillingSettings, resolveAccess, TRIAL_DAYS } from "@/lib/billing";
 import { listPlans } from "@/lib/plans";
 import { CompToggle } from "@/components/admin-billing";
-import { ActiveToggle, PlanPicker } from "@/components/admin/user-actions";
+import { ActiveToggle, DeleteUser, PlanPicker } from "@/components/admin/user-actions";
 import { Avatar, Empty, fmtDate, PageHead, since, Stats, TableShell, Th } from "@/components/admin/ui";
 
 export const metadata: Metadata = {
@@ -69,8 +69,8 @@ export default async function AdminUsers() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
       <PageHead title="Users">
-        Everyone who has signed in. Deactivating keeps every task and list, it only stops the
-        account being used, and it can be undone.
+        Everyone who has signed in. Deactivating keeps every task and list and can be undone;
+        deleting erases the account and its data for good, keeping only payment records.
       </PageHead>
 
       <Stats
@@ -106,12 +106,21 @@ export default async function AdminUsers() {
                     <div className="truncate text-sm font-semibold">{u.name}</div>
                     <div className="truncate text-xs text-ink-faint">{u.email}</div>
                   </div>
-                  <ActiveToggle
-                    userId={u.id}
-                    email={u.email}
-                    disabled={u.disabled}
-                    isSelf={u.id === adminId}
-                  />
+                  <span className="flex shrink-0 items-center gap-1.5">
+                    <ActiveToggle
+                      userId={u.id}
+                      email={u.email}
+                      disabled={u.disabled}
+                      isSelf={u.id === adminId}
+                    />
+                    <DeleteUser
+                      userId={u.id}
+                      email={u.email}
+                      tasks={u.tasks}
+                      lists={u.lists}
+                      isSelf={u.id === adminId}
+                    />
+                  </span>
                 </div>
                 <div className="mt-2.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-faint">
                   <span className="font-medium text-ink-soft">
@@ -196,12 +205,21 @@ export default async function AdminUsers() {
                       </span>
                     </td>
                     <td className="px-4 py-2.5">
-                      <ActiveToggle
-                        userId={u.id}
-                        email={u.email}
-                        disabled={u.disabled}
-                        isSelf={u.id === adminId}
-                      />
+                      <span className="flex items-center gap-1.5">
+                        <ActiveToggle
+                          userId={u.id}
+                          email={u.email}
+                          disabled={u.disabled}
+                          isSelf={u.id === adminId}
+                        />
+                        <DeleteUser
+                          userId={u.id}
+                          email={u.email}
+                          tasks={u.tasks}
+                          lists={u.lists}
+                          isSelf={u.id === adminId}
+                        />
+                      </span>
                     </td>
                   </tr>
                 ))}

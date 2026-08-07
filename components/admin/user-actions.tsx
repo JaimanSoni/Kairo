@@ -86,6 +86,86 @@ export function ActiveToggle({
 }
 
 /**
+ * Erases an account for good.
+ *
+ * Deliberately awkward: it states what will go, then makes you type the email
+ * to prove you mean that row and not the one above it. Deactivation is the
+ * button for "probably", this one is only for "certainly".
+ */
+export function DeleteUser({
+  userId,
+  email,
+  tasks,
+  lists,
+  isSelf,
+}: {
+  userId: string;
+  email: string;
+  tasks: number;
+  lists: number;
+  isSelf: boolean;
+}) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+
+  if (isSelf) return null;
+
+  const run = async () => {
+    if (busy) return;
+    const typed = prompt(
+      `Delete ${email} permanently?\n\n` +
+        `This erases their account, ${tasks} ${tasks === 1 ? "task" : "tasks"} and ` +
+        `${lists} ${lists === 1 ? "list" : "lists"}, and removes them from anything shared ` +
+        `with them. Payment records are kept.\n\nThere is no undo.\n\n` +
+        `Type the email to confirm:`,
+      ""
+    );
+    if (typed === null) return;
+    if (typed.trim().toLowerCase() !== email.toLowerCase()) {
+      alert("That didn't match, nothing was deleted.");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, confirmEmail: typed.trim() }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        report?: { tasks: number; lists: number; paymentsKept: number };
+      };
+      if (!res.ok) throw new Error(data.error ?? "Could not delete the account");
+      const r = data.report;
+      alert(
+        r
+          ? `Deleted ${email}.\n\n${r.tasks} tasks and ${r.lists} lists removed.` +
+            (r.paymentsKept > 0 ? `\n${r.paymentsKept} payment records kept.` : "")
+          : `Deleted ${email}.`
+      );
+      router.refresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Could not delete the account");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={run}
+      disabled={busy}
+      title="Delete this account and all its data"
+      className="rounded-full border border-line bg-card px-2.5 py-1 text-[11px] font-semibold text-ink-faint transition-colors hover:border-clay hover:bg-clay-soft hover:text-clay disabled:opacity-50"
+    >
+      {busy ? "…" : "Delete"}
+    </button>
+  );
+}
+
+/**
  * Moves an account onto a different plan by hand.
  *
  * Changes what the current paid period unlocks; it takes no money and extends
