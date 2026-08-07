@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { TRIAL_DAYS } from "@/lib/access";
 import { B, H2, LI, Mail, P, PageHead, UL } from "../_parts";
 
 export const metadata: Metadata = {
@@ -8,7 +9,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/terms" },
 };
 
-const UPDATED = "28 July 2026";
+const UPDATED = "7 August 2026";
 
 export default function TermsPage() {
   return (
@@ -34,7 +35,8 @@ export default function TermsPage() {
       <H2>What you pay</H2>
       <UL>
         <LI>
-          Kairo is free for <B>3 days</B> from the day you sign up. No card is needed to start.
+          Kairo is free for <B>{TRIAL_DAYS} days</B> from the day you sign up. No card is needed
+          to start.
         </LI>
         <LI>
           After that, access costs <B>₹299 per month</B>, charged as a single payment for one

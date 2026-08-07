@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { TRIAL_DAYS } from "@/lib/access";
 import { B, H2, LI, Mail, P, PageHead, UL } from "../_parts";
 
 export const metadata: Metadata = {
@@ -8,7 +9,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/refunds" },
 };
 
-const UPDATED = "28 July 2026";
+const UPDATED = "7 August 2026";
 
 export default function RefundsPage() {
   return (
@@ -27,8 +28,8 @@ export default function RefundsPage() {
         is no cancellation step, and no way to be billed by forgetting about us.
       </P>
       <P>
-        Your <B>3-day free trial</B> needs no card and ends by itself. Nothing is taken when it
-        does.
+        Your <B>{TRIAL_DAYS}-day free trial</B> needs no card and ends by itself. Nothing is taken
+        when it does.
       </P>
 
       <H2>Refunds</H2>

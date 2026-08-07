@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { List, UserProfile } from "@/lib/types";
 import { FEATURE_KEYS } from "@/lib/features";
 import { track } from "@/lib/analytics-client";
-import { AppProvider, GUEST_CAP_EVENT, GUEST_TASK_CAP, useApp } from "./store";
+import { AppProvider, GUEST_CAP_EVENT, GUEST_STORAGE_KEY, GUEST_TASK_CAP, useApp } from "./store";
 import { EntitlementsProvider } from "./entitlements";
 import { Shell } from "./shell";
 import { AppViews } from "./app-views";
@@ -36,10 +36,38 @@ const GUEST_LISTS: List[] = [
   { id: "guest-list-work", name: "Work", emoji: "💼", order: 2, locked: false, role: "owner", memberCount: 0 },
 ];
 
-const NUDGE_AT_KEY = "kairo-guest-nudged-at";
-/** First invitation after this many tasks; again every RENUDGE_EVERY after. */
-const NUDGE_AFTER = 5;
-const RENUDGE_EVERY = 3;
+/**
+ * Task counts that earn an invitation to sign in. Nothing about which of
+ * these has fired is written down: the set lives for the life of the tab,
+ * and anything already passed when the page loaded counts as spent. A
+ * stored counter would drift out of step with the tasks and start asking
+ * twice, which is exactly the kind of nagging this app exists to avoid.
+ */
+const NUDGE_AT = [1, 3, 7, 10];
+
+/**
+ * One voice per milestone. Asking the same way four times is nagging; the
+ * ask has to earn its place by saying something new each time, and the last
+ * one is a warning rather than an invitation.
+ */
+const NUDGE_COPY: Record<number, { title: string; body: string }> = {
+  1: {
+    title: "That's one off your mind.",
+    body: "It lives in this browser for now. Sign in free and it follows you to every device, with AI capture, reminders and sharing switched on.",
+  },
+  3: {
+    title: "Three down. This is the habit.",
+    body: "Signing in takes a moment and keeps all of them: synced everywhere, backed up, and safe from a cleared browser.",
+  },
+  7: {
+    title: "Seven tasks in.",
+    body: "You're three away from the guest limit. Sign in free to keep going without a ceiling, and everything you've written comes with you.",
+  },
+  10: {
+    title: "That's your tenth task.",
+    body: "Ten is the guest limit, and letting some go doesn't make room for more. Sign in free for unlimited tasks, AI capture, sync, reminders and sharing.",
+  },
+};
 
 export function GoogleBadge({ size = 24 }: { size?: number }) {
   return (
@@ -79,9 +107,11 @@ export function GuestExperience({ authError }: { authError?: string }) {
 
 function GuestOverlays({ authError }: { authError?: string }) {
   const { state } = useApp();
-  const [nudge, setNudge] = useState(false);
+  const [nudge, setNudge] = useState<number | null>(null);
   const [capOpen, setCapOpen] = useState(false);
   const [errorShown, setErrorShown] = useState(Boolean(authError));
+  /** Milestones already spent. Populated on mount from what is already there. */
+  const spent = useRef<Set<number> | null>(null);
 
   const taskCount = useMemo(() => Object.keys(state.tasks).length, [state.tasks]);
 
@@ -103,24 +133,37 @@ function GuestOverlays({ authError }: { authError?: string }) {
     return () => window.removeEventListener(GUEST_CAP_EVENT, onCap);
   }, []);
 
-  // the invitation: at five tasks, then again every few more. The pause lets
-  // the capture panel finish closing before the invitation slides in.
+  /**
+   * The invitation, at 1, 3, 7 and 10 tasks. A milestone the visitor was
+   * already past when they arrived is treated as spent, so a returning guest
+   * is never asked about ground they covered yesterday. The pause lets the
+   * capture panel finish closing before the invitation slides in.
+   */
   useEffect(() => {
-    if (taskCount < NUDGE_AFTER || state.omnibarOpen || state.editingId) return;
-    let lastNudgedAt = 0;
-    try {
-      lastNudgedAt = Number(localStorage.getItem(NUDGE_AT_KEY)) || 0;
-    } catch {}
-    if (lastNudgedAt !== 0 && taskCount < lastNudgedAt + RENUDGE_EVERY) return;
-    const t = setTimeout(() => {
-      setNudge(true);
-      track("guest-signup-nudge", { tasks: taskCount });
+    if (spent.current === null) {
+      // read the saved slate, not the store: the store hydrates in its own
+      // effect, so on this first pass it still reports an empty day and
+      // every milestone would look unspent to a returning guest
+      let already = 0;
       try {
-        localStorage.setItem(NUDGE_AT_KEY, String(taskCount));
-      } catch {}
+        const raw = localStorage.getItem(GUEST_STORAGE_KEY);
+        const saved = raw ? (JSON.parse(raw) as { tasks?: unknown[] }) : null;
+        already = Array.isArray(saved?.tasks) ? saved.tasks.length : 0;
+      } catch {
+        /* an unreadable slate is a fresh one */
+      }
+      spent.current = new Set(NUDGE_AT.filter((n) => n <= already));
+    }
+    if (state.omnibarOpen || state.editingId || capOpen) return;
+    const due = NUDGE_AT.find((n) => taskCount >= n && !spent.current?.has(n));
+    if (due === undefined) return;
+    const t = setTimeout(() => {
+      spent.current?.add(due);
+      setNudge(due);
+      track("guest-signup-nudge", { tasks: due });
     }, 700);
     return () => clearTimeout(t);
-  }, [taskCount, state.omnibarOpen, state.editingId]);
+  }, [taskCount, state.omnibarOpen, state.editingId, capOpen]);
 
   return (
     <>
@@ -171,16 +214,13 @@ function GuestOverlays({ authError }: { authError?: string }) {
         </Modal>
       )}
 
-      {nudge && !capOpen && (
-        <Modal onClose={() => setNudge(false)}>
+      {nudge !== null && !capOpen && (
+        <Modal onClose={() => setNudge(null)}>
           <div className="p-6 text-center">
-            <Icon3d name="party" size={44} className="mx-auto" />
-            <h2 className="font-display mt-3 text-2xl tracking-tight">
-              {taskCount} tasks. You&apos;re really doing this.
-            </h2>
+            <Icon3d name={nudge >= GUEST_TASK_CAP ? "lock" : "party"} size={44} className="mx-auto" />
+            <h2 className="font-display mt-3 text-2xl tracking-tight">{NUDGE_COPY[nudge].title}</h2>
             <p className="mx-auto mt-1.5 max-w-sm text-sm leading-6 text-ink-soft">
-              Right now they live only in this browser. Sign in free and they come with you,
-              synced to every device, with AI capture, reminders and sharing switched on.
+              {NUDGE_COPY[nudge].body}
             </p>
             <a
               href="/api/auth/google"
@@ -190,10 +230,10 @@ function GuestOverlays({ authError }: { authError?: string }) {
               <GoogleBadge size={30} /> Continue with Google, keep my tasks
             </a>
             <button
-              onClick={() => setNudge(false)}
+              onClick={() => setNudge(null)}
               className="mt-2 w-full rounded-full px-5 py-2 text-sm font-medium text-ink-faint hover:text-ink"
             >
-              Not yet
+              {nudge >= GUEST_TASK_CAP ? "Keep browsing" : "Not yet"}
             </button>
           </div>
         </Modal>
