@@ -45,6 +45,9 @@ const nextConfig: NextConfig = {
       // which is what llms.txt points at. The dot is escaped because `source`
       // patterns treat it as a regex metacharacter.
       { source: "/support/:slug\\.md", destination: "/api/docs/:slug" },
+      // The MCP endpoint people paste into an assistant. Short enough to type
+      // and to read out; the handler stays under /api with every other route.
+      { source: "/mcp", destination: "/api/mcp" },
     ];
   },
 };

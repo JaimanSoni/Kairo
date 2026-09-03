@@ -18,6 +18,7 @@ import { CommandPalette } from "./command-palette";
 import { ThemeToggle } from "./theme";
 import { CoffeeButton, CoffeeNudge } from "./coffee";
 import { SubscriptionSettings } from "./subscription-settings";
+import { ConnectionsSettings } from "./mcp-settings";
 import { ShareKairoRow } from "./share-kairo";
 import { Mark } from "./mark";
 import { IconBook, IconCalendar, IconInbox, IconPlus, IconSun, IconX, Kbd, Modal } from "./ui";
@@ -467,6 +468,8 @@ function ProfileSheet({
         <NotificationSettings />
 
         <AppLockSettings />
+
+        <ConnectionsSettings />
 
         <SubscriptionSettings />
 

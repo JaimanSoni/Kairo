@@ -65,10 +65,50 @@ app/
   page.tsx            landing page (public)
   (app)/              authed app — today / calendar / lists / log
   api/                auth + tasks/lists/log route handlers
+  api/mcp/            the MCP endpoint (served at /mcp) + connection-key CRUD
 components/           store (optimistic state), shell, views, task UI
 lib/                  db, session, google oauth, task repo, nlp parser, dates
+lib/mcp/              MCP protocol, tool registry, per-connection scope
 proxy.ts              optimistic session redirects (Next 16's middleware)
 ```
+
+## Connect an assistant (MCP)
+
+Kairo is an MCP server at **`/mcp`**, so ChatGPT, Claude, Gemini, Grok and any
+coding assistant that speaks MCP can plan the day, capture, complete and sweep
+without the app being open. 26 tools cover everything a person can do in the UI.
+
+Auth is a connection key, not OAuth, so it works in clients whose connector UI
+offers only a URL and a header. Create one under **Settings → Connections**; it is
+shown once and stored only as a SHA-256.
+
+```bash
+# header (preferred)
+curl -s https://kairo.jaimansoni.com/mcp \
+  -H 'Authorization: Bearer kairo_sk_...' \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+
+# or X-API-Key, or ?key=... for clients that can only take a URL
+```
+
+Design notes worth knowing before changing it:
+
+- **Stateless Streamable HTTP.** One POST, one answer. No session id, no SSE:
+  nothing here is server-initiated, and that is what keeps each request
+  independent on serverless.
+- **The zone lives on the key.** Every Kairo date is a local day string, and an
+  assistant has no clock of ours — so a key remembers the browser's IANA zone
+  and `lib/tz.ts` computes every day boundary in it.
+- **PIN-locked lists are out of scope by default**, tasks inside them included,
+  unless the key was created with that box ticked. Same rule `/api/parse` uses.
+- **Read-only keys are not shown the write tools at all**, rather than being
+  refused after the model has already spent a turn on one.
+- **The server sends `instructions` on `initialize`** (see `lib/mcp/server.ts`)
+  so the model plans the way Kairo does: planned day ≠ deadline, spotlight holds
+  three, carried-over work is never called overdue.
+
+No new environment variables. Keys live in the `api_keys` collection.
 
 ## Keyboard
 

@@ -280,6 +280,8 @@ export type DeletionReport = {
   sharedTasksLeft: number;
   pushSubscriptions: number;
   magicLinks: number;
+  /** Connection keys, so an assistant cannot outlive the account it acted for. */
+  apiKeys: number;
   /** Kept on purpose: money records outlive the account that made them. */
   paymentsKept: number;
 };
@@ -288,9 +290,10 @@ export type DeletionReport = {
  * Erases an account and everything personal it owns.
  *
  * What goes: the user record, every task and list they own, their push
- * subscriptions and scheduled notifications, their unused sign-in links, and
- * their membership of other people's shared lists and tasks — a stale id in
- * someone else's memberIds renders as a ghost collaborator.
+ * subscriptions and scheduled notifications, their unused sign-in links, every
+ * connection key an AI assistant was holding, and their membership of other
+ * people's shared lists and tasks — a stale id in someone else's memberIds
+ * renders as a ghost collaborator.
  *
  * What stays: payments, orders and tips. Those are money that changed hands,
  * and tax rules outlive the account (our privacy policy says exactly this).
@@ -307,12 +310,15 @@ export async function deleteUserCompletely(idHex: string): Promise<DeletionRepor
     const user = await db.collection("users").findOne({ _id });
     if (!user) return null;
 
-    const [tasks, lists, pushSubs, magic, sharedLists, sharedTasks, paymentsKept] =
+    const [tasks, lists, pushSubs, magic, apiKeys, sharedLists, sharedTasks, paymentsKept] =
       await Promise.all([
         db.collection("tasks").deleteMany({ userId: _id }),
         db.collection("lists").deleteMany({ userId: _id }),
         db.collection("push_subscriptions").deleteMany({ userId: _id }),
         db.collection("magic_links").deleteMany({ email: user.email }),
+        // deleted outright rather than revoked: there is no account left for a
+        // revoked key to be a record of
+        db.collection("api_keys").deleteMany({ userId: _id }),
         // membership of other people's lists, and the tasks shared with them
         db.collection("lists").updateMany({ memberIds: _id }, { $pull: { memberIds: _id } as never }),
         db.collection("tasks").updateMany({ memberIds: _id }, { $pull: { memberIds: _id } as never }),
@@ -335,6 +341,7 @@ export async function deleteUserCompletely(idHex: string): Promise<DeletionRepor
       sharedTasksLeft: sharedTasks.modifiedCount,
       pushSubscriptions: pushSubs.deletedCount,
       magicLinks: magic.deletedCount,
+      apiKeys: apiKeys.deletedCount,
       paymentsKept,
     };
   });

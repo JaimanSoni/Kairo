@@ -48,7 +48,7 @@ export const QUICK_START = ["philosophy", "capture", "today", "notifications"];
  * sitemap is only worth sending if it's true, and a date that moves on every
  * deploy teaches crawlers to ignore it.
  */
-export const DOCS_UPDATED = "2026-07-31";
+export const DOCS_UPDATED = "2026-09-03";
 
 export const ARTICLES: Article[] = [
   /* ---------------------------------------------------------------- basics */
@@ -2081,6 +2081,181 @@ export const ARTICLES: Article[] = [
           {
             t: "p",
             text: "Deleting a task removes it. Deleting a list keeps its tasks and moves them to your Inbox. If you'd like your whole account and its data removed, [ask us](/support/contact) and we'll take care of it.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    slug: "connect-ai",
+    title: "Use Kairo from ChatGPT, Claude or Gemini",
+    summary:
+      "Give an assistant its own key and it can plan your day, capture what you say and tick things off, without you opening Kairo.",
+    categoryId: "account",
+    keywords: [
+      "mcp",
+      "chatgpt",
+      "claude",
+      "gemini",
+      "grok",
+      "ai",
+      "assistant",
+      "api",
+      "api key",
+      "connector",
+      "integration",
+      "connect",
+    ],
+    sections: [
+      {
+        id: "what-it-is",
+        heading: "What this is",
+        blocks: [
+          {
+            t: "p",
+            text: "Kairo can be connected to an AI assistant, so the planner lives wherever you are already typing. You say **plan my day** and it reads what is on today, what carried over and how full the day already looks. You say **I finished the launch post** and it ticks it off. You say **remind me to call the bank at four** and the reminder is set.",
+          },
+          {
+            t: "p",
+            text: "It works through MCP, an open standard that ChatGPT, Claude, Gemini, Grok and most coding assistants now speak. Kairo's address is `https://kairo.jaimansoni.com/mcp`.",
+          },
+          {
+            t: "note",
+            text: "The assistant is not given your password and never sees your Google account. It gets a key that you create, that you can read the usage of, and that you can revoke in one click.",
+          },
+        ],
+      },
+      {
+        id: "create-a-key",
+        heading: "Create a key",
+        blocks: [
+          {
+            t: "ol",
+            items: [
+              "Open your profile (top right) and find **Connections**.",
+              "Tap **Connect**, then **New connection**.",
+              "Name it after where it will live, `ChatGPT on my laptop`, so you know which one to revoke later.",
+              "Choose whether it may change things or only read.",
+              "Copy the key. **It is shown once and never again**, because Kairo stores only a fingerprint of it.",
+            ],
+          },
+          {
+            t: "warn",
+            text: "Treat a key like a password. Anyone holding it can act as you in Kairo. If one leaks, revoke it, the next request made with it fails immediately.",
+          },
+        ],
+      },
+      {
+        id: "connecting",
+        heading: "Point your assistant at it",
+        blocks: [
+          {
+            t: "p",
+            text: "Wherever your assistant asks for a **custom connector** or an **MCP server**, give it the address and the key.",
+          },
+          {
+            t: "table",
+            head: ["Assistant", "Where to put it"],
+            rows: [
+              [
+                "Claude",
+                "Settings → Connectors → Add custom connector. Address `https://kairo.jaimansoni.com/mcp`, header `Authorization: Bearer YOUR_KEY`.",
+              ],
+              [
+                "ChatGPT",
+                "Settings → Connectors → Create. If it accepts only a URL, use the link Kairo shows you with the key already in it.",
+              ],
+              [
+                "Gemini CLI, Grok, others",
+                "Add an HTTP MCP server at the same address with the header `Authorization: Bearer YOUR_KEY`. An `X-API-Key` header works too.",
+              ],
+              [
+                "Claude Code",
+                "`claude mcp add --transport http kairo https://kairo.jaimansoni.com/mcp --header \"Authorization: Bearer YOUR_KEY\"`",
+              ],
+            ],
+          },
+          {
+            t: "tip",
+            text: "A key in a URL is convenient but travels through logs and browser history in a way a header does not. Prefer the header where your assistant supports one.",
+          },
+        ],
+      },
+      {
+        id: "what-it-can-do",
+        heading: "What it can do",
+        blocks: [
+          {
+            t: "p",
+            text: "Everything you can do in the app: capture, plan, complete, reschedule, break work into steps, run the morning sweep, set reminders, make and share lists, assign work inside a shared list, and read back the Log.",
+          },
+          {
+            t: "ul",
+            items: [
+              "**\"Plan my day\"** reads today, what carried over, what is due soon and what capacity is left, then proposes a plan.",
+              "**\"I did the gym and the invoice\"** finds both and completes them, advancing anything that repeats.",
+              "**\"What carried over?\"** offers the same five choices the morning sweep does, including letting something go.",
+              "**\"What did I get done this week?\"** reads the Log.",
+            ],
+          },
+          {
+            t: "note",
+            text: "The assistant is told how Kairo thinks before it touches anything: a planned day is not a deadline, [spotlight](/support/today) holds three, and carried-over work is never presented as overdue. It plans the way Kairo does, not the way a generic to-do list would.",
+          },
+        ],
+      },
+      {
+        id: "privacy",
+        heading: "What stays private",
+        blocks: [
+          {
+            t: "p",
+            text: "[PIN-locked lists](/support/locks) are invisible to a connection by default, including every task filed inside one. A key carries no PIN, so it gets nothing the PIN was protecting.",
+          },
+          {
+            t: "p",
+            text: "If you do want an assistant to see them, there is a checkbox when you create the key, off unless you tick it. You can create one key that can see them and another that cannot.",
+          },
+          {
+            t: "ul",
+            items: [
+              "A **read only** key can never add, change or delete anything, and the tools to do so are not even offered to the assistant.",
+              "A connection can only reach what you can reach: your own work, plus lists and tasks shared with you.",
+              "Nothing about your billing, your PIN or your sign-in is exposed.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "managing",
+        heading: "Revoking and keeping track",
+        blocks: [
+          {
+            t: "p",
+            text: "**Connections** lists every key with its last four characters and when it was last used, so an unfamiliar one is easy to spot. **Revoke** kills it immediately.",
+          },
+          {
+            t: "ul",
+            items: [
+              "You can hold up to 10 live keys at once.",
+              "Revoking cannot be undone, create a new key and paste it in again.",
+              "Deleting your Kairo account deletes every key with it.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "problems",
+        heading: "If it will not connect",
+        blocks: [
+          {
+            t: "ul",
+            items: [
+              "**Unauthorized, or the assistant says the server rejected it** — the key is wrong, was revoked, or has a stray space. Create a fresh one.",
+              "**Payment required** — the Kairo account's [access has ended](/support/troubleshooting). Connections stop when the app does.",
+              "**Wrong dates** — the key remembers the time zone of the browser that made it. If you have moved, make a new key from where you now are.",
+              "**Too many calls** — an assistant stuck in a loop will be slowed down for a minute. Start a new chat.",
+            ],
           },
         ],
       },
