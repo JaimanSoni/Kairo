@@ -593,3 +593,322 @@ button {
     cursor: inherit;
   }
 }
+
+/* ---------- journal ---------- */
+
+/* Highlights are variables so a page highlighted in light mode still reads
+   in dark mode. Stored pages hold var(--hl-*), never a colour. */
+:root {
+  --hl-sun: rgba(12, 147, 132, 0.18);
+  --hl-amber: rgba(216, 160, 62, 0.3);
+  --hl-rose: rgba(217, 99, 84, 0.2);
+  --hl-lilac: rgba(141, 123, 212, 0.22);
+  --hl-sky: rgba(78, 147, 201, 0.2);
+  --hl-moss: rgba(76, 167, 91, 0.22);
+}
+:root[data-theme="dark"] {
+  --hl-sun: rgba(47, 181, 164, 0.3);
+  --hl-amber: rgba(230, 180, 90, 0.32);
+  --hl-rose: rgba(227, 127, 112, 0.3);
+  --hl-lilac: rgba(167, 150, 232, 0.32);
+  --hl-sky: rgba(100, 169, 219, 0.3);
+  --hl-moss: rgba(92, 190, 114, 0.3);
+}
+
+.jr-prose {
+  font-size: 1.125rem;
+  line-height: 1.8;
+  color: var(--color-ink);
+  caret-color: var(--color-sun);
+  outline: none;
+  overflow-wrap: anywhere;
+  min-height: 55vh;
+  padding-bottom: 30vh; /* room to write below the fold without typing at the screen's edge */
+}
+.jr-font-serif .jr-prose {
+  font-family: var(--font-display);
+  font-size: 1.22rem;
+  line-height: 1.75;
+}
+.jr-font-mono .jr-prose {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 1rem;
+  line-height: 1.85;
+}
+.jr-prose > * + * {
+  margin-top: 0.8em;
+}
+.jr-prose p {
+  margin: 0;
+}
+.jr-prose h1,
+.jr-prose h2 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.jr-prose h1 {
+  font-size: 2rem;
+  margin-top: 1.3em;
+}
+.jr-prose h2 {
+  font-size: 1.55rem;
+  margin-top: 1.2em;
+}
+.jr-prose h3 {
+  font-size: 1.12rem;
+  font-weight: 700;
+  margin-top: 1.1em;
+}
+.jr-prose > :first-child {
+  margin-top: 0;
+}
+.jr-prose ul,
+.jr-prose ol {
+  padding-left: 1.4em;
+}
+.jr-prose ul {
+  list-style: disc;
+}
+.jr-prose ol {
+  list-style: decimal;
+}
+.jr-prose li + li {
+  margin-top: 0.2em;
+}
+.jr-prose li::marker {
+  color: var(--color-sun);
+}
+.jr-prose blockquote {
+  border-left: 3px solid var(--color-sun);
+  padding: 0.1em 0 0.1em 1em;
+  color: var(--color-ink-soft);
+  font-style: italic;
+}
+.jr-prose code {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.86em;
+  background: var(--color-paper-deep);
+  padding: 0.1em 0.35em;
+  border-radius: 0.35em;
+}
+.jr-prose pre {
+  background: var(--color-paper-deep);
+  border-radius: 0.9rem;
+  padding: 0.9em 1.1em;
+  overflow-x: auto;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+.jr-prose pre code {
+  background: none;
+  padding: 0;
+}
+.jr-prose hr {
+  border: none;
+  height: 1px;
+  background: var(--color-line);
+  margin: 2.2em 0;
+  position: relative;
+  overflow: visible;
+}
+.jr-prose hr::after {
+  content: "✱";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--color-paper);
+  color: var(--color-sun);
+  padding: 0 0.6em;
+  font-size: 0.9rem;
+}
+.jr-prose hr.ProseMirror-selectednode {
+  background: var(--color-sun);
+}
+.jr-prose a {
+  color: var(--color-sun-deep);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--color-sun) 45%, transparent);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.jr-prose mark {
+  border-radius: 0.3em;
+  padding: 0.04em 0.16em;
+  color: inherit;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.jr-prose mark:not([data-color]) {
+  background: var(--hl-amber);
+}
+.jr-prose ::selection {
+  background: color-mix(in srgb, var(--color-sun) 26%, transparent);
+}
+
+/* checklists. TipTap draws task items through a node view that doesn't put
+   data-type on the <li>, so every rule is scoped through the list's own attribute. */
+.jr-prose ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0.1em;
+}
+.jr-prose ul[data-type="taskList"] > li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6em;
+}
+.jr-prose ul[data-type="taskList"] > li > label {
+  display: flex;
+  flex-shrink: 0;
+  margin-top: 0.36em;
+  user-select: none;
+}
+.jr-prose ul[data-type="taskList"] > li > label input {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  width: 1.05em;
+  height: 1.05em;
+  border: 2px solid var(--color-ink-faint);
+  border-radius: 0.35em;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, transform 0.15s;
+}
+.jr-prose ul[data-type="taskList"] > li > label input:active {
+  transform: scale(0.88);
+}
+.jr-prose ul[data-type="taskList"] > li > label input:checked {
+  background: var(--color-moss);
+  border-color: var(--color-moss);
+}
+.jr-prose ul[data-type="taskList"] > li > label input:checked::after {
+  content: "";
+  width: 0.3em;
+  height: 0.56em;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translate(-1px, -1px);
+}
+.jr-prose ul[data-type="taskList"] > li > div {
+  flex: 1;
+  min-width: 0;
+}
+.jr-prose ul[data-type="taskList"] > li[data-checked="true"] > div,
+.jr-prose ul[data-type="taskList"] > li:has(> label input:checked) > div {
+  color: var(--color-ink-faint);
+  text-decoration: line-through;
+  text-decoration-color: var(--color-ink-faint);
+}
+
+/* callouts */
+.jr-callout {
+  display: flex;
+  gap: 0.75em;
+  background: color-mix(in srgb, var(--color-sun) 7%, var(--color-card));
+  border: 1px solid color-mix(in srgb, var(--color-sun) 22%, var(--color-line));
+  border-radius: 1rem;
+  padding: 0.85em 1.1em;
+}
+.jr-callout-emoji {
+  font-size: 1.2em;
+  line-height: 1.5;
+  user-select: none;
+}
+.jr-callout-body {
+  flex: 1;
+  min-width: 0;
+}
+.jr-callout-body > * + * {
+  margin-top: 0.5em;
+}
+
+/* the divider a page gets when you come back to it */
+.jr-time {
+  display: flex;
+  align-items: center;
+  gap: 0.9em;
+  margin: 2em 0 0.7em !important;
+  color: var(--color-sun-deep);
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  user-select: none;
+}
+.jr-time::before,
+.jr-time::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+}
+.jr-time::before {
+  background: linear-gradient(90deg, transparent, var(--color-line));
+}
+.jr-time::after {
+  background: linear-gradient(90deg, var(--color-line), transparent);
+}
+.jr-time.ProseMirror-selectednode {
+  color: var(--color-sun);
+}
+
+/* placeholder */
+.jr-prose .is-empty::before {
+  content: attr(data-placeholder);
+  color: var(--color-ink-faint);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+.jr-prose p.is-empty::before {
+  font-style: italic;
+}
+
+/* slash command: the query being typed after "/" */
+.jr-slash-query {
+  color: var(--color-sun-deep);
+  background: var(--hl-sun);
+  border-radius: 0.3em;
+  padding: 0 0.15em;
+}
+
+.jr-prose .ProseMirror-gapcursor::after {
+  border-top-color: var(--color-sun);
+}
+
+/* focus mode: everything but the paragraph you're in steps back */
+.jr-focus .jr-prose > * {
+  transition: opacity 0.35s ease;
+}
+.jr-focus .jr-prose > :not(.has-focus) {
+  opacity: 0.2;
+}
+@media (prefers-reduced-motion: reduce) {
+  .jr-focus .jr-prose > * {
+    transition: none;
+  }
+}
+
+/* the save dot breathes while a save is in flight */
+@keyframes jr-breathe {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.jr-breathe {
+  animation: jr-breathe 1.1s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .jr-breathe {
+    animation: none;
+  }
+}

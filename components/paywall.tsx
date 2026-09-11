@@ -192,6 +192,12 @@ export function Paywall({
           <a href="/billing" className="underline underline-offset-2 hover:text-ink-soft">
             Billing &amp; receipts
           </a>
+          {/* a lapsed card must never cost someone their own diary */}
+          <form action="/api/journal/export" method="GET" className="inline">
+            <button type="submit" className="underline underline-offset-2 hover:text-ink-soft">
+              Download your journal
+            </button>
+          </form>
           <a href="/refunds" className="underline underline-offset-2 hover:text-ink-soft">
             Refunds
           </a>

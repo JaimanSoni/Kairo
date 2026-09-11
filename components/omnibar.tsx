@@ -7,33 +7,10 @@ import { friendlyDay, fmtMinutes, fmtTime12 } from "@/lib/dates";
 import { repeatLabel, type Repeat } from "@/lib/repeat";
 import { guestCapReached, useApp, visibleLists } from "./store";
 import { track } from "@/lib/analytics-client";
+import { getSpeechRecognition, type SpeechRec } from "@/lib/speech";
 import { Icon3d } from "./img3d";
 import { Chip, Kbd, Modal } from "./ui";
 
-/* Minimal Web Speech API surface (not in TS dom lib everywhere) */
-type SpeechResultEvent = {
-  results: ArrayLike<ArrayLike<{ transcript: string }>>;
-};
-type SpeechRec = {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  onresult: ((e: SpeechResultEvent) => void) | null;
-  onend: (() => void) | null;
-  onerror: (() => void) | null;
-  start: () => void;
-  stop: () => void;
-  abort: () => void;
-};
-
-function getSpeechRecognition(): (new () => SpeechRec) | null {
-  if (typeof window === "undefined") return null;
-  const w = window as unknown as {
-    SpeechRecognition?: new () => SpeechRec;
-    webkitSpeechRecognition?: new () => SpeechRec;
-  };
-  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
-}
 
 type AiParsed = {
   title: string;

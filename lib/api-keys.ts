@@ -31,6 +31,8 @@ export type ApiKeyDoc = {
   scope: ApiKeyScope;
   /** Whether PIN-locked lists are visible through this connection. */
   includeLocked: boolean;
+  /** Whether the journal is reachable through this connection. Absent on older keys: no. */
+  includeJournal?: boolean;
   /** IANA zone captured from the browser that created the key. */
   timezone: string;
   createdAt: Date;
@@ -45,6 +47,7 @@ export type ApiKeyInfo = {
   last4: string;
   scope: ApiKeyScope;
   includeLocked: boolean;
+  includeJournal: boolean;
   timezone: string;
   createdAt: string;
   lastUsedAt: string | null;
@@ -83,6 +86,7 @@ export function toKeyInfo(doc: ApiKeyDoc): ApiKeyInfo {
     last4: doc.last4,
     scope: doc.scope,
     includeLocked: Boolean(doc.includeLocked),
+    includeJournal: Boolean(doc.includeJournal),
     timezone: doc.timezone,
     createdAt: doc.createdAt.toISOString(),
     lastUsedAt: doc.lastUsedAt ? doc.lastUsedAt.toISOString() : null,
@@ -107,6 +111,7 @@ export async function createApiKey(input: {
   name: string;
   scope: ApiKeyScope;
   includeLocked: boolean;
+  includeJournal?: boolean;
   timezone: string;
 }): Promise<CreateKeyResult> {
   const name = input.name.trim().slice(0, 60) || "Untitled connection";
@@ -131,6 +136,7 @@ export async function createApiKey(input: {
     last4: key.slice(-4),
     scope: input.scope,
     includeLocked: input.includeLocked,
+    includeJournal: input.includeJournal === true,
     timezone: safeTimeZone(input.timezone),
     createdAt: now,
     lastUsedAt: null,
@@ -158,13 +164,14 @@ export async function revokeApiKey(userIdHex: string, keyIdHex: string): Promise
 export async function updateApiKey(
   userIdHex: string,
   keyIdHex: string,
-  patch: { name?: string; scope?: ApiKeyScope; includeLocked?: boolean; timezone?: string }
+  patch: { name?: string; scope?: ApiKeyScope; includeLocked?: boolean; includeJournal?: boolean; timezone?: string }
 ): Promise<ApiKeyInfo | null> {
   if (!ObjectId.isValid(keyIdHex)) return null;
   const set: Partial<ApiKeyDoc> = {};
   if (patch.name !== undefined) set.name = patch.name.trim().slice(0, 60) || "Untitled connection";
   if (patch.scope !== undefined) set.scope = patch.scope;
   if (patch.includeLocked !== undefined) set.includeLocked = patch.includeLocked;
+  if (patch.includeJournal !== undefined) set.includeJournal = patch.includeJournal;
   if (patch.timezone !== undefined) set.timezone = safeTimeZone(patch.timezone);
   if (Object.keys(set).length === 0) return null;
 

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 const SESSION_COOKIE = "kairo_session";
-const PROTECTED = ["/today", "/calendar", "/lists", "/log", "/admin", "/billing", "/upgrade"];
+const PROTECTED = ["/today", "/calendar", "/lists", "/log", "/journal", "/admin", "/billing", "/upgrade"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -37,6 +37,7 @@ export const config = {
     "/calendar/:path*",
     "/lists/:path*",
     "/log/:path*",
+    "/journal/:path*",
     "/admin/:path*",
     "/billing/:path*",
     "/upgrade/:path*",

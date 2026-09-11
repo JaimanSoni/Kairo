@@ -6,9 +6,25 @@ import { TodayView } from "./today-view";
 import { CalendarSection } from "./calendar-section";
 import { ListsView } from "./lists-view";
 import { LogView } from "./log-view";
+import dynamic from "next/dynamic";
 
 /**
- * The four app views behind one client switch.
+ * The journal loads on first visit, not with the app. Its editor is the
+ * heaviest thing Kairo ships, and someone opening Today to tick off a task
+ * should not download a word processor to do it.
+ */
+const JournalSection = dynamic(() => import("./journal/journal-section"), {
+  ssr: false,
+  loading: () => (
+    <div className="mx-auto w-full max-w-2xl px-5 pb-32 pt-10 sm:px-8">
+      <div className="h-9 w-40 animate-pulse rounded-xl bg-paper-deep" />
+      <div className="mt-6 h-40 animate-pulse rounded-3xl bg-paper-deep" />
+    </div>
+  ),
+});
+
+/**
+ * The app views behind one client switch.
  *
  * Every piece of data these views need already lives in the client store, so
  * moving between them should cost nothing — yet a router navigation paid a
@@ -26,6 +42,7 @@ const TITLES: Record<string, string> = {
   "/calendar": "Calendar · Kairo",
   "/lists": "Lists · Kairo",
   "/log": "Log · Kairo",
+  "/journal": "Journal · Kairo",
 };
 
 /** Swap the view without a server round trip. */
@@ -39,12 +56,13 @@ export function AppViews() {
 
   // pushState skips the metadata system, so the tab title follows by hand
   useEffect(() => {
-    const title = TITLES[pathname];
+    const title = TITLES[pathname] ?? (pathname.startsWith("/journal/") ? TITLES["/journal"] : undefined);
     if (title) document.title = title;
   }, [pathname]);
 
   if (pathname.startsWith("/calendar")) return <CalendarSection />;
   if (pathname.startsWith("/lists")) return <ListsView />;
   if (pathname.startsWith("/log")) return <LogView />;
+  if (pathname.startsWith("/journal")) return <JournalSection />;
   return <TodayView />;
 }

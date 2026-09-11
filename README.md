@@ -69,8 +69,33 @@ app/
 components/           store (optimistic state), shell, views, task UI
 lib/                  db, session, google oauth, task repo, nlp parser, dates
 lib/mcp/              MCP protocol, tool registry, per-connection scope
+lib/journal*.ts       journal pages: content model, sanitiser, PIN lock, client cache
+components/journal/   the journal: calendar home, TipTap editor, slash menu, PIN gate
 proxy.ts              optimistic session redirects (Next 16's middleware)
 ```
+
+## Journal
+
+One page per day at `/journal` (shortcut `5`, or `J` for today's page). A TipTap editor with
+Markdown shortcuts, a `/` menu, a selection bubble, focus mode, dictation and mood as weather; a
+calendar tinted by that mood; search; and *on this day*. Each page can pull in what was finished in
+Kairo that day.
+
+Design notes worth knowing before changing it:
+
+- **Pages are editor JSON, not HTML.** `lib/journal-shared.ts` rebuilds every page from a short
+  whitelist of nodes and marks on the way in. Unknown blocks are refused, links are http, https or
+  mailto only, so nothing ever has to be sanitised on the way out.
+- **Every save names the version it started from.** A stale save gets a 409 carrying the newer page,
+  and the editor offers Keep both, Keep mine or Use the other. Nothing is silently overwritten, and
+  a unique index makes one page per day true under concurrency.
+- **Words land on the device first.** Drafts go to localStorage before the network and are removed
+  only once the server confirms that exact version.
+- **The journal PIN is enforced by the server.** Pages aren't sent until a signed, PIN-bound cookie
+  arrives, so changing the PIN locks every other browser. Wrong PINs are counted in the database,
+  not in memory, so a cold serverless instance can't reset the cool-down.
+- **Never sent to the AI parser**, and reachable over MCP only by keys created with *Include journal*.
+- **Export ignores the subscription.** A lapsed card must not cost anyone their diary.
 
 ## Connect an assistant (MCP)
 
@@ -112,4 +137,4 @@ No new environment variables. Keys live in the `api_keys` collection.
 
 ## Keyboard
 
-`N` capture · `1–4` switch views · `Enter` save · `Shift+Enter` capture & keep going · `Esc` close
+`N` capture · `J` today's journal page · `1–5` switch views · `Enter` save · `Shift+Enter` capture & keep going · `Esc` close

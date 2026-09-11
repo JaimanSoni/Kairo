@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { navigateApp } from "./app-views";
 import type { Task } from "@/lib/types";
-import { friendlyDay } from "@/lib/dates";
+import { friendlyDay, todayStr } from "@/lib/dates";
 import { hiddenListIds, useApp, visibleLists } from "./store";
 import { Chip, Kbd, Modal } from "./ui";
 
@@ -41,6 +41,8 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
       { id: "go-calendar", label: "Go to Calendar", hint: "2", run: () => navigateApp("/calendar") },
       { id: "go-lists", label: "Go to Lists", hint: "3", run: () => navigateApp("/lists") },
       { id: "go-log", label: "Go to Log", hint: "4", run: () => navigateApp("/log") },
+      { id: "go-journal", label: "Go to Journal", hint: "5", run: () => navigateApp("/journal") },
+      { id: "write-today", label: "Write today's journal page", run: () => navigateApp(`/journal/${todayStr()}`) },
       ...(state.user.appLockEnabled
         ? [{ id: "lock", label: "Lock Kairo now", run: lockApp }]
         : []),

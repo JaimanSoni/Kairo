@@ -9,14 +9,20 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/mcp/keys/[
   if (!session) return unauthorized();
   const { id } = await ctx.params;
 
-  let body: { name?: unknown; scope?: unknown; includeLocked?: unknown; timezone?: unknown };
+  let body: { name?: unknown; scope?: unknown; includeLocked?: unknown; includeJournal?: unknown; timezone?: unknown };
   try {
     body = await request.json();
   } catch {
     return badRequest("Invalid JSON");
   }
 
-  const patch: { name?: string; scope?: ApiKeyScope; includeLocked?: boolean; timezone?: string } = {};
+  const patch: {
+    name?: string;
+    scope?: ApiKeyScope;
+    includeLocked?: boolean;
+    includeJournal?: boolean;
+    timezone?: string;
+  } = {};
   if ("name" in body) {
     if (typeof body.name !== "string" || !body.name.trim() || body.name.length > 60) {
       return badRequest("Invalid name");
@@ -30,6 +36,10 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/mcp/keys/[
   if ("includeLocked" in body) {
     if (typeof body.includeLocked !== "boolean") return badRequest("Invalid includeLocked");
     patch.includeLocked = body.includeLocked;
+  }
+  if ("includeJournal" in body) {
+    if (typeof body.includeJournal !== "boolean") return badRequest("Invalid includeJournal");
+    patch.includeJournal = body.includeJournal;
   }
   if ("timezone" in body) {
     if (!isValidTimeZone(body.timezone)) return badRequest("Invalid time zone");

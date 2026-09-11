@@ -21,14 +21,25 @@ import { SubscriptionSettings } from "./subscription-settings";
 import { ConnectionsSettings } from "./mcp-settings";
 import { ShareKairoRow } from "./share-kairo";
 import { Mark } from "./mark";
-import { IconBook, IconCalendar, IconInbox, IconPlus, IconSun, IconX, Kbd, Modal } from "./ui";
+import { IconBook, IconCalendar, IconInbox, IconJournal, IconPlus, IconSun, IconX, Kbd, Modal } from "./ui";
 
 const NAV = [
   { href: "/today", label: "Today", icon: IconSun, key: "1" },
   { href: "/calendar", label: "Calendar", icon: IconCalendar, key: "2" },
   { href: "/lists", label: "Lists", icon: IconInbox, key: "3" },
   { href: "/log", label: "Log", icon: IconBook, key: "4" },
+  { href: "/journal", label: "Journal", icon: IconJournal, key: "5" },
 ];
+
+/**
+ * The phone's bottom bar holds four tabs around Capture, and a strict grid
+ * keeps Capture dead centre — so it can't simply grow a fifth. Journal takes
+ * Log's place there: a diary is something opened daily, on a phone, in the
+ * evening, while the Log is somewhere you look back. Log moves to the top bar.
+ */
+const navItem = (href: string) => NAV.find((n) => n.href === href)!;
+const MOBILE_LEFT = [navItem("/today"), navItem("/calendar")];
+const MOBILE_RIGHT = [navItem("/lists"), navItem("/journal")];
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const { state, setOmnibar } = useApp();
@@ -75,6 +86,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   // app-wide keyboard shortcuts (dead while the app-lock gate is up)
   const appLocked = state.appLocked;
+  const today = state.today;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (appLocked) return;
@@ -97,12 +109,18 @@ export function Shell({ children }: { children: React.ReactNode }) {
         e.preventDefault();
         setOmnibar(true);
       }
+      // J goes straight to today's page, the way N goes straight to capture
+      if (e.key === "j") {
+        e.preventDefault();
+        navigateApp(`/journal/${today}`);
+        return;
+      }
       const nav = NAV.find((n) => n.key === e.key);
       if (nav) navigateApp(nav.href);
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [router, setOmnibar, appLocked]);
+  }, [router, setOmnibar, appLocked, today]);
 
   const editingTask = state.editingId ? state.tasks[state.editingId] : null;
 
@@ -248,6 +266,22 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </button>
+            {/* Log's home on a phone, now that Journal holds its bottom tab */}
+            <Link
+              href="/log"
+              onClick={(e) => {
+                e.preventDefault();
+                navigateApp("/log");
+              }}
+              aria-label="Log"
+              data-tip="Log"
+              data-tip-side="bottom"
+              className={`grid size-8 place-items-center rounded-full hover:bg-paper-deep ${
+                pathname.startsWith("/log") ? "text-sun-deep" : "text-ink-soft"
+              }`}
+            >
+              <IconBook size={17} />
+            </Link>
             {guest ? (
               <a
                 href="/api/auth/google"
@@ -277,7 +311,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
       {/* bottom nav — mobile: strict 5-column grid keeps the + dead center */}
       <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 items-center border-t border-line bg-card/95 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur md:hidden">
-        {NAV.slice(0, 2).map(({ href, label, icon: Icon }) => (
+        {MOBILE_LEFT.map(({ href, label, icon: Icon }) => (
           <MobileTab key={href} href={href} label={label} Icon={Icon} active={pathname.startsWith(href)} />
         ))}
         <div className="flex justify-center">
@@ -293,7 +327,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </svg>
           </button>
         </div>
-        {NAV.slice(2).map(({ href, label, icon: Icon }) => (
+        {MOBILE_RIGHT.map(({ href, label, icon: Icon }) => (
           <MobileTab key={href} href={href} label={label} Icon={Icon} active={pathname.startsWith(href)} />
         ))}
       </nav>

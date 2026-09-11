@@ -40,6 +40,8 @@ Dates are the user's local dates. Call whoami or get_overview for today's date i
 
 Read before writing. get_overview answers "what's on today", "plan my day" and "how am I doing" in one call. When the user says they finished something, find it with list_tasks and call complete_task rather than creating a new done task.
 
+The journal is private. If journal tools are available, read or write it only when the user asks you to, write in their words rather than yours, and never quote it back to them unprompted. Adding to a page appends under the current time; nothing is replaced unless they ask for that.
+
 Be brief about it. The user asked for their day, not a report on the API.`;
 
 type Handler = (ctx: McpContext, params: Record<string, unknown>) => Promise<unknown>;

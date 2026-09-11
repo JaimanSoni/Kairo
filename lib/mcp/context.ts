@@ -31,6 +31,8 @@ export type McpContext = {
   scope: ApiKeyScope;
   /** Whether PIN-locked lists are in scope for this connection. */
   includeLocked: boolean;
+  /** Whether journal tools exist for this connection at all. */
+  includeJournal: boolean;
   keyName: string;
   /** Why access is allowed — surfaced by whoami so a trial is never a surprise. */
   accessReason: string;
@@ -128,6 +130,7 @@ export async function authenticate(request: Request): Promise<AuthResult> {
       clock: clockIn(key.timezone, now),
       scope: key.scope,
       includeLocked: Boolean(key.includeLocked),
+      includeJournal: Boolean(key.includeJournal),
       keyName: key.name,
       accessReason: access.reason,
       trialDaysLeft: access.trialDaysLeft,

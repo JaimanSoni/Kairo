@@ -19,6 +19,7 @@ type KeyInfo = {
   last4: string;
   scope: "read" | "write";
   includeLocked: boolean;
+  includeJournal: boolean;
   timezone: string;
   createdAt: string;
   lastUsedAt: string | null;
@@ -112,6 +113,7 @@ function ConnectionsModal({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState("");
   const [scope, setScope] = useState<"read" | "write">("write");
   const [includeLocked, setIncludeLocked] = useState(false);
+  const [includeJournal, setIncludeJournal] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   /** The one and only time this value exists outside the assistant. */
@@ -169,6 +171,7 @@ function ConnectionsModal({ onClose }: { onClose: () => void }) {
           name: name.trim(),
           scope,
           includeLocked,
+          includeJournal,
           // the zone this browser is in, so an assistant with no clock of ours
           // still knows when "today" starts for you
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -316,6 +319,23 @@ function ConnectionsModal({ onClose }: { onClose: () => void }) {
                 </span>
               </label>
 
+              <label className="mt-2 flex items-start gap-2 text-xs text-ink-soft">
+                <input
+                  type="checkbox"
+                  checked={includeJournal}
+                  onChange={(e) => setIncludeJournal(e.target.checked)}
+                  className="mt-0.5 size-3.5 accent-current"
+                />
+                <span>
+                  Include journal
+                  <span className="block text-ink-faint">
+                    Off by default. Lets this assistant read your journal and add to it when you ask,
+                    even if your journal has a PIN. Only tick it for an assistant you&apos;d trust
+                    with your diary.
+                  </span>
+                </span>
+              </label>
+
               <div className="mt-4 flex gap-2">
                 <button
                   onClick={create}
@@ -357,6 +377,7 @@ function ConnectionsModal({ onClose }: { onClose: () => void }) {
                       {" · "}
                       {k.scope === "read" ? "read only" : "read & write"}
                       {k.includeLocked ? " · locked lists" : ""}
+                      {k.includeJournal ? " · journal" : ""}
                       {" · "}
                       {fmtWhen(k.lastUsedAt)}
                       {" · added "}

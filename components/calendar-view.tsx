@@ -46,7 +46,7 @@ const SLIDE_IN_MS = 210;
  * carries the old month out, swaps, then brings the new one in from the other
  * side, so the direction of travel matches the direction of time.
  */
-function useMonthSwipe(
+export function useMonthSwipe(
   frame: React.RefObject<HTMLDivElement | null>,
   track: React.RefObject<HTMLDivElement | null>,
   onSwipe: (delta: number) => void

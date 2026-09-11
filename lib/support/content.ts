@@ -32,6 +32,11 @@ export const CATEGORIES: Category[] = [
     description: "Shared lists, assigning work, and handing tasks off.",
   },
   {
+    id: "journal",
+    name: "Journal",
+    description: "A page a day: writing, the weather inside, and keeping it private.",
+  },
+  {
     id: "account",
     name: "Privacy & account",
     description: "Locks, multiple accounts, your data, and fixing problems.",
@@ -48,7 +53,7 @@ export const QUICK_START = ["philosophy", "capture", "today", "notifications"];
  * sitemap is only worth sending if it's true, and a date that moves on every
  * deploy teaches crawlers to ignore it.
  */
-export const DOCS_UPDATED = "2026-09-03";
+export const DOCS_UPDATED = "2026-09-11";
 
 export const ARTICLES: Article[] = [
   /* ---------------------------------------------------------------- basics */
@@ -2086,6 +2091,169 @@ export const ARTICLES: Article[] = [
       },
     ],
   },
+  /* --------------------------------------------------------------- journal */
+  {
+    slug: "journal",
+    title: "Keep a journal",
+    summary:
+      "One page per day, written your way, with the weather inside, what you finished, and a PIN of its own.",
+    categoryId: "journal",
+    keywords: ["journal", "diary", "write", "writing", "reflection", "mood", "gratitude", "entry", "page", "notes"],
+    sections: [
+      {
+        id: "a-page-a-day",
+        heading: "A page a day",
+        blocks: [
+          {
+            t: "p",
+            text: "The **Journal** is a private diary inside Kairo, and every day has one page. Open it in the evening to write about the day, first thing for morning pages, or for a single line in between. All of it lands on that day's page.",
+          },
+          {
+            t: "p",
+            text: "On a computer it's in the sidebar, or press `5`. Press `J` to jump straight to today's page. On a phone it's in the bottom bar, and the Log now sits in the top bar.",
+          },
+          {
+            t: "note",
+            text: "There are no streaks, and nothing is ever marked as missed. An empty day on the calendar is just an empty day.",
+          },
+        ],
+      },
+      {
+        id: "writing",
+        heading: "Writing",
+        blocks: [
+          { t: "p", text: "Just type. Formatting happens as you write, with shortcuts you may already know:" },
+          {
+            t: "keys",
+            rows: [
+              { k: "# ", d: "Big heading, or `## ` and `### ` for smaller ones" },
+              { k: "- ", d: "Bulleted list" },
+              { k: "1. ", d: "Numbered list" },
+              { k: "[ ] ", d: "Checklist" },
+              { k: "> ", d: "Quote" },
+              { k: "---", d: "Divider" },
+              { k: "==word==", d: "Highlight" },
+              { k: "/", d: "Everything else: callouts, prompts, the time, what you finished" },
+              { k: "⌘S", d: "Save right now. It saves on its own anyway." },
+            ],
+          },
+          {
+            t: "p",
+            text: "Select any words to make them bold or italic, highlight them in one of six colours, or turn them into a link.",
+          },
+        ],
+      },
+      {
+        id: "coming-back",
+        heading: "Coming back later in the day",
+        blocks: [
+          {
+            t: "p",
+            text: "Because each day is one page, a morning thought and an evening one share it. When you come back to today's page after a while and carry on writing at the end, Kairo adds a small divider with the time, so the day reads in the order it happened.",
+          },
+          {
+            t: "tip",
+            text: "Fixing a typo further up doesn't add a time; only continuing at the end does. You can add one yourself with `/` then **The time**.",
+          },
+        ],
+      },
+      {
+        id: "weather",
+        heading: "The weather inside",
+        blocks: [
+          {
+            t: "p",
+            text: "Each page asks once how the day felt, as weather rather than a score: **Stormy**, **Cloudy**, **Mixed**, **Sunny** or **Radiant**. It's optional. The calendar is tinted by it, so over a month you can see the shape of how things have been.",
+          },
+        ],
+      },
+      {
+        id: "wins",
+        heading: "What you finished",
+        blocks: [
+          {
+            t: "p",
+            text: "Under each page, **This day in Kairo** lists the tasks and steps you completed that day. Tap **Add to page** to bring them in as a checklist, or type `/` then **What I finished** anywhere on the page.",
+          },
+          { t: "note", text: "Tasks in [PIN-locked lists](/support/locks) never appear here." },
+        ],
+      },
+      {
+        id: "tools",
+        heading: "Focus, fonts and dictation",
+        blocks: [
+          {
+            t: "ul",
+            items: [
+              "**Focus mode** (⌘⇧F, or the page menu) fades everything except the paragraph you're in and keeps the line you're writing near eye level. Press Esc to leave it.",
+              "**Writing font**: switch between sans, serif and mono from the page menu. Each device remembers its own choice.",
+              "**Dictation**: tap the microphone in the writing toolbar and talk. It works in browsers with speech recognition, such as Chrome and Safari.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "finding",
+        heading: "Finding old pages",
+        blocks: [
+          {
+            t: "ul",
+            items: [
+              "The **calendar** marks every day you wrote, tinted by its weather. Swipe or use the arrows to go back through the months, and tap any day to read it or write about it.",
+              "**Search** looks through the words and titles of every page.",
+              "**On this day** shows what you wrote a week ago, a month ago, and on this date in earlier years.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "privacy",
+        heading: "Privacy",
+        blocks: [
+          {
+            t: "p",
+            text: "Set a **Journal PIN** from the journal's settings. It's separate from the [app lock](/support/locks), and the server enforces it: your pages aren't even sent to a browser until the PIN is entered. The journal then stays open in that browser for up to 12 hours, or until you tap 🔒 to lock it again.",
+          },
+          {
+            t: "ul",
+            items: [
+              "Journal pages are never sent to Kairo's AI.",
+              "Assistants you connect to Kairo can only read or write your journal if you tick **Include journal** on their [connection key](/support/connect-ai). A key with the journal ticked can reach it even when the journal has a PIN, so only tick it for assistants you trust with your diary.",
+              "Deleting your account deletes every page.",
+            ],
+          },
+          { t: "warn", text: "There's no reset link for a journal PIN, so choose one you'll remember." },
+        ],
+      },
+      {
+        id: "offline",
+        heading: "Offline, and two devices at once",
+        blocks: [
+          {
+            t: "p",
+            text: "Everything you type is kept on your device first and synced moments later, so a dropped connection, a closed tab or a flat battery doesn't lose words. The page says **Offline · kept on this device** when that's happening, and finishes saving once you're back.",
+          },
+          {
+            t: "p",
+            text: "If the same page changes on two devices at once, nothing is overwritten. Kairo shows you and lets you **Keep both**, keep yours, or use the other one.",
+          },
+        ],
+      },
+      {
+        id: "export",
+        heading: "Downloading and deleting",
+        blocks: [
+          {
+            t: "ul",
+            items: [
+              "**Download your journal** from the journal's settings: every page in one Markdown file that opens in any text editor. It works even after a subscription has ended.",
+              "To download or delete a single page, use that page's ⋯ menu. A deleted page can be brought back for a few seconds with **Undo**.",
+            ],
+          },
+        ],
+      },
+    ],
+  },
   {
     slug: "connect-ai",
     title: "Use Kairo from ChatGPT, Claude or Gemini",
@@ -2220,6 +2388,7 @@ export const ARTICLES: Article[] = [
             t: "ul",
             items: [
               "A **read only** key can never add, change or delete anything, and the tools to do so are not even offered to the assistant.",
+              "Your [journal](/support/journal) is out of reach unless you tick **Include journal** when creating the key. With it ticked, an assistant can read your pages and add to them when you ask.",
               "A connection can only reach what you can reach: your own work, plus lists and tasks shared with you.",
               "Nothing about your billing, your PIN or your sign-in is exposed.",
             ],

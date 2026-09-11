@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   const session = await requireSession();
   if (!session) return unauthorized();
 
-  let body: { name?: unknown; scope?: unknown; includeLocked?: unknown; timezone?: unknown };
+  let body: { name?: unknown; scope?: unknown; includeLocked?: unknown; includeJournal?: unknown; timezone?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -34,6 +34,8 @@ export async function POST(request: Request) {
   }
   const scope: ApiKeyScope = body.scope === "read" ? "read" : "write";
   const includeLocked = body.includeLocked === true;
+  // the journal is never reachable by accident: only an explicit true opens it
+  const includeJournal = body.includeJournal === true;
 
   // The browser knows the zone; the server's clock is UTC and would file an
   // evening capture under tomorrow for anyone east of Greenwich.
@@ -46,6 +48,7 @@ export async function POST(request: Request) {
     name: body.name,
     scope,
     includeLocked,
+    includeJournal,
     timezone: body.timezone,
   });
   if (!created.ok) return badRequest(created.error);
