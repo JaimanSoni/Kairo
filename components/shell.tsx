@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { hiddenListIds, useApp } from "./store";
@@ -21,8 +21,9 @@ import { SubscriptionSettings } from "./subscription-settings";
 import { ConnectionsSettings } from "./mcp-settings";
 import { ShareKairoRow } from "./share-kairo";
 import { Mark } from "./mark";
-import { IconBook, IconCalendar, IconInbox, IconJournal, IconNotes, IconPlus, IconSun, IconX, Kbd, Modal } from "./ui";
+import { IconBook, IconCalendar, IconInbox, IconJournal, IconNotes, IconPlus, IconSprout, IconSun, IconX, Kbd, Modal } from "./ui";
 import { notesApi, notesStore } from "@/lib/notes-client";
+import { gardenStore } from "@/lib/habits-client";
 import { metaOf } from "./notes/actions";
 import { useKeyboardInset } from "./editor/viewport";
 
@@ -33,6 +34,7 @@ const NAV = [
   { href: "/log", label: "Log", icon: IconBook, key: "4" },
   { href: "/journal", label: "Journal", icon: IconJournal, key: "5" },
   { href: "/notes", label: "Notes", icon: IconNotes, key: "6" },
+  { href: "/garden", label: "Garden", icon: IconSprout, key: "7" },
 ];
 
 /**
@@ -209,6 +211,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                     {inboxCount}
                   </span>
                 )}
+                {href === "/garden" && <GardenDot inline />}
               </Link>
             );
           })}
@@ -285,6 +288,24 @@ export function Shell({ children }: { children: React.ReactNode }) {
               }`}
             >
               <IconBook size={17} />
+            </Link>
+            {/* the garden's way in on a phone: the bottom bar is full */}
+            <Link
+              href="/garden"
+              onClick={(e) => {
+                e.preventDefault();
+                navigateApp("/garden");
+              }}
+              aria-label="Garden"
+              data-tip="Garden"
+              data-tip-side="bottom"
+              data-track="garden-topbar"
+              className={`relative grid size-8 place-items-center rounded-full hover:bg-paper-deep ${
+                pathname.startsWith("/garden") ? "text-moss" : "text-ink-soft"
+              }`}
+            >
+              <IconSprout size={18} />
+              <GardenDot />
             </Link>
             {guest ? (
               <a
@@ -938,6 +959,27 @@ function NotesFab({ pathname, guest, lifted }: { pathname: string; guest: boolea
         <IconNotes size={20} className="text-sun-deep" />
       )}
     </button>
+  );
+}
+
+/**
+ * A drop on the garden's icon while a plant is still thirsty today. It shows
+ * only once the garden has loaded (Today's strip or a visit does that), so the
+ * shell never fetches anything for it.
+ */
+function GardenDot({ inline = false }: { inline?: boolean }) {
+  useSyncExternalStore(gardenStore.subscribe, gardenStore.snapshot, () => 0);
+  const { state } = useApp();
+  if (state.user.guest || gardenStore.status() !== "ready") return null;
+  const thirsty = gardenStore.habits().some((h) => {
+    const lv = gardenStore.live(h, state.today);
+    return lv.dueToday && !lv.todayDone;
+  });
+  if (!thirsty) return null;
+  return inline ? (
+    <span className="ml-auto size-2 rounded-full bg-sky" aria-label="plants need water" />
+  ) : (
+    <span className="absolute right-1 top-1 size-2 rounded-full bg-sky ring-2 ring-paper" aria-hidden />
   );
 }
 

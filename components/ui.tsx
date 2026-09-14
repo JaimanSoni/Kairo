@@ -85,6 +85,17 @@ export function IconNotes({ size = 16, className }: IconProps) {
   );
 }
 
+export function IconSprout({ size = 16, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" className={className}>
+      <path d="M8 14.25V8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M8 8.5C8 5.6 6 3.75 2.75 3.75 2.75 6.9 4.9 8.5 8 8.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M8 10c0-3.1 2.1-5.25 5.25-5.25C13.25 7.9 11.1 10 8 10z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M4.75 14.25h6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function IconStar({ size = 16, className, filled }: IconProps & { filled?: boolean }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill={filled ? "currentColor" : "none"} className={className}>

@@ -12,6 +12,10 @@ import { StepRow } from "./step-row";
 import { TaskItem } from "./task-item";
 import { EmptyState, IconPlus } from "./ui";
 import { BestieNudge, ShareWithBestie } from "./bestie-share";
+import dynamic from "next/dynamic";
+
+/** The garden's plants come with their own art; Today shouldn't wait for it. */
+const TodayGardenStrip = dynamic(() => import("./garden/today-strip"), { ssr: false });
 
 const DAY_CAPACITY_MIN = 6 * 60; // soft cap — a suggestion, never a wall
 
@@ -143,6 +147,8 @@ export function TodayView() {
           )}
         </div>
       </header>
+
+      {!state.appLocked && <TodayGardenStrip />}
 
       {/* One list, in the order you put it in. Starred tasks stay in place
           rather than being hoisted, so dragging a card somewhere actually

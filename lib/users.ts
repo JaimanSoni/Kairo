@@ -292,6 +292,10 @@ export type DeletionReport = {
   journalEntries: number;
   /** Notes pages, trash included. */
   notes: number;
+  /** Garden plants, every day they were watered, and the fruit picked from them. */
+  habits: number;
+  habitLogs: number;
+  harvests: number;
   /** Kept on purpose: money records outlive the account that made them. */
   paymentsKept: number;
 };
@@ -320,7 +324,7 @@ export async function deleteUserCompletely(idHex: string): Promise<DeletionRepor
     const user = await db.collection("users").findOne({ _id });
     if (!user) return null;
 
-    const [tasks, lists, pushSubs, magic, apiKeys, journal, notes, sharedLists, sharedTasks, paymentsKept] =
+    const [tasks, lists, pushSubs, magic, apiKeys, journal, notes, habits, habitLogs, harvests, sharedLists, sharedTasks, paymentsKept] =
       await Promise.all([
         db.collection("tasks").deleteMany({ userId: _id }),
         db.collection("lists").deleteMany({ userId: _id }),
@@ -331,6 +335,10 @@ export async function deleteUserCompletely(idHex: string): Promise<DeletionRepor
         db.collection("api_keys").deleteMany({ userId: _id }),
         db.collection("journal_entries").deleteMany({ userId: _id }),
         db.collection("notes").deleteMany({ userId: _id }),
+        // the garden, its every watering, and the basket
+        db.collection("habits").deleteMany({ userId: _id }),
+        db.collection("habit_logs").deleteMany({ userId: _id }),
+        db.collection("harvests").deleteMany({ userId: _id }),
         // membership of other people's lists, and the tasks shared with them
         db.collection("lists").updateMany({ memberIds: _id }, { $pull: { memberIds: _id } as never }),
         db.collection("tasks").updateMany({ memberIds: _id }, { $pull: { memberIds: _id } as never }),
@@ -356,6 +364,9 @@ export async function deleteUserCompletely(idHex: string): Promise<DeletionRepor
       apiKeys: apiKeys.deletedCount,
       journalEntries: journal.deletedCount,
       notes: notes.deletedCount,
+      habits: habits.deletedCount,
+      habitLogs: habitLogs.deletedCount,
+      harvests: harvests.deletedCount,
       paymentsKept,
     };
   });

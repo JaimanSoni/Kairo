@@ -71,6 +71,18 @@ export async function processDuePushes(): Promise<void> {
     const doc = await scheduled.findOneAndDelete({ fireAt: { $lte: now } });
     if (!doc) break;
 
+    // garden pushes decide for themselves whether they still matter, and plan the next one
+    if (doc.kind === "habit" || doc.kind === "garden-evening") {
+      try {
+        const { fireGardenPush } = await import("./habit-reminders");
+        await fireGardenPush(doc);
+      } catch (err) {
+        // one plant's trouble mustn't strand every push queued behind it
+        console.error("[push] garden push failed", err);
+      }
+      continue;
+    }
+
     // task-linked pushes (reminders): clear the marker, skip if already done/gone
     if (doc.taskId) {
       const tasks = await tasksCollection();

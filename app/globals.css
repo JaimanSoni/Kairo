@@ -1210,3 +1210,374 @@ button {
   color: var(--color-ink-faint);
   text-decoration: line-through;
 }
+
+/* ---------- garden ---------- */
+
+/* A plant's mood is its colour: thirsty fades, wilted greys. Never anything
+   harsher — a plant here wilts, it doesn't die. */
+.gd-plant {
+  overflow: visible;
+  transition: filter 0.6s ease;
+}
+.gd-thirsty {
+  filter: saturate(0.78) brightness(0.98);
+}
+.gd-wilted {
+  filter: saturate(0.42) brightness(0.93) sepia(0.12);
+}
+
+.gd-sway {
+  transform-box: view-box;
+  animation: gd-sway 5.5s ease-in-out infinite;
+}
+@keyframes gd-sway {
+  0%,
+  100% {
+    transform: rotate(-1.6deg);
+  }
+  50% {
+    transform: rotate(1.8deg);
+  }
+}
+
+.gd-peek {
+  transform-box: fill-box;
+  transform-origin: 0% 100%;
+  animation: gd-peek 3.2s ease-in-out infinite;
+}
+@keyframes gd-peek {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-14deg);
+  }
+}
+
+.gd-ripple {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: gd-ripple 3.6s ease-out infinite;
+}
+@keyframes gd-ripple {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.25);
+    opacity: 0;
+  }
+}
+
+.gd-petal-fall {
+  animation: gd-petal-fall 4.5s ease-in infinite;
+}
+@keyframes gd-petal-fall {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(10px, 42px) rotate(160deg);
+    opacity: 0;
+  }
+}
+
+/* ripe fruit bobs, as if it would like to be picked */
+.gd-ripe {
+  animation: gd-ripe 2.4s ease-in-out infinite;
+}
+@keyframes gd-ripe {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 1.6px;
+  }
+}
+
+.gd-twinkle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: gd-twinkle 1.6s ease-in-out infinite;
+}
+@keyframes gd-twinkle {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.6);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+/* watered: a little jump for joy */
+.gd-perk {
+  transform-origin: 50% 90%;
+  animation: gd-perk 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) 0.45s both;
+}
+@keyframes gd-perk {
+  0% {
+    transform: scale(1, 1);
+  }
+  30% {
+    transform: scale(1.06, 0.94);
+  }
+  60% {
+    transform: scale(0.97, 1.05);
+  }
+  100% {
+    transform: scale(1, 1);
+  }
+}
+
+.gd-thirst {
+  animation: gd-thirst 2s ease-in-out infinite;
+}
+@keyframes gd-thirst {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.gd-pick {
+  animation: gd-pick 1.8s ease-in-out infinite;
+}
+@keyframes gd-pick {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.16);
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 8px 22px rgba(255, 210, 63, 0.45);
+  }
+}
+
+/* the watering can tips in, pours, and leaves */
+.gd-can {
+  transform-origin: 70% 60%;
+  animation: gd-can 1.25s ease-in-out both;
+}
+@keyframes gd-can {
+  0% {
+    transform: translate(18px, -10px) rotate(0deg);
+    opacity: 0;
+  }
+  18% {
+    transform: translate(0, 0) rotate(-8deg);
+    opacity: 1;
+  }
+  35%,
+  70% {
+    transform: translate(0, 0) rotate(-38deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(16px, -8px) rotate(-5deg);
+    opacity: 0;
+  }
+}
+.gd-drop {
+  opacity: 0;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  animation: gd-drop 0.55s ease-in both;
+}
+@keyframes gd-drop {
+  0% {
+    transform: translateY(0) scale(0.7);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: translateY(70px) scale(1);
+    opacity: 0;
+  }
+}
+.gd-splash {
+  opacity: 0;
+  animation: gd-splash 0.7s ease-out 0.62s both;
+}
+@keyframes gd-splash {
+  0% {
+    transform: scale(0.3);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.gd-burst {
+  left: 0;
+  top: 0;
+  opacity: 0;
+  animation: gd-burst 1s cubic-bezier(0.15, 0.7, 0.3, 1) both;
+}
+@keyframes gd-burst {
+  0% {
+    transform: translate(-50%, -50%) scale(0.4) rotate(0deg);
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(-50% + var(--bx)), calc(-50% + var(--by) + 24px)) scale(1) rotate(260deg);
+    opacity: 0;
+  }
+}
+
+/* the sky */
+.gd-star {
+  animation: gd-star 3s ease-in-out infinite;
+}
+@keyframes gd-star {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.gd-cloud {
+  left: -180px;
+  animation: gd-cloud 90s linear infinite;
+}
+@keyframes gd-cloud {
+  from {
+    left: -180px;
+  }
+  to {
+    left: 105%;
+  }
+}
+.gd-firefly {
+  box-shadow: 0 0 8px 3px rgba(255, 245, 157, 0.7);
+  animation: gd-firefly 6s ease-in-out infinite;
+}
+@keyframes gd-firefly {
+  0%,
+  100% {
+    transform: translate(0, 0);
+    opacity: 0.1;
+  }
+  25% {
+    transform: translate(14px, -10px);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-6px, -22px);
+    opacity: 0.3;
+  }
+  75% {
+    transform: translate(-16px, -6px);
+    opacity: 0.95;
+  }
+}
+.gd-butterfly {
+  animation: gd-butterfly 14s ease-in-out infinite;
+}
+@keyframes gd-butterfly {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(-6deg);
+  }
+  25% {
+    transform: translate(60px, -26px) rotate(8deg);
+  }
+  50% {
+    transform: translate(120px, 6px) rotate(-4deg);
+  }
+  75% {
+    transform: translate(50px, 22px) rotate(6deg);
+  }
+}
+.gd-wings {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: gd-wings 0.28s ease-in-out infinite alternate;
+}
+@keyframes gd-wings {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0.35);
+  }
+}
+
+/* golden things */
+.gd-golden-card {
+  border-color: #f1d57a;
+  background: linear-gradient(135deg, #fff8dc, var(--color-card));
+}
+:root[data-theme="dark"] .gd-golden-card {
+  border-color: #6b5a1f;
+  background: linear-gradient(135deg, #3a3212, var(--color-card));
+}
+.gd-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.55) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: gd-shine 3.5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes gd-shine {
+  0%,
+  60% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gd-sway,
+  .gd-peek,
+  .gd-ripple,
+  .gd-petal-fall,
+  .gd-ripe,
+  .gd-twinkle,
+  .gd-perk,
+  .gd-thirst,
+  .gd-pick,
+  .gd-star,
+  .gd-cloud,
+  .gd-firefly,
+  .gd-butterfly,
+  .gd-wings,
+  .gd-shine::after {
+    animation: none;
+  }
+  /* the moments that say something happened stay, but only as a quick fade */
+  .gd-can,
+  .gd-drop,
+  .gd-splash,
+  .gd-burst {
+    animation-duration: 0.01ms;
+  }
+  .gd-cloud {
+    left: 30%;
+  }
+}

@@ -42,6 +42,11 @@ export const CATEGORIES: Category[] = [
     description: "Pages inside pages: blocks, templates, tasks in your notes, and the trash.",
   },
   {
+    id: "habits",
+    name: "Habits",
+    description: "Your garden: planting habits, streaks and dew drops, fruit, and leaderboards.",
+  },
+  {
     id: "account",
     name: "Privacy & account",
     description: "Locks, multiple accounts, your data, and fixing problems.",
@@ -212,6 +217,9 @@ export const ARTICLES: Article[] = [
               { k: "2", d: "Go to Calendar" },
               { k: "3", d: "Go to Lists" },
               { k: "4", d: "Go to Log" },
+              { k: "5", d: "Go to Journal. `J` opens today's page." },
+              { k: "6", d: "Go to Notes" },
+              { k: "7", d: "Go to your Garden" },
             ],
           },
           {
@@ -2394,6 +2402,114 @@ export const ARTICLES: Article[] = [
       },
     ],
   },
+  /* ---------------------------------------------------------------- habits */
+  {
+    slug: "habits",
+    title: "Grow habits in your garden",
+    summary:
+      "Every habit is a seed. Water it on the days you keep it and it sprouts, blooms and bears fruit. Streaks, dew drops and leaderboards included.",
+    categoryId: "habits",
+    keywords: ["habits", "habit tracker", "streak", "garden", "plant", "seed", "leaderboard", "dew drop", "fruit", "routine"],
+    sections: [
+      {
+        id: "plant",
+        heading: "Plant a seed",
+        blocks: [
+          {
+            t: "p",
+            text: "**Garden** is where habits live. On a computer it's in the sidebar, or press `7`. On a phone, tap the sprout at the top of the screen — and the plants due today also sit at the top of **Today**, one tap each.",
+          },
+          {
+            t: "ul",
+            items: [
+              "**Seeds** are popular habits ready to plant: drink water, read, meditate, work out and more. Seeds everyone plants share a leaderboard.",
+              "**Your own seed** is any habit you like. Choose its plant, how often it happens (every day, certain days, or a number of times a week), a daily target like 8 glasses, and a reminder time.",
+              "A garden holds up to 40 plants. Most people do best with three or four.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "water",
+        heading: "Water it, watch it grow",
+        blocks: [
+          {
+            t: "p",
+            text: "Tap a plant to water it on a day you kept the habit. Counted habits fill up one tap at a time. Every watering helps the plant grow: a sprout after the first, a young plant after a week, in bloom at 21, and bearing fruit at 30. Growth is never lost.",
+          },
+          {
+            t: "ul",
+            items: [
+              "**Fruit** ripens as waterings add up, starting at 7. Pick it and it goes in your **Basket**.",
+              "**Golden fruit** ripens on your best streaks: 21, 66, 100, 200 and 365 in a row.",
+              "Forgot to tap yesterday? You can still water **yesterday** today, and your streak is kept.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "streaks",
+        heading: "Streaks and dew drops",
+        blocks: [
+          {
+            t: "p",
+            text: "A streak counts the days in a row you kept a habit — or, for a habit that's a number of times a week, the weeks in a row you hit it. Days a habit doesn't ask for don't break anything.",
+          },
+          {
+            t: "ul",
+            items: [
+              "Every 7 in a row earns a **dew drop** 💧, up to three. A drop covers a missed day by itself, so one bad day doesn't erase a month.",
+              "A plant that goes without water **wilts**, but it never dies. Water it again and it perks right back up.",
+              "Changing a habit's schedule or target re-counts its current streak under the new rules. Growth, fruit and your best streak stay.",
+            ],
+          },
+          {
+            t: "tip",
+            text: "Plant **Write in the journal** and it waters itself whenever you write a journal page that day.",
+          },
+        ],
+      },
+      {
+        id: "community",
+        heading: "Leaderboards",
+        blocks: [
+          {
+            t: "p",
+            text: "Every seed has a leaderboard of current streaks: **Everyone**, or **Friends** — the people you share lists or tasks with. You only appear once you join from **Community** with a gardener name and an animal. Nobody sees your email, your photo, or any habit you made yourself.",
+          },
+          {
+            t: "p",
+            text: "Until you join, Kairo still shows *you* where you'd rank, and how many days it would take to pass the next gardener up. **Hide me** takes you off every board at once.",
+          },
+        ],
+      },
+      {
+        id: "reminders",
+        heading: "Reminders",
+        blocks: [
+          {
+            t: "p",
+            text: "Give a habit a reminder time and Kairo nudges you then, only on days it's due and only if you haven't watered it yet. In the evening, if a streak of three or more is still thirsty, you'll get one last gentle nudge. Reminders use the same notifications as tasks, so turn those on in Settings.",
+          },
+        ],
+      },
+      {
+        id: "compost",
+        heading: "Compost, and your data",
+        blocks: [
+          {
+            t: "ul",
+            items: [
+              "**Move to compost** takes a plant off the ground and stops its reminders, but keeps its growth and fruit. Replant it any time.",
+              "A composted plant can be **deleted forever**, with its whole history.",
+              "Assistants you connect to Kairo can see your habits, check one in when you tell them you did it, and plant new ones. They can't delete or compost anything.",
+              "Deleting your account deletes your garden, every watering and your basket.",
+            ],
+          },
+        ],
+      },
+    ],
+  },
   {
     slug: "connect-ai",
     title: "Use Kairo from ChatGPT, Claude or Gemini",
@@ -2530,6 +2646,7 @@ export const ARTICLES: Article[] = [
               "A **read only** key can never add, change or delete anything, and the tools to do so are not even offered to the assistant.",
               "Your [journal](/support/journal) is out of reach unless you tick **Include journal** when creating the key. With it ticked, an assistant can read your pages and add to them when you ask.",
               "Your [notes](/support/notes) work the same way, with **Include notes**: an assistant can search and read them, make new pages and add to existing ones, but never delete or rewrite a page.",
+              "Your [garden](/support/habits) is visible to a connection like your tasks are: it can see your habits and streaks, check a habit in when you say you did it, and plant a new one. It can't delete, compost or edit a habit, and it never sees who's on a leaderboard.",
               "A connection can only reach what you can reach: your own work, plus lists and tasks shared with you.",
               "Nothing about your billing, your PIN or your sign-in is exposed.",
             ],

@@ -63,8 +63,12 @@ export const journalApi = {
 
   get: (date: string) => call<{ entry: JournalEntry | null }>(`/api/journal/${date}`),
 
-  save: (date: string, page: { title: string; doc: JNode; mood: Mood | null; baseVersion: number }) =>
-    call<{ entry: JournalEntry | null }>(`/api/journal/${date}`, { method: "PUT", body: JSON.stringify(page) }),
+  save: async (date: string, page: { title: string; doc: JNode; mood: Mood | null; baseVersion: number }) => {
+    const r = await call<{ entry: JournalEntry | null }>(`/api/journal/${date}`, { method: "PUT", body: JSON.stringify(page) });
+    // a written page may have watered the journal plant; the garden asks again when it's next shown
+    if (r.ok && r.data.entry && r.data.entry.words > 0) window.dispatchEvent(new Event("kairo:garden-stale"));
+    return r;
+  },
 
   remove: (date: string, baseVersion: number) =>
     call<{ ok: true }>(`/api/journal/${date}?baseVersion=${baseVersion}`, { method: "DELETE" }),

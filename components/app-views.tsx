@@ -38,6 +38,17 @@ const NotesSection = dynamic(() => import("./notes/notes-section"), {
   ),
 });
 
+/** The garden brings its own art and animation; it loads when it's visited. */
+const GardenSection = dynamic(() => import("./garden/garden-section"), {
+  ssr: false,
+  loading: () => (
+    <div className="mx-auto w-full max-w-5xl px-4 pb-32 pt-6 sm:px-6">
+      <div className="h-10 w-40 animate-pulse rounded-xl bg-paper-deep" />
+      <div className="mt-5 h-96 animate-pulse rounded-[1.75rem] bg-paper-deep" />
+    </div>
+  ),
+});
+
 /**
  * The app views behind one client switch.
  *
@@ -59,6 +70,7 @@ const TITLES: Record<string, string> = {
   "/log": "Log · Kairo",
   "/journal": "Journal · Kairo",
   "/notes": "Notes · Kairo",
+  "/garden": "Garden · Kairo",
 };
 
 /** Swap the view without a server round trip. */
@@ -74,6 +86,8 @@ export function AppViews() {
   useEffect(() => {
     // an open note names the tab after itself, once it has loaded
     if (/^\/notes\/[a-f0-9]{24}/.test(pathname)) return;
+    // the garden names its own pages
+    if (pathname.startsWith("/garden")) return;
     const title =
       TITLES[pathname] ??
       (pathname.startsWith("/journal/") ? TITLES["/journal"] : pathname.startsWith("/notes/") ? TITLES["/notes"] : undefined);
@@ -85,5 +99,6 @@ export function AppViews() {
   if (pathname.startsWith("/log")) return <LogView />;
   if (pathname.startsWith("/journal")) return <JournalSection />;
   if (pathname.startsWith("/notes")) return <NotesSection />;
+  if (pathname === "/garden" || pathname.startsWith("/garden/")) return <GardenSection />;
   return <TodayView />;
 }

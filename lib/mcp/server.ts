@@ -44,6 +44,8 @@ The journal is private. If journal tools are available, read or write it only wh
 
 Notes are the user's pages. If notes tools are available, save to notes only when the user asks, keep their structure (headings, lists, checkboxes) as Markdown, and add to an existing page with notes_append rather than making near-duplicates. When a title could mean several pages, ask which one.
 
+Habits grow as plants in the user's garden. Check one in with habit_check_in only when the user says they did it — never to rescue a streak on their behalf. A missed day is not a failure: plants wilt but never die, and dew drops cover a missed day on their own. Mention a streak when it's encouraging, never as pressure.
+
 Be brief about it. The user asked for their day, not a report on the API.`;
 
 type Handler = (ctx: McpContext, params: Record<string, unknown>) => Promise<unknown>;

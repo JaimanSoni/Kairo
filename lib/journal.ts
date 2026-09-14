@@ -162,7 +162,10 @@ export async function saveEntry(
       },
       { returnDocument: "after" }
     );
-    if (updated) return { ok: true, entry: toEntry(updated) };
+    if (updated) {
+      await waterGarden(userId, date, updated.words);
+      return { ok: true, entry: toEntry(updated) };
+    }
     const raced = await pages.findOne({ userId, date });
     return { ok: false, reason: "conflict", current: raced ? toEntry(raced) : null };
   }
@@ -188,6 +191,7 @@ export async function saveEntry(
   };
   try {
     await pages.insertOne(record);
+    await waterGarden(userId, date, record.words);
     return { ok: true, entry: toEntry(record) };
   } catch (err) {
     // two devices creating today's page in the same instant: one wins, the
@@ -197,6 +201,20 @@ export async function saveEntry(
       return { ok: false, reason: "conflict", current: winner ? toEntry(winner) : null };
     }
     throw err;
+  }
+}
+
+/**
+ * Writing a page waters the journal plant, if one is growing. A garden hiccup
+ * never costs a diary its save.
+ */
+async function waterGarden(userId: ObjectId, date: string, words: number) {
+  if (words < 1) return;
+  try {
+    const { waterJournalHabit } = await import("./habits");
+    await waterJournalHabit(userId, date);
+  } catch (err) {
+    console.error("[journal] couldn't water the journal plant", err);
   }
 }
 

@@ -57,6 +57,13 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
       { id: "write-today", label: "Write today's journal page", run: () => navigateApp(`/journal/${todayStr()}`) },
       { id: "go-notes", label: "Go to Notes", hint: "6", run: () => navigateApp("/notes") },
       ...(guest ? [] : [{ id: "new-note", label: "New note", run: () => void noteActions.create() }]),
+      { id: "go-garden", label: "Go to Garden", hint: "7", run: () => navigateApp("/garden") },
+      ...(guest
+        ? []
+        : [
+            { id: "plant-habit", label: "Plant a habit", run: () => navigateApp("/garden/seeds") },
+            { id: "garden-community", label: "Habit leaderboards", run: () => navigateApp("/garden/community") },
+          ]),
       ...(state.user.appLockEnabled
         ? [{ id: "lock", label: "Lock Kairo now", run: lockApp }]
         : []),
