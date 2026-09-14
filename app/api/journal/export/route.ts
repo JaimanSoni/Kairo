@@ -13,7 +13,7 @@ import { journalToMarkdown, utcTomorrow } from "@/lib/journal-shared";
  * and in twenty years.
  */
 export async function GET(request: Request) {
-  const session = await requireSession();
+  const session = await requireSession({ expired: "allow" });
   if (!session) return unauthorized();
 
   const gate = await journalGate(session.userId);

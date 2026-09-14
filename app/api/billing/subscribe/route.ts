@@ -24,7 +24,7 @@ import {
  * mid-trial keeps the rest of it.
  */
 export async function POST() {
-  const session = await requireSession();
+  const session = await requireSession({ expired: "allow" });
   if (!session) return unauthorized();
   if (!razorpayConfigured()) {
     return NextResponse.json({ error: "Payments are not configured" }, { status: 503 });

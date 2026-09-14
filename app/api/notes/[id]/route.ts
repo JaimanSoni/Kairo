@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { requireSession, unauthorized, badRequest, notFound } from "@/lib/api-auth";
-import { deleteNoteForever, getNote, saveNoteDoc, trashNote, updateNoteMeta } from "@/lib/notes";
+import { deleteNoteForever, getNote, hideLockedChips, saveNoteDoc, trashNote, updateNoteMeta } from "@/lib/notes";
+import { lockedListIds } from "@/lib/tasks";
 import {
   NOTE_DOC_MAX_BYTES,
   NOTE_FONTS,
@@ -17,9 +18,11 @@ export async function GET(_request: Request, ctx: Ctx) {
   const session = await requireSession();
   if (!session) return unauthorized();
   const { id } = await ctx.params;
-  const found = await getNote(new ObjectId(session.userId), id);
+  const userId = new ObjectId(session.userId);
+  const found = await getNote(userId, id);
   if (!found) return notFound();
-  return NextResponse.json(found);
+  const [page] = await hideLockedChips([found.page], await lockedListIds(userId));
+  return NextResponse.json({ ...found, page });
 }
 
 /**
@@ -56,8 +59,12 @@ export async function PUT(request: Request, ctx: Ctx) {
         return NextResponse.json({ error: "That page is locked. Unlock it to keep writing." }, { status: 423 });
       case "empty":
         return badRequest("That save would empty the page. If that's what you meant, clear it again.");
-      case "conflict":
-        return NextResponse.json({ error: "This page changed somewhere else.", current: result.current }, { status: 409 });
+      case "conflict": {
+        const current = result.current
+          ? (await hideLockedChips([result.current], await lockedListIds(new ObjectId(session.userId))))[0]
+          : result.current;
+        return NextResponse.json({ error: "This page changed somewhere else.", current }, { status: 409 });
+      }
     }
   } catch (err) {
     if (err instanceof NoteContentError) return badRequest(err.message);

@@ -35,6 +35,13 @@ export type ApiKeyDoc = {
   includeJournal?: boolean;
   /** Whether notes are reachable through this connection. Absent on older keys: no. */
   includeNotes?: boolean;
+  /** Whether the garden is reachable through this connection. Absent on older keys: no. */
+  includeHabits?: boolean;
+  /**
+   * The journal PIN in force when the journal was given to this key ("none" when
+   * there was none). Journal tools only work while it still matches.
+   */
+  journalStamp?: string;
   /** IANA zone captured from the browser that created the key. */
   timezone: string;
   createdAt: Date;
@@ -51,6 +58,9 @@ export type ApiKeyInfo = {
   includeLocked: boolean;
   includeJournal: boolean;
   includeNotes: boolean;
+  includeHabits: boolean;
+  /** The journal was given, but its PIN has changed since: paused until given again. */
+  journalPaused: boolean;
   timezone: string;
   createdAt: string;
   lastUsedAt: string | null;
@@ -82,7 +92,7 @@ export function hashKey(key: string): string {
   return createHash("sha256").update(key).digest("hex");
 }
 
-export function toKeyInfo(doc: ApiKeyDoc): ApiKeyInfo {
+export function toKeyInfo(doc: ApiKeyDoc, journalStamp?: string): ApiKeyInfo {
   return {
     id: doc._id.toHexString(),
     name: doc.name,
@@ -91,19 +101,21 @@ export function toKeyInfo(doc: ApiKeyDoc): ApiKeyInfo {
     includeLocked: Boolean(doc.includeLocked),
     includeJournal: Boolean(doc.includeJournal),
     includeNotes: Boolean(doc.includeNotes),
+    includeHabits: Boolean(doc.includeHabits),
+    journalPaused: Boolean(doc.includeJournal) && journalStamp !== undefined && (doc.journalStamp ?? "none") !== journalStamp,
     timezone: doc.timezone,
     createdAt: doc.createdAt.toISOString(),
     lastUsedAt: doc.lastUsedAt ? doc.lastUsedAt.toISOString() : null,
   };
 }
 
-export async function listApiKeys(userIdHex: string): Promise<ApiKeyInfo[]> {
+export async function listApiKeys(userIdHex: string, journalStamp?: string): Promise<ApiKeyInfo[]> {
   const keys = await apiKeysCollection();
   const docs = await keys
     .find({ userId: new ObjectId(userIdHex), revokedAt: null })
     .sort({ createdAt: -1 })
     .toArray();
-  return docs.map(toKeyInfo);
+  return docs.map((d) => toKeyInfo(d, journalStamp));
 }
 
 export type CreateKeyResult =
@@ -117,6 +129,8 @@ export async function createApiKey(input: {
   includeLocked: boolean;
   includeJournal?: boolean;
   includeNotes?: boolean;
+  includeHabits?: boolean;
+  journalStamp?: string;
   timezone: string;
 }): Promise<CreateKeyResult> {
   const name = input.name.trim().slice(0, 60) || "Untitled connection";
@@ -143,13 +157,15 @@ export async function createApiKey(input: {
     includeLocked: input.includeLocked,
     includeJournal: input.includeJournal === true,
     includeNotes: input.includeNotes === true,
+    includeHabits: input.includeHabits === true,
+    ...(input.includeJournal === true ? { journalStamp: input.journalStamp ?? "none" } : {}),
     timezone: safeTimeZone(input.timezone),
     createdAt: now,
     lastUsedAt: null,
     revokedAt: null,
   };
   await keys.insertOne(doc);
-  return { ok: true, key, info: toKeyInfo(doc) };
+  return { ok: true, key, info: toKeyInfo(doc, input.journalStamp) };
 }
 
 /**
@@ -170,7 +186,16 @@ export async function revokeApiKey(userIdHex: string, keyIdHex: string): Promise
 export async function updateApiKey(
   userIdHex: string,
   keyIdHex: string,
-  patch: { name?: string; scope?: ApiKeyScope; includeLocked?: boolean; includeJournal?: boolean; includeNotes?: boolean; timezone?: string }
+  patch: {
+    name?: string;
+    scope?: ApiKeyScope;
+    includeLocked?: boolean;
+    includeJournal?: boolean;
+    includeNotes?: boolean;
+    includeHabits?: boolean;
+    journalStamp?: string;
+    timezone?: string;
+  }
 ): Promise<ApiKeyInfo | null> {
   if (!ObjectId.isValid(keyIdHex)) return null;
   const set: Partial<ApiKeyDoc> = {};
@@ -179,6 +204,8 @@ export async function updateApiKey(
   if (patch.includeLocked !== undefined) set.includeLocked = patch.includeLocked;
   if (patch.includeJournal !== undefined) set.includeJournal = patch.includeJournal;
   if (patch.includeNotes !== undefined) set.includeNotes = patch.includeNotes;
+  if (patch.includeHabits !== undefined) set.includeHabits = patch.includeHabits;
+  if (patch.journalStamp !== undefined) set.journalStamp = patch.journalStamp;
   if (patch.timezone !== undefined) set.timezone = safeTimeZone(patch.timezone);
   if (Object.keys(set).length === 0) return null;
 
@@ -188,7 +215,7 @@ export async function updateApiKey(
     { $set: set },
     { returnDocument: "after" }
   );
-  return updated ? toKeyInfo(updated) : null;
+  return updated ? toKeyInfo(updated, patch.journalStamp) : null;
 }
 
 export function looksLikeKey(token: unknown): token is string {

@@ -8,7 +8,8 @@ import {
   sanitizeTaskPatch,
   buildTaskUpdate,
   taskAccessFilter,
-  accessibleListIds,
+  openListIds,
+  mayMoveTask,
 } from "@/lib/tasks";
 import { sendToUser } from "@/lib/push";
 import { getUserById } from "@/lib/users";
@@ -42,10 +43,17 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/tasks/[id]
   // planted inside a stranger's list, or smuggled into a private one to keep
   // reading it after a share is revoked.
   if (patch.listId !== undefined && patch.listId !== null) {
-    const allowed = await accessibleListIds(userId);
+    const allowed = await openListIds(userId);
     if (!allowed.some((l) => l.toHexString() === patch.listId)) {
       return badRequest("Unknown list");
     }
+  }
+  // And only someone the task belongs to may move it at all: its owner, or the
+  // owner of the list it's in. A collaborator could otherwise pull a shared
+  // task into a private list, where the others lose it and they keep it.
+  const currentList = existing.listId ? (existing.listId as ObjectId).toHexString() : null;
+  if (patch.listId !== undefined && patch.listId !== currentList && !(await mayMoveTask(existing, userId))) {
+    return NextResponse.json({ error: "Only the task's owner can move it to another list." }, { status: 403 });
   }
 
   // Assigning is only valid to a member of the task's shared list.
@@ -139,7 +147,7 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/tasks/[i
   const isOwner = (task.userId as ObjectId).equals(userId);
   const viaList =
     task.listId != null &&
-    (await accessibleListIds(userId)).some((l) => l.equals(task.listId as ObjectId));
+    (await openListIds(userId)).some((l) => l.equals(task.listId as ObjectId));
   if (!isOwner && !viaList) {
     await tasks.updateOne({ _id: task._id }, { $pull: { memberIds: userId } as never });
     return NextResponse.json({ ok: true, left: true });

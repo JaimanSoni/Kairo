@@ -21,7 +21,8 @@ const MAX_TRACKED = 5000;
 
 export type RateVerdict = { allowed: true; remaining: number } | { allowed: false; retryAfter: number };
 
-export function checkRate(keyId: string, limit = CALLS_PER_MINUTE): RateVerdict {
+/** `cost` is how many calls this request carries: a batch of fifty is fifty calls, not one. */
+export function checkRate(keyId: string, limit = CALLS_PER_MINUTE, cost = 1): RateVerdict {
   global._kairoMcpRate ??= new Map();
   const store = global._kairoMcpRate;
   const now = Date.now();
@@ -32,12 +33,13 @@ export function checkRate(keyId: string, limit = CALLS_PER_MINUTE): RateVerdict 
 
   const current = store.get(keyId);
   if (!current || current.resetAt <= now) {
-    store.set(keyId, { count: 1, resetAt: now + WINDOW_MS });
-    return { allowed: true, remaining: limit - 1 };
+    if (cost > limit) return { allowed: false, retryAfter: 1 };
+    store.set(keyId, { count: cost, resetAt: now + WINDOW_MS });
+    return { allowed: true, remaining: limit - cost };
   }
-  if (current.count >= limit) {
+  if (current.count + cost > limit) {
     return { allowed: false, retryAfter: Math.max(1, Math.ceil((current.resetAt - now) / 1000)) };
   }
-  current.count++;
+  current.count += cost;
   return { allowed: true, remaining: limit - current.count };
 }

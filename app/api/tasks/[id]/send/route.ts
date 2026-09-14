@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { sendEmail } from "@/lib/email";
 import { taskSentEmail } from "@/lib/email-templates";
 import { inviteUserByEmail } from "@/lib/invites";
+import { shareAllowance } from "@/lib/rate-limit";
 import { ObjectId } from "mongodb";
 import { requireSession, unauthorized, badRequest, notFound } from "@/lib/api-auth";
 import { tasksCollection, taskAccessFilter } from "@/lib/tasks";
@@ -47,6 +48,9 @@ export async function POST(request: Request, ctx: RouteContext<"/api/tasks/[id]/
     ...(await taskAccessFilter(new ObjectId(session.userId))),
   });
   if (!task) return notFound();
+  // every send drops a copy into someone's inbox: that's what gets an allowance
+  const allowance = await shareAllowance(session.userId);
+  if (!allowance.ok) return NextResponse.json({ error: allowance.error }, { status: 429, headers: { "Retry-After": String(allowance.retryAfter) } });
 
   const now = new Date();
   // a plan in the past is stale, not a gift — those copies arrive in the inbox

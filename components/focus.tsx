@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { playComplete } from "@/lib/sound";
 import { cancelPush, enablePush, pushEnabled, pushPermission, schedulePush } from "@/lib/push-client";
-import { useApp } from "./store";
+import { hiddenListIds, useApp } from "./store";
 import { IconX } from "./ui";
 
 type SavedTimer = {
@@ -54,7 +54,9 @@ function fmtClock(ms: number): string {
 export function FocusOverlay() {
   const { state, getTask, stopFocus, minimizeFocus, startFocus, completeTask, showToast } = useApp();
   const focus = state.focus;
-  const task = focus ? state.tasks[focus.taskId] : null;
+  const found = focus ? state.tasks[focus.taskId] : null;
+  // a timer running on a task in a list that's locked right now doesn't show its title
+  const task = found && !(found.listId && hiddenListIds(state).has(found.listId)) ? found : null;
 
   const [timer, setTimer] = useState<SavedTimer | null>(null);
   const [now, setNow] = useState(0);

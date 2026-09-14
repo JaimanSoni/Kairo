@@ -33,6 +33,7 @@ import {
   writeDraft,
   type Draft,
   type Result,
+  journalKnownPinned,
 } from "@/lib/journal-client";
 import { hiddenListIds, useApp } from "../store";
 import { navigateApp } from "../app-views";
@@ -154,7 +155,12 @@ export function JournalEditor({ date }: { date: string }) {
           setStatus("locked");
           return;
         }
-        // offline or failing: local work on this device is still the page
+        // offline or failing: local work on this device is still the page —
+        // unless the journal has a PIN, which a dropped connection doesn't lift
+        if (journalKnownPinned()) {
+          setStatus("locked");
+          return;
+        }
         if (draft) {
           setLoaded({ server: null, page: draft, baseVersion: draft.baseVersion, unsynced: true });
           setStatus("ready");

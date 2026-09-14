@@ -9,6 +9,7 @@ import {
 import { getUserById, isUserDisabled } from "../users";
 import { accessFor, type UserBilling } from "../billing";
 import { clockIn, todayIn } from "../tz";
+import { journalStampOf } from "../journal-lock";
 
 /**
  * Everything a tool call is allowed to assume about who is asking.
@@ -35,6 +36,8 @@ export type McpContext = {
   includeJournal: boolean;
   /** Whether notes tools exist for this connection at all. */
   includeNotes: boolean;
+  /** Whether garden tools exist for this connection at all. */
+  includeHabits: boolean;
   keyName: string;
   /** Why access is allowed — surfaced by whoami so a trial is never a surprise. */
   accessReason: string;
@@ -132,8 +135,10 @@ export async function authenticate(request: Request): Promise<AuthResult> {
       clock: clockIn(key.timezone, now),
       scope: key.scope,
       includeLocked: Boolean(key.includeLocked),
-      includeJournal: Boolean(key.includeJournal),
+      // given the journal under a PIN that has since changed (or appeared): paused
+      includeJournal: Boolean(key.includeJournal) && (key.journalStamp ?? "none") === journalStampOf(user),
       includeNotes: Boolean(key.includeNotes),
+      includeHabits: Boolean(key.includeHabits),
       keyName: key.name,
       accessReason: access.reason,
       trialDaysLeft: access.trialDaysLeft,

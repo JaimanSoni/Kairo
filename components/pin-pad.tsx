@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useId } from "react";
+
+/**
+ * Every mounted pad, newest last. Only the newest one listens to the keyboard:
+ * an app-lock pad over a journal pad must not send one PIN to both, spending
+ * the journal's guesses on the app's PIN.
+ */
+const pads: string[] = [];
 
 export const MIN_PIN = 4;
 export const MAX_PIN = 8;
@@ -27,6 +34,15 @@ export function PinPad({
     onPinChange(pin + d);
   };
 
+  const padId = useId();
+  useEffect(() => {
+    pads.push(padId);
+    return () => {
+      const at = pads.lastIndexOf(padId);
+      if (at >= 0) pads.splice(at, 1);
+    };
+  }, [padId]);
+
   /**
    * The physical keyboard works too: digits type, Backspace deletes, Enter
    * confirms. Capture phase on purpose — the app's single-key shortcuts
@@ -36,6 +52,7 @@ export function PinPad({
    */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (pads[pads.length - 1] !== padId) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;

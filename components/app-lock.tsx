@@ -43,7 +43,7 @@ export function AppLockGate() {
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-paper px-6">
+    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-paper px-6">
       <Icon3d name="lock" size={64} />
       <h1 className="font-display mt-3 text-3xl">Kairo is locked</h1>
       <p className="mt-1 text-sm text-ink-soft">Enter your PIN, {state.user.name.split(" ")[0]}.</p>
@@ -65,14 +65,8 @@ export function AppLockGate() {
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({ userId: a.id }),
                     });
-                    if (res.ok) {
-                      // leaving the locked account ends any unlocked session
-                      // it may still have had in this tab
-                      try {
-                        sessionStorage.removeItem(`kairo-applock:${state.user.id}`);
-                      } catch {}
-                      window.location.assign("/today");
-                    }
+                    // the server takes back everything the locked account had opened
+                    if (res.ok) window.location.assign("/today");
                   } catch {}
                 }}
                 className="flex items-center gap-1.5 rounded-full border border-line bg-card px-3 py-1.5 text-xs font-medium text-ink-soft hover:border-ink-faint"

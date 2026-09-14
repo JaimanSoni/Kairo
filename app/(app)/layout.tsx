@@ -13,13 +13,13 @@ import { resolveAvatar } from "@/lib/avatars";
 import { EntitlementsProvider } from "@/components/entitlements";
 import { GuestSync } from "@/components/guest-sync";
 import { Shell } from "@/components/shell";
+import { isAppOpen } from "@/lib/lock-grants";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
   if (!session) redirect("/");
 
-  const [{ tasks, lists, people }, userDoc, roster, billingSettings] = await Promise.all([
-    loadUserData(session.userId),
+  const [userDoc, roster, billingSettings] = await Promise.all([
     getUserById(session.userId),
     getSessionAccounts(),
     getBillingSettings(),
@@ -44,6 +44,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!userDoc) redirect("/api/auth/stale?reason=signin_again");
   if (userDoc.disabled) redirect("/api/auth/stale?reason=deactivated");
 
+  // An app lock that this browser hasn't opened gets the lock screen and
+  // nothing else: no tasks, no lists, no people in the page to read past it.
+  // Checked before the paywall, which offers downloads that need an open app.
+  const appLocked = Boolean(userDoc.appLockHash && userDoc.appLockSalt) && !(await isAppOpen(session.userId, userDoc.appLockHash!));
+
   // Access is decided on the server every request. A client that lies about
   // being subscribed gets nowhere, because this is what renders the app.
   const access = await accessFor({
@@ -55,7 +60,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // the charge shape is a server fact; the client is only told which to render
   const mode = billingMode();
 
-  if (!access.allowed) {
+  if (!access.allowed && !appLocked) {
     return (
       <Paywall
         access={access}
@@ -67,6 +72,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     );
   }
 
+  const { tasks, lists, people } = appLocked ? { tasks: [], lists: [], people: [] } : await loadUserData(session.userId);
+
   return (
     <AppProvider
       user={{
@@ -77,6 +84,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         picture: resolveAvatar(userDoc.avatarChoice, session.picture),
         googlePicture: session.picture,
         appLockEnabled: Boolean(userDoc?.appLockHash),
+        appLocked,
         // from the database record, not the session cookie
         isAdmin: isAdminEmail(userDoc?.email),
         // money has actually changed hands: a live subscription, or a period

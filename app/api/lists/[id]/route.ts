@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { requireSession, unauthorized, badRequest, notFound } from "@/lib/api-auth";
-import { listsCollection, tasksCollection, toList } from "@/lib/tasks";
+import { listsCollection, lockedListIds, tasksCollection, toList } from "@/lib/tasks";
+
+const stillLocked = () => NextResponse.json({ error: "Unlock the list first.", locked: true }, { status: 423 });
 
 export async function PATCH(request: Request, ctx: RouteContext<"/api/lists/[id]">) {
   const session = await requireSession();
@@ -29,6 +31,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/lists/[id]
     set.emoji = body.emoji;
   }
   if (Object.keys(set).length === 0) return badRequest("No valid fields");
+  if ((await lockedListIds(new ObjectId(session.userId))).some((l) => l.toHexString() === id)) return stillLocked();
 
   const lists = await listsCollection();
   const result = await lists.findOneAndUpdate(
@@ -48,6 +51,7 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/lists/[i
   if (!ObjectId.isValid(id)) return badRequest("Invalid list id");
 
   const userId = new ObjectId(session.userId);
+  if ((await lockedListIds(userId)).some((l) => l.toHexString() === id)) return stillLocked();
   const lists = await listsCollection();
   const result = await lists.deleteOne({ _id: new ObjectId(id), userId });
   if (result.deletedCount === 0) return notFound();

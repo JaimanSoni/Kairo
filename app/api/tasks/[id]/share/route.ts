@@ -7,6 +7,7 @@ import { sendEmail } from "@/lib/email";
 import { taskSharedEmail } from "@/lib/email-templates";
 import { inviteUserByEmail } from "@/lib/invites";
 import { sendToUser } from "@/lib/push";
+import { shareAllowance } from "@/lib/rate-limit";
 import { resolveAvatar } from "@/lib/avatars";
 import type { DbUser } from "@/lib/users";
 
@@ -93,6 +94,8 @@ export async function POST(request: Request, ctx: RouteContext<"/api/tasks/[id]/
   const tasks = await tasksCollection();
   const task = await tasks.findOne({ _id: new ObjectId(id), ...(await taskAccessFilter(userId)) });
   if (!task) return notFound();
+  const allowance = await shareAllowance(session.userId);
+  if (!allowance.ok) return NextResponse.json({ error: allowance.error }, { status: 429, headers: { "Retry-After": String(allowance.retryAfter) } });
 
   const when = whenOf(task);
   const db = await getDb();
@@ -127,8 +130,9 @@ export async function POST(request: Request, ctx: RouteContext<"/api/tasks/[id]/
   if (!updated) return notFound();
 
   // keyed per task+person: re-adding someone removed tells them again, a
-  // double-click does not
-  if (!invited) {
+  // double-click does not — and someone already on the task isn't told twice
+  const alreadyOn = ((task.memberIds as ObjectId[] | undefined) ?? []).some((m) => m.equals(recipient._id));
+  if (!invited && !alreadyOn) {
     const mail = taskSharedEmail({
       sharerName: session.name,
       taskTitle: String(task.title),

@@ -208,7 +208,10 @@ export function inlineText(nodes: JNode[] | undefined): string {
     if (n.type === "text") s += n.text ?? "";
     else if (n.type === "hardBreak") s += "\n";
     else if (n.type === "pageMention") s += typeof n.attrs?.label === "string" ? n.attrs.label : "";
-    else if (n.type === "taskRef") s += typeof n.attrs?.title === "string" ? n.attrs.title : "";
+    // A task chip's title is a copy of a task that may later sit in a locked
+    // list, so it is never part of a page's searchable text. (Markdown export
+    // writes it, after the server has hidden the ones this viewer can't see.)
+    else if (n.type === "taskRef") s += "";
     else s += inlineText(n.content);
   }
   return s;

@@ -204,7 +204,31 @@ export function GardenHome() {
           </div>
         </section>
       )}
+
+      {habits.length > 0 && <NudgeSwitch />}
     </div>
+  );
+}
+
+/** The evening nudge, and a way to switch it off: a garden that pesters stops being a garden. */
+function NudgeSwitch() {
+  useGarden();
+  const on = gardenStore.nudges();
+  return (
+    <label className="mt-10 flex items-center justify-between gap-3 rounded-2xl border border-line bg-card px-4 py-3">
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold">🌙 Evening nudge</span>
+        <span className="block text-xs text-ink-faint">One gentle reminder at 8:30pm when a streak of three or more is still thirsty.</span>
+      </span>
+      <input
+        type="checkbox"
+        role="switch"
+        checked={on}
+        onChange={(e) => void gardenStore.setNudges(e.target.checked)}
+        className="size-5 shrink-0 accent-[var(--color-sun)]"
+        aria-label="Evening nudge"
+      />
+    </label>
   );
 }
 

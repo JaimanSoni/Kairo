@@ -6,6 +6,7 @@ import { getDb } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
 import { listSharedEmail } from "@/lib/email-templates";
 import { inviteUserByEmail } from "@/lib/invites";
+import { shareAllowance } from "@/lib/rate-limit";
 import { resolveAvatar } from "@/lib/avatars";
 import type { DbUser } from "@/lib/users";
 
@@ -80,6 +81,8 @@ export async function POST(request: Request, ctx: RouteContext<"/api/lists/[id]/
     userId: new ObjectId(session.userId),
   });
   if (!owned) return notFound();
+  const allowance = await shareAllowance(session.userId);
+  if (!allowance.ok) return NextResponse.json({ error: allowance.error }, { status: 429, headers: { "Retry-After": String(allowance.retryAfter) } });
 
   const db = await getDb();
   const found = await db.collection<DbUser>("users").findOne({ email });
@@ -106,8 +109,9 @@ export async function POST(request: Request, ctx: RouteContext<"/api/lists/[id]/
   if (!updated) return notFound();
 
   // keyed per list+member: re-inviting someone removed and added back tells
-  // them again, but a double-click does not
-  if (!invited) {
+  // them again, but a double-click does not, nor does sharing with a member
+  const alreadyOn = ((owned.memberIds as ObjectId[] | undefined) ?? []).some((m) => m.equals(recipient._id));
+  if (!invited && !alreadyOn) {
     const mail = listSharedEmail({
       inviterName: session.name,
       listName: String(updated.name),

@@ -12,7 +12,6 @@ import {
   type LiveHabit,
 } from "@/lib/habits-shared";
 import { track } from "@/lib/analytics-client";
-import { todayStr } from "@/lib/dates";
 import { useApp } from "../store";
 import { buzz, plink } from "./fx";
 
@@ -69,7 +68,9 @@ export type Moments = Record<string, { water: number; burst: number; golden: boo
  * dew drop. Moments are counters a plot watches to replay its animation.
  */
 export function useGardenActions() {
-  const { showToast } = useApp();
+  const { state, showToast } = useApp();
+  // the same "today" every garden screen draws with, even in the minute after midnight
+  const today = state.today;
   const [moments, setMoments] = useState<Moments>({});
 
   const bump = useCallback((id: string, kind: "water" | "burst", golden = false) => {
@@ -81,8 +82,13 @@ export function useGardenActions() {
 
   const water = useCallback(
     async (habit: HabitView, opts: { date?: string; step?: 1 | -1; fill?: boolean } = {}) => {
-      const date = opts.date ?? todayStr();
+      const date = opts.date ?? today;
       const log = gardenStore.logs(habit.id).get(date);
+      // the journal plant is watered by writing; a stray tap shouldn't undo a page that was written
+      if (habit.seedId === "journal" && habit.target === 1 && log?.done && !opts.step && !opts.fill) {
+        showToast({ message: "📔 This one waters itself when you write in your journal." });
+        return;
+      }
       let change: { delta?: number; count?: number };
       if (opts.fill) {
         // a rescued day is a whole day: all eight glasses, not one
@@ -129,12 +135,12 @@ export function useGardenActions() {
         } else if (events.streak > 0 && events.streak % DROP_EVERY === 0) {
           bump(habit.id, "burst");
           showToast({ message: `🔥 ${events.streak} days in a row. You earned a dew drop 💧 — it covers a day you miss.` });
-        } else if (date !== todayStr()) {
+        } else if (date !== today) {
           showToast({ message: `Yesterday's watered. Your ${events.streak}-day streak is safe.` });
         }
       }
     },
-    [bump, showToast]
+    [bump, showToast, today]
   );
 
   const pick = useCallback(

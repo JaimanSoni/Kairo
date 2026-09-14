@@ -40,6 +40,10 @@ export async function POST(request: Request) {
   const scheduled = await scheduledCollection();
   const userId = new ObjectId(session.userId);
   if (tag) await scheduled.deleteMany({ userId, tag });
+  // a timer and a handful of reminders is normal; hundreds is a loop, or abuse
+  if ((await scheduled.countDocuments({ userId })) >= 300) {
+    return NextResponse.json({ error: "Too many pending notifications." }, { status: 429 });
+  }
   await scheduled.insertOne({
     userId,
     fireAt: body.fireAt,
@@ -47,7 +51,8 @@ export async function POST(request: Request) {
     body: typeof body.body === "string" ? body.body.slice(0, 500) : null,
     tag,
     taskId,
-    url: typeof body.url === "string" && body.url.startsWith("/") ? body.url : "/today",
+    // a path on this site, never "//elsewhere": the notification opens it
+    url: typeof body.url === "string" && /^\/(?![/\\])/.test(body.url) && body.url.length <= 300 ? body.url : "/today",
     createdAt: new Date(),
   });
 

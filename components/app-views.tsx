@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { useApp } from "./store";
 import { TodayView } from "./today-view";
 import { CalendarSection } from "./calendar-section";
 import { ListsView } from "./lists-view";
@@ -81,10 +82,16 @@ export function navigateApp(href: string) {
 
 export function AppViews() {
   const pathname = usePathname();
+  const { state } = useApp();
+  const locked = state.appLocked;
 
   // pushState skips the metadata system, so the tab title follows by hand
   useEffect(() => {
     // an open note names the tab after itself, once it has loaded
+    if (locked) {
+      document.title = "Kairo";
+      return;
+    }
     if (/^\/notes\/[a-f0-9]{24}/.test(pathname)) return;
     // the garden names its own pages
     if (pathname.startsWith("/garden")) return;
@@ -92,8 +99,9 @@ export function AppViews() {
       TITLES[pathname] ??
       (pathname.startsWith("/journal/") ? TITLES["/journal"] : pathname.startsWith("/notes/") ? TITLES["/notes"] : undefined);
     if (title) document.title = title;
-  }, [pathname]);
+  }, [pathname, locked]);
 
+  if (locked) return null;
   if (pathname.startsWith("/calendar")) return <CalendarSection />;
   if (pathname.startsWith("/lists")) return <ListsView />;
   if (pathname.startsWith("/log")) return <LogView />;

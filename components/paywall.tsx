@@ -8,6 +8,92 @@ import { PlanCards, type FeatureLabel, type PublicPlan } from "./plan-cards";
 
 const CHECKOUT_SRC = "https://checkout.razorpay.com/v1/checkout.js";
 
+/**
+ * "Download your journal", on the one screen a lapsed account has. A journal
+ * with a PIN asks for it right here — there's no Journal to open behind the
+ * paywall — and downloads once it's accepted.
+ */
+function JournalDownload() {
+  const [asking, setAsking] = useState(false);
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const download = () => window.location.assign("/api/journal/export");
+
+  const start = async () => {
+    setError(null);
+    try {
+      const status = await fetch("/api/journal/lock");
+      const data = (await status.json()) as { locked?: boolean };
+      if (data.locked) {
+        setAsking(true);
+        return;
+      }
+    } catch {
+      /* the download itself will say what's wrong */
+    }
+    download();
+  };
+
+  const unlock = async () => {
+    if (busy || pin.length < 4) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/journal/unlock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin }),
+      });
+      if (res.ok) {
+        setAsking(false);
+        download();
+        return;
+      }
+      setError(res.status === 429 ? "Too many tries. Wait a little, then try again." : "That's not the PIN.");
+      setPin("");
+    } catch {
+      setError("You're offline. Try again when you're back.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!asking) {
+    return (
+      <button type="button" onClick={() => void start()} className="underline underline-offset-2 hover:text-ink-soft">
+        Download your journal
+      </button>
+    );
+  }
+  return (
+    <form
+      className="inline-flex items-center gap-1.5"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void unlock();
+      }}
+    >
+      <input
+        autoFocus
+        inputMode="numeric"
+        type="password"
+        value={pin}
+        maxLength={8}
+        onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+        placeholder="Journal PIN"
+        aria-label="Journal PIN"
+        className="w-24 rounded-md border border-line bg-card px-2 py-1 text-xs text-ink outline-none focus:border-sun"
+      />
+      <button type="submit" disabled={busy} className="rounded-md bg-ink px-2 py-1 text-xs font-semibold text-paper disabled:opacity-50">
+        {busy ? "…" : "Download"}
+      </button>
+      {error && <span className="text-clay">{error}</span>}
+    </form>
+  );
+}
+
 type Razorpay = new (options: Record<string, unknown>) => {
   open: () => void;
   on?: (event: string, cb: (payload: never) => void) => void;
@@ -193,11 +279,7 @@ export function Paywall({
             Billing &amp; receipts
           </a>
           {/* a lapsed card must never cost someone their own diary */}
-          <form action="/api/journal/export" method="GET" className="inline">
-            <button type="submit" className="underline underline-offset-2 hover:text-ink-soft">
-              Download your journal
-            </button>
-          </form>
+          <JournalDownload />
           <form action="/api/notes/export" method="GET" className="inline">
             <button type="submit" className="underline underline-offset-2 hover:text-ink-soft">
               Download your notes

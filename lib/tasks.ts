@@ -3,6 +3,7 @@ import { getDb, withDbRetry } from "./db";
 import { sanitizeRepeat, type Repeat } from "./repeat";
 import { resolveAvatar } from "./avatars";
 import type { AccountInfo, List, Subtask, Task, TaskStatus } from "./types";
+import { isListOpen, listGrants } from "./lock-grants";
 
 export const TASK_STATUSES: TaskStatus[] = ["inbox", "planned", "done", "someday"];
 
@@ -74,6 +75,14 @@ export function listAccessFilter(userId: ObjectId): Document {
   return { $or: [{ userId }, { memberIds: userId }] };
 }
 
+/** Whether this user may move a task between lists: it's theirs, or the list it's in is. */
+export async function mayMoveTask(task: Document, userId: ObjectId): Promise<boolean> {
+  if ((task.userId as ObjectId).equals(userId)) return true;
+  if (!task.listId) return false;
+  const list = await (await listsCollection()).findOne({ _id: task.listId as ObjectId }, { projection: { userId: 1 } });
+  return Boolean(list && (list.userId as ObjectId).equals(userId));
+}
+
 /** Ids of all lists the user can access. */
 export async function accessibleListIds(userId: ObjectId): Promise<ObjectId[]> {
   const lists = await listsCollection();
@@ -81,10 +90,42 @@ export async function accessibleListIds(userId: ObjectId): Promise<ObjectId[]> {
   return docs.map((d) => d._id);
 }
 
-/** Mongo filter matching tasks the user can access (own, shared with them, or in an accessible list). */
+/**
+ * Lists this browser can't see into: PIN-locked, and not unlocked here. Their
+ * tasks are left out of every answer, so a lock holds even against someone
+ * reading the network tab of an unlocked laptop.
+ */
+export async function lockedListIds(userId: ObjectId, docs?: Document[]): Promise<ObjectId[]> {
+  const lists =
+    docs ??
+    (await (await listsCollection())
+      .find({ ...listAccessFilter(userId), pinHash: { $exists: true } })
+      .project({ _id: 1, pinHash: 1 })
+      .toArray());
+  const locked = lists.filter((l) => typeof l.pinHash === "string" && l.pinHash);
+  if (locked.length === 0) return [];
+  const grants = await listGrants(userId.toHexString());
+  return locked.filter((l) => !isListOpen(grants, (l._id as ObjectId).toHexString(), l.pinHash)).map((l) => l._id as ObjectId);
+}
+
+/** Lists the user can reach and see into right now: the only ones a task may be filed under. */
+export async function openListIds(userId: ObjectId): Promise<ObjectId[]> {
+  const docs = await (await listsCollection()).find(listAccessFilter(userId)).project({ _id: 1, pinHash: 1 }).toArray();
+  const locked = new Set((await lockedListIds(userId, docs)).map((l) => l.toHexString()));
+  return docs.filter((d) => !locked.has((d._id as ObjectId).toHexString())).map((d) => d._id as ObjectId);
+}
+
+/**
+ * Mongo filter matching tasks the user can access (own, shared with them, or
+ * in an accessible list), and can see: nothing inside a list locked here.
+ */
 export async function taskAccessFilter(userId: ObjectId): Promise<Document> {
-  const listIds = await accessibleListIds(userId);
-  return { $or: [{ userId }, { memberIds: userId }, { listId: { $in: listIds } }] };
+  const docs = await (await listsCollection()).find(listAccessFilter(userId)).project({ _id: 1, pinHash: 1 }).toArray();
+  const locked = await lockedListIds(userId, docs);
+  return {
+    $or: [{ userId }, { memberIds: userId }, { listId: { $in: docs.map((d) => d._id) } }],
+    ...(locked.length ? { listId: { $nin: locked } } : {}),
+  };
 }
 
 export async function tasksCollection() {
@@ -131,7 +172,12 @@ export async function loadUserData(
     }
 
     const listIds = listDocs.map((d) => d._id);
-    const access = { $or: [{ userId }, { memberIds: userId }, { listId: { $in: listIds } }] };
+    const locked = await lockedListIds(userId, listDocs);
+    const lockedSet = new Set(locked.map((l) => l.toHexString()));
+    const access = {
+      $or: [{ userId }, { memberIds: userId }, { listId: { $in: listIds } }],
+      ...(locked.length ? { listId: { $nin: locked } } : {}),
+    };
 
     const [liveTasks, recentDone] = await Promise.all([
       tasks
@@ -174,7 +220,11 @@ export async function loadUserData(
 
     return {
       tasks: [...liveTasks, ...recentDone].map(toTask),
-      lists: listDocs.map((d) => toList(d, userIdHex)),
+      // a locked list says whether this browser has it open, so the page knows
+      lists: listDocs.map((d) => {
+        const list = toList(d, userIdHex);
+        return list.locked ? { ...list, unlocked: !lockedSet.has(list.id) } : list;
+      }),
       people: peopleDocs.map((u) => ({
         id: u._id.toHexString(),
         name: String(u.name ?? ""),
@@ -293,7 +343,7 @@ export function sanitizeTaskPatch(body: Record<string, unknown>): TaskPatch | nu
     for (const s of body.subtasks) {
       if (typeof s !== "object" || s === null) return null;
       const st = s as Record<string, unknown>;
-      if (typeof st.id !== "string" || typeof st.title !== "string" || st.title.length > 500 || typeof st.done !== "boolean") return null;
+      if (typeof st.id !== "string" || !st.id || st.id.length > 64 || typeof st.title !== "string" || st.title.length > 500 || typeof st.done !== "boolean") return null;
       const sub: Subtask = { id: st.id, title: st.title, done: st.done };
       if (st.done && "doneAt" in st && st.doneAt !== undefined && st.doneAt !== null) {
         if (!isIsoDateTime(st.doneAt)) return null;

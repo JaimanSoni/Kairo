@@ -609,10 +609,11 @@ function AdminLink() {
  */
 function WorkingOn({ className = "" }: { className?: string }) {
   const { state, setEditing, toggleStarted } = useApp();
-  const task = useMemo(
-    () => Object.values(state.tasks).find((t) => t.startedAt && t.status !== "done"),
-    [state.tasks]
-  );
+  // never a task inside a list that's locked right now: its title would sit on every screen
+  const task = useMemo(() => {
+    const hidden = hiddenListIds(state);
+    return Object.values(state.tasks).find((t) => t.startedAt && t.status !== "done" && !(t.listId && hidden.has(t.listId)));
+  }, [state]);
   if (!task) return null;
 
   return (

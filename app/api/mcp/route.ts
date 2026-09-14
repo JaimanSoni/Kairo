@@ -92,23 +92,20 @@ export async function DELETE(): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  // guessing keys costs a database read each time; a caller that keeps failing is slowed first
+  const ip = (request.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+  const failures = checkRate(`bad-key:${ip}`, 30, 0);
+  if (!failures.allowed) {
+    return protocolError(429, -32003, "Too many failed attempts from here. Try again shortly.", { "Retry-After": String(failures.retryAfter) });
+  }
   const auth = await authenticate(request);
   if (!auth.ok) {
+    checkRate(`bad-key:${ip}`, 30, 1);
     return protocolError(
       auth.status,
       auth.status === 402 ? -32002 : -32001,
       auth.error,
       auth.challenge ? { "WWW-Authenticate": auth.challenge } : {}
-    );
-  }
-
-  const rate = checkRate(auth.key._id.toHexString());
-  if (!rate.allowed) {
-    return protocolError(
-      429,
-      -32003,
-      `Too many calls. Kairo allows about ${CALLS_PER_MINUTE} a minute per connection; try again in ${rate.retryAfter}s.`,
-      { "Retry-After": String(rate.retryAfter) }
     );
   }
 
@@ -133,6 +130,17 @@ export async function POST(request: Request): Promise<Response> {
   }
   if (messages.length > 50) {
     return protocolError(400, ErrorCode.InvalidRequest, "At most 50 messages per batch.");
+  }
+
+  // charged per message, so a batch can't carry fifty times the allowance
+  const rate = checkRate(auth.key._id.toHexString(), CALLS_PER_MINUTE, messages.length);
+  if (!rate.allowed) {
+    return protocolError(
+      429,
+      -32003,
+      `Too many calls. Kairo allows about ${CALLS_PER_MINUTE} a minute per connection; try again in ${rate.retryAfter}s.`,
+      { "Retry-After": String(rate.retryAfter) }
+    );
   }
 
   const responses: RpcResponse[] = [];

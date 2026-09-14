@@ -14,7 +14,7 @@ import { fetchSubscription, verifyCheckoutSignature } from "@/lib/razorpay";
  * webhook remains the authority — this only shortens the wait.
  */
 export async function POST(request: Request) {
-  const session = await requireSession();
+  const session = await requireSession({ expired: "allow" });
   if (!session) return unauthorized();
 
   let body: { razorpay_payment_id?: unknown; razorpay_subscription_id?: unknown; razorpay_signature?: unknown };

@@ -103,6 +103,14 @@ export async function inviteUserByEmail(input: {
     return { ok: false, error: "That doesn't look like a full email address" };
   }
 
+  // Invitations to people who aren't here yet are the part a spammer wants,
+  // so each inviter gets a daily handful of them, on top of the per-address cap.
+  const { hitLimit } = await import("./rate-limit");
+  const inviter = await hitLimit(`invites:${input.inviterId}`, 20, 86_400_000);
+  if (!inviter.ok) {
+    return { ok: false, error: "You've invited a lot of new people today. Try again tomorrow." };
+  }
+
   // One invite email per address per day, whatever is being shared. Keying
   // per item let anyone turn the invite flow into an email cannon (new list,
   // new key, unlimited sends from our own domain); repeat shares within a

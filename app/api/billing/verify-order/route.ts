@@ -20,7 +20,7 @@ import { planForPendingPayment } from "@/lib/pending-plan";
  * fields — which stay valid indefinitely — grants nothing the second time.
  */
 export async function POST(request: Request) {
-  const session = await requireSession();
+  const session = await requireSession({ expired: "allow" });
   if (!session) return unauthorized();
 
   let body: {

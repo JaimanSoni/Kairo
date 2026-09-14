@@ -1,6 +1,6 @@
 import { docToText, type JNode } from "../doc-model";
 import { markdownToBlocks } from "../markdown-blocks";
-import { createNote, getNote, listTree, saveNoteDoc, searchNotes } from "../notes";
+import { createNote, getNote, hideLockedChips, listTree, saveNoteDoc, searchNotes } from "../notes";
 import { cleanIcon, isNoteId, NoteContentError, noteToMarkdown, type NoteMeta } from "../notes-shared";
 import { SITE_URL } from "../site";
 import { canWrite, type McpContext } from "./context";
@@ -136,14 +136,16 @@ const notesRead: Tool = {
   description:
     "Read one page of the user's Kairo notes as Markdown, with where it lives and the pages inside it. Name it by pageId, or by its exact title.",
   inputSchema: obj(pageRef),
-  run: async (ctx, _scope, args) => {
+  run: async (ctx, scope, args) => {
     const tree = await loadTree(ctx);
     const meta = resolvePage(tree, args);
     const found = await getNote(ctx.userId, meta.id);
     if (!found || found.page.trashedAt) throw new ToolFail("That page is in the trash.");
+    // chips for tasks in locked lists this connection can't see are hidden, like the tasks
+    const [page] = await hideLockedChips([found.page], scope.hiddenIds);
     const kids = tree.pages.filter((p) => p.parentId === meta.id);
     const parts = [
-      noteToMarkdown(found.page, { path: pathOf(tree, meta.id), titleOf: (id) => tree.byId.get(id)?.title ?? null }),
+      noteToMarkdown(page, { path: pathOf(tree, meta.id), titleOf: (id) => tree.byId.get(id)?.title ?? null }),
     ];
     if (kids.length) parts.push(`**Pages inside:** ${kids.map((k) => `${untitled(k)} (id ${k.id})`).join(", ")}`);
     if (found.backlinks.length) parts.push(`**Linked from:** ${found.backlinks.map((b) => untitled(b)).join(", ")}`);

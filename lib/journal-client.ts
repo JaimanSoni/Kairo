@@ -29,6 +29,26 @@ export type Fail =
 
 export type Result<T> = { ok: true; data: T } | Fail;
 
+const PINNED = "kairo-journal-pinned";
+
+/** Remembered on this device: the journal has a PIN, so nothing opens past it offline either. */
+export function journalKnownPinned(): boolean {
+  try {
+    return localStorage.getItem(PINNED) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function rememberPinned(pinned: boolean) {
+  try {
+    if (pinned) localStorage.setItem(PINNED, "1");
+    else localStorage.removeItem(PINNED);
+  } catch {
+    /* private mode: the server still refuses; only the offline fallback loses this */
+  }
+}
+
 async function call<T>(url: string, init?: RequestInit): Promise<Result<T>> {
   let res: Response;
   try {
@@ -48,7 +68,10 @@ async function call<T>(url: string, init?: RequestInit): Promise<Result<T>> {
     /* an empty or non-JSON body still has a status worth reporting */
   }
   if (res.ok) return { ok: true, data: body as T };
-  if (res.status === 423) return { ok: false, kind: "locked" };
+  if (res.status === 423) {
+    rememberPinned(true);
+    return { ok: false, kind: "locked" };
+  }
   if (res.status === 409) return { ok: false, kind: "conflict", current: (body.current as JournalEntry | null) ?? null };
   const message = typeof body.error === "string" ? body.error : "Something went wrong.";
   if (res.status === 400 || res.status === 403 || res.status === 429) return { ok: false, kind: "invalid", message };
@@ -75,7 +98,11 @@ export const journalApi = {
 
   search: (q: string) => call<{ results: SearchHit[] }>(`/api/journal/search?q=${encodeURIComponent(q)}`),
 
-  lockStatus: () => call<{ hasPin: boolean; locked: boolean; retryAfter: number }>("/api/journal/lock"),
+  lockStatus: async () => {
+    const r = await call<{ hasPin: boolean; locked: boolean; retryAfter: number }>("/api/journal/lock");
+    if (r.ok) rememberPinned(r.data.hasPin);
+    return r;
+  },
 
   unlock: (pin: string) => call<{ locked: false }>("/api/journal/unlock", { method: "POST", body: JSON.stringify({ pin }) }),
 

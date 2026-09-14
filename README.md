@@ -143,13 +143,14 @@ Design notes worth knowing before changing it:
 - **Plants wilt but never die.** Growth is a count of watered days and never goes down.
 - **Leaderboards are opt-in** and show a gardener name and animal only. A streak snapshot taken at
   the last watering is aged by `effectiveStreak`, so an abandoned streak doesn't sit at the top.
-- Over MCP: `habits_today`, `habit_check_in`, `habit_create`. No delete.
+- Over MCP, for keys created with *Include habits*: `habits_today`, `habit_check_in`, `habit_create`. No delete.
 
 ## Connect an assistant (MCP)
 
 Kairo is an MCP server at **`/mcp`**, so ChatGPT, Claude, Gemini, Grok and any
 coding assistant that speaks MCP can plan the day, capture, complete and sweep
-without the app being open. 29 tools cover everything a person can do in the UI.
+without the app being open. 26 tools cover everything a person can do with tasks and lists; keys
+created with *Include journal*, *Include notes* or *Include habits* get those tools too.
 
 Auth is a connection key, not OAuth, so it works in clients whose connector UI
 offers only a URL and a header. Create one under **Settings → Connections**; it is

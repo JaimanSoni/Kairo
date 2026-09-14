@@ -2,6 +2,8 @@ import webpush from "web-push";
 import { ObjectId } from "mongodb";
 import { getDb } from "./db";
 import { tasksCollection } from "./tasks";
+import { createHash } from "crypto";
+import { cookies } from "next/headers";
 
 export type PushPayload = {
   title: string;
@@ -21,6 +23,43 @@ function ensureConfigured(): boolean {
   webpush.setVapidDetails(subject, pub, priv);
   configured = true;
   return true;
+}
+
+/** The hosts browsers deliver web push through. Anything else is refused. */
+const PUSH_HOSTS = [/(^|\.)fcm\.googleapis\.com$/, /(^|\.)android\.googleapis\.com$/, /(^|\.)push\.services\.mozilla\.com$/, /(^|\.)push\.apple\.com$/, /(^|\.)notify\.windows\.com$/];
+
+export function isPushServiceEndpoint(endpoint: string): boolean {
+  if (endpoint.length > 1000) return false;
+  try {
+    const url = new URL(endpoint);
+    return url.protocol === "https:" && !url.port && PUSH_HOSTS.some((re) => re.test(url.hostname));
+  } catch {
+    return false;
+  }
+}
+
+const PUSH_DEVICE_COOKIE = "kairo_push";
+const endpointHash = (endpoint: string) => createHash("sha256").update(endpoint).digest("hex").slice(0, 32);
+
+/** Remembers which subscription belongs to this browser, so signing out here can stop its pushes. */
+export async function rememberPushDevice(endpoint: string): Promise<void> {
+  (await cookies()).set(PUSH_DEVICE_COOKIE, endpointHash(endpoint), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+}
+
+/** An account signing out of this browser stops being notified on it. */
+export async function forgetPushDevice(userId: ObjectId): Promise<void> {
+  const hash = (await cookies()).get(PUSH_DEVICE_COOKIE)?.value;
+  if (!hash) return;
+  const subs = await subscriptionsCollection();
+  const mine = await subs.find({ userId }, { projection: { endpoint: 1 } }).toArray();
+  const here = mine.filter((s) => endpointHash(String(s.endpoint)) === hash).map((s) => s._id);
+  if (here.length) await subs.deleteMany({ _id: { $in: here } });
 }
 
 export async function subscriptionsCollection() {

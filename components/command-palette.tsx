@@ -6,7 +6,7 @@ import { notesStore } from "@/lib/notes-client";
 import type { NoteMeta } from "@/lib/notes-shared";
 import { useNoteActions } from "./notes/actions";
 import type { Task } from "@/lib/types";
-import { friendlyDay, todayStr } from "@/lib/dates";
+import { friendlyDay } from "@/lib/dates";
 import { hiddenListIds, useApp, visibleLists } from "./store";
 import { Chip, Kbd, Modal } from "./ui";
 
@@ -54,7 +54,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
       { id: "go-lists", label: "Go to Lists", hint: "3", run: () => navigateApp("/lists") },
       { id: "go-log", label: "Go to Log", hint: "4", run: () => navigateApp("/log") },
       { id: "go-journal", label: "Go to Journal", hint: "5", run: () => navigateApp("/journal") },
-      { id: "write-today", label: "Write today's journal page", run: () => navigateApp(`/journal/${todayStr()}`) },
+      { id: "write-today", label: "Write today's journal page", run: () => navigateApp(`/journal/${state.today}`) },
       { id: "go-notes", label: "Go to Notes", hint: "6", run: () => navigateApp("/notes") },
       ...(guest ? [] : [{ id: "new-note", label: "New note", run: () => void noteActions.create() }]),
       { id: "go-garden", label: "Go to Garden", hint: "7", run: () => navigateApp("/garden") },
@@ -71,7 +71,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
     return base
       .filter((a) => !query || a.label.toLowerCase().includes(query))
       .map((a) => ({ kind: "action" as const, ...a }));
-  }, [query, setOmnibar, lockApp, state.user.appLockEnabled, guest, noteActions]);
+  }, [query, setOmnibar, lockApp, state.user.appLockEnabled, state.today, guest, noteActions]);
 
   const taskItems = useMemo<PaletteItem[]>(() => {
     const candidates = Object.values(state.tasks).filter(

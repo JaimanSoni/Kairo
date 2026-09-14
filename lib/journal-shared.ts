@@ -75,7 +75,7 @@ export function isRealDate(s: string): boolean {
  * passes tomorrow in UTC, which is today somewhere on Earth.
  */
 export function isJournalDate(v: unknown, latest: string): v is string {
-  return typeof v === "string" && isRealDate(v) && v <= latest;
+  return typeof v === "string" && isRealDate(v) && v >= "1970-01-01" && v <= latest;
 }
 
 export function utcTomorrow(): string {

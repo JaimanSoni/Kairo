@@ -5,7 +5,7 @@ import { accessFor, getBillingSettings, type UserBilling } from "@/lib/billing";
 
 /** This account's billing state, for the settings sheet. */
 export async function GET() {
-  const session = await requireSession();
+  const session = await requireSession({ expired: "allow" });
   if (!session) return unauthorized();
 
   const [user, settings] = await Promise.all([getUserById(session.userId), getBillingSettings()]);

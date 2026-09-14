@@ -79,6 +79,8 @@ export type List = {
   role: "owner" | "member";
   /** Number of people the list is shared with (excluding the owner). */
   memberCount: number;
+  /** For a locked list: whether this browser has entered its PIN. The server decides, and its tasks only arrive when true. */
+  unlocked?: boolean;
   /** Client-only: created optimistically, still waiting for its real id.
    *  Anything that would send this id to the server stays off until then. */
   pending?: boolean;
@@ -101,6 +103,8 @@ export type UserProfile = {
   googlePicture?: string;
   /** True when an app-wide PIN lock is set for this account. */
   appLockEnabled: boolean;
+  /** True when that lock is shut for this browser: the server sent no data, and nothing loads until the PIN is entered. */
+  appLocked?: boolean;
   /** Shows the admin entry point. Access itself is enforced server-side. */
   isAdmin: boolean;
   /** True when this account is actually paying us. Suppresses the tip jar —

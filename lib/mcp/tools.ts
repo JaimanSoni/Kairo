@@ -78,6 +78,8 @@ export type Tool = {
   journal?: boolean;
   /** Notes tools exist only for keys created with notes ticked. */
   notes?: boolean;
+  /** Garden tools exist only for keys created with habits ticked. */
+  habits?: boolean;
   run: (ctx: McpContext, scope: Scope, args: Args) => Promise<ToolResult>;
 };
 
@@ -746,7 +748,7 @@ const completeTask: Tool = {
     if (doc.status === "done") {
       return text(`"${String(doc.title)}" was already done.`);
     }
-    const outcome = await completeTaskOp(ctx, doc);
+    const outcome = await completeTaskOp(ctx, doc, scope);
     if (outcome.nextOccurrence) {
       return json({
         completed: String(doc.title),
@@ -828,7 +830,8 @@ const duplicateTask: Tool = {
       plannedTime: src.plannedTime,
       dueDate: src.dueDate,
       spotlight: false,
-      listId: src.listId ? new ObjectId(src.listId) : null,
+      // a copy stays in the original's list only if this caller can reach that list
+      listId: src.listId && scope.visibleIds.some((l) => l.toHexString() === src.listId) ? new ObjectId(src.listId) : null,
       estimateMin: src.estimateMin,
       // +1 keeps the copy adjacent to the original instead of at the end
       order: src.order + 1,
@@ -1095,7 +1098,7 @@ const sweepTasks: Tool = {
       // simply moves it on. "done" logs the win properly, the rest skip today.
       if (task.repeat) {
         if (action === "done") {
-          await completeTaskOp(ctx, doc);
+          await completeTaskOp(ctx, doc, scope);
           summary.done++;
           continue;
         }
@@ -1113,13 +1116,21 @@ const sweepTasks: Tool = {
       }
 
       if (action === "letgo") {
-        await cancelReminder(ctx, doc._id);
-        ops.push({ deleteOne: { filter: { _id: doc._id, ...access } } });
+        // the same rule as delete_task: someone who only sees this task because
+        // it was shared with them leaves it; the owner's copy is never deleted
+        const isOwner = (doc.userId as ObjectId).equals(ctx.userId);
+        const viaList = doc.listId != null && scope.visibleIds.some((l) => l.equals(doc.listId as ObjectId));
+        if (!isOwner && !viaList) {
+          ops.push({ updateOne: { filter: { _id: doc._id }, update: { $pull: { memberIds: ctx.userId } as never } } });
+        } else {
+          await cancelReminder(ctx, doc._id);
+          ops.push({ deleteOne: { filter: { _id: doc._id, ...access } } });
+        }
         summary.letgo++;
         continue;
       }
       if (action === "done") {
-        await completeTaskOp(ctx, doc);
+        await completeTaskOp(ctx, doc, scope);
         summary.done++;
         continue;
       }
@@ -1252,6 +1263,11 @@ const setReminder: Tool = {
     requireWrite(ctx, "set reminders");
     const doc = await mustFindTask(ctx, scope, args);
     const tasks = await tasksCollection();
+    // a reminder is written onto the task itself, so only its owner may set one:
+    // on someone else's task it would never fire for you, and would show on theirs
+    if (!(doc.userId as ObjectId).equals(ctx.userId)) {
+      throw new ToolFail("Reminders can only be set on the user's own tasks, not ones shared with them.");
+    }
 
     if (optBool(args, "clear")) {
       await tasks.updateOne({ _id: doc._id }, { $set: { reminderAt: null, updatedAt: new Date() } });
@@ -1516,11 +1532,20 @@ const assignTaskTool: Tool = {
       if (!ObjectId.isValid(idArg)) throw new ToolFail("assigneeId is not valid.");
       assignee = new ObjectId(idArg);
     } else if (emailArg) {
+      // matched only against people already on the task's list, so this can't
+      // be used to ask whether some address has a Kairo account
       const person = await findPersonByEmail(emailArg);
-      if (!person) {
-        throw new ToolFail(
-          `No Kairo account for ${emailArg}. Share the list with them first — that sends an invitation.`
-        );
+      const list = doc.listId
+        ? await (await listsCollection()).findOne({ _id: doc.listId as ObjectId }, { projection: { userId: 1, memberIds: 1 } })
+        : null;
+      const onList = Boolean(
+        person &&
+          list &&
+          ((list.userId as ObjectId).equals(person._id) ||
+            ((list.memberIds as ObjectId[] | undefined) ?? []).some((m) => m.equals(person._id)))
+      );
+      if (!person || !onList) {
+        throw new ToolFail(`${emailArg} isn't on this task's list. Share the list with them first.`);
       }
       assignee = person._id;
     }
@@ -1582,9 +1607,7 @@ export function findTool(name: string): Tool | undefined {
  * the person watching, like the assistant failing.
  */
 export function toolsFor(ctx: McpContext) {
-  return TOOLS.filter(
-    (t) => (canWrite(ctx) || !t.write) && (!t.journal || ctx.includeJournal) && (!t.notes || ctx.includeNotes)
-  ).map((t) => ({
+  return TOOLS.filter((t) => visibleTo(ctx, t) && (canWrite(ctx) || !t.write)).map((t) => ({
     name: t.name,
     title: t.title,
     description: t.description,
@@ -1593,16 +1616,23 @@ export function toolsFor(ctx: McpContext) {
   }));
 }
 
+/** Whether a connection has been given this kind of tool at all. */
+function visibleTo(ctx: McpContext, t: Tool): boolean {
+  return (!t.journal || ctx.includeJournal) && (!t.notes || ctx.includeNotes) && (!t.habits || ctx.includeHabits);
+}
+
 export async function runTool(
   ctx: McpContext,
   name: string,
   args: Args
 ): Promise<ToolResult> {
   const tool = findTool(name);
-  if (!tool) throw new ToolFail(`No tool called "${name}".`);
   // a journal tool named by a connection without the journal is no tool at all
-  if (tool.journal && !ctx.includeJournal) throw new ToolFail(`No tool called "${name}".`);
-  if (tool.notes && !ctx.includeNotes) throw new ToolFail(`No tool called "${name}".`);
+  if (!tool || !visibleTo(ctx, tool)) throw new ToolFail(`No tool called "${name}".`);
+  // every write tool checks this itself; this is the backstop if one ever forgets
+  if (tool.write && !canWrite(ctx)) {
+    throw new ToolFail("This connection is read-only. Create a key with write access in Kairo under Settings → Connections.");
+  }
   const scope = await loadScope(ctx);
   return tool.run(ctx, scope, args);
 }

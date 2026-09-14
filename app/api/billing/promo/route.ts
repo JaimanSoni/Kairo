@@ -9,7 +9,7 @@ import { discountedMinor, validatePromo } from "@/lib/promos";
  * the order route recomputes everything when money actually moves.
  */
 export async function POST(request: Request) {
-  const session = await requireSession();
+  const session = await requireSession({ expired: "allow" });
   if (!session) return unauthorized();
 
   let code = "";

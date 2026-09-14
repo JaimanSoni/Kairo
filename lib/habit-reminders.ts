@@ -85,6 +85,12 @@ export async function fireGardenPush(doc: Record<string, unknown>): Promise<void
   const db = await getDb();
   const userId = doc.userId as ObjectId;
 
+  // a switched-off, deleted or lapsed account gets no nudges, and none are planned after this one
+  const owner = await db.collection("users").findOne({ _id: userId }, { projection: { disabled: 1, createdAt: 1, billing: 1, gardenNudges: 1 } });
+  if (!owner || owner.disabled) return;
+  const { accessFor } = await import("./billing");
+  if (!(await accessFor({ createdAt: owner.createdAt, billing: owner.billing })).allowed) return;
+
   if (doc.kind === "habit") {
     const habit = await db.collection<HabitRecord>("habits").findOne({ _id: doc.habitId as ObjectId, userId });
     if (!habit || habit.archivedAt || !habit.reminder) return;
@@ -107,6 +113,8 @@ export async function fireGardenPush(doc: Record<string, unknown>): Promise<void
   }
 
   if (doc.kind === "garden-evening") {
+    // evening nudges switched off: stay quiet, and stop planning them
+    if (owner.gardenNudges === false) return;
     const tz = safeTimeZone(doc.timezone);
     const today = todayIn(tz);
     const habits = await db.collection<HabitRecord>("habits").find({ userId, archivedAt: null }).toArray();

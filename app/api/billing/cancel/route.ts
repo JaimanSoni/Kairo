@@ -6,7 +6,7 @@ import { cancelSubscription } from "@/lib/razorpay";
 
 /** Cancels at the end of the paid period — never mid-period. */
 export async function POST() {
-  const session = await requireSession();
+  const session = await requireSession({ expired: "allow" });
   if (!session) return unauthorized();
 
   const user = await getUserById(session.userId);

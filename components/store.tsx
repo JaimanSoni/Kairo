@@ -98,6 +98,8 @@ function reducer(state: State, action: Action): State {
         tasks: Object.fromEntries(action.tasks.map((t) => [t.id, t])),
         lists: action.lists,
         people: action.people,
+        // which locked lists are open is the server's call, made on the same answer
+        unlockedLists: openLockedIds(action.lists),
       };
     case "UPSERT_LIST": {
       const exists = state.lists.some((l) => l.id === action.list.id);
@@ -296,6 +298,11 @@ export function byOrder(a: Task, b: Task): number {
   return a.order - b.order || a.createdAt.localeCompare(b.createdAt);
 }
 
+/** Locked lists the server says this browser has opened. */
+function openLockedIds(lists: List[]): string[] {
+  return lists.filter((l) => l.locked && l.unlocked).map((l) => l.id);
+}
+
 /** Ids of lists whose contents are currently hidden (locked, not unlocked this session). */
 export function hiddenListIds(state: { lists: List[]; unlockedLists: string[] }): Set<string> {
   return new Set(
@@ -350,9 +357,6 @@ export function AppProvider({
     guestMode = guest;
   }, [guest]);
 
-  /* unlock state is scoped per account — switching users never leaks an unlock */
-  const unlockedListsKey = `kairo-unlocked:${user.id}`;
-  const appLockKey = `kairo-applock:${user.id}`;
   const [state, dispatch] = useReducer(reducer, undefined, () => ({
     tasks: Object.fromEntries(initialTasks.map((t) => [t.id, t])),
     lists: initialLists,
@@ -365,10 +369,11 @@ export function AppProvider({
     editingId: null,
     sweepDismissed: false,
     focus: null,
-    unlockedLists: [],
-    // starts locked when a lock exists — the mount effect lifts it for
-    // sessions that already unlocked (SSR-safe: no storage read here)
-    appLocked: user.appLockEnabled,
+    // Both are the server's decision, read from signed cookies it set when a
+    // PIN was entered. A locked app was sent no data at all; a locked list's
+    // tasks weren't sent either.
+    unlockedLists: openLockedIds(initialLists),
+    appLocked: Boolean(user.appLockEnabled && user.appLocked),
   }));
 
   const stateRef = useRef(state);
@@ -1064,33 +1069,21 @@ export function AppProvider({
     if (cur) dispatch({ type: "SET_FOCUS", focus: { ...cur, minimized } });
   }, []);
 
-  /* restore per-session unlocks (survives refresh, not a new browser session) */
-  useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem(unlockedListsKey);
-      if (raw) {
-        const ids = (JSON.parse(raw) as unknown[]).filter((x): x is string => typeof x === "string");
-        if (ids.length) dispatch({ type: "SET_UNLOCKED", ids });
-      }
-      if (sessionStorage.getItem(appLockKey) === "open") {
-        dispatch({ type: "SET_APP_LOCKED", locked: false });
-      }
-    } catch {}
-  }, [unlockedListsKey, appLockKey]);
-
+  /**
+   * Locking gives this browser's grant back to the server, then starts the
+   * page over: what was on screen leaves memory too, not just the view.
+   */
   const lockApp = useCallback(() => {
-    try {
-      sessionStorage.removeItem(appLockKey);
-    } catch {}
     dispatch({ type: "SET_APP_LOCKED", locked: true });
-  }, [appLockKey]);
+    void fetch("/api/applock/unlock", { method: "DELETE" })
+      .catch(() => {})
+      .finally(() => window.location.reload());
+  }, []);
 
+  /** Unlocked: the server now has a grant for this browser, so the page loads for real. */
   const unlockApp = useCallback(() => {
-    try {
-      sessionStorage.setItem(appLockKey, "open");
-    } catch {}
-    dispatch({ type: "SET_APP_LOCKED", locked: false });
-  }, [appLockKey]);
+    window.location.reload();
+  }, []);
 
   const refreshData = useCallback(async () => {
     if (guestMode) return; // a guest's truth is already in this browser
@@ -1098,6 +1091,11 @@ export function AppProvider({
     if (Object.keys(stateRef.current.tasks).some((id) => id.startsWith("temp-"))) return;
     try {
       const res = await fetch("/api/bootstrap");
+      // locked elsewhere (another tab pressed Lock, or the grant ran out): start over behind the gate
+      if (res.status === 401 && stateRef.current.user.appLockEnabled && !stateRef.current.appLocked) {
+        window.location.reload();
+        return;
+      }
       if (!res.ok) return;
       const data: { tasks: Task[]; lists: List[]; people?: AccountInfo[] } = await res.json();
       dispatch({
@@ -1114,6 +1112,9 @@ export function AppProvider({
     let last = Date.now();
     const onVisible = () => {
       if (document.visibilityState !== "visible") return;
+      // a new day can begin while the tab sat in the background
+      const now = todayStr();
+      if (now !== stateRef.current.today) dispatch({ type: "SET_TODAY", today: now });
       if (Date.now() - last < 20_000) return;
       last = Date.now();
       refreshData();
@@ -1135,31 +1136,27 @@ export function AppProvider({
     [syncError]
   );
 
-  const setAppLockEnabled = useCallback(
-    (enabled: boolean) => {
-      dispatch({ type: "SET_APPLOCK_ENABLED", enabled });
-      try {
-        if (enabled) sessionStorage.setItem(appLockKey, "open");
-        else sessionStorage.removeItem(appLockKey);
-      } catch {}
-    },
-    [appLockKey]
-  );
+  // setting a PIN grants this browser on the server, so nothing to remember here
+  const setAppLockEnabled = useCallback((enabled: boolean) => {
+    dispatch({ type: "SET_APPLOCK_ENABLED", enabled });
+  }, []);
 
+  /**
+   * A list opening or closing changes what the server will send, so the store
+   * asks again: an opened list's tasks arrive, a closed one's leave memory.
+   * Opening is only ever called after the PIN was accepted (which granted it);
+   * closing hands the grant back first.
+   */
   const setListUnlocked = useCallback(
     (listId: string, unlocked: boolean) => {
       const cur = stateRef.current.unlockedLists;
-      const ids = unlocked
-        ? cur.includes(listId)
-          ? cur
-          : [...cur, listId]
-        : cur.filter((id) => id !== listId);
+      const ids = unlocked ? (cur.includes(listId) ? cur : [...cur, listId]) : cur.filter((id) => id !== listId);
       dispatch({ type: "SET_UNLOCKED", ids });
-      try {
-        sessionStorage.setItem(unlockedListsKey, JSON.stringify(ids));
-      } catch {}
+      if (guestMode) return;
+      const revoke = unlocked ? Promise.resolve() : fetch(`/api/lists/${listId}/unlock`, { method: "DELETE" }).catch(() => {});
+      void revoke.then(() => refreshData());
     },
-    [unlockedListsKey]
+    [refreshData]
   );
 
   const value = useMemo<AppContextValue>(

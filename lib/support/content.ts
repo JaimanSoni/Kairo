@@ -1857,10 +1857,11 @@ export const ARTICLES: Article[] = [
           {
             t: "ul",
             items: [
-              "An unlock applies to **the tab you're in**. Refreshing and navigating keep it open.",
-              "A new tab, a new window, or reopening Kairo asks for the PIN again.",
-              "**Relock** hides an unlocked list again immediately, useful before handing someone your laptop.",
-              "Unlocks are per account: unlocking as one [account](/support/accounts) never reveals anything in another.",
+              "An unlock applies to **this browser** until you close it, for at most 12 hours. Refreshing, navigating and new tabs keep it open.",
+              "Another browser, another device, or reopening the browser asks for the PIN again.",
+              "**Hide it again now** (for a list) and **Lock now** (for the app) close it immediately, useful before handing someone your laptop.",
+              "Changing a PIN closes it everywhere except the browser you changed it in.",
+              "Unlocks are per account: unlocking as one [account](/support/accounts) never reveals anything in another, and switching away or signing out locks everything that account had opened.",
             ],
           },
         ],
@@ -1885,11 +1886,15 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "PINs are never stored as text, only a salted hash lives on the server, checks happen there, and every wrong attempt is deliberately slowed down.",
+            text: "PINs are never stored as text: only a salted hash lives on the server, and every check happens there. Locks are enforced by the server, not drawn over the screen — while the app is locked, Kairo sends that browser nothing, and a locked list's tasks are never sent at all until its PIN is entered. Someone with your unlocked laptop and the developer tools open still gets nothing.",
+          },
+          {
+            t: "p",
+            text: "Guessing is limited: after five wrong PINs, each further try waits longer, up to fifteen minutes, no matter how many tries are sent at once. Connection keys can only be given locked lists or the journal from a browser that has already opened them.",
           },
           {
             t: "warn",
-            text: "Be clear-eyed about what this is: **glance privacy, not encryption.** It stops someone using your unlocked device from seeing those tasks. It does not protect against someone who can inspect the page, use the API with your session, or read the database. There's also no attempt limit, a determined person with your unlocked laptop could guess a 4-digit PIN.",
+            text: "A lock is not encryption: someone with access to the database itself could read what's stored. And there's no PIN recovery, so pick one you'll remember.",
           },
           {
             t: "note",
@@ -2502,7 +2507,7 @@ export const ARTICLES: Article[] = [
             items: [
               "**Move to compost** takes a plant off the ground and stops its reminders, but keeps its growth and fruit. Replant it any time.",
               "A composted plant can be **deleted forever**, with its whole history.",
-              "Assistants you connect to Kairo can see your habits, check one in when you tell them you did it, and plant new ones. They can't delete or compost anything.",
+              "Assistants you connect to Kairo only reach your garden if you tick **Include habits** on their [connection key](/support/connect-ai). Then they can see your habits, check one in when you tell them you did it, and plant new ones. They can't delete or compost anything.",
               "Deleting your account deletes your garden, every watering and your basket.",
             ],
           },
@@ -2646,7 +2651,8 @@ export const ARTICLES: Article[] = [
               "A **read only** key can never add, change or delete anything, and the tools to do so are not even offered to the assistant.",
               "Your [journal](/support/journal) is out of reach unless you tick **Include journal** when creating the key. With it ticked, an assistant can read your pages and add to them when you ask.",
               "Your [notes](/support/notes) work the same way, with **Include notes**: an assistant can search and read them, make new pages and add to existing ones, but never delete or rewrite a page.",
-              "Your [garden](/support/habits) is visible to a connection like your tasks are: it can see your habits and streaks, check a habit in when you say you did it, and plant a new one. It can't delete, compost or edit a habit, and it never sees who's on a leaderboard.",
+              "Your [garden](/support/habits) works the same way, with **Include habits**: an assistant can see your habits and streaks, check a habit in when you say you did it, and plant a new one. It can't delete, compost or edit a habit, and it never sees who's on a leaderboard.",
+              "Giving a key the journal takes a browser where the journal is open, and giving it locked lists takes a browser where they're unlocked. If you set or change your journal PIN later, the key's journal access pauses until you give it again.",
               "A connection can only reach what you can reach: your own work, plus lists and tasks shared with you.",
               "Nothing about your billing, your PIN or your sign-in is exposed.",
             ],

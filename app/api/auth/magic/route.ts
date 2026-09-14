@@ -35,6 +35,11 @@ export async function GET(request: Request) {
     if (user.disabled) {
       return NextResponse.redirect(`${origin}/?auth_error=deactivated`);
     }
+    // Once Google has claimed an account, Google is how it signs in. An invite
+    // email forwarded, leaked or left in a shared inbox stops being a key to it.
+    if (user.googleId) {
+      return NextResponse.redirect(`${origin}/?auth_error=link_expired`);
+    }
 
     // A signed-in browser must never have a NEW account injected into it by
     // following a link: that is login CSRF — an attacker could mail out a

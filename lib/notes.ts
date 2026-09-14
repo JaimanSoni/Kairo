@@ -1,6 +1,9 @@
 import { ObjectId, type AnyBulkWriteOperation, type WithId } from "mongodb";
 import { getDb, withDbRetry } from "./db";
 import { countWords, docToText, EMPTY_DOC, previewOf, type JNode } from "./doc-model";
+
+/** Bumped when what goes into a page's search text changes (2: task chip titles left it). */
+const TEXT_VERSION = 2;
 import {
   cleanCover,
   cleanIcon,
@@ -39,6 +42,8 @@ import {
  */
 
 export type NoteRecord = {
+  /** Which rules built `text` (see TEXT_VERSION). */
+  textV?: number;
   _id: ObjectId;
   userId: ObjectId;
   parentId: ObjectId | null;
@@ -327,6 +332,7 @@ export async function createNote(
     cover: cleanCover(input.cover),
     doc,
     text,
+    textV: TEXT_VERSION,
     words: countWords(text),
     links: linksIn(doc).map(oid),
     favorite: false,
@@ -385,6 +391,7 @@ export async function saveNoteDoc(
       $set: {
         doc,
         text,
+        textV: TEXT_VERSION,
         words: countWords(text),
         links: linksIn(doc)
           .filter((l) => l !== id)
@@ -688,14 +695,29 @@ export async function searchNotes(userId: ObjectId, query: string, limit = 30): 
   const re = new RegExp(escapeRegExp(q), "i");
   return withDbRetry(async () => {
     const notes = await notesCollection();
-    const rows = await notes
+    const found = await notes
       .find(
         { userId, trashedAt: null, $or: [{ title: re }, { text: re }] },
-        { projection: { title: 1, icon: 1, parentId: 1, text: 1, updatedAt: 1 } }
+        { projection: { title: 1, icon: 1, parentId: 1, text: 1, updatedAt: 1, textV: 1 } }
       )
       .sort({ updatedAt: -1 })
       .limit(200)
       .toArray();
+    // Pages saved before chip titles left the search text still carry them.
+    // Those are re-read from their bodies (once: the fresh text is written
+    // back), so a locked task's title can't be found by searching for it.
+    const rows = [];
+    for (const r of found) {
+      if (r.textV !== TEXT_VERSION && !re.test(r.title ?? "")) {
+        const full = await notes.findOne({ _id: r._id, userId }, { projection: { doc: 1 } });
+        const text = full ? docToText(full.doc) : "";
+        await notes.updateOne({ _id: r._id, userId }, { $set: { text, textV: TEXT_VERSION } });
+        if (!re.test(text)) continue;
+        rows.push({ ...r, text });
+      } else {
+        rows.push(r);
+      }
+    }
     return rows
       .map((r) => {
         const flat = (r.text ?? "").replace(/\s+/g, " ");
@@ -724,6 +746,40 @@ export async function searchNotes(userId: ObjectId, query: string, limit = 30): 
       .slice(0, limit)
       .map((x) => x.hit);
   });
+}
+
+/* ------------------------------------------------------- locked chips */
+
+function taskRefIds(node: JNode | undefined, out: Set<string>): void {
+  if (!node) return;
+  if (node.type === "taskRef" && typeof node.attrs?.id === "string" && ObjectId.isValid(node.attrs.id)) out.add(node.attrs.id);
+  for (const child of node.content ?? []) taskRefIds(child, out);
+}
+
+function withHiddenChips(node: JNode, hidden: Set<string>): JNode {
+  if (node.type === "taskRef" && typeof node.attrs?.id === "string" && hidden.has(node.attrs.id)) {
+    return { ...node, attrs: { ...node.attrs, title: "Locked task" } };
+  }
+  return node.content ? { ...node, content: node.content.map((c) => withHiddenChips(c, hidden)) } : node;
+}
+
+/**
+ * A task chip keeps a copy of its task's title. When that task now lives in a
+ * list this viewer can't see into, the copy is replaced before the page leaves
+ * the server — in the app, in exports and over MCP alike.
+ */
+export async function hideLockedChips<T extends { doc: JNode }>(pages: T[], lockedLists: ObjectId[]): Promise<T[]> {
+  if (lockedLists.length === 0 || pages.length === 0) return pages;
+  const ids = new Set<string>();
+  for (const p of pages) taskRefIds(p.doc, ids);
+  if (ids.size === 0) return pages;
+  const { tasksCollection } = await import("./tasks");
+  const rows = await (await tasksCollection())
+    .find({ _id: { $in: [...ids].map((id) => new ObjectId(id)) }, listId: { $in: lockedLists } }, { projection: { _id: 1 } })
+    .toArray();
+  if (rows.length === 0) return pages;
+  const hidden = new Set(rows.map((r) => r._id.toHexString()));
+  return pages.map((p) => ({ ...p, doc: withHiddenChips(p.doc, hidden) }));
 }
 
 /* --------------------------------------------------------------- export */

@@ -60,7 +60,8 @@ export type HabitDraft = Partial<Pick<HabitView, "name" | "emoji" | "species" | 
 
 export const gardenApi = {
   load: (today = todayStr()) =>
-    call<{ habits: HabitView[]; archived: HabitView[]; logs: HabitLogView[]; gardener: Gardener | null }>(`/api/habits?today=${today}`),
+    call<{ habits: HabitView[]; archived: HabitView[]; logs: HabitLogView[]; gardener: Gardener | null; nudges: boolean }>(`/api/habits?today=${today}`),
+  setNudges: (on: boolean) => call<{ on: boolean }>("/api/garden/nudges", { method: "PUT", body: JSON.stringify({ on, timezone: zone() }) }),
   plant: (draft: HabitDraft) =>
     call<{ habit: HabitView }>("/api/habits", { method: "POST", body: JSON.stringify({ ...draft, today: todayStr(), timezone: zone() }) }),
   update: (id: string, patch: HabitDraft & { order?: number }) =>
@@ -91,10 +92,11 @@ type GardenState = {
   archived: HabitView[];
   logs: Map<string, Map<string, LogLite>>;
   gardener: Gardener | null;
+  nudges: boolean;
   tick: number;
 };
 
-const garden: GardenState = { status: "idle", habits: [], archived: [], logs: new Map(), gardener: null, tick: 0 };
+const garden: GardenState = { status: "idle", habits: [], archived: [], logs: new Map(), gardener: null, nudges: true, tick: 0 };
 const listeners = new Set<() => void>();
 let loading: Promise<void> | null = null;
 let owner: string | null = null;
@@ -107,6 +109,8 @@ if (typeof window !== "undefined") {
   // something outside the garden watered a plant (a journal page): the next look reloads
   window.addEventListener("kairo:garden-stale", () => {
     loadedAt = 0;
+    // a garden already on screen (the Today strip, the thirsty dot) catches up now, not on its next visit
+    if (garden.status === "ready" && listeners.size > 0) void gardenStore.reload();
   });
 }
 let loadedDay = "";
@@ -136,6 +140,7 @@ export const gardenStore = {
   habits: () => garden.habits,
   archived: () => garden.archived,
   gardener: () => garden.gardener,
+  nudges: () => garden.nudges,
   get: (id: string) => garden.habits.find((h) => h.id === id) ?? garden.archived.find((h) => h.id === id) ?? null,
   logs: (id: string) => logsFor(id),
 
@@ -188,6 +193,7 @@ export const gardenStore = {
         garden.habits = r.data.habits;
         garden.archived = r.data.archived;
         garden.gardener = r.data.gardener;
+        garden.nudges = r.data.nudges !== false;
         garden.logs = new Map();
         for (const l of r.data.logs) logsFor(l.habitId).set(l.date, { date: l.date, count: l.count, done: l.done, frozen: l.frozen });
         garden.status = "ready";
@@ -225,6 +231,19 @@ export const gardenStore = {
   setGardener(g: Gardener | null) {
     garden.gardener = g;
     emit();
+  },
+
+  async setNudges(on: boolean): Promise<boolean> {
+    const before = garden.nudges;
+    garden.nudges = on;
+    emit();
+    const r = await gardenApi.setNudges(on);
+    if (!r.ok) {
+      garden.nudges = before;
+      emit();
+      return false;
+    }
+    return true;
   },
 
   /**

@@ -21,6 +21,8 @@ type KeyInfo = {
   includeLocked: boolean;
   includeJournal: boolean;
   includeNotes: boolean;
+  includeHabits: boolean;
+  journalPaused: boolean;
   timezone: string;
   createdAt: string;
   lastUsedAt: string | null;
@@ -116,6 +118,7 @@ function ConnectionsModal({ onClose }: { onClose: () => void }) {
   const [includeLocked, setIncludeLocked] = useState(false);
   const [includeJournal, setIncludeJournal] = useState(false);
   const [includeNotes, setIncludeNotes] = useState(false);
+  const [includeHabits, setIncludeHabits] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   /** The one and only time this value exists outside the assistant. */
@@ -175,6 +178,7 @@ function ConnectionsModal({ onClose }: { onClose: () => void }) {
           includeLocked,
           includeJournal,
           includeNotes,
+          includeHabits,
           // the zone this browser is in, so an assistant with no clock of ours
           // still knows when "today" starts for you
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -317,7 +321,7 @@ function ConnectionsModal({ onClose }: { onClose: () => void }) {
                   Include PIN-locked lists
                   <span className="block text-ink-faint">
                     Off by default. An assistant has no PIN, so locked lists stay invisible to it
-                    unless you say otherwise.
+                    unless you say otherwise. Unlock your locked lists here first.
                   </span>
                 </span>
               </label>
@@ -332,9 +336,9 @@ function ConnectionsModal({ onClose }: { onClose: () => void }) {
                 <span>
                   Include journal
                   <span className="block text-ink-faint">
-                    Off by default. Lets this assistant read your journal and add to it when you ask,
-                    even if your journal has a PIN. Only tick it for an assistant you&apos;d trust
-                    with your diary.
+                    Off by default. Lets this assistant read your journal and add to it when you ask.
+                    If your journal has a PIN, open it here first; changing the PIN later pauses this.
+                    Only tick it for an assistant you&apos;d trust with your diary.
                   </span>
                 </span>
               </label>
@@ -351,6 +355,22 @@ function ConnectionsModal({ onClose }: { onClose: () => void }) {
                   <span className="block text-ink-faint">
                     Off by default. Lets this assistant search and read your notes, make new pages and
                     add to existing ones when you ask. It can&apos;t delete or rewrite a page.
+                  </span>
+                </span>
+              </label>
+
+              <label className="mt-2 flex items-start gap-2 text-xs text-ink-soft">
+                <input
+                  type="checkbox"
+                  checked={includeHabits}
+                  onChange={(e) => setIncludeHabits(e.target.checked)}
+                  className="mt-0.5 size-3.5 accent-current"
+                />
+                <span>
+                  Include habits
+                  <span className="block text-ink-faint">
+                    Off by default. Lets this assistant see your garden, check a habit in when you tell it
+                    you did it, and plant new ones. It can&apos;t delete or compost anything.
                   </span>
                 </span>
               </label>
@@ -398,6 +418,8 @@ function ConnectionsModal({ onClose }: { onClose: () => void }) {
                       {k.includeLocked ? " · locked lists" : ""}
                       {k.includeJournal ? " · journal" : ""}
                       {k.includeNotes ? " · notes" : ""}
+                      {k.includeHabits ? " · habits" : ""}
+                      {k.journalPaused ? " · journal paused (PIN changed)" : ""}
                       {" · "}
                       {fmtWhen(k.lastUsedAt)}
                       {" · added "}

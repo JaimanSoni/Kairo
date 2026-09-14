@@ -16,7 +16,7 @@ import { RAZORPAY_KEY_ID, createOrder, razorpayConfigured } from "@/lib/razorpay
  * which is exactly what the payment will later be validated against.
  */
 export async function POST(request: Request) {
-  const session = await requireSession();
+  const session = await requireSession({ expired: "allow" });
   if (!session) return unauthorized();
   if (!razorpayConfigured()) {
     return NextResponse.json({ error: "Payments are not configured" }, { status: 503 });

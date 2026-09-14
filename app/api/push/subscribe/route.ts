@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { requireSession, unauthorized, badRequest } from "@/lib/api-auth";
-import { subscriptionsCollection, ensureTicker } from "@/lib/push";
+import { subscriptionsCollection, ensureTicker, isPushServiceEndpoint, rememberPushDevice } from "@/lib/push";
 
 /** Registers this browser's push subscription for the signed-in user. */
 export async function POST(request: Request) {
@@ -19,7 +19,9 @@ export async function POST(request: Request) {
   if (
     !sub ||
     typeof sub.endpoint !== "string" ||
-    !sub.endpoint.startsWith("https://") ||
+    // only the browsers' own push services: this server POSTs to whatever is
+    // stored here, so an arbitrary URL would make it a messenger for anyone
+    !isPushServiceEndpoint(sub.endpoint) ||
     typeof sub.keys?.p256dh !== "string" ||
     typeof sub.keys?.auth !== "string"
   ) {
@@ -39,6 +41,7 @@ export async function POST(request: Request) {
     },
     { upsert: true }
   );
+  await rememberPushDevice(sub.endpoint);
   ensureTicker();
   return NextResponse.json({ ok: true });
 }

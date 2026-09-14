@@ -1,7 +1,8 @@
 import { ObjectId } from "mongodb";
 import { requireSession, unauthorized } from "@/lib/api-auth";
 import { getUserById } from "@/lib/users";
-import { allNotesInOrder } from "@/lib/notes";
+import { allNotesInOrder, hideLockedChips } from "@/lib/notes";
+import { lockedListIds } from "@/lib/tasks";
 import { notesToMarkdown } from "@/lib/notes-shared";
 
 /**
@@ -11,11 +12,14 @@ import { notesToMarkdown } from "@/lib/notes-shared";
  * Nobody should lose their own notes to a lapsed card.
  */
 export async function GET() {
-  const session = await requireSession();
+  const session = await requireSession({ expired: "allow" });
   if (!session) return unauthorized();
 
   const userId = new ObjectId(session.userId);
-  const [pages, user] = await Promise.all([allNotesInOrder(userId), getUserById(session.userId)]);
+  const [ordered, user, locked] = await Promise.all([allNotesInOrder(userId), getUserById(session.userId), lockedListIds(userId)]);
+  const pages = await hideLockedChips(ordered.map((o) => ({ ...o, doc: o.page.doc })), locked).then((hidden) =>
+    hidden.map((h) => ({ page: { ...h.page, doc: h.doc }, path: h.path }))
+  );
   const today = new Date().toISOString().slice(0, 10);
   const markdown = notesToMarkdown(pages, String(user?.name ?? "").split(" ")[0] ?? "", today);
 

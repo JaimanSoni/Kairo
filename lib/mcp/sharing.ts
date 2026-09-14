@@ -5,6 +5,12 @@ import { sendEmail } from "../email";
 import { listSharedEmail, taskSharedEmail, taskSentEmail, taskAssignedEmail } from "../email-templates";
 import { inviteUserByEmail } from "../invites";
 import { sendToUser } from "../push";
+import { shareAllowance } from "../rate-limit";
+
+async function spendShare(ctx: McpContext): Promise<void> {
+  const allowance = await shareAllowance(ctx.userIdHex);
+  if (!allowance.ok) throw new ToolFail(allowance.error);
+}
 import type { DbUser } from "../users";
 import { ToolFail } from "./fail";
 import type { McpContext } from "./context";
@@ -62,6 +68,7 @@ export async function shareList(
   const lists = await listsCollection();
   const owned = await lists.findOne({ _id: listId, userId: ctx.userId });
   if (!owned) throw new ToolFail("Only the owner of a list can share it.");
+  await spendShare(ctx);
 
   const { user: recipient, invited } = await findOrInvite(ctx, email, {
     kind: "list",
@@ -70,7 +77,8 @@ export async function shareList(
 
   await lists.updateOne({ _id: listId, userId: ctx.userId }, { $addToSet: { memberIds: recipient._id } });
 
-  if (!invited) {
+  const alreadyOn = ((owned.memberIds as ObjectId[] | undefined) ?? []).some((m) => m.equals(recipient._id));
+  if (!invited && !alreadyOn) {
     const mail = listSharedEmail({
       inviterName: ctx.name,
       listName: String(owned.name),
@@ -93,6 +101,7 @@ export async function shareTask(
 ): Promise<{ name: string; email: string; invited: boolean }> {
   if (email === ctx.email.toLowerCase()) throw new ToolFail("That is your own address.");
 
+  await spendShare(ctx);
   const when = whenOf(doc, ctx.today);
   const { user: recipient, invited } = await findOrInvite(ctx, email, {
     kind: "task",
@@ -109,7 +118,9 @@ export async function shareTask(
     { $addToSet: { memberIds: recipient._id }, $set: { updatedAt: new Date() } }
   );
 
-  if (!invited) {
+  // only someone newly added hears about it: repeating a share is not a way to buzz a phone
+  const alreadyOn = ((doc.memberIds as ObjectId[] | undefined) ?? []).some((m) => m.equals(recipient._id));
+  if (!invited && !alreadyOn) {
     const mail = taskSharedEmail({
       sharerName: ctx.name,
       taskTitle: String(doc.title),
@@ -180,6 +191,7 @@ export async function sendTaskCopy(
 ): Promise<{ to: string }> {
   if (email === ctx.email.toLowerCase()) throw new ToolFail("That is your own address.");
 
+  await spendShare(ctx);
   const now = new Date();
   // a plan in the past is stale, not a gift — those copies arrive in the inbox
   const plannedFor =

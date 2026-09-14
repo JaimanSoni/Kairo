@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "./db";
 import { getUserById, type DbUser } from "./users";
 import { hashPin, makeSalt, verifyPin, PIN_RE } from "./pin";
+import { claimPinAttempt, clearPinAttempts, pinRetryAfter, wrongPinPause } from "./rate-limit";
 
 /**
  * The journal's own PIN.
@@ -21,11 +22,8 @@ import { hashPin, makeSalt, verifyPin, PIN_RE } from "./pin";
 
 const COOKIE = "kairo_journal";
 const UNLOCK_HOURS = 12;
-const FAIL_DELAY_MS = 400;
 
-/** Tries allowed before the first cool-down. */
-const FREE_ATTEMPTS = 5;
-const MAX_COOLDOWN_MS = 15 * 60_000;
+const attemptsKey = (userIdHex: string) => `journal:${userIdHex}`;
 
 function secret(): Uint8Array {
   const s = process.env.AUTH_SECRET;
@@ -39,6 +37,15 @@ export function hasJournalLock(user: Pick<DbUser, "journalLockHash" | "journalLo
 
 /** A fragment of the PIN's hash — enough to notice it changed, not enough to attack it. */
 const stampOf = (hash: string) => hash.slice(0, 16);
+
+/**
+ * Which journal PIN is in force: its stamp, or "none". A connection key given
+ * the journal remembers this, and stops reaching the journal once it changes —
+ * setting or changing a PIN takes the diary back from every assistant.
+ */
+export function journalStampOf(user: Pick<DbUser, "journalLockHash" | "journalLockSalt"> | null): string {
+  return hasJournalLock(user) ? stampOf(user!.journalLockHash!) : "none";
+}
 
 async function grantUnlock(userIdHex: string, hash: string): Promise<void> {
   const token = await new SignJWT({ stamp: stampOf(hash) })
@@ -111,51 +118,28 @@ export async function journalLockStatus(userIdHex: string): Promise<JournalLockS
   if (!user) return null;
   const hasPin = hasJournalLock(user);
   const locked = hasPin && !(await isUnlocked(userIdHex, user.journalLockHash!));
-  return { hasPin, locked, retryAfter: retryAfterOf(user) };
-}
-
-function retryAfterOf(user: DbUser): number {
-  const until = user.journalLockUntil ? new Date(user.journalLockUntil).getTime() : 0;
-  return Math.max(0, Math.ceil((until - Date.now()) / 1000));
+  return { hasPin, locked, retryAfter: hasPin ? await pinRetryAfter(attemptsKey(userIdHex)) : 0 };
 }
 
 /**
- * Wrong PINs are counted in the database, not in memory.
- *
- * Four digits is ten thousand guesses; the 400ms delay alone lets a script get
- * through them in about an hour, and an in-memory counter resets every time a
- * serverless instance does. After five misses each further one doubles a
- * cool-down, capped at fifteen minutes — nothing a person mistyping will ever
- * meet, and a wall to anyone guessing.
+ * Wrong PINs are counted in the database, not in memory, and each attempt is
+ * claimed before the PIN is even looked at (see claimPinAttempt): a burst of
+ * guesses fired together can't all slip in under one stale count. After five
+ * misses each further one doubles a cool-down, capped at fifteen minutes —
+ * nothing a person mistyping will ever meet, and a wall to anyone guessing.
  */
 async function checkPin(user: DbUser, pin: unknown): Promise<{ ok: true } | { ok: false; status: 403 | 429; retryAfter: number }> {
-  const wait = retryAfterOf(user);
-  if (wait > 0) return { ok: false, status: 429, retryAfter: wait };
+  const key = attemptsKey(user._id.toHexString());
+  const claim = await claimPinAttempt(key);
+  if (!claim.ok) return { ok: false, status: 429, retryAfter: claim.retryAfter };
 
-  const users = (await getDb()).collection<DbUser>("users");
   if (typeof pin === "string" && verifyPin(pin, user.journalLockSalt!, user.journalLockHash!)) {
-    if (user.journalLockFails) {
-      await users.updateOne({ _id: user._id }, { $unset: { journalLockFails: "", journalLockUntil: "" } });
-    }
+    await clearPinAttempts(key);
     return { ok: true };
   }
-
-  const fails = (user.journalLockFails ?? 0) + 1;
-  const over = fails - FREE_ATTEMPTS;
-  const cooldown = over >= 0 ? Math.min(MAX_COOLDOWN_MS, 30_000 * 2 ** over) : 0;
-  await users.updateOne(
-    { _id: user._id },
-    {
-      $set: {
-        journalLockFails: fails,
-        ...(cooldown > 0 ? { journalLockUntil: new Date(Date.now() + cooldown) } : {}),
-      },
-    }
-  );
-  await new Promise((r) => setTimeout(r, FAIL_DELAY_MS));
-  return cooldown > 0
-    ? { ok: false, status: 429, retryAfter: Math.ceil(cooldown / 1000) }
-    : { ok: false, status: 403, retryAfter: 0 };
+  await wrongPinPause();
+  const wait = await pinRetryAfter(key);
+  return wait > 0 ? { ok: false, status: 429, retryAfter: wait } : { ok: false, status: 403, retryAfter: 0 };
 }
 
 export type LockOutcome =

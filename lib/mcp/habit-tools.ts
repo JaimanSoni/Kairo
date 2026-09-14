@@ -14,7 +14,7 @@ import {
 } from "../habits-shared";
 import { HabitInputError, loadGarden, plantHabit, waterHabit } from "../habits";
 import { SITE_URL } from "../site";
-import { canWrite } from "./context";
+import { canWrite, type McpContext } from "./context";
 import { ToolFail } from "./fail";
 import { json, type JsonSchema } from "./protocol";
 import { optBool, optInt, optString, reqString, type Args } from "./args";
@@ -36,6 +36,23 @@ const habitRef = {
 };
 
 type Garden = Awaited<ReturnType<typeof loadGarden>>;
+
+/**
+ * The garden as this connection may see it. The journal plant waters itself
+ * from journal pages, so its streak says whether someone wrote in their diary:
+ * a key without the journal doesn't see that plant at all.
+ */
+async function gardenFor(ctx: McpContext): Promise<Garden> {
+  const garden = await loadGarden(ctx.userId, ctx.today);
+  if (ctx.includeJournal) return garden;
+  const hidden = new Set([...garden.habits, ...garden.archived].filter((h) => h.seedId === "journal").map((h) => h.id));
+  return {
+    ...garden,
+    habits: garden.habits.filter((h) => !hidden.has(h.id)),
+    archived: garden.archived.filter((h) => !hidden.has(h.id)),
+    logs: garden.logs.filter((l) => !hidden.has(l.habitId)),
+  };
+}
 
 function logsOf(garden: Garden, id: string): Map<string, LogLite> {
   return new Map(garden.logs.filter((l) => l.habitId === id).map((l) => [l.date, { date: l.date, count: l.count, done: l.done, frozen: l.frozen }]));
@@ -59,7 +76,8 @@ function shape(garden: Garden, h: HabitView, today: string) {
     dewDrops: lv.drops,
     plant: `${speciesOf(h.species).label}, ${stage.label.toLowerCase()}`,
     ...(ripe > 0 ? { ripeFruit: ripe } : {}),
-    ...(lv.rescue && !lv.rescue.covered && lv.rescue.keeps > 0 ? { yesterdayMissed: `Checking in for yesterday (${addDays(today, -1)}) would keep a ${lv.rescue.keeps}-long streak.` } : {}),
+    // a plain fact for when the user says they did it yesterday; not a prompt to act
+    ...(lv.rescue && !lv.rescue.covered && lv.rescue.keeps > 0 ? { yesterday: `not checked in (${addDays(today, -1)})` } : {}),
   };
 }
 
@@ -88,13 +106,14 @@ function resolveHabit(garden: Garden, args: Args): HabitView {
 const habitsToday: Tool = {
   name: "habits_today",
   title: "Habits today",
+  habits: true,
   write: false,
   annotations: { readOnlyHint: true },
   description:
     "The user's habit garden in Kairo: every habit with whether it's due and done today, its streak, dew drops (which cover a missed day), and how its plant is growing. Call this when the user asks about their habits or streaks, or before checking one in.",
   inputSchema: obj({}),
   run: async (ctx) => {
-    const garden = await loadGarden(ctx.userId, ctx.today);
+    const garden = await gardenFor(ctx);
     const habits = garden.habits.map((h) => shape(garden, h, ctx.today));
     const due = habits.filter((h) => h.dueToday || h.doneToday);
     return json({
@@ -111,6 +130,7 @@ const habitsToday: Tool = {
 const habitCheckIn: Tool = {
   name: "habit_check_in",
   title: "Check in a habit",
+  habits: true,
   write: true,
   description:
     "Mark a habit as done (waters its plant) for today, or for yesterday if the user says they did it yesterday — only when the user tells you they did it. For a habit with a daily target (like 8 glasses), pass amount to add that many, or count to set the day's total. undo: true takes the check-in back.",
@@ -123,7 +143,7 @@ const habitCheckIn: Tool = {
   }),
   run: async (ctx, _scope, args) => {
     if (!canWrite(ctx)) throw new ToolFail("This connection is read-only, so it can't check habits in.");
-    const garden = await loadGarden(ctx.userId, ctx.today);
+    const garden = await gardenFor(ctx);
     const habit = resolveHabit(garden, args);
     const dayArg = optString(args, "day", 10) ?? "today";
     if (dayArg !== "today" && dayArg !== "yesterday") throw new ToolFail("day must be today or yesterday.");
@@ -159,6 +179,7 @@ const habitCheckIn: Tool = {
 const habitCreate: Tool = {
   name: "habit_create",
   title: "Plant a habit",
+  habits: true,
   write: true,
   description: `Plant a new habit in the user's Kairo garden — only when they ask for one. Popular seeds share leaderboards; pass seedId to use one (${SEEDS.map((s) => `${s.id}: ${s.name}`).join("; ")}), or give a name for a custom habit. schedule: {"kind":"daily"}, {"kind":"days","days":[1,3,5]} (0 is Sunday), or {"kind":"weekly","times":3}.`,
   inputSchema: obj({

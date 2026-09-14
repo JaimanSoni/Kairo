@@ -9,7 +9,7 @@ import {
 
 /** Whether a PIN is set and whether this browser has entered it. Says nothing else. */
 export async function GET() {
-  const session = await requireSession();
+  const session = await requireSession({ expired: "allow" });
   if (!session) return unauthorized();
   const status = await journalLockStatus(session.userId);
   if (!status) return unauthorized();

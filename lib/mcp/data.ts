@@ -214,7 +214,8 @@ export type CompleteOutcome = {
  */
 export async function completeTask(
   ctx: McpContext,
-  doc: WithId<Document>
+  doc: WithId<Document>,
+  scope?: Scope
 ): Promise<CompleteOutcome> {
   const tasks = await tasksCollection();
   const task = toTask(doc);
@@ -249,7 +250,11 @@ export async function completeTask(
     plannedTime: task.plannedTime,
     dueDate: null,
     spotlight: false,
-    listId: task.listId ? new ObjectId(task.listId) : null,
+    // the logged copy is the completer's; it only files under a list they can reach
+    listId:
+      task.listId && (scope ? scope.visibleIds.some((l) => l.toHexString() === task.listId) : (doc.userId as ObjectId).equals(ctx.userId))
+        ? new ObjectId(task.listId)
+        : null,
     estimateMin: task.estimateMin,
     order: now.getTime(),
     carryCount: 0,

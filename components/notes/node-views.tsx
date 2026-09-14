@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { NodeViewWrapper, type ReactNodeViewProps } from "@tiptap/react";
 import { notesStore } from "@/lib/notes-client";
-import { useApp } from "../store";
+import { hiddenListIds, useApp } from "../store";
 import { navigateApp } from "../app-views";
 
 /**
@@ -70,9 +70,12 @@ export function PageLinkView({ node, selected }: ReactNodeViewProps) {
 export function TaskRefView({ node }: ReactNodeViewProps) {
   const { state, completeTask, uncompleteTask, setEditing } = useApp();
   const id = typeof node.attrs.id === "string" ? node.attrs.id : null;
-  const task = id ? state.tasks[id] : undefined;
+  const found = id ? state.tasks[id] : undefined;
+  // a task in a list that's locked right now stays out of the page, even from memory
+  const locked = Boolean(found?.listId && hiddenListIds(state).has(found.listId));
+  const task = locked ? undefined : found;
   const done = task?.status === "done";
-  const title = task?.title ?? String(node.attrs.title || "Task");
+  const title = locked ? "Locked task" : task?.title ?? String(node.attrs.title || "Task");
 
   return (
     <NodeViewWrapper as="span" className={`nt-task ${done ? "is-done" : ""} ${task ? "" : "is-away"}`} data-task-ref="" contentEditable={false}>

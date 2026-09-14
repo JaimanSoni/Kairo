@@ -276,6 +276,7 @@ export async function loadGarden(userId: ObjectId, today: string) {
       archived: all.filter((h) => h.archivedAt).map(toHabitView),
       logs: settled.flatMap((s) => s.logs.filter((l) => l.date >= recentFrom).map(toLogView)),
       gardener: await getGardener(userId),
+      nudges: await gardenNudgesOn(userId),
     };
   });
 }
@@ -621,16 +622,32 @@ export async function setGardener(userId: ObjectId, input: { name?: unknown; ani
   return gardener as Gardener;
 }
 
-/** People this account already shares lists or tasks with — the friends board. */
+/** Whether the evening nudge is on (it is, until someone switches it off). */
+export async function gardenNudgesOn(userId: ObjectId): Promise<boolean> {
+  const user = await (await getDb()).collection("users").findOne({ _id: userId }, { projection: { gardenNudges: 1 } });
+  return user?.gardenNudges !== false;
+}
+
+export async function setGardenNudges(userId: ObjectId, on: boolean, timezone: unknown): Promise<boolean> {
+  await (await getDb()).collection("users").updateOne({ _id: userId }, on ? { $unset: { gardenNudges: "" } } : { $set: { gardenNudges: false } });
+  const { scheduleEveningSave } = await import("./habit-reminders");
+  const { scheduledCollection } = await import("./push");
+  if (on) await scheduleEveningSave(userId, safeTimeZone(timezone));
+  else await (await scheduledCollection()).deleteMany({ userId, kind: "garden-evening" });
+  return on;
+}
+
+/**
+ * People this account shares a list with — the friends board. Lists only: a
+ * single task shared once is too thin a tie to put someone's streaks in front
+ * of you, and a board of two is a board where a pseudonym stops hiding anyone.
+ */
 async function friendIds(userId: ObjectId): Promise<ObjectId[]> {
   const db = await getDb();
   const filter = { $or: [{ userId }, { memberIds: userId }], "memberIds.0": { $exists: true } };
-  const [lists, tasks] = await Promise.all([
-    db.collection("lists").find(filter, { projection: { userId: 1, memberIds: 1 } }).limit(500).toArray(),
-    db.collection("tasks").find(filter, { projection: { userId: 1, memberIds: 1 } }).limit(1000).toArray(),
-  ]);
+  const lists = await db.collection("lists").find(filter, { projection: { userId: 1, memberIds: 1 } }).limit(500).toArray();
   const ids = new Map<string, ObjectId>([[userId.toHexString(), userId]]);
-  for (const doc of [...lists, ...tasks]) {
+  for (const doc of lists) {
     ids.set((doc.userId as ObjectId).toHexString(), doc.userId as ObjectId);
     for (const m of (doc.memberIds as ObjectId[]) ?? []) ids.set(m.toHexString(), m);
   }

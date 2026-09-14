@@ -274,7 +274,58 @@ export async function setUserDisabled(
     );
     // write-through: the admin's own instance must see the change immediately
     disabledCache().set(idHex, { at: Date.now(), disabled });
+    bustUserGate(idHex);
   });
+}
+
+/**
+ * What every authenticated API call needs to know about its account before
+ * doing anything: that it exists, isn't switched off, whether an app lock
+ * guards it, and enough billing to decide access. One projected read, cached
+ * for fifteen seconds per account and busted on the instance that changes it.
+ */
+export type UserGate = {
+  disabled: boolean;
+  appLockHash: string | null;
+  createdAt: Date | null;
+  billing: unknown;
+};
+
+const GATE_TTL_MS = 15_000;
+
+declare global {
+  var _kairoUserGate: Map<string, { at: number; gate: UserGate | null }> | undefined;
+}
+
+function gateCache(): Map<string, { at: number; gate: UserGate | null }> {
+  global._kairoUserGate ??= new Map();
+  return global._kairoUserGate;
+}
+
+export async function userGate(idHex: string): Promise<UserGate | null> {
+  const cache = gateCache();
+  const hit = cache.get(idHex);
+  if (process.env.KAIRO_CACHE_OFF !== "1" && hit && Date.now() - hit.at < GATE_TTL_MS) return hit.gate;
+  const doc = await withDbRetry(async () =>
+    (await getDb())
+      .collection("users")
+      .findOne({ _id: new ObjectId(idHex) }, { projection: { disabled: 1, appLockHash: 1, appLockSalt: 1, createdAt: 1, billing: 1 } })
+  );
+  const gate: UserGate | null = doc
+    ? {
+        disabled: doc.disabled === true,
+        appLockHash: typeof doc.appLockHash === "string" && typeof doc.appLockSalt === "string" ? doc.appLockHash : null,
+        createdAt: doc.createdAt instanceof Date ? doc.createdAt : null,
+        billing: doc.billing ?? null,
+      }
+    : null;
+  if (cache.size >= DISABLED_MAX_ENTRIES) cache.clear();
+  cache.set(idHex, { at: Date.now(), gate });
+  return gate;
+}
+
+export function bustUserGate(idHex: string): void {
+  gateCache().delete(idHex);
 }
 
 /** What a deletion actually removed, so the admin is told rather than trusted. */
@@ -323,6 +374,8 @@ export async function deleteUserCompletely(idHex: string): Promise<DeletionRepor
 
     const user = await db.collection("users").findOne({ _id });
     if (!user) return null;
+    // the lists about to go, so tasks other people keep in them can be let out first
+    const ownedListIds = (await db.collection("lists").find({ userId: _id }, { projection: { _id: 1 } }).toArray()).map((l) => l._id);
 
     const [tasks, lists, pushSubs, magic, apiKeys, journal, notes, habits, habitLogs, harvests, sharedLists, sharedTasks, paymentsKept] =
       await Promise.all([
@@ -347,6 +400,12 @@ export async function deleteUserCompletely(idHex: string): Promise<DeletionRepor
 
     // work assigned to someone who no longer exists belongs to nobody
     await db.collection("tasks").updateMany({ assigneeId: _id }, { $set: { assigneeId: null } });
+    // other members' tasks in the lists that went fall back to their own inboxes, as a list delete does
+    if (ownedListIds.length) await db.collection("tasks").updateMany({ listId: { $in: ownedListIds } }, { $set: { listId: null } });
+    // what we kept about them: analytics events and the record of emails sent to them
+    await db.collection("events").deleteMany({ userId: idHex });
+    await db.collection("emails").deleteMany({ to: String(user.email ?? "") });
+    await db.collection("pin_attempts").deleteMany({ _id: { $regex: `^(app|journal):${idHex}$|^list:[a-f0-9]{24}:${idHex}$` } as never });
     await db.collection("scheduled_pushes").deleteMany({ userId: _id });
     await db.collection("users").deleteOne({ _id });
 
@@ -463,6 +522,8 @@ async function upsertGoogleUserOnce(profile: GoogleProfile): Promise<DbUser> {
     { returnDocument: "after" }
   );
   if (claimed) {
+    // Google signs this address in from now on; the invite links that brought it here retire
+    await db.collection("magic_links").deleteMany({ email: profile.email }).catch(() => {});
     return claimed.pending ? activatePendingUser(claimed) : claimed;
   }
 
