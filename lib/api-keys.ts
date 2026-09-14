@@ -33,6 +33,8 @@ export type ApiKeyDoc = {
   includeLocked: boolean;
   /** Whether the journal is reachable through this connection. Absent on older keys: no. */
   includeJournal?: boolean;
+  /** Whether notes are reachable through this connection. Absent on older keys: no. */
+  includeNotes?: boolean;
   /** IANA zone captured from the browser that created the key. */
   timezone: string;
   createdAt: Date;
@@ -48,6 +50,7 @@ export type ApiKeyInfo = {
   scope: ApiKeyScope;
   includeLocked: boolean;
   includeJournal: boolean;
+  includeNotes: boolean;
   timezone: string;
   createdAt: string;
   lastUsedAt: string | null;
@@ -87,6 +90,7 @@ export function toKeyInfo(doc: ApiKeyDoc): ApiKeyInfo {
     scope: doc.scope,
     includeLocked: Boolean(doc.includeLocked),
     includeJournal: Boolean(doc.includeJournal),
+    includeNotes: Boolean(doc.includeNotes),
     timezone: doc.timezone,
     createdAt: doc.createdAt.toISOString(),
     lastUsedAt: doc.lastUsedAt ? doc.lastUsedAt.toISOString() : null,
@@ -112,6 +116,7 @@ export async function createApiKey(input: {
   scope: ApiKeyScope;
   includeLocked: boolean;
   includeJournal?: boolean;
+  includeNotes?: boolean;
   timezone: string;
 }): Promise<CreateKeyResult> {
   const name = input.name.trim().slice(0, 60) || "Untitled connection";
@@ -137,6 +142,7 @@ export async function createApiKey(input: {
     scope: input.scope,
     includeLocked: input.includeLocked,
     includeJournal: input.includeJournal === true,
+    includeNotes: input.includeNotes === true,
     timezone: safeTimeZone(input.timezone),
     createdAt: now,
     lastUsedAt: null,
@@ -164,7 +170,7 @@ export async function revokeApiKey(userIdHex: string, keyIdHex: string): Promise
 export async function updateApiKey(
   userIdHex: string,
   keyIdHex: string,
-  patch: { name?: string; scope?: ApiKeyScope; includeLocked?: boolean; includeJournal?: boolean; timezone?: string }
+  patch: { name?: string; scope?: ApiKeyScope; includeLocked?: boolean; includeJournal?: boolean; includeNotes?: boolean; timezone?: string }
 ): Promise<ApiKeyInfo | null> {
   if (!ObjectId.isValid(keyIdHex)) return null;
   const set: Partial<ApiKeyDoc> = {};
@@ -172,6 +178,7 @@ export async function updateApiKey(
   if (patch.scope !== undefined) set.scope = patch.scope;
   if (patch.includeLocked !== undefined) set.includeLocked = patch.includeLocked;
   if (patch.includeJournal !== undefined) set.includeJournal = patch.includeJournal;
+  if (patch.includeNotes !== undefined) set.includeNotes = patch.includeNotes;
   if (patch.timezone !== undefined) set.timezone = safeTimeZone(patch.timezone);
   if (Object.keys(set).length === 0) return null;
 

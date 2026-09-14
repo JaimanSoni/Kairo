@@ -198,6 +198,11 @@ export function Paywall({
               Download your journal
             </button>
           </form>
+          <form action="/api/notes/export" method="GET" className="inline">
+            <button type="submit" className="underline underline-offset-2 hover:text-ink-soft">
+              Download your notes
+            </button>
+          </form>
           <a href="/refunds" className="underline underline-offset-2 hover:text-ink-soft">
             Refunds
           </a>

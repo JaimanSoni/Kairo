@@ -23,6 +23,21 @@ const JournalSection = dynamic(() => import("./journal/journal-section"), {
   ),
 });
 
+/** Notes load on first visit too, for the same reason. */
+const NotesSection = dynamic(() => import("./notes/notes-section"), {
+  ssr: false,
+  loading: () => (
+    <div className="mx-auto w-full max-w-3xl px-5 pb-32 pt-10 sm:px-8">
+      <div className="h-9 w-32 animate-pulse rounded-xl bg-paper-deep" />
+      <div className="mt-6 grid grid-cols-3 gap-3">
+        <div className="h-32 animate-pulse rounded-2xl bg-paper-deep" />
+        <div className="h-32 animate-pulse rounded-2xl bg-paper-deep" />
+        <div className="h-32 animate-pulse rounded-2xl bg-paper-deep" />
+      </div>
+    </div>
+  ),
+});
+
 /**
  * The app views behind one client switch.
  *
@@ -43,6 +58,7 @@ const TITLES: Record<string, string> = {
   "/lists": "Lists · Kairo",
   "/log": "Log · Kairo",
   "/journal": "Journal · Kairo",
+  "/notes": "Notes · Kairo",
 };
 
 /** Swap the view without a server round trip. */
@@ -56,7 +72,11 @@ export function AppViews() {
 
   // pushState skips the metadata system, so the tab title follows by hand
   useEffect(() => {
-    const title = TITLES[pathname] ?? (pathname.startsWith("/journal/") ? TITLES["/journal"] : undefined);
+    // an open note names the tab after itself, once it has loaded
+    if (/^\/notes\/[a-f0-9]{24}/.test(pathname)) return;
+    const title =
+      TITLES[pathname] ??
+      (pathname.startsWith("/journal/") ? TITLES["/journal"] : pathname.startsWith("/notes/") ? TITLES["/notes"] : undefined);
     if (title) document.title = title;
   }, [pathname]);
 
@@ -64,5 +84,6 @@ export function AppViews() {
   if (pathname.startsWith("/lists")) return <ListsView />;
   if (pathname.startsWith("/log")) return <LogView />;
   if (pathname.startsWith("/journal")) return <JournalSection />;
+  if (pathname.startsWith("/notes")) return <NotesSection />;
   return <TodayView />;
 }

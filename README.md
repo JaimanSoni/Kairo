@@ -71,6 +71,10 @@ lib/                  db, session, google oauth, task repo, nlp parser, dates
 lib/mcp/              MCP protocol, tool registry, per-connection scope
 lib/journal*.ts       journal pages: content model, sanitiser, PIN lock, client cache
 components/journal/   the journal: calendar home, TipTap editor, slash menu, PIN gate
+lib/doc-model.ts      the document model both editors share: sanitiser, plain text, Markdown
+lib/notes*.ts         notes: page tree, versioned bodies, trash, search, client store
+components/notes/     notes: page tree, block editor, block handle, templates, trash
+components/editor/    editor pieces shared by the journal and notes
 proxy.ts              optimistic session redirects (Next 16's middleware)
 ```
 
@@ -96,6 +100,27 @@ Design notes worth knowing before changing it:
   not in memory, so a cold serverless instance can't reset the cool-down.
 - **Never sent to the AI parser**, and reachable over MCP only by keys created with *Include journal*.
 - **Export ignores the subscription.** A lapsed card must not cost anyone their diary.
+
+## Notes
+
+Pages inside pages at `/notes` (shortcut `6`; on a phone, the round button bottom-right). A block
+editor with a `/` menu, a drag handle on every block, toggles, tables, callouts, text colours, `@`
+links between pages with backlinks, templates, and Kairo tasks that live inside a page and tick
+everywhere. Favorites, a drag-to-nest tree, quick find (`⌘P`), a 30-day trash, and Markdown export.
+
+Design notes worth knowing before changing it:
+
+- **The body is versioned; the rest is last-writer-wins.** A body save names the version it started
+  from and a stale one gets a 409, exactly like a journal page. Title, icon, cover and page settings
+  are plain fields, so renaming a page in the tree never collides with typing on it.
+- **Order is a number between neighbours.** Moving a page rewrites one row; siblings are renumbered
+  only when the gap between two ranks runs out.
+- **Trash is two steps.** Deleting trashes a page with everything beneath it; restoring brings back
+  what went together; anything older than 30 days is purged lazily when the trash is read.
+- **A blank body over a written one is refused** unless the editor says a person cleared it.
+- **One document model.** `lib/doc-model.ts` holds the sanitiser, plain text and Markdown for both
+  editors; each brings its own whitelist of blocks.
+- Reachable over MCP only by keys created with *Include notes*, and there is no delete tool.
 
 ## Connect an assistant (MCP)
 
@@ -137,4 +162,4 @@ No new environment variables. Keys live in the `api_keys` collection.
 
 ## Keyboard
 
-`N` capture · `J` today's journal page · `1–5` switch views · `Enter` save · `Shift+Enter` capture & keep going · `Esc` close
+`N` capture · `J` today's journal page · `1–6` switch views · `⌘K` search everything · `⌘P` find a note · `Enter` save · `Shift+Enter` capture & keep going · `Esc` close

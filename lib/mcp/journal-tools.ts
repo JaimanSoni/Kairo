@@ -1,4 +1,5 @@
 import { getEntry, listSummaries, saveEntry, searchEntries } from "../journal";
+import { markdownToBlocks } from "../markdown-blocks";
 import {
   docToText,
   entryToMarkdown,
@@ -7,7 +8,6 @@ import {
   longDate,
   moodOf,
   MOODS,
-  type JNode,
   type Mood,
 } from "../journal-shared";
 import { canWrite, type McpContext } from "./context";
@@ -54,101 +54,6 @@ function dayArg(ctx: McpContext, args: Args, key = "date"): string {
     throw new ToolFail(`${longDate(date)} hasn't happened yet for this user — today is ${longDate(ctx.today)}.`);
   }
   return date;
-}
-
-/* ------------------------------------------------------- markdown → page */
-
-function inline(s: string): JNode[] {
-  const out: JNode[] = [];
-  const re = /(\*\*[^*]+\*\*|__[^_]+__|\*[^*\s][^*]*\*|_[^_\s][^_]*_)/g;
-  let last = 0;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(s))) {
-    if (m.index > last) out.push({ type: "text", text: s.slice(last, m.index) });
-    const token = m[0];
-    const bold = token.startsWith("**") || token.startsWith("__");
-    out.push({ type: "text", text: bold ? token.slice(2, -2) : token.slice(1, -1), marks: [{ type: bold ? "bold" : "italic" }] });
-    last = m.index + token.length;
-  }
-  if (last < s.length) out.push({ type: "text", text: s.slice(last) });
-  return out.filter((n) => n.text);
-}
-
-/** Lines of one paragraph keep their breaks — a diary is not reflowed prose. */
-function paragraph(lines: string[]): JNode {
-  const content: JNode[] = [];
-  lines.forEach((line, i) => {
-    if (i > 0) content.push({ type: "hardBreak" });
-    content.push(...inline(line));
-  });
-  return content.length ? { type: "paragraph", content } : { type: "paragraph" };
-}
-
-/**
- * The small, forgiving Markdown an assistant naturally writes: paragraphs,
- * headings, quotes, bullets, numbers and checkboxes. Anything else arrives as
- * plain text, which is never wrong — just unformatted.
- */
-export function markdownToBlocks(md: string): JNode[] {
-  const blocks: JNode[] = [];
-  let para: string[] = [];
-  let list: { kind: "bulletList" | "orderedList" | "taskList"; items: JNode[] } | null = null;
-
-  const endPara = () => {
-    if (para.length) blocks.push(paragraph(para));
-    para = [];
-  };
-  const endList = () => {
-    if (list) {
-      blocks.push(
-        list.kind === "orderedList"
-          ? { type: "orderedList", attrs: { start: 1 }, content: list.items }
-          : { type: list.kind, content: list.items }
-      );
-    }
-    list = null;
-  };
-  const item = (kind: "bulletList" | "orderedList" | "taskList", body: string, checked?: boolean) => {
-    endPara();
-    if (!list || list.kind !== kind) {
-      endList();
-      list = { kind, items: [] };
-    }
-    const node: JNode =
-      kind === "taskList"
-        ? { type: "taskItem", attrs: { checked: Boolean(checked) }, content: [paragraph([body])] }
-        : { type: "listItem", content: [paragraph([body])] };
-    list.items.push(node);
-  };
-
-  for (const raw of md.replace(/\r\n?/g, "\n").split("\n")) {
-    const line = raw.trimEnd();
-    let m: RegExpExecArray | null;
-    if (!line.trim()) {
-      endPara();
-      endList();
-    } else if ((m = /^(#{1,3})\s+(.+)$/.exec(line))) {
-      endPara();
-      endList();
-      blocks.push({ type: "heading", attrs: { level: m[1].length }, content: inline(m[2]) });
-    } else if ((m = /^>\s?(.*)$/.exec(line))) {
-      endPara();
-      endList();
-      blocks.push({ type: "blockquote", content: [paragraph([m[1]])] });
-    } else if ((m = /^[-*]\s+\[( |x|X)\]\s+(.*)$/.exec(line))) {
-      item("taskList", m[2], m[1].toLowerCase() === "x");
-    } else if ((m = /^[-*]\s+(.*)$/.exec(line))) {
-      item("bulletList", m[1]);
-    } else if ((m = /^\d+[.)]\s+(.*)$/.exec(line))) {
-      item("orderedList", m[1]);
-    } else {
-      endList();
-      para.push(line.trim());
-    }
-  }
-  endPara();
-  endList();
-  return blocks;
 }
 
 /* ---------------------------------------------------------------- tools */

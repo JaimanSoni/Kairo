@@ -37,6 +37,11 @@ export const CATEGORIES: Category[] = [
     description: "A page a day: writing, the weather inside, and keeping it private.",
   },
   {
+    id: "notes",
+    name: "Notes",
+    description: "Pages inside pages: blocks, templates, tasks in your notes, and the trash.",
+  },
+  {
     id: "account",
     name: "Privacy & account",
     description: "Locks, multiple accounts, your data, and fixing problems.",
@@ -53,7 +58,7 @@ export const QUICK_START = ["philosophy", "capture", "today", "notifications"];
  * sitemap is only worth sending if it's true, and a date that moves on every
  * deploy teaches crawlers to ignore it.
  */
-export const DOCS_UPDATED = "2026-09-11";
+export const DOCS_UPDATED = "2026-09-14";
 
 export const ARTICLES: Article[] = [
   /* ---------------------------------------------------------------- basics */
@@ -2254,6 +2259,141 @@ export const ARTICLES: Article[] = [
       },
     ],
   },
+  /* ----------------------------------------------------------------- notes */
+  {
+    slug: "notes",
+    title: "Keep notes",
+    summary:
+      "Pages inside pages, with toggles, tables, links between pages and live Kairo tasks. Organise them your way.",
+    categoryId: "notes",
+    keywords: ["notes", "notion", "pages", "wiki", "docs", "document", "subpage", "toggle", "table", "template", "markdown"],
+    sections: [
+      {
+        id: "pages",
+        heading: "Pages inside pages",
+        blocks: [
+          {
+            t: "p",
+            text: "**Notes** is where anything bigger than a task lives: a plan, meeting notes, a recipe, a page for everything about one project. Every page can hold more pages, so your notes grow into a shape that fits you.",
+          },
+          {
+            t: "p",
+            text: "On a computer it's in the sidebar, or press `6`. The panel beside your pages shows the whole tree, and `Ctrl+\\` hides it. On a phone, tap the round notes button in the bottom-right corner; inside Notes the same button makes a new page.",
+          },
+          {
+            t: "ul",
+            items: [
+              "**Organise** by dragging pages in the panel: onto the top or bottom edge of a page to reorder, onto its middle to put it inside. Or use a page's ⋯ menu and **Move to…**.",
+              "**Favorites** sit at the top of the panel. Tap the star on any page.",
+              "**Templates** give a blank page a shape to start from: meeting notes, a project brief, reading notes, a weekly review.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "writing",
+        heading: "Writing on a page",
+        blocks: [
+          { t: "p", text: "Type `/` anywhere for the full list of blocks. Formatting also happens as you type:" },
+          {
+            t: "keys",
+            rows: [
+              { k: "# ", d: "Heading, or `## ` and `### ` for smaller ones" },
+              { k: "[ ] ", d: "To-do list" },
+              { k: "- ", d: "Bulleted list" },
+              { k: "1. ", d: "Numbered list" },
+              { k: "> ", d: "Quote" },
+              { k: "```", d: "Code block" },
+              { k: "@ or [[", d: "Link to another page, or make a new one" },
+              { k: "⌘⇧↑ / ⌘⇧↓", d: "Move the block you're in up or down" },
+              { k: "⌘D", d: "Duplicate the block you're in" },
+              { k: "⌘P", d: "Find any page" },
+            ],
+          },
+          {
+            t: "p",
+            text: "Hover a block to see its handle: drag it to move the block, click it to turn the block into another kind, duplicate it or delete it, or **+** to add a block below. Select words to make them bold, colour them, highlight them, or link them.",
+          },
+          {
+            t: "tip",
+            text: "Paste Markdown straight in, from a chat with an assistant or a README, and it arrives as real headings, lists, checkboxes and tables.",
+          },
+        ],
+      },
+      {
+        id: "blocks",
+        heading: "Toggles, tables and callouts",
+        blocks: [
+          {
+            t: "ul",
+            items: [
+              "**Toggle lists** tuck details away until you open them. Click the arrow to open or close one.",
+              "**Tables** grow with **+ Row** and **+ Column** in the bar above them. Drag a column's edge to widen it.",
+              "**Callouts** make something stand out. Click the emoji to change it.",
+              "**Sub-pages** made with `/` then **Page** appear as a link on the page they live in.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "tasks",
+        heading: "Kairo tasks inside notes",
+        blocks: [
+          {
+            t: "p",
+            text: "A line of a note can become a real Kairo task. Select the words and tap **✓ Task**, use a block's handle and **Make it a Kairo task**, or type `/task`. What you type is read the same way Capture reads it, so \"pay rent friday\" is planned for Friday.",
+          },
+          {
+            t: "p",
+            text: "The task shows on the page as a live chip: tick it there and it's ticked everywhere in Kairo, and the other way round.",
+          },
+        ],
+      },
+      {
+        id: "look",
+        heading: "Icons, covers and the page menu",
+        blocks: [
+          {
+            t: "ul",
+            items: [
+              "Hover over a page's title for **Add icon** and **Add cover**. Click either later to change it.",
+              "The ⋯ menu sets the font, small text and full width for that page.",
+              "**Lock page** stops a page from being edited by accident, on every device, until you unlock it.",
+              "**Linked from** at the bottom of a page lists every page that links to it.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "trash",
+        heading: "Trash",
+        blocks: [
+          {
+            t: "p",
+            text: "Deleting a page moves it and every page inside it to the **Trash**, with an **Undo** straight away. Restore it from the Trash for 30 days; after that it's deleted for good.",
+          },
+        ],
+      },
+      {
+        id: "saving",
+        heading: "Saving, offline, and two devices",
+        blocks: [
+          {
+            t: "p",
+            text: "Pages save as you type, and everything is kept on your device first, so a dropped connection or a closed tab doesn't lose words. If the same page changes on two devices at once, nothing is overwritten: Kairo lets you **Keep both**, keep yours, or use the other one.",
+          },
+          {
+            t: "ul",
+            items: [
+              "Assistants you connect to Kairo can only use your notes if you tick **Include notes** on their [connection key](/support/connect-ai). They can search, read, make pages and add to them, but never delete or rewrite one.",
+              "**Export as Markdown** from a page's ⋯ menu. Everything at once is downloadable too, even after a subscription has ended.",
+              "Deleting your account deletes every page, trash included.",
+            ],
+          },
+        ],
+      },
+    ],
+  },
   {
     slug: "connect-ai",
     title: "Use Kairo from ChatGPT, Claude or Gemini",
@@ -2389,6 +2529,7 @@ export const ARTICLES: Article[] = [
             items: [
               "A **read only** key can never add, change or delete anything, and the tools to do so are not even offered to the assistant.",
               "Your [journal](/support/journal) is out of reach unless you tick **Include journal** when creating the key. With it ticked, an assistant can read your pages and add to them when you ask.",
+              "Your [notes](/support/notes) work the same way, with **Include notes**: an assistant can search and read them, make new pages and add to existing ones, but never delete or rewrite a page.",
               "A connection can only reach what you can reach: your own work, plus lists and tasks shared with you.",
               "Nothing about your billing, your PIN or your sign-in is exposed.",
             ],

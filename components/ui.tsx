@@ -76,6 +76,15 @@ export function IconJournal({ size = 16, className }: IconProps) {
   );
 }
 
+export function IconNotes({ size = 16, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" className={className}>
+      <path d="M3.75 1.75h5.5l3.5 3.5v8a1 1 0 01-1 1h-8a1 1 0 01-1-1v-10.5a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M9 1.9v3.6h3.6M5.5 8.5h5M5.5 11.25h3.25" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function IconStar({ size = 16, className, filled }: IconProps & { filled?: boolean }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill={filled ? "currentColor" : "none"} className={className}>

@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { navigateApp } from "./app-views";
+import { notesStore } from "@/lib/notes-client";
+import type { NoteMeta } from "@/lib/notes-shared";
+import { useNoteActions } from "./notes/actions";
 import type { Task } from "@/lib/types";
 import { friendlyDay, todayStr } from "@/lib/dates";
 import { hiddenListIds, useApp, visibleLists } from "./store";
@@ -10,7 +13,8 @@ import { Chip, Kbd, Modal } from "./ui";
 type PaletteItem =
   | { kind: "action"; id: string; label: string; hint?: string; run: () => void }
   | { kind: "task"; id: string; task: Task }
-  | { kind: "list"; id: string; label: string; emoji: string };
+  | { kind: "list"; id: string; label: string; emoji: string }
+  | { kind: "note"; id: string; page: NoteMeta };
 
 /** 0 = no match; higher = better. */
 function score(text: string, q: string): number {
@@ -33,6 +37,14 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
 
   const query = q.trim().toLowerCase();
   const hidden = useMemo(() => hiddenListIds(state), [state]);
+  const noteActions = useNoteActions();
+  const notesTick = useSyncExternalStore(notesStore.subscribe, notesStore.snapshot, () => 0);
+  const guest = Boolean(state.user.guest);
+
+  // pages are searchable here too; the tree loads the first time anyone looks
+  useEffect(() => {
+    if (!guest) void notesStore.ensureLoaded();
+  }, [guest]);
 
   const actions = useMemo<PaletteItem[]>(() => {
     const base: { id: string; label: string; hint?: string; run: () => void }[] = [
@@ -43,6 +55,8 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
       { id: "go-log", label: "Go to Log", hint: "4", run: () => navigateApp("/log") },
       { id: "go-journal", label: "Go to Journal", hint: "5", run: () => navigateApp("/journal") },
       { id: "write-today", label: "Write today's journal page", run: () => navigateApp(`/journal/${todayStr()}`) },
+      { id: "go-notes", label: "Go to Notes", hint: "6", run: () => navigateApp("/notes") },
+      ...(guest ? [] : [{ id: "new-note", label: "New note", run: () => void noteActions.create() }]),
       ...(state.user.appLockEnabled
         ? [{ id: "lock", label: "Lock Kairo now", run: lockApp }]
         : []),
@@ -50,7 +64,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
     return base
       .filter((a) => !query || a.label.toLowerCase().includes(query))
       .map((a) => ({ kind: "action" as const, ...a }));
-  }, [query, setOmnibar, lockApp, state.user.appLockEnabled]);
+  }, [query, setOmnibar, lockApp, state.user.appLockEnabled, guest, noteActions]);
 
   const taskItems = useMemo<PaletteItem[]>(() => {
     const candidates = Object.values(state.tasks).filter(
@@ -87,9 +101,20 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
       .map((l) => ({ kind: "list" as const, id: l.id, label: l.name, emoji: l.emoji }));
   }, [state, query]);
 
+  const noteItems = useMemo<PaletteItem[]>(() => {
+    if (!query || notesTick < 0) return [];
+    return notesStore
+      .all()
+      .map((page) => ({ page, s: score(page.title || "untitled", query) }))
+      .filter((x) => x.s > 0)
+      .sort((a, b) => b.s - a.s || b.page.updatedAt.localeCompare(a.page.updatedAt))
+      .slice(0, 5)
+      .map(({ page }) => ({ kind: "note" as const, id: page.id, page }));
+  }, [query, notesTick]);
+
   const items = useMemo(
-    () => [...taskItems, ...listItems, ...actions],
-    [taskItems, listItems, actions]
+    () => [...taskItems, ...listItems, ...noteItems, ...actions],
+    [taskItems, listItems, noteItems, actions]
   );
 
   useEffect(() => {
@@ -101,13 +126,15 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
     onClose();
     if (item.kind === "action") item.run();
     else if (item.kind === "task") setEditing(item.id);
+    else if (item.kind === "note") navigateApp(`/notes/${item.id}`);
     else navigateApp("/lists");
   };
 
   const groupLabel = (idx: number): string | null => {
     if (idx === 0 && taskItems.length > 0) return query ? "Tasks" : "Recent";
     if (idx === taskItems.length && listItems.length > 0) return "Lists";
-    if (idx === taskItems.length + listItems.length && actions.length > 0) return "Actions";
+    if (idx === taskItems.length + listItems.length && noteItems.length > 0) return "Notes";
+    if (idx === taskItems.length + listItems.length + noteItems.length && actions.length > 0) return "Actions";
     return null;
   };
 
@@ -136,7 +163,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
                 run(items[sel]);
               }
             }}
-            placeholder="Search tasks, lists… or jump anywhere"
+            placeholder="Search tasks, lists, notes… or jump anywhere"
             className="w-full bg-transparent text-base outline-none placeholder:text-ink-faint"
             autoFocus
           />
@@ -190,6 +217,12 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
                       )}
                       {item.task.status === "inbox" && <Chip>inbox</Chip>}
                       {item.task.status === "someday" && <Chip>someday</Chip>}
+                    </>
+                  ) : item.kind === "note" ? (
+                    <>
+                      <span className="shrink-0 text-sm" aria-hidden>{item.page.icon ?? "📄"}</span>
+                      <span className="min-w-0 flex-1 truncate text-sm">{item.page.title || "Untitled"}</span>
+                      <Chip>note</Chip>
                     </>
                   ) : item.kind === "list" ? (
                     <>

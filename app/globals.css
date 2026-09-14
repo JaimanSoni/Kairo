@@ -912,3 +912,301 @@ button {
     animation: none;
   }
 }
+
+/* ---------- notes ---------- */
+
+/* Text colours are variables for the same reason highlights are: a page
+   coloured in light mode still reads in dark mode. */
+:root {
+  --tc-gray: #787774;
+  --tc-amber: #b4741c;
+  --tc-rose: #c2413a;
+  --tc-lilac: #7b61c9;
+  --tc-sky: #2f78b3;
+  --tc-moss: #3e8a4e;
+  --tc-sun: #0b7d71;
+}
+:root[data-theme="dark"] {
+  --tc-gray: #a5a29d;
+  --tc-amber: #e6b45e;
+  --tc-rose: #f08b7f;
+  --tc-lilac: #b8a5f1;
+  --tc-sky: #7cb9e7;
+  --tc-moss: #7fca8e;
+  --tc-sun: #52d1c0;
+}
+
+/* notes read closer together than a diary: more structure, less prose */
+.nt-prose {
+  font-size: 1rem;
+  line-height: 1.7;
+  min-height: 40vh;
+  padding-bottom: 35vh;
+}
+.nt-prose > * + * {
+  margin-top: 0.35em;
+}
+.nt-prose h1 {
+  font-size: 1.9rem;
+  margin-top: 1.4em;
+}
+.nt-prose h2 {
+  font-size: 1.45rem;
+  margin-top: 1.25em;
+}
+.nt-prose h3 {
+  font-size: 1.15rem;
+  margin-top: 1em;
+}
+.nt-prose blockquote {
+  font-style: normal;
+  color: var(--color-ink);
+}
+.nt-prose hr {
+  margin: 1.2em 0;
+}
+.nt-prose hr::after {
+  content: none;
+}
+.nt-small .nt-prose {
+  font-size: 0.875rem;
+}
+.nt-font-serif .nt-prose {
+  font-family: var(--font-display);
+  font-size: 1.08rem;
+}
+.nt-small.nt-font-serif .nt-prose {
+  font-size: 0.95rem;
+}
+.nt-font-mono .nt-prose {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.92rem;
+}
+.nt-small.nt-font-mono .nt-prose {
+  font-size: 0.82rem;
+}
+
+.nt-title {
+  font-family: var(--font-display);
+  font-size: 2.6rem;
+  line-height: 1.15;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.nt-small .nt-title {
+  font-size: 2.1rem;
+}
+.nt-font-mono .nt-title {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  letter-spacing: -0.01em;
+}
+@media (max-width: 640px) {
+  .nt-title {
+    font-size: 2.05rem;
+  }
+}
+
+/* a block picked up by its handle */
+.nt-prose .ProseMirror-selectednode:not(hr):not(.react-renderer) {
+  background: var(--hl-sun);
+  border-radius: 0.4rem;
+}
+
+/* callout emoji can be changed with a click */
+.nt-prose .jr-callout-emoji {
+  cursor: pointer;
+  border-radius: 0.4em;
+  transition: background-color 0.15s;
+}
+.nt-prose .jr-callout-emoji:hover {
+  background: color-mix(in srgb, var(--color-ink) 7%, transparent);
+}
+
+/* toggles */
+.nt-prose [data-type="details"] {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.2em;
+}
+.nt-prose [data-type="details"] > button {
+  flex-shrink: 0;
+  width: 1.55em;
+  height: 1.55em;
+  margin-top: 0.08em;
+  margin-left: -0.3em;
+  border-radius: 0.35em;
+  display: grid;
+  place-items: center;
+  color: var(--color-ink-soft);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+.nt-prose [data-type="details"] > button:hover {
+  background: var(--color-paper-deep);
+}
+.nt-prose [data-type="details"] > button::before {
+  content: "";
+  border-left: 0.38em solid currentColor;
+  border-top: 0.26em solid transparent;
+  border-bottom: 0.26em solid transparent;
+  transition: transform 0.18s ease;
+}
+.nt-prose [data-type="details"].is-open > button::before {
+  transform: rotate(90deg);
+}
+.nt-prose [data-type="details"] > div {
+  flex: 1;
+  min-width: 0;
+}
+.nt-prose [data-type="details"] summary {
+  display: block;
+  list-style: none;
+  font-weight: 500;
+}
+.nt-prose [data-type="details"] summary::-webkit-details-marker {
+  display: none;
+}
+.nt-prose [data-type="detailsContent"] {
+  margin-top: 0.15em;
+}
+.nt-prose [data-type="detailsContent"] > * + * {
+  margin-top: 0.35em;
+}
+
+/* tables */
+.nt-prose .tableWrapper {
+  overflow-x: auto;
+  margin: 0.7em 0;
+}
+.nt-prose table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0;
+}
+.nt-prose td,
+.nt-prose th {
+  position: relative;
+  min-width: 5em;
+  border: 1px solid var(--color-line);
+  padding: 0.35em 0.6em;
+  vertical-align: top;
+  box-sizing: border-box;
+  text-align: left;
+}
+.nt-prose th {
+  background: var(--color-paper-deep);
+  font-weight: 600;
+}
+.nt-prose td > * + *,
+.nt-prose th > * + * {
+  margin-top: 0.25em;
+}
+.nt-prose .selectedCell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--color-sun) 14%, transparent);
+  pointer-events: none;
+}
+.nt-prose .column-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  bottom: -2px;
+  width: 4px;
+  background: var(--color-sun);
+  pointer-events: none;
+}
+.nt-prose.resize-cursor {
+  cursor: col-resize;
+}
+
+/* links to other pages */
+.nt-mention {
+  display: inline;
+  padding: 0.05em 0.2em;
+  border-radius: 0.35em;
+  font-weight: 500;
+  color: var(--color-ink);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--color-ink-faint) 50%, transparent);
+  text-underline-offset: 3px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+.nt-mention:hover {
+  background: var(--color-paper-deep);
+}
+.nt-mention-icon {
+  margin-right: 0.2em;
+}
+.nt-mention.is-gone {
+  color: var(--color-ink-faint);
+  text-decoration: line-through;
+  cursor: default;
+}
+.ProseMirror-selectednode .nt-mention,
+.ProseMirror-selectednode .nt-task,
+.ProseMirror-selectednode .nt-pagelink {
+  background: var(--hl-sun);
+}
+.nt-pagelink {
+  margin: 0.1em 0 0.1em -0.5rem;
+  border-radius: 0.5rem;
+}
+
+/* Kairo tasks inside a page */
+.nt-task {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  margin: 0 0.1em;
+  padding: 0.02em 0.5em 0.02em 0.3em;
+  border: 1px solid var(--color-line);
+  border-radius: 0.55em;
+  background: var(--color-card);
+  line-height: 1.55;
+  vertical-align: baseline;
+}
+.nt-task-box {
+  position: relative;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 1.1em;
+  height: 1.1em;
+  border: 2px solid var(--color-sun);
+  border-radius: 999px;
+  color: #fff;
+  font-size: 0.7em;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, transform 0.15s;
+}
+/* a finger needs more than the circle to aim at */
+.nt-task-box::after {
+  content: "";
+  position: absolute;
+  inset: -0.55rem;
+}
+.nt-task-box:active {
+  transform: scale(0.85);
+}
+.nt-task.is-done .nt-task-box {
+  background: var(--color-moss);
+  border-color: var(--color-moss);
+}
+.nt-task.is-away .nt-task-box {
+  border-color: var(--color-ink-faint);
+  cursor: default;
+}
+.nt-task-title {
+  font-size: 0.95em;
+  cursor: pointer;
+}
+.nt-task.is-done .nt-task-title {
+  color: var(--color-ink-faint);
+  text-decoration: line-through;
+}

@@ -33,6 +33,8 @@ export type McpContext = {
   includeLocked: boolean;
   /** Whether journal tools exist for this connection at all. */
   includeJournal: boolean;
+  /** Whether notes tools exist for this connection at all. */
+  includeNotes: boolean;
   keyName: string;
   /** Why access is allowed — surfaced by whoami so a trial is never a surprise. */
   accessReason: string;
@@ -131,6 +133,7 @@ export async function authenticate(request: Request): Promise<AuthResult> {
       scope: key.scope,
       includeLocked: Boolean(key.includeLocked),
       includeJournal: Boolean(key.includeJournal),
+      includeNotes: Boolean(key.includeNotes),
       keyName: key.name,
       accessReason: access.reason,
       trialDaysLeft: access.trialDaysLeft,

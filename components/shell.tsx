@@ -21,7 +21,10 @@ import { SubscriptionSettings } from "./subscription-settings";
 import { ConnectionsSettings } from "./mcp-settings";
 import { ShareKairoRow } from "./share-kairo";
 import { Mark } from "./mark";
-import { IconBook, IconCalendar, IconInbox, IconJournal, IconPlus, IconSun, IconX, Kbd, Modal } from "./ui";
+import { IconBook, IconCalendar, IconInbox, IconJournal, IconNotes, IconPlus, IconSun, IconX, Kbd, Modal } from "./ui";
+import { notesApi, notesStore } from "@/lib/notes-client";
+import { metaOf } from "./notes/actions";
+import { useKeyboardInset } from "./editor/viewport";
 
 const NAV = [
   { href: "/today", label: "Today", icon: IconSun, key: "1" },
@@ -29,6 +32,7 @@ const NAV = [
   { href: "/lists", label: "Lists", icon: IconInbox, key: "3" },
   { href: "/log", label: "Log", icon: IconBook, key: "4" },
   { href: "/journal", label: "Journal", icon: IconJournal, key: "5" },
+  { href: "/notes", label: "Notes", icon: IconNotes, key: "6" },
 ];
 
 /**
@@ -331,6 +335,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <MobileTab key={href} href={href} label={label} Icon={Icon} active={pathname.startsWith(href)} />
         ))}
       </nav>
+
+      <NotesFab pathname={pathname} guest={guest} lifted={Boolean(state.focus?.minimized)} />
 
       {/* overlays */}
       {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}
@@ -881,6 +887,57 @@ function AccountSwitcher() {
         )}
       </a>
     </div>
+  );
+}
+
+/**
+ * Notes on a phone. The tab bar is full, so notes get a button of their own in
+ * the corner a right thumb rests on: anywhere else it opens Notes, and inside
+ * Notes it makes a new page. It steps aside wherever something is being
+ * written, so it never sits on a page's toolbar or the keyboard.
+ */
+function NotesFab({ pathname, guest, lifted }: { pathname: string; guest: boolean; lifted: boolean }) {
+  const { showToast } = useApp();
+  const inset = useKeyboardInset();
+  const [busy, setBusy] = useState(false);
+  const home = pathname === "/notes" || pathname === "/notes/";
+  const writing = /^\/notes\/[a-f0-9]{24}/.test(pathname) || /^\/journal\/\d{4}-\d{2}-\d{2}/.test(pathname);
+  if (writing || inset > 0 || (home && guest)) return null;
+
+  const onClick = async () => {
+    if (!home) {
+      navigateApp("/notes");
+      return;
+    }
+    if (busy) return;
+    setBusy(true);
+    const r = await notesApi.create({});
+    setBusy(false);
+    if (r.ok) {
+      notesStore.upsert(metaOf(r.data.page));
+      navigateApp(`/notes/${r.data.page.id}`);
+    } else {
+      showToast({ message: r.kind === "offline" ? "You're offline, so a new page can't be made just now." : "Couldn't make a new page." });
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={() => void onClick()}
+      aria-label={home ? "New page" : "Notes"}
+      data-track={home ? "notes-fab-new" : "notes-fab-open"}
+      className="anim-pop fixed right-4 z-40 grid size-12 place-items-center rounded-2xl border border-line bg-card text-ink shadow-lg shadow-ink/15 transition-transform active:scale-95 md:hidden"
+      style={{ bottom: lifted ? "calc(9.25rem + env(safe-area-inset-bottom))" : "calc(5.25rem + env(safe-area-inset-bottom))" }}
+    >
+      {busy ? (
+        <span className="size-4 animate-spin rounded-full border-2 border-ink-faint border-t-sun" aria-hidden />
+      ) : home ? (
+        <IconPlus size={20} className="text-sun-deep" />
+      ) : (
+        <IconNotes size={20} className="text-sun-deep" />
+      )}
+    </button>
   );
 }
 

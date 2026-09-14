@@ -1,23 +1,33 @@
 /**
  * The journal's content model, shared by the server, the editor and the export.
  *
- * Pure on purpose — no database, no DOM — so the rules that decide what the API
- * will store are the same rules that decide what the word count says and what
- * the Markdown export writes. They cannot disagree, because there is only one.
- *
- * Pages are stored as the editor's own JSON rather than HTML. HTML would have
- * to be sanitised on every read, forever; a document tree is checked once, on
- * the way in, against a short list of things a journal page can contain.
+ * The document rules every editor shares live in doc-model; this file adds what
+ * only a diary has — the weather, the day a page belongs to, the timestamp
+ * divider — and the short list of blocks a journal page may contain.
  */
 
-export type JMark = { type: string; attrs?: Record<string, unknown> };
-export type JNode = {
-  type: string;
-  attrs?: Record<string, unknown>;
-  content?: JNode[];
-  text?: string;
-  marks?: JMark[];
-};
+import {
+  BASE_MARKS,
+  BASE_NODES,
+  blocksToMarkdown,
+  createNormalizer,
+  escapeMd,
+  type JNode,
+} from "./doc-model";
+
+export {
+  countWords,
+  docToText,
+  EMPTY_DOC,
+  HIGHLIGHTS,
+  highlightVar,
+  previewOf,
+  safeHref,
+  withTrailingParagraph,
+  type HighlightName,
+  type JMark,
+  type JNode,
+} from "./doc-model";
 
 /* ------------------------------------------------------------------ mood */
 
@@ -112,25 +122,11 @@ export type JournalMemories = {
   yearsAgo: JournalSummary[];
 };
 
-/* ------------------------------------------------------------ highlights */
-
-/**
- * Highlights are stored as CSS variables, not colours. A hex picked on a light
- * theme is a glare on a dark one; a variable is redefined per theme, so an old
- * page opened in dark mode highlights correctly without being rewritten.
- */
-export const HIGHLIGHTS = ["sun", "amber", "rose", "lilac", "sky", "moss"] as const;
-export type HighlightName = (typeof HIGHLIGHTS)[number];
-export const highlightVar = (name: HighlightName) => `var(--hl-${name})`;
-const HIGHLIGHT_RE = new RegExp(`^var\\(--hl-(${HIGHLIGHTS.join("|")})\\)$`);
-
 /* -------------------------------------------------------------- limits */
 
 export const TITLE_MAX = 140;
 /** Serialised JSON. A long novel chapter is ~150KB; this is generous, not unbounded. */
 export const DOC_MAX_BYTES = 400_000;
-const DOC_MAX_DEPTH = 24;
-const DOC_MAX_NODES = 25_000;
 
 export class JournalContentError extends Error {
   constructor(message: string) {
@@ -141,189 +137,22 @@ export class JournalContentError extends Error {
 
 /* ------------------------------------------------------------ sanitiser */
 
-const isObj = (v: unknown): v is Record<string, unknown> =>
-  typeof v === "object" && v !== null && !Array.isArray(v);
-
-function int(v: unknown, min: number, max: number, fallback: number): number {
-  return typeof v === "number" && Number.isInteger(v) && v >= min && v <= max ? v : fallback;
-}
-
-/**
- * Only http, https and mailto survive. Everything else — javascript:, data:,
- * vbscript:, a relative path that resolves somewhere surprising — is dropped,
- * and the words it was attached to stay as plain text.
- */
-export function safeHref(v: unknown): string | null {
-  if (typeof v !== "string") return null;
-  const s = v.trim();
-  if (!s || s.length > 2048) return null;
-  try {
-    const u = new URL(s);
-    return u.protocol === "http:" || u.protocol === "https:" || u.protocol === "mailto:" ? u.toString() : null;
-  } catch {
-    return null;
-  }
-}
-
-type AttrRule = ((a: Record<string, unknown>) => Record<string, unknown>) | null;
-
-/** Every block and inline node a page may hold, and the attributes each keeps. */
-const NODES: Record<string, AttrRule> = {
-  doc: null,
-  paragraph: null,
-  text: null,
-  hardBreak: null,
-  horizontalRule: null,
-  bulletList: null,
-  listItem: null,
-  taskList: null,
-  blockquote: null,
-  heading: (a) => ({ level: int(a.level, 1, 3, 2) }),
-  orderedList: (a) => ({
-    start: int(a.start, 1, 99_999, 1),
-    type: typeof a.type === "string" && ["1", "a", "A", "i", "I"].includes(a.type) ? a.type : null,
-  }),
-  taskItem: (a) => ({ checked: a.checked === true }),
-  codeBlock: (a) => ({
-    language: typeof a.language === "string" && /^[a-z0-9+#.-]{1,24}$/i.test(a.language) ? a.language : null,
-  }),
-  // a callout carries one emoji; anything longer is a smuggled string
-  callout: (a) => ({
-    emoji: typeof a.emoji === "string" && a.emoji.length > 0 && a.emoji.length <= 16 ? a.emoji : "💭",
-  }),
-  // the divider a page gets when you come back to it later in the day
-  entryTime: (a) => ({ time: typeof a.time === "string" && TIME_RE.test(a.time) ? a.time : "00:00" }),
-};
-
-/** Marks, and a rule per mark. A rule returning null drops the mark but keeps the text. */
-const MARKS: Record<string, ((a: Record<string, unknown>) => Record<string, unknown> | null) | null> = {
-  bold: null,
-  italic: null,
-  underline: null,
-  strike: null,
-  code: null,
-  highlight: (a) => ({ color: typeof a.color === "string" && HIGHLIGHT_RE.test(a.color) ? a.color : null }),
-  link: (a) => {
-    const href = safeHref(a.href);
-    return href ? { href, target: "_blank", rel: "noopener noreferrer nofollow", class: null } : null;
+/** Checks a journal page from the editor and rebuilds it from known parts. */
+export const normalizeDoc = createNormalizer({
+  nodes: {
+    ...BASE_NODES,
+    // the divider a page gets when you come back to it later in the day
+    entryTime: (a) => ({ time: typeof a.time === "string" && TIME_RE.test(a.time) ? a.time : "00:00" }),
   },
-};
-
-/**
- * Checks a page from the editor and rebuilds it from known parts.
- *
- * Unknown blocks are refused rather than silently dropped: the editor cannot
- * produce one, so meeting one means a client that is lying, and quietly
- * deleting part of someone's diary would be the worse failure. Unknown
- * attributes, by contrast, are just not copied — they carry no words.
- */
-export function normalizeDoc(input: unknown): JNode {
-  if (!isObj(input) || input.type !== "doc") {
-    throw new JournalContentError("That page isn't a document.");
-  }
-  if (JSON.stringify(input).length > DOC_MAX_BYTES) {
-    throw new JournalContentError("That page is too long to save in one piece.");
-  }
-
-  let count = 0;
-  const walk = (n: unknown, depth: number): JNode | null => {
-    if (depth > DOC_MAX_DEPTH) throw new JournalContentError("That page is nested too deeply.");
-    if (++count > DOC_MAX_NODES) throw new JournalContentError("That page has too many pieces.");
-    if (!isObj(n) || typeof n.type !== "string") throw new JournalContentError("A block on that page is malformed.");
-    if (!(n.type in NODES)) throw new JournalContentError(`A page can't contain "${n.type}".`);
-
-    const out: JNode = { type: n.type };
-    const rule = NODES[n.type];
-    if (rule) out.attrs = rule(isObj(n.attrs) ? n.attrs : {});
-
-    if (n.type === "text") {
-      // ProseMirror refuses empty text nodes; an empty one is dropped, not an error
-      if (typeof n.text !== "string" || n.text.length === 0) return null;
-      out.text = n.text;
-      if (Array.isArray(n.marks)) {
-        const marks: JMark[] = [];
-        for (const m of n.marks) {
-          if (!isObj(m) || typeof m.type !== "string" || !(m.type in MARKS)) continue;
-          const markRule = MARKS[m.type];
-          if (!markRule) {
-            marks.push({ type: m.type });
-            continue;
-          }
-          const attrs = markRule(isObj(m.attrs) ? m.attrs : {});
-          if (attrs) marks.push({ type: m.type, attrs });
-        }
-        if (marks.length > 0) out.marks = marks;
-      }
-      return out;
-    }
-
-    if (Array.isArray(n.content)) {
-      const children = n.content.map((c) => walk(c, depth + 1)).filter((c): c is JNode => c !== null);
-      if (children.length > 0) out.content = children;
-    }
-    return out;
-  };
-
-  const doc = walk(input, 0) as JNode;
-  // a document with nothing in it still needs one paragraph to put a caret in
-  if (!doc.content || doc.content.length === 0) doc.content = [{ type: "paragraph" }];
-  return doc;
-}
-
-export const EMPTY_DOC: JNode = { type: "doc", content: [{ type: "paragraph" }] };
+  marks: BASE_MARKS,
+  maxBytes: DOC_MAX_BYTES,
+  maxDepth: 24,
+  maxNodes: 25_000,
+  fail: (message) => new JournalContentError(message),
+});
 
 export function cleanTitle(v: unknown): string {
   return typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, TITLE_MAX) : "";
-}
-
-/* ----------------------------------------------------------- plain text */
-
-const TEXTBLOCKS = new Set(["paragraph", "heading", "codeBlock"]);
-
-function inlineText(nodes: JNode[] | undefined): string {
-  let s = "";
-  for (const n of nodes ?? []) {
-    if (n.type === "text") s += n.text ?? "";
-    else if (n.type === "hardBreak") s += "\n";
-    else s += inlineText(n.content);
-  }
-  return s;
-}
-
-/**
- * The words on a page, one line per block. Timestamps and dividers are left
- * out: searching for "16:30" should find what you wrote about half four, not
- * every afternoon you came back to the page.
- */
-export function docToText(doc: JNode): string {
-  const lines: string[] = [];
-  const visit = (n: JNode) => {
-    if (TEXTBLOCKS.has(n.type)) {
-      lines.push(inlineText(n.content));
-      return;
-    }
-    for (const c of n.content ?? []) visit(c);
-  };
-  visit(doc);
-  return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
-}
-
-const CJK = /[぀-ヿ㐀-鿿豈-﫿가-힯]/g;
-
-/**
- * Words, counted the way a writer would. Scripts written without spaces —
- * Chinese, Japanese, Korean — count a character as a word, or a full page of
- * Japanese would report itself as one.
- */
-export function countWords(text: string): number {
-  const cjk = (text.match(CJK) ?? []).length;
-  const rest = text.replace(CJK, " ").match(/\S+/g)?.length ?? 0;
-  return cjk + rest;
-}
-
-export function previewOf(text: string, max = 180): string {
-  const flat = text.replace(/\s+/g, " ").trim();
-  return flat.length > max ? `${flat.slice(0, max - 1).trimEnd()}…` : flat;
 }
 
 /** Empty means nothing a person wrote: no words, no title, no mood. */
@@ -332,99 +161,6 @@ export function isEmptyPage(text: string, title: string, mood: Mood | null): boo
 }
 
 /* ------------------------------------------------------------- markdown */
-
-function escapeMd(s: string): string {
-  return s.replace(/([\\`*_~[\]])/g, "\\$1");
-}
-
-/** Marks wrap the words, never the spaces around them — `** word **` is not bold. */
-function wrap(t: string, fence: string): string {
-  const m = /^(\s*)([\s\S]*?)(\s*)$/.exec(t);
-  if (!m || !m[2]) return t;
-  return `${m[1]}${fence}${m[2]}${fence}${m[3]}`;
-}
-
-function mdInline(nodes: JNode[] | undefined): string {
-  let out = "";
-  for (const n of nodes ?? []) {
-    if (n.type === "hardBreak") {
-      out += "  \n";
-      continue;
-    }
-    if (n.type !== "text") continue;
-    const marks = n.marks ?? [];
-    const has = (type: string) => marks.some((m) => m.type === type);
-    let t: string;
-    if (has("code")) {
-      t = `\`${(n.text ?? "").replace(/`/g, "'")}\``;
-    } else {
-      t = escapeMd(n.text ?? "");
-      if (has("bold")) t = wrap(t, "**");
-      if (has("italic")) t = wrap(t, "_");
-      if (has("strike")) t = wrap(t, "~~");
-      if (has("highlight")) t = wrap(t, "==");
-    }
-    const link = marks.find((m) => m.type === "link");
-    const href = link ? safeHref(link.attrs?.href) : null;
-    out += href ? `[${t}](${href})` : t;
-  }
-  return out;
-}
-
-/** Stops a paragraph that begins with "#" or "-" turning into a heading or a list. */
-function guardLineStart(s: string): string {
-  return s.replace(/^(#{1,6}\s|[-+>]\s|\d+\.\s)/, "\\$1");
-}
-
-function mdListItem(item: JNode, indent: string, marker: string, shift: number): string {
-  const [first, ...rest] = item.content ?? [];
-  const lead = first && TEXTBLOCKS.has(first.type) ? mdInline(first.content) : "";
-  const pad = indent + " ".repeat(marker.length);
-  const tail = (first && !TEXTBLOCKS.has(first.type) ? [first, ...rest] : rest)
-    .map((b) => mdBlock(b, pad, shift))
-    .filter(Boolean);
-  return [`${indent}${marker}${lead}`, ...tail].join("\n");
-}
-
-function mdBlock(n: JNode, indent: string, shift: number): string {
-  switch (n.type) {
-    case "paragraph":
-      return indent + guardLineStart(mdInline(n.content));
-    case "heading": {
-      const level = Math.min(6, int(n.attrs?.level, 1, 3, 2) + shift);
-      return `${indent}${"#".repeat(level)} ${mdInline(n.content)}`;
-    }
-    case "blockquote":
-    case "callout": {
-      const inner = (n.content ?? []).map((b) => mdBlock(b, "", shift)).join("\n\n");
-      const emoji = n.type === "callout" ? `${String(n.attrs?.emoji ?? "💭")} ` : "";
-      return (emoji + inner)
-        .split("\n")
-        .map((line) => `${indent}> ${line}`.trimEnd())
-        .join("\n");
-    }
-    case "bulletList":
-      return (n.content ?? []).map((li) => mdListItem(li, indent, "- ", shift)).join("\n");
-    case "orderedList": {
-      const start = int(n.attrs?.start, 1, 99_999, 1);
-      return (n.content ?? []).map((li, i) => mdListItem(li, indent, `${start + i}. `, shift)).join("\n");
-    }
-    case "taskList":
-      return (n.content ?? [])
-        .map((li) => mdListItem(li, indent, li.attrs?.checked === true ? "- [x] " : "- [ ] ", shift))
-        .join("\n");
-    case "codeBlock": {
-      const lang = typeof n.attrs?.language === "string" ? n.attrs.language : "";
-      return `${indent}\`\`\`${lang}\n${inlineText(n.content)}\n${indent}\`\`\``;
-    }
-    case "horizontalRule":
-      return `${indent}---`;
-    case "entryTime":
-      return `${indent}_— ${String(n.attrs?.time ?? "")}_`;
-    default:
-      return (n.content ?? []).map((b) => mdBlock(b, indent, shift)).join("\n\n");
-  }
-}
 
 const LONG_WEEKDAY = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const LONG_MONTH = [
@@ -454,10 +190,7 @@ export function entryToMarkdown(
     .join(" · ");
   const parts = [`${"#".repeat(depth)} ${longDate(entry.date)}`, `_${meta}_`];
   if (entry.title) parts.push(`${"#".repeat(depth + 1)} ${escapeMd(entry.title)}`);
-  const body = (entry.doc.content ?? [])
-    .map((b) => mdBlock(b, "", depth + 1))
-    .filter((s) => s.trim().length > 0)
-    .join("\n\n");
+  const body = blocksToMarkdown(entry.doc.content, { shift: depth + 1 });
   if (body) parts.push(body);
   return parts.join("\n\n");
 }

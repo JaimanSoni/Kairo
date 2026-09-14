@@ -290,6 +290,8 @@ export type DeletionReport = {
   apiKeys: number;
   /** Journal pages — the most private thing an account holds goes with it. */
   journalEntries: number;
+  /** Notes pages, trash included. */
+  notes: number;
   /** Kept on purpose: money records outlive the account that made them. */
   paymentsKept: number;
 };
@@ -318,7 +320,7 @@ export async function deleteUserCompletely(idHex: string): Promise<DeletionRepor
     const user = await db.collection("users").findOne({ _id });
     if (!user) return null;
 
-    const [tasks, lists, pushSubs, magic, apiKeys, journal, sharedLists, sharedTasks, paymentsKept] =
+    const [tasks, lists, pushSubs, magic, apiKeys, journal, notes, sharedLists, sharedTasks, paymentsKept] =
       await Promise.all([
         db.collection("tasks").deleteMany({ userId: _id }),
         db.collection("lists").deleteMany({ userId: _id }),
@@ -328,6 +330,7 @@ export async function deleteUserCompletely(idHex: string): Promise<DeletionRepor
         // revoked key to be a record of
         db.collection("api_keys").deleteMany({ userId: _id }),
         db.collection("journal_entries").deleteMany({ userId: _id }),
+        db.collection("notes").deleteMany({ userId: _id }),
         // membership of other people's lists, and the tasks shared with them
         db.collection("lists").updateMany({ memberIds: _id }, { $pull: { memberIds: _id } as never }),
         db.collection("tasks").updateMany({ memberIds: _id }, { $pull: { memberIds: _id } as never }),
@@ -352,6 +355,7 @@ export async function deleteUserCompletely(idHex: string): Promise<DeletionRepor
       magicLinks: magic.deletedCount,
       apiKeys: apiKeys.deletedCount,
       journalEntries: journal.deletedCount,
+      notes: notes.deletedCount,
       paymentsKept,
     };
   });

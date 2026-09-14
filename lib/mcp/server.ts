@@ -42,6 +42,8 @@ Read before writing. get_overview answers "what's on today", "plan my day" and "
 
 The journal is private. If journal tools are available, read or write it only when the user asks you to, write in their words rather than yours, and never quote it back to them unprompted. Adding to a page appends under the current time; nothing is replaced unless they ask for that.
 
+Notes are the user's pages. If notes tools are available, save to notes only when the user asks, keep their structure (headings, lists, checkboxes) as Markdown, and add to an existing page with notes_append rather than making near-duplicates. When a title could mean several pages, ask which one.
+
 Be brief about it. The user asked for their day, not a report on the API.`;
 
 type Handler = (ctx: McpContext, params: Record<string, unknown>) => Promise<unknown>;

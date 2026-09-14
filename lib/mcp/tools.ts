@@ -59,6 +59,7 @@ import {
   type Args,
 } from "./args";
 import { JOURNAL_TOOLS } from "./journal-tools";
+import { NOTES_TOOLS } from "./notes-tools";
 
 /** A soft cap, the same six hours the day's capacity meter uses. */
 const DAY_CAPACITY_MIN = 6 * 60;
@@ -74,6 +75,8 @@ export type Tool = {
   annotations?: Record<string, boolean | string>;
   /** Journal tools exist only for keys created with the journal ticked. */
   journal?: boolean;
+  /** Notes tools exist only for keys created with notes ticked. */
+  notes?: boolean;
   run: (ctx: McpContext, scope: Scope, args: Args) => Promise<ToolResult>;
 };
 
@@ -1560,6 +1563,7 @@ export const TOOLS: Tool[] = [
   sendTaskCopyTool,
   assignTaskTool,
   ...JOURNAL_TOOLS,
+  ...NOTES_TOOLS,
 ];
 
 const BY_NAME = new Map(TOOLS.map((t) => [t.name, t]));
@@ -1576,7 +1580,9 @@ export function findTool(name: string): Tool | undefined {
  * the person watching, like the assistant failing.
  */
 export function toolsFor(ctx: McpContext) {
-  return TOOLS.filter((t) => (canWrite(ctx) || !t.write) && (!t.journal || ctx.includeJournal)).map((t) => ({
+  return TOOLS.filter(
+    (t) => (canWrite(ctx) || !t.write) && (!t.journal || ctx.includeJournal) && (!t.notes || ctx.includeNotes)
+  ).map((t) => ({
     name: t.name,
     title: t.title,
     description: t.description,
@@ -1594,6 +1600,7 @@ export async function runTool(
   if (!tool) throw new ToolFail(`No tool called "${name}".`);
   // a journal tool named by a connection without the journal is no tool at all
   if (tool.journal && !ctx.includeJournal) throw new ToolFail(`No tool called "${name}".`);
+  if (tool.notes && !ctx.includeNotes) throw new ToolFail(`No tool called "${name}".`);
   const scope = await loadScope(ctx);
   return tool.run(ctx, scope, args);
 }

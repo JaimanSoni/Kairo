@@ -20,6 +20,7 @@ import {
   longDate,
   MOODS,
   previewOf,
+  withTrailingParagraph,
   type JNode,
   type JournalEntry,
   type Mood,
@@ -36,8 +37,12 @@ import {
 import { hiddenListIds, useApp } from "../store";
 import { navigateApp } from "../app-views";
 import { Modal } from "../ui";
-import { AutoStamp, Callout, createSlashStore, EntryTime, SlashCommand, type SlashItem } from "./extensions";
-import { buildSlashItems, filterSlash, nowHHMM, SelectionBubble, SlashMenu, WritingDock } from "./menus";
+import { Callout } from "../editor/callout";
+import { createSlashStore, filterSlash, SlashCommand, type SlashItem } from "../editor/slash";
+import { SlashMenu } from "../editor/slash-menu";
+import { SelectionBubble } from "../editor/bubble";
+import { AutoStamp, EntryTime } from "./extensions";
+import { buildSlashItems, nowHHMM, WritingDock } from "./menus";
 import { JournalLockGate } from "./lock-gate";
 import { promptFor } from "./prompts";
 
@@ -65,7 +70,11 @@ const FONT_KEY = "kairo-journal-font";
 /* ---------------------------------------------------------------- helpers */
 
 function samePage(a: Page, b: Page): boolean {
-  return a.title === b.title && a.mood === b.mood && JSON.stringify(a.doc) === JSON.stringify(b.doc);
+  return (
+    a.title === b.title &&
+    a.mood === b.mood &&
+    JSON.stringify(withTrailingParagraph(a.doc)) === JSON.stringify(withTrailingParagraph(b.doc))
+  );
 }
 
 function pageOf(entry: JournalEntry | null): Page {
@@ -524,7 +533,8 @@ function PageSurface({
       SlashCommand.configure({ store: slashStore, filter: filterSlash }),
       AutoStamp.configure({ now: nowHHMM }),
     ],
-    content: loaded.page.doc,
+    // already in the shape the editor keeps, so opening a page never counts as an edit
+    content: withTrailingParagraph(loaded.page.doc),
     editorProps: {
       attributes: {
         class: "jr-prose",

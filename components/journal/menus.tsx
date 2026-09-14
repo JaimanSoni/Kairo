@@ -1,17 +1,14 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
-import { createPortal } from "react-dom";
-import { NodeSelection } from "@tiptap/pm/state";
 import { useEditorState, type Editor, type Range } from "@tiptap/react";
-import { BubbleMenu } from "@tiptap/react/menus";
-import { HIGHLIGHTS, highlightVar, type HighlightName } from "@/lib/journal-shared";
-import type { SlashItem, SlashStore } from "./extensions";
+import { Tool, useCoarsePointer, useKeyboardInset } from "../editor/bubble";
+import type { SlashItem } from "../editor/slash";
 
 /**
- * Everything that floats over the page: the slash menu, the selection bubble,
- * and the writing dock. None of it is visible until it's useful — a blank page
- * with a toolbar across the top is a form to fill in, not a place to write.
+ * The journal's own floating pieces: its slash items and the writing dock.
+ * The slash menu and selection bubble are shared with notes, in ../editor.
+ * None of it is visible until it's useful — a blank page with a toolbar across
+ * the top is a form to fill in, not a place to write.
  */
 
 export const nowHHMM = () => {
@@ -57,9 +54,9 @@ export function buildSlashItems(opts: {
     { id: "code", group: "Structure", icon: "</>", title: "Code", hint: "Monospaced, untouched", keywords: ["codeblock", "pre", "```"],
       run: (e, r) => clear(e, r).toggleCodeBlock().run() },
 
-    { id: "time", group: "Kairo", icon: "🕐", title: "The time", hint: "Mark when you came back", keywords: ["timestamp", "now", "clock", "stamp"],
+    { id: "time", group: "From Kairo", icon: "🕐", title: "The time", hint: "Mark when you came back", keywords: ["timestamp", "now", "clock", "stamp"],
       run: (e, r) => clear(e, r).insertEntryTime(nowHHMM()).run() },
-    { id: "prompt", group: "Kairo", icon: "?", title: "A prompt", hint: "A question to write toward", keywords: ["question", "inspire", "stuck", "idea"],
+    { id: "prompt", group: "From Kairo", icon: "?", title: "A prompt", hint: "A question to write toward", keywords: ["question", "inspire", "stuck", "idea"],
       run: (e, r) =>
         clear(e, r)
           .insertContent([
@@ -67,7 +64,7 @@ export function buildSlashItems(opts: {
             { type: "paragraph" },
           ])
           .run() },
-    { id: "good", group: "Kairo", icon: "3", title: "Three good things", hint: "Small, ordinary, true", keywords: ["gratitude", "good", "three", "list"],
+    { id: "good", group: "From Kairo", icon: "3", title: "Three good things", hint: "Small, ordinary, true", keywords: ["gratitude", "good", "three", "list"],
       run: (e, r) =>
         clear(e, r)
           .insertContent([
@@ -75,7 +72,7 @@ export function buildSlashItems(opts: {
             { type: "orderedList", content: [{ type: "listItem", content: [{ type: "paragraph" }] }] },
           ])
           .run() },
-    { id: "wins", group: "Kairo", icon: "✓", title: "What I finished", hint: "Pull in this day's wins from Kairo", keywords: ["wins", "done", "tasks", "log", "finished"],
+    { id: "wins", group: "From Kairo", icon: "✓", title: "What I finished", hint: "Pull in this day's wins from Kairo", keywords: ["wins", "done", "tasks", "log", "finished"],
       run: async (e, r) => {
         clear(e, r).run();
         const lines = await opts.wins();
@@ -108,323 +105,7 @@ export function buildSlashItems(opts: {
   ];
 }
 
-export function filterSlash(items: SlashItem[], query: string): SlashItem[] {
-  const q = query.toLowerCase().trim();
-  if (!q) return items;
-  return items.filter((i) => i.title.toLowerCase().includes(q) || i.keywords.some((k) => k.startsWith(q)));
-}
-
-/* ------------------------------------------------------------- slash menu */
-
-export function SlashMenu({ store }: { store: SlashStore }) {
-  const s = useSyncExternalStore(store.subscribe, store.get, store.get);
-  const ref = useRef<HTMLDivElement>(null);
-
-  // Placed by writing to the node, not by state: the position is a fact about
-  // the DOM, and routing it through a render would draw the menu once in the
-  // wrong place before correcting itself.
-  useLayoutEffect(() => {
-    const el = ref.current;
-    const rect = s.rect?.();
-    if (!el || !rect) return;
-    const vv = window.visualViewport;
-    const bottom = vv ? vv.height + vv.offsetTop : window.innerHeight;
-    const h = el.offsetHeight;
-    const w = el.offsetWidth;
-    let top = rect.bottom + 8;
-    if (top + h > bottom - 8) top = Math.max(8, rect.top - h - 8);
-    const left = Math.max(8, Math.min(rect.left - 12, window.innerWidth - w - 8));
-    el.style.top = `${top}px`;
-    el.style.left = `${left}px`;
-    el.style.visibility = "visible";
-    el.querySelector<HTMLElement>(`[data-index="${s.index}"]`)?.scrollIntoView({ block: "nearest" });
-  }, [s]);
-
-  if (!s.open || s.hidden) return null;
-
-  let n = -1;
-  const groups = (["Write", "Structure", "Kairo"] as const)
-    .map((g) => ({ g, items: s.items.filter((i) => i.group === g) }))
-    .filter((x) => x.items.length > 0);
-
-  return createPortal(
-    <div
-      ref={ref}
-      role="listbox"
-      aria-label="Insert a block"
-      style={{ position: "fixed", top: 0, left: 0, visibility: "hidden" }}
-      className="anim-pop no-scrollbar z-[80] max-h-[min(22rem,60vh)] w-72 overflow-y-auto rounded-2xl border border-line bg-card/95 p-1.5 shadow-2xl shadow-ink/10 backdrop-blur"
-      onMouseDown={(e) => e.preventDefault() /* keep the caret in the page */}
-    >
-      {s.items.length === 0 ? (
-        <p className="px-3 py-3 text-sm text-ink-faint">No blocks match &ldquo;{s.query}&rdquo;</p>
-      ) : (
-        groups.map(({ g, items }) => (
-          <div key={g} className="mb-1 last:mb-0">
-            <div className="px-2.5 pb-1 pt-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-ink-faint">
-              {g === "Kairo" ? "From Kairo" : g}
-            </div>
-            {items.map((item) => {
-              n++;
-              const i = n;
-              const active = i === s.index;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  role="option"
-                  aria-selected={active}
-                  data-index={i}
-                  onMouseEnter={() => store.set({ index: i })}
-                  onClick={() => s.pick?.(item)}
-                  className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors ${
-                    active ? "bg-sun-soft" : "hover:bg-paper-deep"
-                  }`}
-                >
-                  <span
-                    className={`grid size-9 shrink-0 place-items-center rounded-lg border text-sm font-semibold ${
-                      active ? "border-sun/40 bg-card text-sun-deep" : "border-line bg-paper text-ink-soft"
-                    }`}
-                  >
-                    {item.icon}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium">{item.title}</span>
-                    <span className="block truncate text-xs text-ink-faint">{item.hint}</span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        ))
-      )}
-    </div>,
-    document.body
-  );
-}
-
-/* ------------------------------------------------------ selection bubble */
-
-function Tool({
-  active,
-  label,
-  onClick,
-  children,
-  className = "",
-}: {
-  active?: boolean;
-  label: string;
-  onClick: () => void;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      aria-pressed={active}
-      title={label}
-      onMouseDown={(e) => e.preventDefault()}
-      onClick={onClick}
-      className={`grid h-8 min-w-8 place-items-center rounded-lg px-1.5 text-sm transition-colors ${
-        active ? "bg-sun-soft text-sun-deep" : "text-ink-soft hover:bg-paper-deep hover:text-ink"
-      } ${className}`}
-    >
-      {children}
-    </button>
-  );
-}
-
-/** Adds a scheme a person left off, and refuses anything that isn't a web or mail link. */
-function normaliseUrl(raw: string): string | null {
-  const s = raw.trim();
-  if (!s) return null;
-  const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(s) ? s : s.includes("@") && !s.includes("/") ? `mailto:${s}` : `https://${s}`;
-  try {
-    const u = new URL(withScheme);
-    return ["http:", "https:", "mailto:"].includes(u.protocol) ? u.toString() : null;
-  } catch {
-    return null;
-  }
-}
-
-export function SelectionBubble({ editor }: { editor: Editor }) {
-  const on = useEditorState({
-    editor,
-    selector: ({ editor: e }) => ({
-      bold: e.isActive("bold"),
-      italic: e.isActive("italic"),
-      underline: e.isActive("underline"),
-      strike: e.isActive("strike"),
-      h1: e.isActive("heading", { level: 1 }),
-      h2: e.isActive("heading", { level: 2 }),
-      quote: e.isActive("blockquote"),
-      link: e.isActive("link"),
-      highlight: (e.getAttributes("highlight").color as string | undefined) ?? (e.isActive("highlight") ? "default" : null),
-      href: (e.getAttributes("link").href as string | undefined) ?? "",
-    }),
-  });
-  const [linking, setLinking] = useState(false);
-  const [url, setUrl] = useState("");
-  const [bad, setBad] = useState(false);
-
-  const applyLink = () => {
-    if (!url.trim()) {
-      editor.chain().focus().extendMarkRange("link").unsetLink().run();
-      setLinking(false);
-      return;
-    }
-    const href = normaliseUrl(url);
-    if (!href) {
-      setBad(true);
-      return;
-    }
-    editor.chain().focus().extendMarkRange("link").setLink({ href }).run();
-    setLinking(false);
-  };
-
-  return (
-    <BubbleMenu
-      editor={editor}
-      shouldShow={({ editor: e, state, from, to }) =>
-        from !== to && !e.isActive("codeBlock") && !(state.selection instanceof NodeSelection)
-      }
-      className="z-[75]"
-    >
-      <div className="anim-pop flex items-center gap-0.5 rounded-xl border border-line bg-card/95 p-1 shadow-xl shadow-ink/10 backdrop-blur">
-        {linking ? (
-          <form
-            className="flex items-center gap-1"
-            onSubmit={(e) => {
-              e.preventDefault();
-              applyLink();
-            }}
-          >
-            <input
-              autoFocus
-              value={url}
-              onChange={(e) => {
-                setUrl(e.target.value);
-                setBad(false);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") {
-                  e.preventDefault();
-                  setLinking(false);
-                  editor.commands.focus();
-                }
-              }}
-              placeholder="Paste a link"
-              aria-label="Link address"
-              className={`h-8 w-56 rounded-lg border bg-paper px-2.5 text-sm outline-none ${bad ? "border-clay" : "border-line focus:border-sun"}`}
-            />
-            <Tool label="Apply link" onClick={applyLink}>
-              ↵
-            </Tool>
-          </form>
-        ) : (
-          <>
-            <Tool label="Bold" active={on.bold} onClick={() => editor.chain().focus().toggleBold().run()}>
-              <b>B</b>
-            </Tool>
-            <Tool label="Italic" active={on.italic} onClick={() => editor.chain().focus().toggleItalic().run()}>
-              <i className="font-display">I</i>
-            </Tool>
-            <Tool label="Underline" active={on.underline} onClick={() => editor.chain().focus().toggleUnderline().run()}>
-              <span className="underline underline-offset-2">U</span>
-            </Tool>
-            <Tool label="Strikethrough" active={on.strike} onClick={() => editor.chain().focus().toggleStrike().run()}>
-              <s>S</s>
-            </Tool>
-            <span className="mx-0.5 h-5 w-px bg-line" />
-            <Tool label="Big heading" active={on.h1} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}>
-              <span className="text-xs font-bold">H1</span>
-            </Tool>
-            <Tool label="Heading" active={on.h2} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>
-              <span className="text-xs font-bold">H2</span>
-            </Tool>
-            <Tool label="Quote" active={on.quote} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
-              ❝
-            </Tool>
-            <span className="mx-0.5 h-5 w-px bg-line" />
-            {HIGHLIGHTS.map((name: HighlightName) => {
-              const color = highlightVar(name);
-              const active = on.highlight === color;
-              return (
-                <button
-                  key={name}
-                  type="button"
-                  aria-label={`Highlight ${name}`}
-                  title={`Highlight`}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() =>
-                    active
-                      ? editor.chain().focus().unsetHighlight().run()
-                      : editor.chain().focus().setHighlight({ color }).run()
-                  }
-                  className="grid size-8 place-items-center rounded-lg hover:bg-paper-deep"
-                >
-                  <span
-                    className={`block size-4 rounded-full border border-ink/10 transition-transform ${active ? "scale-110 ring-2 ring-sun ring-offset-1 ring-offset-card" : ""}`}
-                    style={{ background: color }}
-                  />
-                </button>
-              );
-            })}
-            <span className="mx-0.5 h-5 w-px bg-line" />
-            <Tool
-              label={on.link ? "Edit link" : "Add link"}
-              active={on.link}
-              onClick={() => {
-                setUrl(on.href);
-                setBad(false);
-                setLinking(true);
-              }}
-            >
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
-                <path d="M6.5 9.5l3-3M7 4.5l1-1a2.8 2.8 0 014 4l-1 1M9 11.5l-1 1a2.8 2.8 0 01-4-4l1-1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-            </Tool>
-          </>
-        )}
-      </div>
-    </BubbleMenu>
-  );
-}
-
 /* ------------------------------------------------------------ writing dock */
-
-const noopSubscribe = () => () => {};
-
-/** How far the on-screen keyboard has pushed up from the bottom, in px. */
-function useKeyboardInset(): number {
-  return useSyncExternalStore(
-    (cb) => {
-      const vv = window.visualViewport;
-      vv?.addEventListener("resize", cb);
-      vv?.addEventListener("scroll", cb);
-      window.addEventListener("resize", cb);
-      return () => {
-        vv?.removeEventListener("resize", cb);
-        vv?.removeEventListener("scroll", cb);
-        window.removeEventListener("resize", cb);
-      };
-    },
-    () => {
-      const vv = window.visualViewport;
-      return vv ? Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)) : 0;
-    },
-    () => 0
-  );
-}
-
-function useCoarsePointer(): boolean {
-  return useSyncExternalStore(
-    noopSubscribe,
-    () => window.matchMedia("(pointer: coarse)").matches,
-    () => false
-  );
-}
 
 /**
  * The writing dock.

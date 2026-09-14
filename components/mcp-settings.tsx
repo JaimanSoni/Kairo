@@ -20,6 +20,7 @@ type KeyInfo = {
   scope: "read" | "write";
   includeLocked: boolean;
   includeJournal: boolean;
+  includeNotes: boolean;
   timezone: string;
   createdAt: string;
   lastUsedAt: string | null;
@@ -114,6 +115,7 @@ function ConnectionsModal({ onClose }: { onClose: () => void }) {
   const [scope, setScope] = useState<"read" | "write">("write");
   const [includeLocked, setIncludeLocked] = useState(false);
   const [includeJournal, setIncludeJournal] = useState(false);
+  const [includeNotes, setIncludeNotes] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   /** The one and only time this value exists outside the assistant. */
@@ -172,6 +174,7 @@ function ConnectionsModal({ onClose }: { onClose: () => void }) {
           scope,
           includeLocked,
           includeJournal,
+          includeNotes,
           // the zone this browser is in, so an assistant with no clock of ours
           // still knows when "today" starts for you
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -336,6 +339,22 @@ function ConnectionsModal({ onClose }: { onClose: () => void }) {
                 </span>
               </label>
 
+              <label className="mt-2 flex items-start gap-2 text-xs text-ink-soft">
+                <input
+                  type="checkbox"
+                  checked={includeNotes}
+                  onChange={(e) => setIncludeNotes(e.target.checked)}
+                  className="mt-0.5 size-3.5 accent-current"
+                />
+                <span>
+                  Include notes
+                  <span className="block text-ink-faint">
+                    Off by default. Lets this assistant search and read your notes, make new pages and
+                    add to existing ones when you ask. It can&apos;t delete or rewrite a page.
+                  </span>
+                </span>
+              </label>
+
               <div className="mt-4 flex gap-2">
                 <button
                   onClick={create}
@@ -378,6 +397,7 @@ function ConnectionsModal({ onClose }: { onClose: () => void }) {
                       {k.scope === "read" ? "read only" : "read & write"}
                       {k.includeLocked ? " · locked lists" : ""}
                       {k.includeJournal ? " · journal" : ""}
+                      {k.includeNotes ? " · notes" : ""}
                       {" · "}
                       {fmtWhen(k.lastUsedAt)}
                       {" · added "}
