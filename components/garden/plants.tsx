@@ -589,6 +589,70 @@ const SPECIES_DRAW: Record<SpeciesId, (dr: Draw) => React.ReactNode> = {
   lotus: Lotus,
 };
 
+const FRUIT_LOOK: Record<SpeciesId, { color: string; shape: "round" | "oval" | "drop" | "berry"; pair?: boolean }> = {
+  sunflower: { color: "#6b4a2e", shape: "drop" },
+  tulip: { color: "#d9a066", shape: "drop" },
+  lavender: { color: "#7e57c2", shape: "oval" },
+  rose: { color: "#e8743b", shape: "oval" },
+  cactus: { color: "#d6336c", shape: "oval" },
+  bonsai: { color: "#8a5a3b", shape: "oval" },
+  apple: { color: "#e53935", shape: "round" },
+  lemon: { color: "#f2c230", shape: "oval" },
+  cherry: { color: "#c2185b", shape: "round", pair: true },
+  strawberry: { color: "#e53950", shape: "berry" },
+  monstera: { color: "#d9b84f", shape: "oval" },
+  lotus: { color: "#7fb45f", shape: "round" },
+};
+
+/**
+ * A species' fruit on its own, drawn like the fruit on the plant: for the
+ * basket, the pick buttons and anywhere fruit is counted.
+ */
+export function FruitGlyph({ species, size = 20, golden = false, className = "" }: { species: SpeciesId; size?: number; golden?: boolean; className?: string }) {
+  const uid = useId().replace(/:/g, "");
+  const look = FRUIT_LOOK[species] ?? FRUIT_LOOK.apple;
+  const paint = golden ? `url(#fg-${uid})` : look.color;
+  const one = (cx: number, cy: number, r: number) =>
+    look.shape === "oval" ? (
+      <ellipse cx={cx} cy={cy} rx={r * 0.8} ry={r * 1.05} fill={paint} />
+    ) : look.shape === "drop" ? (
+      <path d={`M${cx} ${cy - r * 1.2} C ${cx + r} ${cy - r * 0.2}, ${cx + r} ${cy + r}, ${cx} ${cy + r} C ${cx - r} ${cy + r}, ${cx - r} ${cy - r * 0.2}, ${cx} ${cy - r * 1.2} Z`} fill={paint} />
+    ) : look.shape === "berry" ? (
+      <path d={`M${cx} ${cy + r * 1.15} C ${cx - r * 1.1} ${cy + r * 0.2}, ${cx - r} ${cy - r * 0.9}, ${cx} ${cy - r * 0.7} C ${cx + r} ${cy - r * 0.9}, ${cx + r * 1.1} ${cy + r * 0.2}, ${cx} ${cy + r * 1.15} Z`} fill={paint} />
+    ) : (
+      <circle cx={cx} cy={cy} r={r} fill={paint} />
+    );
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} className={className} aria-hidden>
+      <defs>
+        <radialGradient id={`fg-${uid}`} cx="35%" cy="35%" r="70%">
+          <stop offset="0%" stopColor="#fff6c2" />
+          <stop offset="55%" stopColor="#ffcf3f" />
+          <stop offset="100%" stopColor="#d99a0b" />
+        </radialGradient>
+      </defs>
+      {look.pair ? (
+        <>
+          <path d="M8 13 C 9 8, 12 5, 15 3.5 M16 14 C 15.5 9, 15 6, 15 3.5" stroke="#5d8a4a" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+          {one(8, 15.5, 4.2)}
+          {one(16, 16.5, 4.2)}
+          <ellipse cx={6.6} cy={14} rx={1.1} ry={0.7} fill="#fff" opacity={0.45} />
+          <ellipse cx={14.6} cy={15} rx={1.1} ry={0.7} fill="#fff" opacity={0.45} />
+        </>
+      ) : (
+        <>
+          <path d="M12 7.5 C 12 5.6, 12.6 4.2, 13.6 3.2" stroke="#6b4a2e" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+          <path d="M13.2 5.2 C 15.2 3.4, 17.8 3.4, 19 4.4 C 17.6 6.2, 15.2 6.6, 13.2 5.2 Z" fill="#5fae5f" />
+          {one(12, 14.5, 6)}
+          {look.shape === "berry" &&
+            [[-2, -0.5], [1.8, 0.5], [0, 3], [-1.6, 3.4], [2.2, 3.2]].map(([a, b], k) => <circle key={k} cx={12 + a} cy={14.5 + b} r={0.55} fill="#fff3b0" opacity={0.9} />)}
+          {look.shape !== "berry" && <ellipse cx={9.8} cy={11.8} rx={1.7} ry={1.1} fill="#fff" opacity={0.42} />}
+        </>
+      )}
+    </svg>
+  );
+}
+
 /** A watering can, for the moment a plant is watered. */
 export function WateringCan({ size = 56 }: { size?: number }) {
   return (

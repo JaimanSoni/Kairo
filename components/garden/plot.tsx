@@ -2,18 +2,11 @@
 
 import { scheduleLabel, speciesOf, type HabitView } from "@/lib/habits-shared";
 import { navigateApp } from "../app-views";
+import { HABIT_TINT, HabitMark } from "./bits";
 import { Burst, Moment, WaterPour } from "./fx";
-import { Plant } from "./plants";
+import { IconDrop, IconFlame, IconMinus, IconSparkle, IconTick } from "./icons";
+import { FruitGlyph, Plant } from "./plants";
 import type { Moments, PlotInfo } from "./use-garden";
-
-const RING: Record<string, string> = {
-  sun: "#0c9384",
-  amber: "#d8a03e",
-  rose: "#d96354",
-  lilac: "#8d7bd4",
-  sky: "#4e93c9",
-  moss: "#4ca75b",
-};
 
 /** One plant on the ground: tap it to water, tap its sign to open it, tap ripe fruit to pick. */
 export function Plot({
@@ -60,13 +53,13 @@ export function Plot({
             className="h-auto w-[5.75rem] sm:w-[7rem]"
           />
         </span>
-        {/* one badge, top right: thirsty, counting, or done */}
+        {/* one badge, top right: done, counting, or thirsty */}
         {live.todayDone ? (
-          <span className="absolute right-0 top-3 grid size-7 place-items-center rounded-full bg-moss text-xs font-bold text-white shadow-md ring-2 ring-white/80" aria-hidden>
-            ✓
+          <span className="absolute right-0 top-3 grid size-7 place-items-center rounded-full bg-moss text-white shadow-md ring-2 ring-white/80" aria-hidden data-state="done">
+            <IconTick />
           </span>
         ) : counted && live.todayCount > 0 ? (
-          <span className="absolute right-0 top-3 grid size-8 place-items-center rounded-full bg-white shadow-md" aria-hidden>
+          <span className="absolute right-0 top-3 grid size-8 place-items-center rounded-full bg-white shadow-md" aria-hidden data-state="counting">
             <svg className="absolute inset-0" viewBox="0 0 32 32">
               <circle cx="16" cy="16" r="13" fill="none" stroke="#e3eef6" strokeWidth="3" />
               <circle
@@ -74,7 +67,7 @@ export function Plot({
                 cy="16"
                 r="13"
                 fill="none"
-                stroke={RING[habit.color] ?? RING.sky}
+                stroke={HABIT_TINT[habit.color] ?? HABIT_TINT.sky}
                 strokeWidth="3"
                 strokeLinecap="round"
                 strokeDasharray={`${progress * 81.7} 81.7`}
@@ -82,13 +75,13 @@ export function Plot({
                 className="transition-[stroke-dasharray] duration-500"
               />
             </svg>
-            <span className="relative text-[10px] font-bold text-ink">
+            <span className="relative text-[10px] font-bold tabular-nums text-[#1c2624]">
               {live.todayCount}/{habit.target}
             </span>
           </span>
         ) : thirsty ? (
-          <span className="gd-thirst absolute right-0 top-3 grid size-7 place-items-center rounded-full bg-white/90 text-sm shadow-md" aria-hidden>
-            💧
+          <span className="gd-thirst absolute right-0 top-3 grid size-7 place-items-center rounded-full bg-white text-sky shadow-md" aria-hidden data-state="thirsty">
+            <IconDrop size={14} />
           </span>
         ) : null}
         <Moment id={m.water} ms={1300}>
@@ -103,10 +96,13 @@ export function Plot({
         <button
           type="button"
           onClick={() => onPick(habit, golden > 0 ? "golden" : "fruit")}
-          className={`gd-pick absolute top-1 z-10 flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold shadow-lg ${golden > 0 ? "bg-[#ffd23f] text-[#6b4a00]" : "bg-white text-ink"}`}
+          className={`gd-pick absolute top-1 z-10 flex items-center gap-1 rounded-full py-1 pl-1.5 pr-2.5 text-[11px] font-semibold shadow-lg ${
+            golden > 0 ? "bg-[#ffd96a] text-[#5c4300]" : "bg-white text-[#1c2624]"
+          }`}
           aria-label={`Pick ${golden > 0 ? "a golden fruit" : `a ${speciesOf(habit.species).fruit.toLowerCase()}`} from ${habit.name}`}
         >
-          {golden > 0 ? "✨" : speciesOf(habit.species).fruitEmoji} Pick
+          {golden > 0 ? <IconSparkle size={13} /> : <FruitGlyph species={habit.species} size={15} />}
+          Pick
         </button>
       )}
 
@@ -116,17 +112,26 @@ export function Plot({
           e.preventDefault();
           navigateApp(`/garden/${habit.id}`);
         }}
-        className="-mt-3 flex max-w-[9.5rem] items-center gap-1 truncate rounded-full border border-[#e3cfae] bg-[#fbf1df] px-2.5 py-1 text-xs font-semibold text-[#5b4128] shadow-sm transition-transform hover:-translate-y-0.5"
+        className="-mt-3 max-w-[9.5rem] truncate rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-[#1c2624] shadow-sm transition-transform hover:-translate-y-0.5"
       >
-        <span aria-hidden>{habit.emoji}</span>
-        <span className="truncate">{habit.name}</span>
+        {habit.name}
       </a>
-      <div className="mt-1 flex items-center gap-2 text-[11px] font-bold text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
-        <span title={`${live.streak}-day streak`}>🔥 {live.streak}</span>
-        {live.drops > 0 && <span title={`${live.drops} dew ${live.drops === 1 ? "drop" : "drops"}`}>💧 {live.drops}</span>}
+      <div className="mt-1.5 flex items-center gap-2.5 text-[11px] font-semibold text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
+        <span className="flex items-center gap-0.5" title={`${live.streak}-day streak`}>
+          <IconFlame size={12} className="text-[#ffc59e]" />
+          <span className="tabular-nums" data-streak>
+            {live.streak}
+          </span>
+        </span>
+        {live.drops > 0 && (
+          <span className="flex items-center gap-0.5" title={`${live.drops} dew ${live.drops === 1 ? "drop" : "drops"}`}>
+            <IconDrop size={12} className="text-[#cfe9ff]" />
+            <span className="tabular-nums">{live.drops}</span>
+          </span>
+        )}
         {live.week && (
-          <span>
-            {live.week.done}/{live.week.times} wk
+          <span className="tabular-nums">
+            {live.week.done}/{live.week.times} this week
           </span>
         )}
       </div>
@@ -138,16 +143,15 @@ export function Plot({
 export function PlantRow({
   info,
   onWater,
-  compact = false,
 }: {
   info: PlotInfo;
   onWater: (h: HabitView, opts?: { date?: string; step?: 1 | -1 }) => void;
-  compact?: boolean;
 }) {
-  const { habit, live, stage, thirsty } = info;
+  const { habit, live, thirsty } = info;
   const counted = habit.target > 1;
+  const meta = live.week ? `${live.week.done} of ${live.week.times} this week` : live.dueToday ? scheduleLabel(habit.schedule) : "Resting today";
   return (
-    <li className="flex items-center gap-3 rounded-2xl border border-line bg-card px-3 py-2">
+    <li className="flex items-center gap-3 px-3 py-2.5">
       <a
         href={`/garden/${habit.id}`}
         onClick={(e) => {
@@ -156,39 +160,41 @@ export function PlantRow({
         }}
         className="flex min-w-0 flex-1 items-center gap-3"
       >
-        <span className="-my-2 shrink-0">
-          <Plant species={habit.species} stage={stage.index} health={live.health} size={compact ? 38 : 46} sway={false} ground="none" fit="tight" />
-        </span>
+        <HabitMark habit={habit} size={40} />
         <span className="min-w-0">
-          <span className="flex items-center gap-1.5 truncate text-sm font-semibold">
-            <span aria-hidden>{habit.emoji}</span>
-            <span className="truncate">{habit.name}</span>
-          </span>
-          <span className="block truncate text-xs text-ink-faint">
-            {live.week ? `${live.week.done} of ${live.week.times} this week` : live.dueToday ? scheduleLabel(habit.schedule) : "Resting today"}
-            {live.streak > 0 && ` · 🔥 ${live.streak}`}
-            {counted && ` · ${live.todayCount}/${habit.target}${habit.unit ? ` ${habit.unit}` : ""}`}
+          <span className="block truncate text-sm font-medium text-ink">{habit.name}</span>
+          <span className="flex items-center gap-2 truncate text-xs text-ink-faint">
+            <span className="truncate">{meta}</span>
+            {live.streak > 0 && (
+              <span className="flex shrink-0 items-center gap-0.5 text-clay">
+                <IconFlame size={11} />
+                <span className="tabular-nums">{live.streak}</span>
+              </span>
+            )}
           </span>
         </span>
       </a>
       {counted ? (
-        <span className="flex shrink-0 items-center gap-1">
+        <span className="flex shrink-0 items-center rounded-full border border-line bg-paper">
           <button
             type="button"
             onClick={() => onWater(habit, { step: -1 })}
             disabled={live.todayCount === 0}
             aria-label={`One less for ${habit.name}`}
-            className="grid size-8 place-items-center rounded-full border border-line text-ink-soft disabled:opacity-30"
+            className="grid size-8 place-items-center rounded-full text-ink-soft transition-colors hover:bg-paper-deep disabled:opacity-30"
           >
-            −
+            <IconMinus />
           </button>
+          <span className="min-w-12 text-center text-xs font-semibold tabular-nums text-ink">
+            {live.todayCount}/{habit.target}
+          </span>
           <button
             type="button"
             onClick={() => onWater(habit, { step: 1 })}
             aria-label={`One more for ${habit.name}`}
-            className={`grid size-9 place-items-center rounded-full text-base font-bold shadow-sm transition-transform active:scale-90 ${live.todayDone ? "bg-moss text-white" : "bg-sky text-white"}`}
+            className={`grid size-8 place-items-center rounded-full transition-colors ${live.todayDone ? "bg-moss text-white" : "bg-sky text-white hover:bg-sky/90"}`}
           >
-            {live.todayDone ? "✓" : "+"}
+            {live.todayDone ? <IconTick /> : <IconDrop size={14} />}
           </button>
         </span>
       ) : (
@@ -197,11 +203,11 @@ export function PlantRow({
           onClick={() => onWater(habit)}
           aria-label={live.todayDone ? `Unwater ${habit.name}` : `Water ${habit.name}`}
           aria-pressed={live.todayDone}
-          className={`grid size-10 shrink-0 place-items-center rounded-full text-lg shadow-sm transition-all active:scale-90 ${
-            live.todayDone ? "bg-moss text-white" : thirsty ? "border-2 border-sky bg-sky-soft text-sky" : "border border-line bg-card text-ink-faint"
+          className={`grid size-9 shrink-0 place-items-center rounded-full transition-all active:scale-90 ${
+            live.todayDone ? "bg-moss text-white" : thirsty ? "border border-sky/50 bg-sky-soft text-sky hover:bg-sky hover:text-white" : "border border-line bg-card text-ink-faint"
           }`}
         >
-          {live.todayDone ? "✓" : "💧"}
+          {live.todayDone ? <IconTick size={14} /> : <IconDrop size={15} />}
         </button>
       )}
     </li>

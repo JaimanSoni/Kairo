@@ -86,7 +86,7 @@ export function useGardenActions() {
       const log = gardenStore.logs(habit.id).get(date);
       // the journal plant is watered by writing; a stray tap shouldn't undo a page that was written
       if (habit.seedId === "journal" && habit.target === 1 && log?.done && !opts.step && !opts.fill) {
-        showToast({ message: "📔 This one waters itself when you write in your journal." });
+        showToast({ message: "This one waters itself when you write in your journal." });
         return;
       }
       let change: { delta?: number; count?: number };
@@ -121,20 +121,20 @@ export function useGardenActions() {
           bump(habit.id, "burst", true);
           plink(true);
           buzz([30, 40, 30, 40, 60]);
-          showToast({ message: `✨ A golden fruit ripened on ${habit.emoji} ${habit.name}. Tap it to pick.` });
+          showToast({ message: `A golden fruit ripened on ${habit.name}. Tap it to pick.` });
         } else if (events.grew) {
           bump(habit.id, "burst");
           plink(true);
           buzz([20, 30, 40]);
           const grown = stageOf(gardenStore.get(habit.id)?.growth ?? habit.growth + 1);
-          showToast({ message: `🌱 ${habit.name} grew: it's ${stagePhrase(grown.label)} now.` });
+          showToast({ message: `${habit.name} grew: it's ${stagePhrase(grown.label)} now.` });
         } else if (events.ripened) {
           bump(habit.id, "burst");
           plink(true);
-          showToast({ message: `${species.fruitEmoji} A ${species.fruit.toLowerCase()} is ripe on ${habit.name}. Tap it to pick.` });
+          showToast({ message: `${withArticle(species.fruit, true)} is ripe on ${habit.name}. Tap it to pick.` });
         } else if (events.streak > 0 && events.streak % DROP_EVERY === 0) {
           bump(habit.id, "burst");
-          showToast({ message: `🔥 ${events.streak} days in a row. You earned a dew drop 💧 — it covers a day you miss.` });
+          showToast({ message: `${events.streak} days in a row. You earned a dew drop: it covers a day you miss.` });
         } else if (date !== today) {
           showToast({ message: `Yesterday's watered. Your ${events.streak}-day streak is safe.` });
         }
@@ -156,7 +156,7 @@ export function useGardenActions() {
       buzz([15, 25, 15]);
       track("habit-harvest", { kind });
       const species = speciesOf(habit.species);
-      showToast({ message: kind === "golden" ? "✨ A golden fruit, into the basket." : `${species.fruitEmoji} Picked a ${species.fruit.toLowerCase()}. It's in your basket.` });
+      showToast({ message: kind === "golden" ? "A golden fruit, into the basket." : `Picked ${withArticle(species.fruit)}. It's in your basket.` });
     },
     [bump, showToast]
   );
@@ -171,8 +171,8 @@ export function useGardenActions() {
       gardenStore.put(r.data.habit);
       showToast(
         archived
-          ? { message: `${habit.emoji} ${habit.name} went to the compost.`, action: { label: "Undo", run: () => void compostBack(habit.id) } }
-          : { message: `${habit.emoji} ${habit.name} is growing again.` }
+          ? { message: `${habit.name} went to the compost.`, action: { label: "Undo", run: () => void compostBack(habit.id) } }
+          : { message: `${habit.name} is growing again.` }
       );
       return true;
     },
@@ -185,6 +185,13 @@ export function useGardenActions() {
 async function compostBack(id: string) {
   const r = await gardenApi.archive(id, false);
   if (r.ok) gardenStore.put(r.data.habit);
+}
+
+/** "an apple", "a lemon", "sunflower seeds": a fruit as a sentence says it. */
+function withArticle(fruit: string, capital = false): string {
+  const word = fruit.toLowerCase();
+  const phrase = /s$/.test(word) ? word : `${/^[aeiou]/.test(word) ? "an" : "a"} ${word}`;
+  return capital ? phrase[0].toUpperCase() + phrase.slice(1) : phrase;
 }
 
 function stagePhrase(label: string): string {

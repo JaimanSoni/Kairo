@@ -7,7 +7,8 @@ import { gardenApi, gardenStore } from "@/lib/habits-client";
 import { useApp } from "../store";
 import { navigateApp } from "../app-views";
 import { Plant } from "./plants";
-import { Avatar, BackLink, SectionTitle } from "./bits";
+import { Avatar, BackLink, HABIT_TINT, RankBadge, SectionTitle } from "./bits";
+import { IconFlame, IconTrophy, IconUsers } from "./icons";
 import { useGarden } from "./use-garden";
 
 /**
@@ -35,21 +36,23 @@ export function CommunityPage() {
   }, []);
 
   const mine = new Set(seeded.map((h) => h.seedId as string));
-  const order = [...SEEDS].sort((a, b) => Number(mine.has(b.id)) - Number(mine.has(a.id)) || (stats.find((s) => s.seedId === b.id)?.gardeners ?? 0) - (stats.find((s) => s.seedId === a.id)?.gardeners ?? 0));
+  const order = [...SEEDS].sort(
+    (a, b) => Number(mine.has(b.id)) - Number(mine.has(a.id)) || (stats.find((s) => s.seedId === b.id)?.gardeners ?? 0) - (stats.find((s) => s.seedId === a.id)?.gardeners ?? 0)
+  );
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-32 pt-6 sm:px-6">
       <BackLink href="/garden" label="Garden" />
-      <header className="anim-rise mb-5 mt-2">
+      <header className="anim-rise mb-6 mt-3">
         <h1 className="font-display text-4xl">Community</h1>
         <p className="mt-1 text-sm text-ink-soft">Streak leaderboards for every seed. Grow alongside people keeping the same habit.</p>
       </header>
 
       <GardenerCard key={gardener ? `${gardener.name}:${gardener.animal}:${gardener.public}` : "none"} gardener={gardener} />
 
-      <section className="mt-6">
+      <section className="mt-8">
         <SectionTitle>Boards</SectionTitle>
-        <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4 pb-2">
+        <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4 pb-2 sm:mx-0 sm:flex-wrap sm:px-0">
           {order.map((s) => (
             <button
               key={s.id}
@@ -59,37 +62,35 @@ export function CommunityPage() {
                 setSeed(s.id);
                 window.history.replaceState(null, "", `/garden/community?seed=${s.id}`);
               }}
-              className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
-                seed === s.id ? "border-ink bg-ink text-paper" : "border-line bg-card text-ink-soft hover:border-sun"
+              className={`flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-xs font-medium transition-colors ${
+                seed === s.id ? "border-ink bg-ink text-paper" : "border-line bg-card text-ink-soft hover:border-ink-faint hover:text-ink"
               }`}
             >
-              <span aria-hidden>{s.emoji}</span> {s.name}
-              {mine.has(s.id) && <span className="size-1.5 rounded-full bg-moss" aria-label="(growing)" />}
+              {mine.has(s.id) && <span className="size-1.5 rounded-full" style={{ background: HABIT_TINT[s.color] }} aria-label="(growing)" />}
+              {s.name}
             </button>
           ))}
         </div>
 
-        <div className="mt-2 inline-flex rounded-full border border-line bg-card p-0.5">
-          {(["global", "friends"] as const).map((s) => (
-            <button
-              key={s}
-              type="button"
-              aria-pressed={scope === s}
-              onClick={() => setScope(s)}
-              className={`rounded-full px-4 py-1 text-sm font-semibold ${scope === s ? "bg-sun text-on-accent" : "text-ink-soft"}`}
-            >
-              {s === "global" ? "Everyone" : "Friends"}
-            </button>
-          ))}
-        </div>
-
-        <BoardList key={`${seed}:${scope}`} seedId={seed} scope={scope} growing={mine.has(seed)} gardener={gardener} />
+        <BoardList key={`${seed}:${scope}`} seedId={seed} scope={scope} setScope={setScope} growing={mine.has(seed)} gardener={gardener} />
       </section>
     </div>
   );
 }
 
-function BoardList({ seedId, scope, growing, gardener }: { seedId: string; scope: "global" | "friends"; growing: boolean; gardener: Gardener | null }) {
+function BoardList({
+  seedId,
+  scope,
+  setScope,
+  growing,
+  gardener,
+}: {
+  seedId: string;
+  scope: "global" | "friends";
+  setScope: (s: "global" | "friends") => void;
+  growing: boolean;
+  gardener: Gardener | null;
+}) {
   const [board, setBoard] = useState<Board | null>(null);
   const [failed, setFailed] = useState(false);
   const seed = seedOf(seedId)!;
@@ -106,92 +107,116 @@ function BoardList({ seedId, scope, growing, gardener }: { seedId: string; scope
     };
   }, [seedId, scope, gardener?.public, gardener?.name, gardener?.animal]);
 
-  if (failed) return <p className="mt-4 text-sm text-ink-soft">The board didn&apos;t load. Try again in a moment.</p>;
-  if (!board) {
-    return (
-      <div className="mt-4 space-y-2">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="h-12 animate-pulse rounded-2xl bg-paper-deep" />
-        ))}
-      </div>
-    );
-  }
-
-  const me = board.me;
-  const above = me ? [...board.rows].reverse().find((r) => r.streak > me.streak) : null;
-  const showMeBelow = me && !board.rows.some((r) => r.me);
+  const me = board?.me ?? null;
+  const above = board && me ? [...board.rows].reverse().find((r) => r.streak > me.streak) : null;
+  const showMeBelow = Boolean(board && me && !board.rows.some((r) => r.me));
 
   return (
-    <div className="mt-4">
-      <div className="mb-3 flex items-center gap-3 rounded-2xl border border-line bg-card p-3">
-        <Plant species={seed.species} stage={5} size={52} sway={false} ground="none" />
+    <div className="mt-4 overflow-hidden rounded-2xl border border-line bg-card">
+      <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3">
+        <span
+          className="grid size-11 shrink-0 place-items-end justify-center overflow-hidden rounded-xl"
+          style={{ background: `color-mix(in srgb, ${HABIT_TINT[seed.color]} 14%, transparent)` }}
+        >
+          <Plant species={seed.species} stage={5} size={36} sway={false} ground="none" fit="snug" />
+        </span>
         <div className="min-w-0 flex-1">
-          <div className="truncate font-semibold">
-            {seed.emoji} {seed.name}
-          </div>
-          <div className="text-xs text-ink-faint">
-            {board.gardeners} public {board.gardeners === 1 ? "gardener" : "gardeners"}
-            {scope === "friends" ? " among people you share lists with" : ""}
+          <div className="truncate text-sm font-semibold">{seed.name}</div>
+          <div className="flex items-center gap-1 text-xs text-ink-faint">
+            <IconUsers size={12} />
+            {board ? `${board.gardeners} public ${board.gardeners === 1 ? "gardener" : "gardeners"}` : "…"}
           </div>
         </div>
+        <div className="inline-flex rounded-full border border-line bg-paper p-0.5">
+          {(["global", "friends"] as const).map((s) => (
+            <button
+              key={s}
+              type="button"
+              aria-pressed={scope === s}
+              onClick={() => setScope(s)}
+              className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${scope === s ? "bg-card text-ink shadow-sm" : "text-ink-faint hover:text-ink-soft"}`}
+            >
+              {s === "global" ? "Everyone" : "Friends"}
+            </button>
+          ))}
+        </div>
         {!growing && (
-          <button type="button" onClick={() => navigateApp(`/garden/seeds?plant=${seedId}`)} className="shrink-0 rounded-full bg-ink px-3 py-1.5 text-xs font-semibold text-paper">
+          <button type="button" onClick={() => navigateApp(`/garden/seeds?plant=${seedId}`)} className="h-8 shrink-0 rounded-full bg-ink px-3.5 text-xs font-semibold text-paper">
             Plant it
           </button>
         )}
       </div>
 
-      {me && (
-        <div className="anim-pop mb-3 rounded-2xl border border-sun/40 bg-sun-soft/60 px-4 py-3 text-sm">
-          <b>{gardener?.public ? `You're #${me.rank}` : `You'd be #${me.rank}`}</b> with a {me.streak}-day streak.{" "}
-          {above ? (
-            <>
-              {above.streak - me.streak + 1} more {above.streak - me.streak + 1 === 1 ? "day" : "days"} to pass <b>{above.name}</b>.
-            </>
-          ) : me.streak > 0 ? (
-            "Nobody's ahead of you. 👑"
-          ) : (
-            "Water today to get on the board."
-          )}
-          {!gardener?.public && <span className="block text-xs text-ink-soft">Only you can see this until you join the board above.</span>}
-        </div>
-      )}
-
-      {board.rows.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-line px-6 py-10 text-center">
-          <div className="text-3xl">🌱</div>
-          <p className="mt-2 text-sm text-ink-soft">
-            {scope === "friends" ? "None of the people you share with grow this publicly yet." : "No public gardeners here yet. The top spot is open."}
-          </p>
+      {failed ? (
+        <p className="px-4 py-6 text-sm text-ink-soft">The board didn&apos;t load. Try again in a moment.</p>
+      ) : !board ? (
+        <div className="space-y-2 p-4">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-10 animate-pulse rounded-xl bg-paper-deep" />
+          ))}
         </div>
       ) : (
-        <ol className="space-y-1.5">
-          {board.rows.map((r, i) => (
-            <li
-              key={`${i}-${r.name}`}
-              className={`flex items-center gap-3 rounded-2xl border px-3 py-2 ${r.me ? "border-sun bg-sun-soft" : "border-line bg-card"} ${r.rank <= 3 ? "shadow-sm" : ""}`}
-            >
-              <span className={`w-7 text-center font-display ${r.rank <= 3 ? "text-xl" : "text-sm text-ink-faint"}`}>{r.rank <= 3 ? ["🥇", "🥈", "🥉"][r.rank - 1] : r.rank}</span>
-              <Avatar animal={r.animal} size={34} />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-semibold">
-                  {r.name}
-                  {r.me && <span className="ml-1 text-xs font-normal text-sun-deep">(you)</span>}
-                </span>
-                <span className="block text-[11px] text-ink-faint">best {r.best}</span>
+        <>
+          {me && (
+            <div className="flex items-start gap-3 border-b border-line bg-sun-soft/40 px-4 py-3">
+              <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-card text-sun-deep shadow-sm">
+                <IconTrophy size={15} />
               </span>
-              <span className="text-base font-bold">🔥 {r.streak}</span>
-            </li>
-          ))}
-          {showMeBelow && (
-            <li className="flex items-center gap-3 rounded-2xl border border-dashed border-sun/60 px-3 py-2">
-              <span className="w-7 text-center text-sm text-ink-faint">{me!.rank}</span>
-              <Avatar animal={me!.animal} size={34} className="opacity-70" />
-              <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink-soft">{me!.name} (you, hidden)</span>
-              <span className="text-base font-bold text-ink-soft">🔥 {me!.streak}</span>
-            </li>
+              <p className="text-sm text-ink">
+                <b className="font-semibold">{gardener?.public ? `You're #${me.rank}` : `You'd be #${me.rank}`}</b> with a {me.streak}-day streak.{" "}
+                <span className="text-ink-soft">
+                  {above ? (
+                    <>
+                      {above.streak - me.streak + 1} more {above.streak - me.streak + 1 === 1 ? "day" : "days"} to pass {above.name}.
+                    </>
+                  ) : me.streak > 0 ? (
+                    "Nobody's ahead of you."
+                  ) : (
+                    "Water today to get on the board."
+                  )}
+                </span>
+                {!gardener?.public && <span className="mt-0.5 block text-xs text-ink-faint">Only you can see this until you join the boards.</span>}
+              </p>
+            </div>
           )}
-        </ol>
+
+          {board.rows.length === 0 && !showMeBelow ? (
+            <p className="px-4 py-8 text-center text-sm text-ink-soft">
+              {scope === "friends" ? "None of the people you share lists with grow this publicly yet." : "No public gardeners here yet. The top spot is open."}
+            </p>
+          ) : (
+            <ol className="divide-y divide-line">
+              {board.rows.map((r, i) => (
+                <li key={`${i}-${r.name}`} className={`flex items-center gap-3 px-4 py-2.5 ${r.me ? "bg-sun-soft/40" : ""}`}>
+                  <RankBadge rank={r.rank} />
+                  <Avatar animal={r.animal} size={32} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium">
+                      {r.name}
+                      {r.me && <span className="ml-1.5 text-xs font-normal text-ink-faint">(you)</span>}
+                    </span>
+                    <span className="block text-[11px] text-ink-faint">best {r.best}</span>
+                  </span>
+                  <span className="flex items-center gap-1 text-sm font-semibold tabular-nums">
+                    <IconFlame size={14} className="text-clay" />
+                    {r.streak}
+                  </span>
+                </li>
+              ))}
+              {showMeBelow && me && (
+                <li className="flex items-center gap-3 px-4 py-2.5">
+                  <RankBadge rank={me.rank} />
+                  <Avatar animal={me.animal} size={32} className="opacity-60" />
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink-soft">{me.name} (you, hidden)</span>
+                  <span className="flex items-center gap-1 text-sm font-semibold tabular-nums text-ink-soft">
+                    <IconFlame size={14} />
+                    {me.streak}
+                  </span>
+                </li>
+              )}
+            </ol>
+          )}
+        </>
       )}
     </div>
   );
@@ -222,15 +247,15 @@ function GardenerCard({ gardener }: { gardener: Gardener | null }) {
     }
     gardenStore.setGardener(r.data.gardener);
     setEditing(false);
-    showToast({ message: r.data.gardener.public ? `🏆 You're on the boards as ${r.data.gardener.name}.` : "You're hidden from the boards." });
+    showToast({ message: r.data.gardener.public ? `You're on the boards as ${r.data.gardener.name}.` : "You're hidden from the boards." });
   };
 
   if (gardener && !editing) {
     return (
-      <div className="flex items-center gap-3 rounded-2xl border border-line bg-card p-3">
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-card px-4 py-3">
         <Avatar animal={gardener.animal} size={44} />
         <div className="min-w-0 flex-1">
-          <div className="truncate font-semibold">{gardener.name}</div>
+          <div className="truncate text-sm font-semibold">{gardener.name}</div>
           <div className="text-xs text-ink-faint">{gardener.public ? "Shown on leaderboards" : "Hidden from leaderboards"}</div>
         </div>
         <button
@@ -240,11 +265,11 @@ function GardenerCard({ gardener }: { gardener: Gardener | null }) {
             setOpen(!gardener.public);
             void save({ name: gardener.name, animal: gardener.animal, public: !gardener.public });
           }}
-          className="rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-ink-soft hover:border-sun"
+          className="h-8 rounded-full border border-line bg-card px-3.5 text-xs font-semibold text-ink-soft transition-colors hover:border-ink-faint hover:text-ink"
         >
           {gardener.public ? "Hide me" : "Show me"}
         </button>
-        <button type="button" onClick={() => setEditing(true)} className="rounded-full px-2 py-1.5 text-xs font-semibold text-sun-deep">
+        <button type="button" onClick={() => setEditing(true)} className="h-8 rounded-full px-3 text-xs font-semibold text-sun-deep hover:bg-sun-soft">
           Edit
         </button>
       </div>
@@ -257,23 +282,23 @@ function GardenerCard({ gardener }: { gardener: Gardener | null }) {
         e.preventDefault();
         void save();
       }}
-      className="rounded-2xl border border-sun/40 bg-gradient-to-br from-sun-soft/70 to-card p-4"
+      className="rounded-2xl border border-line bg-card p-5"
     >
-      <h2 className="font-display text-xl">{gardener ? "Your gardener" : "Join the leaderboards"}</h2>
-      <p className="mt-0.5 text-xs text-ink-soft">Pick a name and an animal. That&apos;s all anyone sees — never your email or photo.</p>
-      <label className="mt-3 block">
+      <h2 className="font-display text-2xl">{gardener ? "Your gardener" : "Join the leaderboards"}</h2>
+      <p className="mt-1 text-sm text-ink-soft">Pick a name and an animal. That&apos;s all anyone sees: never your email or your photo.</p>
+      <label className="mt-4 block">
         <span className="text-xs font-semibold text-ink-soft">Gardener name</span>
         <input
           value={name}
           maxLength={24}
           onChange={(e) => setName(e.target.value)}
           placeholder="Sunny Fern"
-          className="mt-1 h-10 w-full rounded-xl border border-line bg-card px-3 text-sm outline-none focus:border-sun"
+          className="mt-1 h-10 w-full rounded-xl border border-line bg-paper px-3 text-sm outline-none focus:border-sun"
         />
       </label>
-      <fieldset className="mt-3">
+      <fieldset className="mt-4">
         <legend className="text-xs font-semibold text-ink-soft">Animal</legend>
-        <div className="mt-1 flex flex-wrap gap-2">
+        <div className="mt-1.5 flex flex-wrap gap-2">
           {ANIMALS.map((a) => (
             <button
               key={a}
@@ -281,14 +306,14 @@ function GardenerCard({ gardener }: { gardener: Gardener | null }) {
               aria-pressed={animal === a}
               aria-label={`Animal ${a}`}
               onClick={() => setAnimal(a)}
-              className={`rounded-full p-0.5 transition-transform ${animal === a ? "scale-110 ring-2 ring-sun" : "opacity-70 hover:opacity-100"}`}
+              className={`rounded-full p-0.5 transition-all ${animal === a ? "ring-2 ring-sun ring-offset-2 ring-offset-card" : "opacity-60 hover:opacity-100"}`}
             >
-              <Avatar animal={a} size={42} />
+              <Avatar animal={a} size={40} />
             </button>
           ))}
         </div>
       </fieldset>
-      <label className="mt-3 flex items-center gap-2 text-sm">
+      <label className="mt-4 flex items-center gap-2 text-sm text-ink-soft">
         <input type="checkbox" checked={open} onChange={(e) => setOpen(e.target.checked)} className="size-4 accent-[var(--color-sun)]" />
         Show me on leaderboards
       </label>
@@ -297,12 +322,12 @@ function GardenerCard({ gardener }: { gardener: Gardener | null }) {
           {error}
         </p>
       )}
-      <div className="mt-3 flex gap-2">
-        <button type="submit" disabled={busy} className="rounded-full bg-ink px-4 py-2 text-sm font-semibold text-paper disabled:opacity-60">
+      <div className="mt-4 flex gap-2">
+        <button type="submit" disabled={busy} className="h-9 rounded-full bg-ink px-5 text-sm font-semibold text-paper disabled:opacity-60">
           {busy ? "Saving…" : gardener ? "Save" : "Join"}
         </button>
         {gardener && (
-          <button type="button" onClick={() => setEditing(false)} className="rounded-full px-3 py-2 text-sm font-semibold text-ink-soft">
+          <button type="button" onClick={() => setEditing(false)} className="h-9 rounded-full px-4 text-sm font-semibold text-ink-soft hover:bg-paper-deep">
             Cancel
           </button>
         )}

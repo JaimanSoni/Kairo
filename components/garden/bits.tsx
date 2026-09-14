@@ -1,14 +1,44 @@
 "use client";
 
-import type { HabitView } from "@/lib/habits-shared";
+import { stageOf, type HabitColor, type HabitView } from "@/lib/habits-shared";
 import { navigateApp } from "../app-views";
+import { IconArrowLeft } from "./icons";
+import { Plant } from "./plants";
+
+/** The habit colours, as the tile tints and accents they become. */
+export const HABIT_TINT: Record<HabitColor, string> = {
+  sun: "#0c9384",
+  amber: "#d8a03e",
+  rose: "#d96354",
+  lilac: "#8d7bd4",
+  sky: "#4e93c9",
+  moss: "#4ca75b",
+};
 
 /** What watering yesterday would save. A weekly habit's last week may need more than one day. */
 export function rescueText(habit: HabitView, keeps: number): string {
   if (habit.schedule.kind === "weekly") {
-    return `Last week isn't kept yet, and yesterday still counts toward it. Water Sunday to help save your ${keeps}-week streak.`;
+    return `Last week isn't kept yet. Water Sunday to help save your ${keeps}-week streak.`;
   }
-  return `${habit.name} wasn't watered yesterday. Water it now and your ${keeps}-day streak lives on.`;
+  return `Missed yesterday. Water it now and your ${keeps}-day streak carries on.`;
+}
+
+/**
+ * A habit's mark: its own plant, on a tile tinted with its colour. The garden's
+ * answer to an emoji — every habit already has a face, and it's the one growing.
+ */
+export function HabitMark({ habit, size = 40, className = "" }: { habit: Pick<HabitView, "species" | "growth" | "color">; size?: number; className?: string }) {
+  const tint = HABIT_TINT[habit.color] ?? HABIT_TINT.sun;
+  const stage = Math.max(1, stageOf(habit.growth).index);
+  return (
+    <span
+      className={`relative grid shrink-0 place-items-center overflow-hidden rounded-xl ${className}`}
+      style={{ width: size, height: size, background: `color-mix(in srgb, ${tint} 13%, transparent)` }}
+      aria-hidden
+    >
+      <Plant species={habit.species} stage={stage} size={size * 0.78} sway={false} ground="none" fit="tight" />
+    </span>
+  );
 }
 
 export function BackLink({ href, label }: { href: string; label: string }) {
@@ -19,19 +49,38 @@ export function BackLink({ href, label }: { href: string; label: string }) {
         e.preventDefault();
         navigateApp(href);
       }}
-      className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-sm font-medium text-ink-soft transition-colors hover:bg-paper-deep hover:text-ink"
+      className="-ml-2 inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-sm font-medium text-ink-soft transition-colors hover:bg-paper-deep hover:text-ink"
     >
-      <span aria-hidden>←</span> {label}
+      <IconArrowLeft size={14} /> {label}
     </a>
   );
 }
 
 export function SectionTitle({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
   return (
-    <div className="mb-2 flex items-center justify-between gap-2">
-      <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-faint">{children}</h2>
+    <div className="mb-2.5 flex items-center justify-between gap-2">
+      <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-faint">{children}</h2>
       {action}
     </div>
+  );
+}
+
+/** A quiet pill: the same outline button Lists and Notes use in their headers. */
+export function PillLink({ href, icon, children, primary = false }: { href: string; icon?: React.ReactNode; children: React.ReactNode; primary?: boolean }) {
+  return (
+    <a
+      href={href}
+      onClick={(e) => {
+        e.preventDefault();
+        navigateApp(href);
+      }}
+      className={`flex h-9 items-center gap-1.5 rounded-full px-3.5 text-xs font-semibold transition-colors ${
+        primary ? "bg-ink text-paper hover:bg-ink/90" : "border border-line bg-card text-ink-soft hover:border-ink-faint hover:text-ink"
+      }`}
+    >
+      {icon}
+      {children}
+    </a>
   );
 }
 
@@ -43,11 +92,45 @@ export function Avatar({ animal, size = 32, className = "" }: { animal: string; 
   );
 }
 
-export function Stat({ value, label, tone = "" }: { value: React.ReactNode; label: string; tone?: string }) {
+export function Stat({ value, label, icon }: { value: React.ReactNode; label: string; icon?: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-line bg-card px-3 py-2.5">
-      <div className={`font-display text-2xl leading-none ${tone}`}>{value}</div>
-      <div className="mt-1 text-[11px] font-medium text-ink-faint">{label}</div>
+    <div className="rounded-2xl border border-line bg-card px-4 py-3">
+      <div className="flex items-center gap-1.5 text-ink-faint">
+        {icon}
+        <span className="text-[11px] font-medium">{label}</span>
+      </div>
+      <div className="font-display mt-1 text-[1.65rem] leading-none text-ink">{value}</div>
     </div>
+  );
+}
+
+/** A switch, for settings that are on or off. */
+export function Switch({ checked, onChange, label }: { checked: boolean; onChange: (on: boolean) => void; label: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={() => onChange(!checked)}
+      className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${checked ? "bg-sun" : "bg-line"}`}
+    >
+      <span className={`absolute left-0.5 top-0.5 size-5 rounded-full bg-card shadow-sm transition-transform ${checked ? "translate-x-4" : "translate-x-0"}`} />
+    </button>
+  );
+}
+
+const MEDAL = ["#d9a520", "#9aa7ad", "#c07b4a"];
+
+/** A rank on a board: the top three wear a quiet medal colour, the rest are just numbers. */
+export function RankBadge({ rank }: { rank: number }) {
+  const medal = rank <= 3 ? MEDAL[rank - 1] : null;
+  return (
+    <span
+      className={`grid size-7 shrink-0 place-items-center rounded-full text-xs font-bold tabular-nums ${medal ? "text-white" : "text-ink-faint"}`}
+      style={medal ? { background: medal } : undefined}
+    >
+      {rank}
+    </span>
   );
 }

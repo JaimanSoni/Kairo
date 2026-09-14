@@ -44,7 +44,7 @@ export async function scheduleHabitReminders(habit: Pick<HabitRecord, "_id" | "u
         habitId: habit._id,
         kind: "habit",
         fireAt: next.fireAt,
-        title: `${habit.emoji} ${habit.name}`,
+        title: habit.name,
         body: "Time to water it.",
         tag: `habit-${habit._id.toHexString()}`,
         url: `/garden/${habit._id.toHexString()}`,
@@ -102,7 +102,7 @@ export async function fireGardenPush(doc: Record<string, unknown>): Promise<void
       const count = view.todayCount && habit.target > 1 ? ` ${view.todayCount} of ${habit.target} so far.` : "";
       const streak = view.streak >= 2 ? ` Your ${view.streak}-day streak is growing.` : "";
       await sendToUser(userId, {
-        title: `${habit.emoji} ${habit.name}`,
+        title: habit.name,
         body: `Time to water it.${count}${streak}`,
         tag: `habit-${habit._id.toHexString()}`,
         url: `/garden/${habit._id.toHexString()}`,
@@ -130,7 +130,7 @@ export async function fireGardenPush(doc: Record<string, unknown>): Promise<void
     if (worst) {
       const others = habits.length > 1 ? " Your garden's waiting." : "";
       await sendToUser(userId, {
-        title: `${worst.habit.emoji} ${worst.habit.name} is thirsty`,
+        title: `${worst.habit.name} still needs water`,
         body: `Water it before bed to keep your ${worst.streak}-day streak.${others}`,
         tag: "garden-evening",
         url: `/garden/${worst.habit._id.toHexString()}`,

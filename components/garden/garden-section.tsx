@@ -53,10 +53,10 @@ export default function GardenSection() {
 
 function GuestGarden() {
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 pb-32 pt-6 sm:px-6">
-      <header className="anim-rise mb-4">
+    <div className="mx-auto w-full max-w-3xl px-4 pb-32 pt-8 sm:px-6">
+      <header className="anim-rise mb-6">
         <h1 className="font-display text-4xl">Garden</h1>
-        <p className="mt-1 text-sm text-ink-soft">Every habit is a seed. Keep it and it grows.</p>
+        <p className="mt-1 text-sm text-ink-soft">Every habit is a seed. Keep it, and it grows.</p>
       </header>
       <GardenScene weather="clear" thriving={3}>
         <div className="relative flex flex-col items-center px-6 pb-8 pt-2 text-center">
@@ -72,7 +72,7 @@ function GuestGarden() {
           <a
             href="/api/auth/google"
             data-track="guest-signin"
-            className="mt-4 flex items-center gap-2 rounded-full bg-white py-1.5 pl-1.5 pr-4 text-sm font-semibold text-ink shadow-lg transition-all hover:-translate-y-0.5"
+            className="mt-4 flex items-center gap-2 rounded-full bg-white py-1.5 pl-1.5 pr-4 text-sm font-semibold text-[#1c2624] shadow-lg transition-all hover:-translate-y-0.5"
           >
             <GoogleBadge size={24} /> Sign in to plant your garden
           </a>

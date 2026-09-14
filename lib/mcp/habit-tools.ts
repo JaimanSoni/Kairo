@@ -65,7 +65,6 @@ function shape(garden: Garden, h: HabitView, today: string) {
   return {
     habitId: h.id,
     name: h.name,
-    emoji: h.emoji,
     schedule: scheduleLabel(h.schedule),
     ...(h.target > 1 ? { target: h.target, unit: h.unit || null, todayCount: lv.todayCount } : {}),
     dueToday: lv.dueToday,
@@ -185,7 +184,6 @@ const habitCreate: Tool = {
   inputSchema: obj({
     seedId: { type: "string", enum: SEEDS.map((s) => s.id), description: "A seed from the catalogue." },
     name: { type: "string", maxLength: 60, description: "The habit, short: 'Read 10 pages'. Required without seedId." },
-    emoji: { type: "string", maxLength: 16 },
     schedule: {
       type: "object",
       properties: {
@@ -212,7 +210,6 @@ const habitCreate: Tool = {
         {
           seedId: seedId ?? null,
           name: args.name,
-          emoji: args.emoji,
           schedule: args.schedule,
           target: args.target,
           unit: args.unit,
