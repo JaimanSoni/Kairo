@@ -15,6 +15,7 @@ import { IdeaPicker, ideaLine, PlantSheet } from "./plant-sheet";
 import { GardenBed, GardenHud, PlantRow } from "./plot";
 import { GardenScene, type Weather } from "./scene";
 import { plotOf, useGarden, useGardenActions } from "./use-garden";
+import { ImmersiveGarden, useGardenView } from "./immersive";
 
 type Sheet = { seed?: Seed; name?: string };
 
@@ -29,6 +30,7 @@ export function GardenHome() {
   const minute = useClock();
   const params = useSearchParams();
   const [sheet, setSheet] = useState<Sheet | null>(null);
+  const view = useGardenView();
   // search's "New habit" arrives as ?new=1
   const askedNew = params.get("new") === "1";
   const open = sheet ?? (askedNew ? {} : null);
@@ -118,10 +120,21 @@ export function GardenHome() {
         </>
       ) : (
         <>
-          <section aria-label="Your garden">
+          <section className="relative" aria-label="Your garden">
             <GardenScene weather={weather} thriving={thriving} allDone={allDone} celebrate={celebrate} hud={<GardenHud done={doneToday} total={due.length} />}>
               <GardenBed plots={plots} moments={moments} onWater={(h) => void water(h)} />
             </GardenScene>
+            <button
+              type="button"
+              onClick={view.show}
+              className="gd-hud absolute right-3 top-3 z-10 flex h-9 items-center gap-1.5 rounded-full px-3.5 text-xs font-semibold text-white transition-transform hover:-translate-y-0.5 sm:right-4 sm:top-4"
+              data-open-garden
+            >
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden>
+                <path d="M9.5 2.5h4v4M6.5 13.5h-4v-4M13.5 2.5 9 7M2.5 13.5 7 9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Full screen
+            </button>
             <p className="mt-2 px-1 text-xs text-ink-faint">Tap a plant to mark it done. Each one grows as its habit gets stronger.</p>
           </section>
 
@@ -259,6 +272,7 @@ export function GardenHome() {
         </div>
       )}
 
+      {view.open && <ImmersiveGarden onClose={view.hide} />}
       {open && <PlantSheet key={open.seed?.id ?? open.name ?? "new"} seed={open.seed ?? null} name={open.name} onClose={closeSheet} />}
     </div>
   );

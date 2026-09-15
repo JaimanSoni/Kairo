@@ -134,7 +134,7 @@ function subscribeWide(cb: () => void) {
  * front and largest, later ones further back and smaller, each row offset
  * from the one in front so nothing hides behind anything.
  */
-export function GardenBed({ plots, moments, onWater }: { plots: PlotInfo[]; moments: Moments; onWater: (h: HabitView) => void }) {
+export function GardenBed({ plots, moments, onWater, scale = 1 }: { plots: PlotInfo[]; moments: Moments; onWater: (h: HabitView) => void; scale?: number }) {
   const wide = useSyncExternalStore(subscribeWide, () => window.matchMedia("(min-width: 640px)").matches, () => true);
   const perRow = wide ? 5 : 3;
   const rows: PlotInfo[][] = [];
@@ -144,7 +144,7 @@ export function GardenBed({ plots, moments, onWater }: { plots: PlotInfo[]; mome
     <div className="relative px-1 pb-6 pt-2 sm:px-4" data-garden-bed>
       {back.map((row, ri) => {
         const depth = back.length === 1 ? 1 : ri / (back.length - 1);
-        const size = Math.round(wide ? 80 + depth * 32 : 72 + depth * 22);
+        const size = Math.round((wide ? 80 + depth * 32 : 72 + depth * 22) * scale);
         const first = plots.indexOf(row[0]);
         return (
           <div

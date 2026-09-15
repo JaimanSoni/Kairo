@@ -1,23 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { navigateApp } from "../app-views";
-import { IconSprout, IconX } from "../ui";
-import { HABIT_TINT } from "./bits";
-import { Burst, Moment, WaterPour } from "./fx";
-import { IconFlame, IconTick } from "./icons";
+import { IconX } from "../ui";
+import { ImmersiveGarden, useGardenView } from "./immersive";
+import { IconTick } from "./icons";
 import { Plant } from "./plants";
-import { plotOf, useGarden, useGardenActions } from "./use-garden";
+import { GardenHud } from "./plot";
+import { GardenScene, type Weather } from "./scene";
+import { plotOf, useGarden, type PlotInfo } from "./use-garden";
+import { useClock } from "./fx";
 
 const HIDE_KEY = "kairo:garden-invite-hidden";
 
+function subscribeWide(cb: () => void) {
+  const mq = window.matchMedia("(min-width: 640px)");
+  mq.addEventListener("change", cb);
+  return () => mq.removeEventListener("change", cb);
+}
+
+/** Four arrows out: this opens bigger. */
+function IconExpand({ size = 13 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path d="M9.5 2.5h4v4M6.5 13.5h-4v-4M13.5 2.5 9 7M2.5 13.5 7 9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 /**
- * Habits, on Today: the ones due, one tap each. Kept small
- * so the day's tasks stay the main thing on the page.
+ * The garden, on Today: a small window onto it, with today's progress on
+ * the sky. Tapping it opens the whole garden, full screen, where habits are
+ * marked done by tapping their plants.
  */
 export default function TodayGardenStrip() {
   const { status, habits, today, guest } = useGarden();
-  const { moments, water } = useGardenActions();
+  const view = useGardenView();
+  const minute = useClock();
   const [inviteHidden, setInviteHidden] = useState(() => {
     try {
       return localStorage.getItem(HIDE_KEY) === "1";
@@ -31,14 +50,31 @@ export default function TodayGardenStrip() {
   if (habits.length === 0) {
     if (inviteHidden) return null;
     return (
-      <div className="anim-rise mb-5 flex items-center gap-3 rounded-2xl border border-line bg-card px-3 py-2.5">
-        <span className="grid size-10 shrink-0 place-items-end justify-center overflow-hidden rounded-xl bg-moss-soft">
-          <Plant species="sunflower" stage={2} size={32} sway={false} ground="none" fit="tight" />
-        </span>
-        <button type="button" onClick={() => navigateApp("/habits")} className="min-w-0 flex-1 text-left">
-          <span className="block text-sm font-medium">Build a habit alongside your tasks</span>
-          <span className="block truncate text-xs text-ink-faint">Pick something small, mark it done each day, and watch it get stronger.</span>
-        </button>
+      <section className="anim-rise relative mb-5" aria-label="Your garden">
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => navigateApp("/habits")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              navigateApp("/habits");
+            }
+          }}
+          className="gd-card group block cursor-pointer rounded-2xl outline-none transition-transform duration-300 hover:-translate-y-0.5 focus-visible:ring-4 focus-visible:ring-sun/40"
+          data-garden-invite
+        >
+          <GardenScene variant="mini" weather="clear" thriving={1}>
+            <div className="flex items-end justify-center gap-6 px-4 pb-3 pt-1">
+              {(["tulip", "sunflower", "lavender"] as const).map((s, i) => (
+                <Plant key={s} species={s} stage={i === 1 ? 2 : 0} size={i === 1 ? 58 : 48} phase={i} sway={i === 1} fit="snug" />
+              ))}
+            </div>
+          </GardenScene>
+          <span className="gd-hud absolute left-2.5 top-2.5 max-w-[calc(100%-3.5rem)] truncate rounded-full px-3 py-1.5 text-xs font-semibold text-white">
+            Build a habit alongside your tasks
+          </span>
+        </div>
         <button
           type="button"
           onClick={() => {
@@ -49,94 +85,74 @@ export default function TodayGardenStrip() {
               /* private mode: hidden for this visit */
             }
           }}
-          aria-label="Hide habits invite"
-          className="grid size-7 shrink-0 place-items-center rounded-full text-ink-faint hover:bg-paper-deep hover:text-ink"
+          aria-label="Hide garden invite"
+          className="gd-hud absolute right-2.5 top-2.5 grid size-7 place-items-center rounded-full text-white"
         >
-          <IconX size={14} />
+          <IconX size={13} />
         </button>
-      </div>
+      </section>
     );
   }
 
-  const plots = habits.map((h) => plotOf(h, today)).filter((p) => p.live.dueToday || p.live.todayDone);
-  if (plots.length === 0) return null;
-  const doneCount = plots.filter((p) => p.live.todayDone).length;
-  const all = doneCount === plots.length;
-  plots.sort((a, b) => Number(a.live.todayDone) - Number(b.live.todayDone));
+  const plots = habits.map((h) => plotOf(h, today));
+  const due = plots.filter((p) => p.live.dueToday || p.live.todayDone);
+  const doneToday = due.filter((p) => p.live.todayDone).length;
+  const allDone = due.length > 0 && doneToday === due.length;
+  const thriving = plots.filter((p) => p.live.health === "thriving").length;
+  const weather: Weather = due.length === 0 || allDone ? "clear" : doneToday > 0 || minute < 17 * 60 ? "partly" : "cloudy";
 
   return (
-    <section className="anim-rise mb-5" aria-label="Habits">
-      <div className="mb-2 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => navigateApp("/habits")}
-          className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-faint transition-colors hover:text-ink-soft"
-        >
-          <IconSprout size={13} />
-          Habits · {all ? "all done" : `${doneCount} of ${plots.length} done`}
-        </button>
-        <button type="button" onClick={() => navigateApp("/habits")} className="text-xs font-semibold text-sun-deep hover:underline">
-          Open
-        </button>
+    <section className="anim-rise mb-5" aria-label="Your garden">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={view.show}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            view.show();
+          }
+        }}
+        aria-label={`Open your garden. ${due.length ? `${doneToday} of ${due.length} habits done today.` : "Nothing due today."}`}
+        className="gd-card group relative block cursor-pointer rounded-2xl outline-none transition-transform duration-300 hover:-translate-y-0.5 focus-visible:ring-4 focus-visible:ring-sun/40"
+        data-garden-card
+      >
+        <GardenScene variant="mini" weather={weather} thriving={thriving} allDone={allDone} hud={<GardenHud done={doneToday} total={due.length} />}>
+          <MiniBed plots={plots} />
+        </GardenScene>
+        <span className="gd-hud gd-card-cta absolute right-2.5 top-2.5 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-white transition-transform">
+          <IconExpand /> Open garden
+        </span>
       </div>
-      <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
-        {plots.map((p) => {
-          const { habit, live, stage, streak } = p;
-          const m = moments[habit.id] ?? { water: 0, burst: 0 };
-          const counted = habit.target > 1;
-          const tint = HABIT_TINT[habit.color] ?? HABIT_TINT.sun;
-          return (
-            <div
-              key={habit.id}
-              data-strip-habit={habit.id}
-              className={`relative flex w-[5.75rem] shrink-0 flex-col items-center overflow-hidden rounded-2xl border pb-2 transition-colors ${
-                live.todayDone ? "border-moss/30 bg-moss-soft/50" : "border-line bg-card"
-              }`}
-            >
-              <button
-                type="button"
-                onClick={() => void water(habit, counted ? { step: 1 } : {})}
-                aria-label={live.todayDone && !counted ? `Unmark ${habit.name}` : counted ? `One more for ${habit.name}` : `Mark ${habit.name} done`}
-                className="relative flex w-full justify-center pt-1"
-                style={live.todayDone ? undefined : { background: `linear-gradient(180deg, transparent, color-mix(in srgb, ${tint} 9%, transparent))` }}
-              >
-                <span className={`block ${m.water ? "gd-perk" : ""}`} key={`perk-${m.water}`}>
-                  <Plant species={habit.species} stage={stage} health={live.health} size={54} ground="none" sway={!live.todayDone} phase={habit.order} fit="tight" />
-                </span>
-                <span
-                  className={`absolute right-1.5 top-1.5 grid size-5 place-items-center rounded-full text-[10px] font-bold shadow-sm ${
-                    live.todayDone ? "bg-moss text-white" : "bg-card text-sun-deep ring-1 ring-sun/40"
-                  }`}
-                  aria-hidden
-                >
-                  {live.todayDone ? <IconTick size={10} /> : counted ? live.todayCount : <span className="size-2 rounded-full border-[1.5px] border-current" />}
-                </span>
-                <Moment id={m.water} ms={1300}>
-                  <WaterPour />
-                </Moment>
-                <Moment id={m.burst} ms={1200}>
-                  <Burst count={12} />
-                </Moment>
-              </button>
-              <span className="mt-1 w-full truncate px-1.5 text-center text-[11px] font-medium leading-tight">{habit.name}</span>
-              <span className="mt-0.5 flex items-center gap-0.5 text-[10px] text-ink-faint">
-                {counted ? (
-                  `${live.todayCount}/${habit.target}`
-                ) : streak > 0 ? (
-                  <>
-                    <IconFlame size={10} className="text-clay" />
-                    {streak}
-                  </>
-                ) : p.strength > 0 ? (
-                  `${p.strength}% strong`
-                ) : (
-                  " "
-                )}
-              </span>
-            </div>
-          );
-        })}
-      </div>
+      {view.open && <ImmersiveGarden onClose={view.hide} />}
     </section>
+  );
+}
+
+/** The plants in a row, small: a glimpse, not a place to tap. */
+function MiniBed({ plots }: { plots: PlotInfo[] }) {
+  const wide = useSyncExternalStore(subscribeWide, () => window.matchMedia("(min-width: 640px)").matches, () => true);
+  const room = wide ? 9 : 5;
+  const shown = plots.length > room ? plots.slice(0, room - 1) : plots;
+  const more = plots.length - shown.length;
+  return (
+    <div className="relative flex items-end justify-center gap-1.5 px-3 pb-2.5 pt-1 sm:gap-4" aria-hidden>
+      {shown.map((p, i) => (
+        <span key={p.habit.id} className="relative flex flex-col items-center" data-mini-habit={p.habit.id} data-done={p.live.todayDone}>
+          {p.live.todayDone && <span className="gd-glow absolute -inset-x-1 top-0 aspect-square rounded-full" />}
+          <span className="relative">
+            <Plant species={p.habit.species} stage={p.stage} health={p.due && p.live.health === "thriving" ? "healthy" : p.live.health} size={wide ? 56 : 50} phase={i * 0.7} fit="snug" />
+          </span>
+          {p.live.todayDone ? (
+            <span className="absolute right-0 top-1 grid size-4 place-items-center rounded-full bg-moss text-white ring-1 ring-white/80">
+              <IconTick size={8} />
+            </span>
+          ) : p.due ? (
+            <span className="absolute right-0.5 top-1 size-3 rounded-full border-2 border-[#0c9384] bg-white/95" />
+          ) : null}
+        </span>
+      ))}
+      {more > 0 && <span className="mb-3 rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-semibold text-[#1c2624] shadow-sm">+{more}</span>}
+    </div>
   );
 }

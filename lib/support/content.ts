@@ -2499,7 +2499,7 @@ const ALL_ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "**Habits** is in the sidebar on a computer, or press `6`. On a phone it's the last tab in the bottom bar, with a dot while a habit is still to do today. The habits due today also sit at the top of **Today**, one tap each.",
+            text: "**Habits** is in the sidebar on a computer, or press `6`. On a phone it's the last tab in the bottom bar, with a dot while a habit is still to do today. **Today** shows a small window onto your garden with the day's progress: tap it to open the garden full screen.",
           },
           {
             t: "ul",
@@ -2561,6 +2561,7 @@ const ALL_ARTICLES: Article[] = [
               "**Just started** below 10%, **Taking root** from 10%, **Growing strong** from 40%, **Almost automatic** from 70%, and **Rooted** from 85%. A habit's page shows about how many more days it takes to reach the next.",
               "Each habit has a plant, and it grows with strength: a sprout while the habit is new, in bloom once it's rooted. The garden at the top of Habits shows them all together, and a plant can be tapped to mark its habit done.",
               "The garden follows your day. The sky follows the clock, clouds gather while habits are still to do, and when everything due today is done the sky clears for a rainbow.",
+              "**Open garden** on Today, or **Full screen** on Habits, fills the screen with it. Tap plants there to mark habits done; close it with the cross, Escape or your back button.",
             ],
           },
         ],

@@ -1648,7 +1648,7 @@ button {
     opacity: 1;
   }
   100% {
-    transform: translate(40px, 420px) rotate(540deg);
+    transform: translate(40px, var(--fall, 420px)) rotate(540deg);
     opacity: 0;
   }
 }
@@ -1665,6 +1665,45 @@ button {
   50% {
     opacity: 1;
     transform: scale(1.06);
+  }
+}
+/* depth: layers of the immersive garden drift against the pointer; --gx and --gy stay 0 everywhere else */
+.gd-par {
+  transform: translate3d(calc(var(--gx, 0) * var(--dx, 0px)), calc(var(--gy, 0) * var(--dy, 0px)), 0);
+  transition: transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.gd-immersive {
+  animation: gd-immersive 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes gd-immersive {
+  from {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.gd-card:hover .gd-card-cta {
+  transform: translateX(2px);
+}
+.gd-hint {
+  animation: gd-hint 5s ease both;
+}
+@keyframes gd-hint {
+  0%,
+  8% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  15%,
+  80% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
   }
 }
 .gd-hud {
@@ -1696,8 +1735,12 @@ button {
   .gd-tuft,
   .gd-petal,
   .gd-glow,
+  .gd-immersive,
   .gd-shine::after {
     animation: none;
+  }
+  .gd-par {
+    transform: none;
   }
   .gd-petal,
   .gd-shooting {
