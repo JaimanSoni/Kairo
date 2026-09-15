@@ -3,7 +3,7 @@ import { ObjectId } from "mongodb";
 import { requireSession, unauthorized, badRequest } from "@/lib/api-auth";
 import { loadGarden, plantHabit } from "@/lib/habits";
 import { habitFailure, jsonBody, needToday, todayFrom } from "@/lib/habit-api";
-import { cheersToday, refreshGardenLater } from "@/lib/city";
+import { cheersToday, friendRequestCount, refreshGardenLater } from "@/lib/city";
 
 /** The whole garden, settled to your today: every plant, the compost, recent days, your gardener name. */
 export async function GET(request: Request) {
@@ -12,10 +12,10 @@ export async function GET(request: Request) {
   const today = todayFrom(new URL(request.url).searchParams.get("today"));
   if (!today) return needToday();
   const userId = new ObjectId(session.userId);
-  const [garden, cheers] = await Promise.all([loadGarden(userId, today), cheersToday(userId, today)]);
+  const [garden, cheers, friendRequests] = await Promise.all([loadGarden(userId, today), cheersToday(userId, today), friendRequestCount(userId)]);
   // the city's picture of this garden catches up with the day
   refreshGardenLater(userId, today);
-  return NextResponse.json({ ...garden, cheers });
+  return NextResponse.json({ ...garden, cheers, friendRequests });
 }
 
 /** Plants a habit — from a seed in the catalogue, or from scratch. */

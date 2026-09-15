@@ -6,6 +6,9 @@ import {
   type City,
   type CityGarden,
   type CityScope,
+  type FriendCard,
+  type FriendsOverview,
+  type Friendship,
   type Gardener,
   type HabitLogView,
   type HabitView,
@@ -62,7 +65,7 @@ export type HabitDraft = Partial<Pick<HabitView, "name" | "emoji" | "species" | 
 
 export const gardenApi = {
   load: (today = todayStr()) =>
-    call<{ habits: HabitView[]; archived: HabitView[]; logs: HabitLogView[]; gardener: Gardener | null; nudges: boolean; cheers?: { today: number; from: string[] } }>(`/api/habits?today=${today}`),
+    call<{ habits: HabitView[]; archived: HabitView[]; logs: HabitLogView[]; gardener: Gardener | null; nudges: boolean; cheers?: { today: number; from: string[] }; friendRequests?: number }>(`/api/habits?today=${today}`),
   setNudges: (on: boolean) => call<{ on: boolean }>("/api/garden/nudges", { method: "PUT", body: JSON.stringify({ on, timezone: zone() }) }),
   plant: (draft: HabitDraft) =>
     call<{ habit: HabitView }>("/api/habits", { method: "POST", body: JSON.stringify({ ...draft, today: todayStr(), timezone: zone() }) }),
@@ -89,6 +92,12 @@ export const gardenApi = {
   sentInvites: () => call<{ sent: { email: string; claimed: boolean }[] }>("/api/garden/invites"),
   emailInvite: (code: string, email: string) => call<{ sent: boolean; dry: boolean; email: string }>(`/api/garden/invites/${code}/email`, { method: "POST", body: JSON.stringify({ email, today: todayStr() }) }),
   inviteInfo: (code: string) => call<{ status: "open" | "claimed" | "mine"; inviter: CityGarden | null; inviterName: string | null }>(`/api/garden/invites/${code}?today=${todayStr()}`),
+  friends: () => call<FriendsOverview>(`/api/garden/friends?today=${todayStr()}`),
+  searchGardeners: (q: string) => call<{ results: FriendCard[] }>(`/api/garden/friends/search?q=${encodeURIComponent(q)}&today=${todayStr()}`),
+  askFriend: (id: string) => call<{ friendship: Friendship }>("/api/garden/friends", { method: "POST", body: JSON.stringify({ id }) }),
+  answerFriend: (id: string, action: "accept" | "decline") => call<{ friendship: Friendship }>(`/api/garden/friends/${id}`, { method: "PATCH", body: JSON.stringify({ action }) }),
+  dropFriend: (id: string) => call<{ friendship: null }>(`/api/garden/friends/${id}`, { method: "DELETE" }),
+  leaveCity: () => call<{ gardener: Gardener | null }>("/api/garden/city/leave", { method: "POST" }),
   claim: (code: string, profile: { name?: string; animal?: string }) =>
     call<{ inviter: { name: string; id: string } | null }>(`/api/garden/invites/${code}/claim`, { method: "POST", body: JSON.stringify({ ...profile, today: todayStr() }) }),
 };
@@ -104,10 +113,12 @@ type GardenState = {
   nudges: boolean;
   /** Cheers your garden got today in Kairo City. */
   cheers: { today: number; from: string[] };
+  /** Friend requests waiting for an answer in Kairo City. */
+  friendRequests: number;
   tick: number;
 };
 
-const garden: GardenState = { status: "idle", habits: [], archived: [], logs: new Map(), gardener: null, nudges: true, cheers: { today: 0, from: [] }, tick: 0 };
+const garden: GardenState = { status: "idle", habits: [], archived: [], logs: new Map(), gardener: null, nudges: true, cheers: { today: 0, from: [] }, friendRequests: 0, tick: 0 };
 const listeners = new Set<() => void>();
 let loading: Promise<void> | null = null;
 let owner: string | null = null;
@@ -153,6 +164,7 @@ export const gardenStore = {
   gardener: () => garden.gardener,
   nudges: () => garden.nudges,
   cheers: () => garden.cheers,
+  friendRequests: () => garden.friendRequests,
   get: (id: string) => garden.habits.find((h) => h.id === id) ?? garden.archived.find((h) => h.id === id) ?? null,
   logs: (id: string) => logsFor(id),
 
@@ -207,6 +219,7 @@ export const gardenStore = {
         garden.gardener = r.data.gardener;
         garden.nudges = r.data.nudges !== false;
         garden.cheers = r.data.cheers ?? { today: 0, from: [] };
+        garden.friendRequests = r.data.friendRequests ?? 0;
         garden.logs = new Map();
         for (const l of r.data.logs) logsFor(l.habitId).set(l.date, { date: l.date, count: l.count, done: l.done, frozen: l.frozen });
         garden.status = "ready";
@@ -243,6 +256,13 @@ export const gardenStore = {
 
   setGardener(g: Gardener | null) {
     garden.gardener = g;
+    emit();
+  },
+
+  /** The city knows the count first: answering a request there clears the badge everywhere. */
+  setFriendRequests(n: number) {
+    if (garden.friendRequests === n) return;
+    garden.friendRequests = n;
     emit();
   },
 
@@ -301,6 +321,7 @@ export const gardenStore = {
     garden.archived = [];
     garden.logs = new Map();
     garden.gardener = null;
+    garden.friendRequests = 0;
     emit();
   },
 };

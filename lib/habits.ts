@@ -36,6 +36,7 @@ import {
   type Settled,
   type SpeciesId,
 } from "./habits-shared";
+import { friendIds } from "./friends";
 import { safeTimeZone, todayIn } from "./tz";
 
 /**
@@ -638,28 +639,6 @@ export async function setGardenNudges(userId: ObjectId, on: boolean, timezone: u
   if (on) await scheduleEveningSave(userId, safeTimeZone(timezone));
   else await (await scheduledCollection()).deleteMany({ userId, kind: "garden-evening" });
   return on;
-}
-
-/**
- * People this account shares a list with, or became neighbours with in Kairo City: the friends board. Lists, not tasks: a
- * single task shared once is too thin a tie to put someone's streaks in front
- * of you, and a board of two is a board where a pseudonym stops hiding anyone.
- */
-export async function friendIds(userId: ObjectId): Promise<ObjectId[]> {
-  const db = await getDb();
-  const filter = { $or: [{ userId }, { memberIds: userId }], "memberIds.0": { $exists: true } };
-  const lists = await db.collection("lists").find(filter, { projection: { userId: 1, memberIds: 1 } }).limit(500).toArray();
-  const ids = new Map<string, ObjectId>([[userId.toHexString(), userId]]);
-  for (const doc of lists) {
-    ids.set((doc.userId as ObjectId).toHexString(), doc.userId as ObjectId);
-    for (const m of (doc.memberIds as ObjectId[]) ?? []) ids.set(m.toHexString(), m);
-  }
-  // and neighbours made in Kairo City: a plot saved for a friend, and claimed
-  const neighbours = await db.collection("city_invites").find({ claimedBy: { $ne: null }, $or: [{ fromUserId: userId }, { claimedBy: userId }] }, { projection: { fromUserId: 1, claimedBy: 1 } }).limit(500).toArray();
-  for (const n of neighbours) {
-    for (const who of [n.fromUserId as ObjectId, n.claimedBy as ObjectId]) ids.set(who.toHexString(), who);
-  }
-  return [...ids.values()];
 }
 
 /* ------------------------------------------------------------ community */

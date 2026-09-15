@@ -481,8 +481,38 @@ export type CityGarden = {
   doneToday: number;
   dueToday: number;
   cheers: { today: number; total: number; mine: boolean; from: string[] };
-  /** Friends brought into the city, or brought in by: each one is a bench on the plot. */
+  /** Friends in the city: each one is a bench on the plot. */
   friends?: number;
+  /** Where the one looking stands with this gardener. Only for someone signed in, never on their own garden. */
+  friendship?: Friendship;
+};
+
+/** Friends, a request you sent, a request waiting for your answer, or nothing yet. */
+export type Friendship = "friends" | "requested" | "incoming" | null;
+
+/** A gardener in a list of friends, requests or search results: enough to recognise them. */
+export type FriendCard = {
+  id: string;
+  name: string;
+  animal: string;
+  level: number;
+  score: number;
+  doneToday: number;
+  dueToday: number;
+  /** Their strongest plants, a few. */
+  plants: CityPlant[];
+  friendship: Friendship;
+  /** Why they're suggested. */
+  note?: string;
+};
+
+export type FriendsOverview = {
+  /** On the street: needed to ask, and to accept. */
+  joined: boolean;
+  friends: FriendCard[];
+  incoming: FriendCard[];
+  outgoing: FriendCard[];
+  suggestions: FriendCard[];
 };
 
 export type CityScope = "neighbours" | "friends" | "top";
@@ -494,6 +524,8 @@ export type City = {
   gardens: CityGarden[];
   /** Signed in: the plots you've saved for friends (their codes), and friends who claimed one since you last looked. */
   invites?: { open: string[]; arrived: string[] };
+  /** Signed in: friend requests waiting for an answer, and who accepted yours since you last looked. */
+  requests?: { incoming: number; accepted: string[] };
 };
 
 /** How a plant looks: the last week of scheduled days (the last two weeks, for a weekly habit). */

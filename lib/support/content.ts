@@ -2572,22 +2572,29 @@ const ALL_ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "**Kairo City** is a street of real gardens, one plot beside the next, each grown by someone's habits. Open it from **Kairo City** on Habits, or the button on Today's garden card. Swipe or drag along the street, and tap any garden to walk into it.",
+            text: "**Kairo City** is a street of real gardens, one plot beside the next, each grown by someone's habits. Open it from **Kairo City** on Habits, or the button on Today's garden card (it's there before your first habit too). Swipe or drag along the street, and tap any garden to walk into it.",
           },
           {
             t: "ul",
             items: [
               "**Your garden's score** is the strength of your 5 strongest habits added up, from 0 to 500. Adding more habits doesn't raise it; keeping them does. A garden whose owner stops coming by slowly fades.",
               "**Levels** turn the score into your plot: a Sprouting garden gets flower beds, then come a stone path, a pond, a rose arch, a fountain, and for a Legendary garden, golden lanterns and a golden gate. They show in your own garden too.",
-              "**Neighbours** is the stretch of street around your garden, with the garden just ahead of you and how many points it's ahead. **Friends** is the people you share lists with, and **Top gardens** the best in the city.",
+              "**Neighbours** is the stretch of street around your garden, with the garden just ahead of you and how many points it's ahead. **Friends** is your friends in the city, and **Top gardens** the best in the city.",
               "**Cheers**: walk into someone's garden and leave a cheer, once a day. There are no messages. You see who cheered your own garden; nobody else does.",
               "**Share** gives your garden a link of its own that anyone can open, with a picture of your level for when it's posted.",
+              "**Friends**: tap **Friends** at the top of the city. Find a gardener by the name on their gate and tap **Add friend**, or tap **Add friend** inside their garden. They get a request to accept; once they do, you're on each other's Friends street and each get a bench. Requests waiting for you show as a red count on the Friends button, on Kairo City on Today and on Habits. People you share a list with are friends already.",
+              "**People you might know** are gardeners who cheered your garden lately, then gardens near yours on the street. Search only finds gardens already on the street, by their gate name, never by email.",
+              "**Declining** a request is quiet: they aren't told. **Requested** in someone's garden takes a request back, and **Remove** in your friends list ends a friendship, even with someone you share a list with. You can send 30 requests a day.",
               "**Invite a friend**: tap the free plot beside your garden to save it for someone. Send them the link; when they claim it (signing in on the way if they need to), they move in next door, you each appear on the other's Friends street, and both gardens get a bench for two. A saved plot shows on your street until it's claimed, and tapping it lets you send the link again or let the plot go. You can hold 10 at a time.",
             ],
           },
           {
             t: "p",
-            text: "Your garden only appears once you **claim your plot** with a name and an animal. Until then it stands on your street where only you can see it. Visitors see your plants, your level and the names of habits started from Ideas, never your email, your photo or habits you wrote yourself. Hide it again from **Leaderboards** with **Hide me**.",
+            text: "Your garden only appears once you **claim your plot** with a name and an animal. Until then it stands on your street where only you can see it. Visitors see your plants, your level and the names of habits started from Ideas, never your email, your photo or habits you wrote yourself.",
+          },
+          {
+            t: "p",
+            text: "**Leaving the city**: walk into your own garden and tap **Leave Kairo City**. Your garden comes off the street, so nobody can find, visit or cheer it, it leaves the habit leaderboards, and plots you saved for friends are let go. Your habits, your garden and your friends stay; claim your plot again any time to come back under the same name.",
           },
         ],
       },

@@ -120,6 +120,10 @@ export function GardenHome() {
             <p className="mt-1 text-sm text-ink-soft">Tap one to start, or type your own. It grows in your garden as you keep it.</p>
             <IdeaPicker className="mt-4" onPick={(seed) => setSheet({ seed })} onCustom={(name) => setSheet({ name })} />
           </section>
+          {/* the city is open before the first plant: friends who moved in next door are there to visit */}
+          <div className="mt-5">
+            <CityCard score={0} requests={gardenStore.friendRequests()} onOpen={city.show} />
+          </div>
           <FirstSteps />
         </>
       ) : (
@@ -143,7 +147,7 @@ export function GardenHome() {
           </section>
 
           <div className="mt-5">
-            <CityCard score={score} onOpen={city.show} />
+            <CityCard score={score} requests={gardenStore.friendRequests()} onOpen={city.show} />
           </div>
 
           {rescues.length > 0 && (

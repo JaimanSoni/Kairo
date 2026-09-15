@@ -93,9 +93,10 @@ export async function exchangeCode(code: string, origin: string): Promise<Google
 
 /**
  * Where signing in may land afterwards: Today or Habits, with only the city's
- * own query (an invite to claim, the city open). Anything else, including any
+ * own query (an invite to claim, the city open, a garden or the friends sheet
+ * to open). Anything else, including any
  * other host, lands on Today.
  */
 export function isSafeNext(next: string): boolean {
-  return /^\/(today|habits)(\?(?:(?:city=open|street=(?:friends|neighbours|top)|claim=[a-f0-9]{10})&?)+)?$/.test(next);
+  return /^\/(today|habits)(\?(?:(?:city=open|street=(?:friends|neighbours|top)|claim=[a-f0-9]{10}|visit=[a-f0-9]{12}|friends=open)&?)+)?$/.test(next);
 }

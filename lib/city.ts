@@ -18,9 +18,26 @@ import {
   type CityGarden,
   type CityPlant,
   type CityScope,
+  type FriendCard,
+  type FriendsOverview,
+  type Friendship,
   type LogLite,
 } from "./habits-shared";
-import { friendIds, habitsCollection, HabitInputError, logsCollection, setGardener } from "./habits";
+import { habitsCollection, HabitInputError, logsCollection, setGardener } from "./habits";
+import {
+  acceptedSinceLastLook,
+  acceptFriend,
+  askFriend,
+  befriendByPlot,
+  declineFriend,
+  dropFriend,
+  FriendRefused,
+  friendIds,
+  friendsCollection,
+  incomingRequests,
+  outgoingRequests,
+  relationsOf,
+} from "./friends";
 import { safeTimeZone, todayIn } from "./tz";
 
 /**
@@ -256,22 +273,38 @@ async function tallyCheers(ids: ObjectId[], viewer: ObjectId | null, today: stri
 
 const EMPTY_TALLY: CheerTally = { today: 0, total: 0, mine: false, from: [] };
 
-/** How many friends each gardener has brought into the city, or been brought in by: each one is a bench. */
+/** How many friends each gardener has made in the city, asked for or moved in next door: each one is a bench. */
 async function tallyFriends(ids: ObjectId[]): Promise<Map<string, number>> {
   const out = new Map<string, number>();
   if (ids.length === 0) return out;
-  const rows = await (await invites()).find({ claimedBy: { $ne: null }, $or: [{ fromUserId: { $in: ids } }, { claimedBy: { $in: ids } }] }, { projection: { fromUserId: 1, claimedBy: 1 } }).toArray();
+  const [plots, records] = await Promise.all([
+    (await invites()).find({ claimedBy: { $ne: null }, $or: [{ fromUserId: { $in: ids } }, { claimedBy: { $in: ids } }] }, { projection: { fromUserId: 1, claimedBy: 1 } }).toArray(),
+    (await friendsCollection()).find({ users: { $in: ids }, status: { $in: ["friends", "removed"] } }, { projection: { users: 1, status: 1 } }).limit(5000).toArray(),
+  ]);
   const wanted = new Set(ids.map((i) => i.toHexString()));
-  for (const r of rows) {
-    for (const who of [r.fromUserId, r.claimedBy!]) {
-      const hex = who.toHexString();
-      if (wanted.has(hex)) out.set(hex, (out.get(hex) ?? 0) + 1);
+  const sets = new Map<string, Set<string>>();
+  const link = (a: ObjectId, b: ObjectId, on: boolean) => {
+    for (const [x, y] of [
+      [a, b],
+      [b, a],
+    ]) {
+      const hex = x.toHexString();
+      if (!wanted.has(hex)) continue;
+      const set = sets.get(hex) ?? new Set<string>();
+      if (on) set.add(y.toHexString());
+      else set.delete(y.toHexString());
+      sets.set(hex, set);
     }
-  }
+  };
+  for (const p of plots) link(p.fromUserId, p.claimedBy!, true);
+  for (const r of records) if (r.status === "friends") link(r.users[0], r.users[1], true);
+  // a friendship ended takes its bench with it
+  for (const r of records) if (r.status === "removed") link(r.users[0], r.users[1], false);
+  for (const [hex, set] of sets) if (set.size) out.set(hex, set.size);
   return out;
 }
 
-async function toCityGarden(user: CityUser, viewer: ObjectId | null, today: string, tally: Map<string, CheerTally>, rank: number | null, friends = new Map<string, number>()): Promise<CityGarden> {
+async function toCityGarden(user: CityUser, viewer: ObjectId | null, today: string, tally: Map<string, CheerTally>, rank: number | null, friends = new Map<string, number>(), relations?: Map<string, Friendship>): Promise<CityGarden> {
   const me = Boolean(viewer && user._id.equals(viewer));
   const snap = agedSnapshot(user.garden, today);
   const g = user.gardener;
@@ -291,6 +324,7 @@ async function toCityGarden(user: CityUser, viewer: ObjectId | null, today: stri
     dueToday: snap?.dueToday ?? 0,
     cheers: tally.get(user._id.toHexString()) ?? EMPTY_TALLY,
     friends: friends.get(user._id.toHexString()) ?? 0,
+    ...(viewer && !me ? { friendship: relations?.get(user._id.toHexString()) ?? null } : {}),
   };
 }
 
@@ -368,12 +402,14 @@ async function buildCity(viewer: ObjectId | null, asked: CityScope, today: strin
   const firstRank = scope === "neighbours" && street.length ? (await col.countDocuments({ ...others, "garden.score": { $gt: scoreOf(street[0]) } })) + 1 : 1;
   const ranks = ranksFrom(firstRank, street.map(scoreOf));
   const ids = meDoc ? [...new Set([...street, meDoc])].map((u) => u._id) : street.map((u) => u._id);
-  const [tally, friends] = await Promise.all([tallyCheers(ids, viewer, today, viewer), tallyFriends(ids)]);
+  const [tally, friends, relations] = await Promise.all([tallyCheers(ids, viewer, today, viewer), tallyFriends(ids), viewer ? relationsOf(viewer, ids) : undefined]);
 
   settleStale(docs, today);
-  const gardens = await Promise.all(street.map((u, i) => toCityGarden(u, viewer, today, tally, ranks[i], friends)));
+  const gardens = await Promise.all(street.map((u, i) => toCityGarden(u, viewer, today, tally, ranks[i], friends, relations)));
   const meGarden = meDoc ? { ...(gardens.find((g) => g.me) ?? (await toCityGarden(meDoc, viewer, today, tally, myRank, friends))), rank: myRank } : null;
-  return { scope, total, me: meGarden, gardens, invites: viewer ? await invitesOf(viewer) : undefined };
+  if (!viewer) return { scope, total, me: meGarden, gardens };
+  const [invited, requests] = await Promise.all([invitesOf(viewer), requestsOf(viewer)]);
+  return { scope, total, me: meGarden, gardens, invites: invited, requests };
 }
 
 /** One garden, to walk into. Only a joined garden, or your own. */
@@ -389,8 +425,8 @@ export async function visitGarden(viewer: ObjectId | null, id: string, today: st
   if (mine) doc.garden = await refreshGardenSnapshot(doc._id, today);
   const score = agedSnapshot(doc.garden, today)?.score ?? 0;
   const rank = doc.gardener?.public ? (await col.countDocuments({ ...PUBLIC, _id: { $ne: doc._id }, "garden.score": { $gt: score } })) + 1 : null;
-  const [tally, friends] = await Promise.all([tallyCheers([doc._id], viewer, today, mine ? doc._id : null), tallyFriends([doc._id])]);
-  return toCityGarden(doc, viewer, today, tally, rank, friends);
+  const [tally, friends, relations] = await Promise.all([tallyCheers([doc._id], viewer, today, mine ? doc._id : null), tallyFriends([doc._id]), viewer && !mine ? relationsOf(viewer, [doc._id]) : undefined]);
+  return toCityGarden(doc, viewer, today, tally, rank, friends, relations);
 }
 
 export class CheerRefused extends Error {}
@@ -511,7 +547,7 @@ export async function claimInvite(userId: ObjectId, code: string, input: { name?
 
   const claimed = await col.updateOne({ _id: invite._id, claimedBy: null }, { $set: { claimedBy: userId, claimedAt: new Date(), seenByInviter: false } });
   if (claimed.modifiedCount === 0) throw new InviteRefused("Someone has just claimed this plot.");
-  await refreshGardenSnapshot(userId, today);
+  await Promise.all([refreshGardenSnapshot(userId, today), befriendByPlot(invite.fromUserId, userId)]);
 
   const owner = await people.findOne({ _id: invite.fromUserId }, PROJECTION);
   const fresh = await people.findOne({ _id: userId }, PROJECTION);
@@ -589,4 +625,209 @@ export async function emailInvite(userId: ObjectId, code: string, rawEmail: unkn
   }
   await col.updateOne({ _id: invite._id }, { $set: { sentTo: email, sentAt: new Date() } });
   return { sent: true, dry: result.skipped === "dry", email };
+}
+
+/* ----------------------------------------------------------------- friends */
+
+export { FriendRefused };
+
+/** On the street, whatever their score: someone who can be found, asked, and visited. */
+const GARDENERS = { "gardener.public": true, disabled: { $ne: true } };
+
+/** A push to someone, once the response has gone. */
+function pushLater(userId: ObjectId, payload: { title: string; body: string; tag: string; url: string }): void {
+  const run = async () => {
+    const { sendToUser } = await import("./push");
+    await sendToUser(userId, payload);
+  };
+  const safe = () => run().catch((err: unknown) => console.error("[city] push", err));
+  try {
+    after(safe);
+  } catch {
+    void safe();
+  }
+}
+
+/** Friend requests waiting for an answer (from people still on the street), and who accepted yours since you last looked. */
+async function requestsOf(userId: ObjectId): Promise<NonNullable<City["requests"]>> {
+  const [incoming, accepted] = await Promise.all([incomingRequests(userId), acceptedSinceLastLook(userId)]);
+  const people = await users();
+  const [askers, accepters] = await Promise.all([
+    incoming.length ? people.countDocuments({ _id: { $in: incoming.map((r) => r.from) }, ...GARDENERS }) : 0,
+    accepted.length ? people.find({ _id: { $in: accepted }, ...GARDENERS }, { projection: { gardener: 1 } }).toArray() : [],
+  ]);
+  return { incoming: askers, accepted: accepters.map((u) => u.gardener?.name).filter((n): n is string => Boolean(n)) };
+}
+
+/** How many friend requests are waiting for this account, for the badge on the way into the city. */
+export async function friendRequestCount(userId: ObjectId): Promise<number> {
+  const incoming = await incomingRequests(userId);
+  if (incoming.length === 0) return 0;
+  return (await users()).countDocuments({ _id: { $in: incoming.map((r) => r.from) }, ...GARDENERS });
+}
+
+async function toFriendCards(docs: CityUser[], today: string, relations: Map<string, Friendship>, notes?: Map<string, string>): Promise<FriendCard[]> {
+  return Promise.all(
+    docs.map(async (u) => {
+      const snap = agedSnapshot(u.garden, today);
+      const score = snap?.score ?? 0;
+      const hex = u._id.toHexString();
+      const note = notes?.get(hex);
+      return {
+        id: await slugFor(u),
+        name: u.gardener?.name ?? "A gardener",
+        animal: u.gardener && isAnimal(u.gardener.animal) ? u.gardener.animal : "1",
+        level: gardenLevelOf(score).level,
+        score,
+        doneToday: snap?.doneToday ?? 0,
+        dueToday: snap?.dueToday ?? 0,
+        plants: (snap?.plants ?? []).slice(0, 3),
+        friendship: relations.get(hex) ?? null,
+        ...(note ? { note } : {}),
+      };
+    })
+  );
+}
+
+/** In the order of the records they came from: newest request first. */
+function inOrder(docs: CityUser[], ids: ObjectId[]): CityUser[] {
+  const byId = new Map(docs.map((d) => [d._id.toHexString(), d]));
+  return ids.map((id) => byId.get(id.toHexString())).filter((d): d is CityUser => Boolean(d));
+}
+
+/**
+ * Everything the friends sheet shows: your friends, requests waiting on you,
+ * requests you sent, and a few people you might know from the city (who
+ * cheered your garden lately, then gardens near yours on the street).
+ */
+export async function friendsOverview(viewer: ObjectId, today: string): Promise<FriendsOverview> {
+  await ensureCityIndexes();
+  const people = await users();
+  const [me, ids, incoming, outgoing] = await Promise.all([people.findOne({ _id: viewer }, PROJECTION), friendIds(viewer), incomingRequests(viewer), outgoingRequests(viewer)]);
+  const friendOnly = ids.filter((id) => !id.equals(viewer));
+  const [friendDocs, incomingDocs, outgoingDocs] = await Promise.all([
+    friendOnly.length ? people.find({ _id: { $in: friendOnly }, ...GARDENERS }, PROJECTION).sort({ "garden.score": -1, _id: 1 }).limit(200).toArray() : [],
+    incoming.length ? people.find({ _id: { $in: incoming.map((r) => r.from) }, ...GARDENERS }, PROJECTION).toArray() : [],
+    outgoing.length ? people.find({ _id: { $in: outgoing.map((r) => r.to) }, ...GARDENERS }, PROJECTION).toArray() : [],
+  ]);
+
+  // people you might know: never yourself, a friend, or someone a request is already waiting on
+  const taken = new Set([viewer, ...friendOnly, ...incoming.map((r) => r.from), ...outgoing.map((r) => r.to)].map((id) => id.toHexString()));
+  const notes = new Map<string, string>();
+  const cheerers = await (await cheers())
+    .aggregate<{ _id: ObjectId; last: Date }>([{ $match: { toUserId: viewer, day: { $gte: addDays(today, -30) } } }, { $group: { _id: "$fromUserId", last: { $max: "$at" } } }, { $sort: { last: -1 } }, { $limit: 30 }])
+    .toArray();
+  const cheererIds = cheerers.map((c) => c._id).filter((id) => !taken.has(id.toHexString()));
+  let suggested = cheererIds.length ? inOrder(await people.find({ _id: { $in: cheererIds }, ...GARDENERS }, PROJECTION).toArray(), cheererIds).slice(0, 6) : [];
+  for (const u of suggested) notes.set(u._id.toHexString(), "Cheered your garden");
+  if (suggested.length < 6 && me?.gardener?.public) {
+    for (const u of suggested) taken.add(u._id.toHexString());
+    const myScore = agedSnapshot(me.garden, today)?.score ?? 0;
+    const skip = [...taken].map((h) => new ObjectId(h));
+    const [ahead, behind] = await Promise.all([
+      people.find({ ...PUBLIC, _id: { $nin: skip }, "garden.score": { $gt: myScore } }, PROJECTION).sort({ "garden.score": 1, _id: 1 }).limit(4).toArray(),
+      people.find({ ...PUBLIC, _id: { $nin: skip }, "garden.score": { $lte: myScore } }, PROJECTION).sort({ "garden.score": -1, _id: 1 }).limit(4).toArray(),
+    ]);
+    const near: CityUser[] = [];
+    for (let i = 0; i < 4; i++) {
+      if (ahead[i]) near.push(ahead[i]);
+      if (behind[i]) near.push(behind[i]);
+    }
+    for (const u of near) notes.set(u._id.toHexString(), "Near you on the street");
+    suggested = [...suggested, ...near].slice(0, 6);
+  }
+
+  const everyone = [...friendDocs, ...incomingDocs, ...outgoingDocs, ...suggested];
+  const relations = await relationsOf(viewer, everyone.map((u) => u._id));
+  const [friends, asking, asked, suggestions] = await Promise.all([
+    toFriendCards(friendDocs, today, relations),
+    toFriendCards(inOrder(incomingDocs, incoming.map((r) => r.from)), today, relations),
+    toFriendCards(inOrder(outgoingDocs, outgoing.map((r) => r.to)), today, relations),
+    toFriendCards(suggested, today, relations, notes),
+  ]);
+  return { joined: Boolean(me?.gardener?.public), friends, incoming: asking, outgoing: asked, suggestions };
+}
+
+/** Gardeners on the street whose names hold what was typed: names that start with it first, then by score. */
+export async function searchGardeners(viewer: ObjectId, raw: unknown, today: string): Promise<FriendCard[]> {
+  const q = typeof raw === "string" ? raw.trim().replace(/\s+/g, " ") : "";
+  if (q.length < 2 || q.length > 40) return [];
+  await ensureCityIndexes();
+  const pattern = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const docs = await (await users())
+    .find({ ...GARDENERS, _id: { $ne: viewer }, "gardener.name": { $regex: pattern, $options: "i" } }, PROJECTION)
+    .sort({ "garden.score": -1, _id: 1 })
+    .limit(40)
+    .toArray();
+  const lower = q.toLowerCase();
+  const starts = (u: CityUser) => (u.gardener?.name.toLowerCase().startsWith(lower) ? 0 : 1);
+  const top = docs.sort((a, b) => starts(a) - starts(b)).slice(0, 20);
+  return toFriendCards(top, today, await relationsOf(viewer, top.map((u) => u._id)));
+}
+
+async function gardenerBySlug(slug: string, onStreet: boolean): Promise<CityUser | null> {
+  if (!/^[a-f0-9]{12}$/.test(slug)) return null;
+  return (await users()).findOne({ "gardener.slug": slug, ...(onStreet ? GARDENERS : { disabled: { $ne: true } }) }, PROJECTION);
+}
+
+/**
+ * Asks a gardener on the street to be friends, or says yes to one who asked
+ * first. Only from someone on the street too: a request comes with a name
+ * and a garden to look at.
+ */
+export async function askFriendship(viewer: ObjectId, slug: string): Promise<Friendship> {
+  await ensureCityIndexes();
+  const [me, them] = await Promise.all([(await users()).findOne({ _id: viewer }, PROJECTION), gardenerBySlug(slug, true)]);
+  if (!them) throw new HabitInputError("That garden isn't in the city.");
+  if (them._id.equals(viewer)) throw new HabitInputError("That's your own garden.");
+  if (!me?.gardener?.public) throw new FriendRefused("Claim your plot in the city first, then add friends.");
+  const { friendship, tell } = await askFriend(viewer, them._id);
+  if (tell) {
+    const tag = `city-friend-${await slugFor(me)}`;
+    pushLater(
+      them._id,
+      tell === "request"
+        ? { title: `${me.gardener.name} wants to be friends`, body: "Say yes, and your gardens share a street in Kairo City.", tag, url: "/today?city=open&friends=open" }
+        : { title: `${me.gardener.name} accepted your friend request`, body: "You're on each other's Friends street now. Go and see their garden.", tag, url: "/today?city=open&street=friends" }
+    );
+  }
+  return friendship;
+}
+
+/** Says yes, or quietly no, to a friend request. */
+export async function answerFriendship(viewer: ObjectId, slug: string, action: "accept" | "decline"): Promise<Friendship> {
+  await ensureCityIndexes();
+  const them = await gardenerBySlug(slug, action === "accept");
+  if (!them) throw new HabitInputError("That garden isn't in the city.");
+  if (action === "decline") {
+    await declineFriend(viewer, them._id);
+    return null;
+  }
+  const me = await (await users()).findOne({ _id: viewer }, PROJECTION);
+  if (!me?.gardener?.public) throw new FriendRefused("Claim your plot in the city to accept.");
+  if (!(await acceptFriend(viewer, them._id))) {
+    const now = await relationsOf(viewer, [them._id]);
+    if (now.get(them._id.toHexString()) === "friends") return "friends";
+    throw new HabitInputError("That request isn't waiting any more.");
+  }
+  pushLater(them._id, { title: `${me.gardener.name} accepted your friend request`, body: "You're on each other's Friends street now. Go and see their garden.", tag: `city-friend-${await slugFor(me)}`, url: "/today?city=open&street=friends" });
+  return "friends";
+}
+
+/** Takes back a request, or ends a friendship. False when there was nothing to end. */
+export async function endFriendship(viewer: ObjectId, slug: string): Promise<boolean> {
+  const them = await gardenerBySlug(slug, false);
+  if (!them || them._id.equals(viewer)) return false;
+  return dropFriend(viewer, them._id);
+}
+
+/**
+ * Takes a garden off the street: nobody can find, visit or cheer it, it leaves
+ * the habit leaderboards, and the plots it saved for friends are let go.
+ * Habits, friends and cheers stay, for coming back under the same name.
+ */
+export async function leaveCity(userId: ObjectId): Promise<void> {
+  await (await users()).updateOne({ _id: userId, "gardener.name": { $type: "string" } }, { $set: { "gardener.public": false } });
+  await (await invites()).deleteMany({ fromUserId: userId, claimedBy: null });
+  globalThis._kairoGuestCity?.clear();
 }

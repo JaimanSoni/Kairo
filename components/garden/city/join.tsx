@@ -85,7 +85,7 @@ export function JoinCity({ onClose, onJoined }: { onClose: () => void; onJoined:
             {error}
           </p>
         )}
-        <p className="mt-4 text-xs text-ink-faint">You can hide your garden again any time, from Leaderboards.</p>
+        <p className="mt-4 text-xs text-ink-faint">You can leave the city any time, from inside your own garden.</p>
         <div className="mt-4 flex justify-end gap-2">
           <button type="button" onClick={onClose} className="h-10 rounded-full px-4 text-sm font-semibold text-ink-soft hover:bg-paper-deep">
             Not now

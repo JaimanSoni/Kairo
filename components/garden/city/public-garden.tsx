@@ -20,7 +20,7 @@ function subscribeWide(cb: () => void) {
  * full size, whose it is and how far it has come, and the two ways in, to
  * start one's own or to walk around the city first.
  */
-export function PublicGarden({ garden }: { garden: CityGarden }) {
+export function PublicGarden({ garden, signedIn = false }: { garden: CityGarden; signedIn?: boolean }) {
   // the sky follows the visitor's clock, so nothing is drawn until the browser has one
   const mounted = useSyncExternalStore(noop, () => true, () => false);
   const wide = useSyncExternalStore(subscribeWide, () => window.matchMedia("(min-width: 640px)").matches, () => true);
@@ -67,9 +67,25 @@ export function PublicGarden({ garden }: { garden: CityGarden }) {
           Every plant here is a habit {garden.name} keeps, grown one kept day at a time. Can yours grow a better garden?
         </p>
         <div className="flex flex-wrap justify-center gap-2">
-          <a href="/api/auth/google" data-track="share-signin" className="flex h-12 items-center rounded-full bg-[#ffd166] px-6 text-sm font-bold text-[#3b2a00] shadow-xl transition-transform hover:-translate-y-0.5">
-            Start your own garden, free
-          </a>
+          {signedIn ? (
+            <a
+              href={`/today?city=open&visit=${garden.id}`}
+              data-track={garden.me ? "share-own" : "share-add-friend"}
+              className="flex h-12 items-center rounded-full bg-[#ffd166] px-6 text-sm font-bold text-[#3b2a00] shadow-xl transition-transform hover:-translate-y-0.5"
+              data-share-add-friend={garden.me ? undefined : garden.friendship ?? "none"}
+              data-share-own={garden.me || undefined}
+            >
+              {garden.me ? "Open your garden in the city" : garden.friendship === "friends" ? `Visit ${garden.name} in the city` : garden.friendship === "requested" ? "Friend request sent" : garden.friendship === "incoming" ? `Accept ${garden.name}'s friend request` : `Add ${garden.name} as a friend`}
+            </a>
+          ) : (
+            <a
+              href={`/api/auth/google?next=${encodeURIComponent(`/today?city=open&visit=${garden.id}`)}`}
+              data-track="share-signin"
+              className="flex h-12 items-center rounded-full bg-[#ffd166] px-6 text-sm font-bold text-[#3b2a00] shadow-xl transition-transform hover:-translate-y-0.5"
+            >
+              Start your own garden, free
+            </a>
+          )}
           <Link href="/?city=open" data-track="share-city" className="gd-hud flex h-12 items-center rounded-full px-6 text-sm font-bold text-white transition-transform hover:-translate-y-0.5">
             Walk around Kairo City
           </Link>

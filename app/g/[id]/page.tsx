@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { ObjectId } from "mongodb";
 import { visitGarden } from "@/lib/city";
 import { GARDEN_LEVELS, utcToday } from "@/lib/habits-shared";
 import { PublicGarden } from "@/components/garden/city/public-garden";
+import { getSession } from "@/lib/session";
 
 /**
  * A garden in Kairo City, shared by its owner. Open to anyone with the link,
@@ -30,7 +32,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function SharedGardenPage({ params }: Props) {
   const { id } = await params;
-  const garden = await visitGarden(null, id, utcToday());
+  const session = await getSession();
+  // seen by someone signed in, the garden knows whose it is and where the two of them stand
+  const garden = await visitGarden(session ? new ObjectId(session.userId) : null, id, utcToday());
   if (!garden) notFound();
-  return <PublicGarden garden={garden} />;
+  return <PublicGarden garden={garden} signedIn={Boolean(session)} />;
 }

@@ -4,10 +4,11 @@ import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from "rea
 import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import { gardenApi, gardenStore } from "@/lib/habits-client";
-import { GARDEN_LEVELS, type City, type CityGarden, type CityScope } from "@/lib/habits-shared";
+import { GARDEN_LEVELS, type City, type CityGarden, type CityScope, type Friendship } from "@/lib/habits-shared";
 import { track } from "@/lib/analytics-client";
 import { useApp } from "../../store";
 import { IconX } from "../../ui";
+import { IconUsers } from "../icons";
 import { useClock, useReducedMotion } from "../fx";
 import { phaseOf } from "../scene";
 import { Balloon, hillsTile, LampPost, skylineTile, StreetTree, type CityPhase } from "./decor";
@@ -15,6 +16,8 @@ import { CityLot, IconSun, SHOWCASE, type StreetItem } from "./lot";
 import { GardenVisit } from "./visit";
 import { JoinCity } from "./join";
 import { InviteSheet } from "./invite";
+import { FriendsSheet } from "./friends";
+import { LeaveCity } from "./leave";
 
 /**
  * Kairo City, full screen: a street of real gardens under a skyline, one
@@ -62,7 +65,8 @@ export function useCityView() {
   const visit = open ? params.get("visit") : null;
   const asked = params.get("street");
   const street: CityScope | null = asked === "friends" || asked === "neighbours" || asked === "top" ? asked : null;
-  return { open, visit, street, show: showCity, hide: hideCity, openVisit, closeVisit };
+  const friends = open && params.get("friends") === "open";
+  return { open, visit, street, friends, show: showCity, hide: hideCity, openVisit, closeVisit };
 }
 
 const noop = () => () => {};
@@ -85,7 +89,7 @@ export function KairoCity({ onClose }: { onClose: () => void }) {
   const mounted = useSyncExternalStore(noop, () => true, () => false);
   const { state, showToast } = useApp();
   const guest = Boolean(state.user.guest);
-  const { visit, street: askedStreet } = useCityView();
+  const { visit, street: askedStreet, friends: askedFriends } = useCityView();
   const minute = useClock();
   const phase = phaseOf(minute) as CityPhase;
   const dark = phase === "night" || phase === "dusk";
@@ -103,6 +107,14 @@ export function KairoCity({ onClose }: { onClose: () => void }) {
   const [saving, setSaving] = useState(false);
   // friends who claimed a saved plot since last time: told once, kept for this walk
   const [arrivals, setArrivals] = useState<string[]>([]);
+  // and people who accepted a friend request since last time
+  const [accepted, setAccepted] = useState<string[]>([]);
+  // friendships changed during this walk, over whatever the street loaded with
+  const [befriended, setBefriended] = useState<Record<string, Friendship>>({});
+  // friend requests waiting, as the friends sheet last counted them (for the street it was counted on)
+  const [counted, setCounted] = useState<{ key: number; n: number } | null>(null);
+  const [friendsOpen, setFriendsOpen] = useState(askedFriends);
+  const [leaving, setLeaving] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const frame = useRef(0);
@@ -114,6 +126,8 @@ export function KairoCity({ onClose }: { onClose: () => void }) {
     void gardenApi.city(scope).then((r) => {
       // news of a friend moving in is told only once, so it's kept even from an answer that came too late for the street
       if (r.ok && r.data.invites?.arrived.length) setArrivals((known) => [...new Set([...known, ...r.data.invites!.arrived])]);
+      if (r.ok && r.data.requests?.accepted.length) setAccepted((known) => [...new Set([...known, ...r.data.requests!.accepted])]);
+      if (r.ok && r.data.requests) gardenStore.setFriendRequests(r.data.requests.incoming);
       if (!alive) return;
       setLoaded({ scope, key: reload, city: r.ok ? r.data : null });
     });
@@ -124,14 +138,14 @@ export function KairoCity({ onClose }: { onClose: () => void }) {
 
   const current = loaded?.scope === scope ? loaded : null;
   const failed = Boolean(current && !current.city && current.key === reload);
-  const city = current?.city
-    ? { ...current.city, gardens: current.city.gardens.map((g) => (cheered[g.id] ? { ...g, cheers: cheered[g.id] } : g)) }
-    : null;
+  const withChanges = (g: CityGarden): CityGarden => ({ ...g, ...(cheered[g.id] ? { cheers: cheered[g.id] } : {}), ...(g.id in befriended ? { friendship: befriended[g.id] } : {}) });
+  const city = current?.city ? { ...current.city, gardens: current.city.gardens.map(withChanges) } : null;
+  const requests = counted && counted.key === reload ? counted.n : (current?.city?.requests?.incoming ?? 0);
 
   // Escape walks out: out of a garden first, then out of the city
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || joining || inviting) return;
+      if (e.key !== "Escape" || joining || inviting || friendsOpen || leaving) return;
       e.stopImmediatePropagation();
       if (visit) closeVisit();
       else onClose();
@@ -144,7 +158,7 @@ export function KairoCity({ onClose }: { onClose: () => void }) {
       document.body.style.overflow = prev;
       cancelAnimationFrame(frame.current);
     };
-  }, [onClose, visit, joining, inviting]);
+  }, [onClose, visit, joining, inviting, friendsOpen, leaving]);
 
   const street: StreetItem[] = [];
   if (city) {
@@ -204,7 +218,7 @@ export function KairoCity({ onClose }: { onClose: () => void }) {
       alive = false;
     };
   }, [needFetch, visit, showToast]);
-  const fromServer = fetched && fetched.id === visit ? { ...fetched, cheers: cheered[fetched.id] ?? fetched.cheers } : null;
+  const fromServer = fetched && fetched.id === visit ? withChanges(fetched) : null;
   const visited = onStreet ?? fromServer;
 
   if (!mounted) return null;
@@ -257,6 +271,12 @@ export function KairoCity({ onClose }: { onClose: () => void }) {
     track("city-invite-create");
     setInviting(r.data.code);
     setReload((n) => n + 1);
+  };
+
+  const closeFriends = () => {
+    setFriendsOpen(false);
+    // opened from a notification: the address forgets it, so a refresh doesn't open it again
+    if (new URL(window.location.href).searchParams.has("friends")) window.history.replaceState(window.history.state, "", withParams({ friends: null }));
   };
 
   const openItem = (item: StreetItem) => {
@@ -415,6 +435,23 @@ export function KairoCity({ onClose }: { onClose: () => void }) {
           </p>
         </div>
         <div className="flex items-center justify-end gap-2 sm:col-start-3 sm:order-3">
+          {!guest && (
+            <button
+              type="button"
+              onClick={() => setFriendsOpen(true)}
+              aria-label={requests ? `Friends, ${requests} ${requests === 1 ? "request" : "requests"} waiting` : "Friends"}
+              className="gd-hud relative flex h-10 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5 sm:px-4"
+              data-open-friends
+            >
+              <IconUsers size={16} />
+              <span className="hidden sm:inline">Friends</span>
+              {requests > 0 && (
+                <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[#ff6b6b] px-1 text-[11px] font-bold tabular-nums text-white ring-2 ring-white/80" data-friend-badge>
+                  {requests}
+                </span>
+              )}
+            </button>
+          )}
           <button type="button" onClick={() => void share()} className="gd-hud flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5" data-city-share>
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
               <path d="M8 10V2M8 2 5 5M8 2l3 3M3 9v4h10V9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
@@ -474,6 +511,29 @@ export function KairoCity({ onClose }: { onClose: () => void }) {
               <IconX size={13} />
             </button>
           </p>
+        ) : accepted.length ? (
+          <p className="city-invite flex items-center gap-2 rounded-full bg-white py-2 pl-2 pr-2 text-sm font-semibold text-[#1c2624] shadow-xl" data-accepted>
+            <span className="grid size-7 place-items-center rounded-full bg-[#ffd166]">
+              <IconUsers size={15} />
+            </span>
+            {accepted.slice(0, 2).join(" and ")}
+            {accepted.length > 2 ? ` and ${accepted.length - 2} more` : ""} accepted your friend request.
+            <button type="button" onClick={() => setAccepted([])} aria-label="Dismiss" className="ml-1 grid size-7 place-items-center rounded-full text-ink-faint hover:bg-paper-deep">
+              <IconX size={13} />
+            </button>
+          </p>
+        ) : requests > 0 ? (
+          <button type="button" onClick={() => setFriendsOpen(true)} className="city-invite flex items-center gap-2 rounded-full bg-white py-2 pl-2 pr-5 text-sm font-semibold text-[#1c2624] shadow-xl transition-transform hover:-translate-y-0.5" data-requests-waiting>
+            <span className="grid size-7 place-items-center rounded-full bg-[#ff6b6b] text-xs font-bold text-white">{requests}</span>
+            {requests === 1 ? "Someone wants to be friends. See who" : `${requests} people want to be friends. See who`}
+          </button>
+        ) : city?.scope === "friends" && me?.joined && !city.gardens.some((g) => !g.me) ? (
+          <button type="button" onClick={() => setFriendsOpen(true)} className="flex items-center gap-2 rounded-full bg-white py-2 pl-2 pr-5 text-sm font-semibold text-[#1c2624] shadow-xl transition-transform hover:-translate-y-0.5" data-find-friends>
+            <span className="grid size-7 place-items-center rounded-full bg-sun text-on-accent">
+              <IconUsers size={15} />
+            </span>
+            Your Friends street is empty. Find friends
+          </button>
         ) : lead ? (
           <p className="gd-hud rounded-full px-4 py-2 text-center text-sm font-semibold text-white" data-rival>
             {lead}
@@ -502,6 +562,43 @@ export function KairoCity({ onClose }: { onClose: () => void }) {
           onJoin={() => setJoining(true)}
           onShare={() => void share()}
           onCheered={(cheers) => setCheered((c) => ({ ...c, [visited.id]: cheers }))}
+          onFriendship={(friendship) => {
+            setBefriended((b) => ({ ...b, [visited.id]: friendship }));
+            // accepting from inside a garden answers a request: the count and the Friends street catch up
+            if (visited.friendship === "incoming" || friendship === "friends") setReload((n) => n + 1);
+          }}
+          onLeave={() => setLeaving(true)}
+        />
+      )}
+      {friendsOpen && (
+        <FriendsSheet
+          onClose={closeFriends}
+          onVisit={(id) => {
+            closeFriends();
+            openVisit(id);
+          }}
+          onJoin={() => setJoining(true)}
+          onInvite={() => {
+            closeFriends();
+            void saveForFriend();
+          }}
+          onChanged={(id, friendship, incoming) => {
+            setBefriended((b) => ({ ...b, [id]: friendship }));
+            setCounted({ key: reload, n: incoming });
+            if (scope === "friends") setReload((n) => n + 1);
+          }}
+        />
+      )}
+      {leaving && (
+        <LeaveCity
+          onClose={() => setLeaving(false)}
+          onLeft={() => {
+            setLeaving(false);
+            closeVisit();
+            panned.current = null;
+            setReload((n) => n + 1);
+            showToast({ message: "Your garden has left the city. Claim your plot any time to come back." });
+          }}
         />
       )}
       {inviting && (

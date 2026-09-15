@@ -41,7 +41,7 @@ function Skyline({ phase, plants }: { phase: CityPhase; plants: SpeciesId[] }) {
 }
 
 /** On Habits: your garden's standing, and the way into the city. */
-export function CityCard({ score, onOpen }: { score: number; onOpen: () => void }) {
+export function CityCard({ score, requests = 0, onOpen }: { score: number; requests?: number; onOpen: () => void }) {
   const phase = phaseOf(useClock()) as CityPhase;
   const level = gardenLevelOf(score);
   const next = nextGardenLevel(score);
@@ -62,8 +62,15 @@ export function CityCard({ score, onOpen }: { score: number; onOpen: () => void 
             {next ? `, ${next.min - score} points from ${next.name}` : ""}.
           </span>
         </span>
-        <span className="gd-hud flex w-max items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold text-white transition-transform group-hover:translate-x-0.5">
-          Walk into the city <span aria-hidden>→</span>
+        <span className="flex flex-wrap items-center gap-2">
+          <span className="gd-hud flex w-max items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold text-white transition-transform group-hover:translate-x-0.5">
+            Walk into the city <span aria-hidden>→</span>
+          </span>
+          {requests > 0 && (
+            <span className="rounded-full bg-[#ff6b6b] px-2.5 py-1 text-xs font-bold text-white shadow" data-city-requests>
+              {requests} friend {requests === 1 ? "request" : "requests"}
+            </span>
+          )}
         </span>
       </span>
     </button>

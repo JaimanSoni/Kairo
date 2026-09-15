@@ -2,7 +2,7 @@
 
 import { useState, useSyncExternalStore } from "react";
 import { gardenApi } from "@/lib/habits-client";
-import { GARDEN_LEVELS, nextGardenLevel, type CityGarden, type CityPlant } from "@/lib/habits-shared";
+import { GARDEN_LEVELS, nextGardenLevel, type CityGarden, type CityPlant, type Friendship } from "@/lib/habits-shared";
 import { track } from "@/lib/analytics-client";
 import { useApp } from "../../store";
 import { Avatar } from "../bits";
@@ -12,6 +12,7 @@ import { Plant } from "../plants";
 import { GardenScene } from "../scene";
 import { IconSun } from "./lot";
 import { FriendBench } from "./decor";
+import { FriendAction } from "./friends";
 
 function subscribeWide(cb: () => void) {
   const mq = window.matchMedia("(min-width: 640px)");
@@ -21,8 +22,9 @@ function subscribeWide(cb: () => void) {
 
 /**
  * Inside someone's garden: their plants at full size, what their level has
- * built, and a cheer to leave. Your own garden shows what the next level
- * adds, and a way to share it.
+ * built, a cheer to leave, and where you stand as friends. Your own garden
+ * shows what the next level adds, a way to share it, and the way out of the
+ * city.
  */
 export function GardenVisit({
   garden,
@@ -32,6 +34,8 @@ export function GardenVisit({
   onJoin,
   onShare,
   onCheered,
+  onFriendship,
+  onLeave,
 }: {
   garden: CityGarden;
   guest: boolean;
@@ -40,6 +44,8 @@ export function GardenVisit({
   onJoin: () => void;
   onShare: () => void;
   onCheered: (cheers: CityGarden["cheers"]) => void;
+  onFriendship: (friendship: Friendship) => void;
+  onLeave: () => void;
 }) {
   const { showToast } = useApp();
   const wide = useSyncExternalStore(subscribeWide, () => window.matchMedia("(min-width: 640px)").matches, () => true);
@@ -144,12 +150,21 @@ export function GardenVisit({
             <button type="button" onClick={onShare} className="flex h-12 items-center gap-2 rounded-full bg-white px-6 text-sm font-bold text-[#1c2624] shadow-xl transition-transform hover:-translate-y-0.5">
               Share your garden
             </button>
+            {garden.joined && (
+              <button type="button" onClick={onLeave} className="rounded-full px-3 py-1 text-xs font-semibold text-white/80 underline-offset-2 [text-shadow:0_1px_3px_rgba(0,0,0,0.5)] hover:text-white hover:underline" data-leave-open>
+                Leave Kairo City
+              </button>
+            )}
           </>
         ) : (
           <>
             <p className="gd-hud rounded-full px-4 py-2 text-center text-xs font-semibold text-white">
               {garden.dueToday > 0 ? `${garden.doneToday} of ${garden.dueToday} habits done today` : `${garden.habits} ${garden.habits === 1 ? "habit" : "habits"} growing`} · {garden.cheers.today} {garden.cheers.today === 1 ? "cheer" : "cheers"} today
             </p>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+            {!guest && (
+              <FriendAction key={garden.id} id={garden.id} name={garden.name} friendship={garden.friendship ?? null} canAsk={canCheer} onJoin={onJoin} onChanged={onFriendship} />
+            )}
             <button
               type="button"
               onClick={() => void cheer()}
@@ -162,6 +177,7 @@ export function GardenVisit({
               <IconSun size={24} className={garden.cheers.mine ? "" : "gd-spin"} />
               {garden.cheers.mine ? "You cheered today" : guest ? "Sign in to cheer" : canCheer ? `Cheer ${garden.name}` : "Join the city to cheer"}
             </button>
+            </div>
           </>
         )}
       </div>

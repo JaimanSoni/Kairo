@@ -12,6 +12,7 @@ import { GardenHud } from "./plot";
 import { gardenLevelOf, gardenScore } from "@/lib/habits-shared";
 import { GardenScene, type Weather } from "./scene";
 import { plotOf, useGarden, type PlotInfo } from "./use-garden";
+import { gardenStore } from "@/lib/habits-client";
 import { useClock } from "./fx";
 
 const HIDE_KEY = "kairo:garden-invite-hidden";
@@ -37,7 +38,8 @@ function IconExpand({ size = 13 }: { size?: number }) {
  * marked done by tapping their plants.
  */
 export default function TodayGardenStrip() {
-  const { status, habits, today, guest } = useGarden();
+  const { status, habits, today, guest, gardener } = useGarden();
+  const requests = gardenStore.friendRequests();
   const view = useGardenView();
   const city = useCityView();
   const minute = useClock();
@@ -56,7 +58,9 @@ export default function TodayGardenStrip() {
   if (status !== "ready") return null;
 
   if (habits.length === 0) {
-    if (inviteHidden) return null;
+    // someone on the street keeps a way into the city, habits or not
+    const joined = Boolean(gardener?.public);
+    if (inviteHidden && !joined && requests === 0) return null;
     return (
       <section className="anim-rise relative mb-5" aria-label="Your garden">
         <div
@@ -80,9 +84,11 @@ export default function TodayGardenStrip() {
             </div>
           </GardenScene>
           <span className="gd-hud absolute left-2.5 top-2.5 max-w-[calc(100%-3.5rem)] truncate rounded-full px-3 py-1.5 text-xs font-semibold text-white">
-            Build a habit alongside your tasks
+            {joined ? "Plant a first habit in your plot" : "Build a habit alongside your tasks"}
           </span>
         </div>
+        <CityButton requests={requests} onOpen={city.show} />
+        {!joined && (
         <button
           type="button"
           onClick={() => {
@@ -98,6 +104,7 @@ export default function TodayGardenStrip() {
         >
           <IconX size={13} />
         </button>
+        )}
       </section>
     );
   }
@@ -132,20 +139,32 @@ export default function TodayGardenStrip() {
         <span className="gd-hud gd-card-cta absolute right-2.5 top-2.5 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-white transition-transform">
           <IconExpand /> Open garden
         </span>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            city.show();
-          }}
-          className="gd-hud absolute bottom-2.5 right-2.5 z-10 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-white transition-transform hover:-translate-y-0.5"
-          data-open-city
-        >
-          Kairo City · Level {level}
-        </button>
+        <CityButton level={level} requests={requests} onOpen={city.show} />
       </div>
       {view.open && <ImmersiveGarden onClose={view.hide} />}
     </section>
+  );
+}
+
+/** The way into Kairo City from Today, with friend requests waiting counted on it. */
+function CityButton({ level, requests, onOpen }: { level?: number; requests: number; onOpen: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onOpen();
+      }}
+      className="gd-hud absolute bottom-2.5 right-2.5 z-10 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-white transition-transform hover:-translate-y-0.5"
+      data-open-city
+    >
+      Kairo City{level ? ` · Level ${level}` : ""}
+      {requests > 0 && (
+        <span className="grid h-4 min-w-4 place-items-center rounded-full bg-[#ff6b6b] px-1 text-[10px] font-bold tabular-nums text-white" aria-label={`${requests} friend ${requests === 1 ? "request" : "requests"}`}>
+          {requests}
+        </span>
+      )}
+    </button>
   );
 }
 
