@@ -7,25 +7,20 @@ import { hiddenListIds, useApp } from "./store";
 import { navigateApp } from "./app-views";
 import { animalAvatar } from "@/lib/avatars";
 import { track } from "@/lib/analytics-client";
-import { upgradeHref, useCan } from "./entitlements";
 import { registerServiceWorker } from "@/lib/push-client";
 import { playNotify } from "@/lib/sound";
 import { Omnibar } from "./omnibar";
 import { TaskEditor } from "./task-editor";
 import { FocusOverlay } from "./focus";
-import { AppLockGate, AppLockModal, type AppLockMode } from "./app-lock";
+import { AppLockGate } from "./app-lock";
 import { CommandPalette } from "./command-palette";
 import { ThemeToggle } from "./theme";
-import { CoffeeButton, CoffeeNudge } from "./coffee";
-import { SubscriptionSettings } from "./subscription-settings";
-import { ConnectionsSettings } from "./mcp-settings";
-import { ShareKairoRow } from "./share-kairo";
+import { CoffeeNudge } from "./coffee";
 import { Mark } from "./mark";
-import { IconPlus, IconX, Kbd, Modal } from "./ui";
+import { IconPlus, Kbd } from "./ui";
 import { gardenStore } from "@/lib/habits-client";
 import { numberedPages, SPACES, TODAY, visibleSpaces, type NavItem } from "./places";
-import { PlaceToggle, SPACE_CHOICES, Welcome } from "./welcome";
-import { JournalDownload } from "./paywall";
+import { Welcome } from "./welcome";
 
 const inItem = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);
 const spaceOf = (pathname: string) => SPACES.find((s) => s.items.some((i) => inItem(pathname, i.href))) ?? null;
@@ -45,7 +40,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const { state, setOmnibar } = useApp();
   const pathname = usePathname();
   const router = useRouter();
-  const [profileOpen, setProfileOpen] = useState(false);
+  // the account menu, opened from the phone's top bar or the foot of the sidebar
+  const [menu, setMenu] = useState<"top" | "side" | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const guest = Boolean(state.user.guest);
   const prefs = state.user.spaces;
@@ -141,7 +137,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   /* Anything the coffee nudge should wait behind rather than interrupt. */
   const somethingOnScreen =
     paletteOpen ||
-    profileOpen ||
+    menu !== null ||
     state.omnibarOpen ||
     state.appLocked ||
     Boolean(editingTask) ||
@@ -228,22 +224,31 @@ export function Shell({ children }: { children: React.ReactNode }) {
               >
                 <GoogleChip size={24} /> Sign in free
               </a>
+              <Link href="/support" className="mt-2 flex items-center justify-center gap-1.5 text-xs font-medium text-ink-soft hover:text-ink" data-help-link>
+                Help &amp; guides
+              </Link>
             </div>
           ) : (
-            /* opens the full settings sheet — notifications, app lock, accounts */
+            <div className="flex items-center gap-1">
+            {/* the account menu: Settings, help, other accounts, sign out */}
             <button
-              onClick={() => setProfileOpen(true)}
-              className="flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-left transition-colors hover:bg-card/60"
+              onClick={() => setMenu((m) => (m === "side" ? null : "side"))}
+              aria-haspopup="menu"
+              aria-expanded={menu === "side"}
+              className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-2 py-2 text-left transition-colors hover:bg-card/60 ${menu === "side" || pathname === "/settings" ? "bg-card shadow-sm" : ""}`}
+              data-account-button
             >
               <Avatar name={state.user.name} picture={state.user.picture} size={8} />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold">{state.user.name}</span>
-                <span className="block text-xs text-ink-faint">Settings &amp; accounts</span>
+                <span className="block truncate text-xs text-ink-faint">Settings</span>
               </span>
-              <span className="shrink-0 text-ink-faint" aria-hidden>
-                →
-              </span>
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="shrink-0 text-ink-faint" aria-hidden>
+                <path d="M4.5 10l3.5-3.5 3.5 3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </button>
+            <HelpLink className="size-10 rounded-xl text-ink-faint hover:bg-card/60 hover:text-ink" />
+            </div>
           )}
         </div>
       </aside>
@@ -255,7 +260,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <Link href="/today" className="flex items-center gap-1.5 text-base font-bold tracking-tight">
             <Mark size={17} className="text-sun" /> kairo
           </Link>
-          <span className="flex items-center gap-3">
+          <span className="flex items-center gap-2">
             <button
               onClick={() => setPaletteOpen(true)}
               aria-label="Search"
@@ -269,6 +274,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </button>
+            <HelpLink className="size-8 rounded-full text-ink-soft hover:bg-paper-deep" />
             {guest ? (
               <a
                 href="/api/auth/google"
@@ -279,8 +285,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
               </a>
             ) : (
               <button
-                onClick={() => setProfileOpen(true)}
+                onClick={() => setMenu((m) => (m === "top" ? null : "top"))}
                 aria-label="Profile and settings"
+                aria-haspopup="menu"
+                aria-expanded={menu === "top"}
                 data-tip="Profile and settings"
                 data-tip-side="bottom"
               >
@@ -330,14 +338,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}
       {state.omnibarOpen && <Omnibar />}
       {editingTask && <TaskEditor key={editingTask.id} task={editingTask} />}
-      {profileOpen && (
-        <ProfileSheet
-          name={state.user.name}
-          email={state.user.email}
-          picture={state.user.picture}
-          onClose={() => setProfileOpen(false)}
-        />
-      )}
+      {menu && !guest && <AccountMenu placement={menu} onClose={() => setMenu(null)} />}
       <FocusOverlay />
       <AppLockGate />
       {!state.user.isPaying && !guest && <CoffeeNudge busy={somethingOnScreen || Boolean(state.user.welcome)} today={state.today} />}
@@ -360,6 +361,140 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </div>
       )}
     </div>
+  );
+}
+
+/** Help & guides, as a question mark: beside you on a phone, at the foot of the sidebar on a computer. */
+function HelpLink({ className }: { className: string }) {
+  return (
+    <Link href="/support" aria-label="Help and guides" data-tip="Help and guides" data-tip-side="bottom" data-help-link className={`grid shrink-0 place-items-center transition-colors ${className}`}>
+      <svg width="17" height="17" viewBox="0 0 16 16" fill="none" aria-hidden>
+        <circle cx="8" cy="8" r="6.25" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M6.25 6.25a1.8 1.8 0 0 1 3.5.55c0 1.2-1.75 1.5-1.75 2.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="8" cy="11.6" r="0.85" fill="currentColor" />
+      </svg>
+    </Link>
+  );
+}
+
+/**
+ * The account menu: who you are, the way to Settings and to help, your other
+ * accounts one tap away, and signing out. Everything else lives on the
+ * Settings page, where it has room to explain itself.
+ */
+function AccountMenu({ placement, onClose }: { placement: "top" | "side"; onClose: () => void }) {
+  const { state, lockApp } = useApp();
+  const [busy, setBusy] = useState<string | null>(null);
+  const others = state.accounts.filter((a) => a.id !== state.user.id);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const switchTo = async (userId: string) => {
+    if (busy) return;
+    setBusy(userId);
+    try {
+      const res = await fetch("/api/auth/switch", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId }) });
+      if (res.ok) {
+        // leaving an account ends its unlocked session, so switching back to a locked one asks for its PIN again
+        try {
+          sessionStorage.removeItem(`kairo-applock:${state.user.id}`);
+        } catch {}
+        window.location.assign("/today");
+        return;
+      }
+    } catch {}
+    setBusy(null);
+  };
+
+  const item = "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-ink transition-colors hover:bg-paper-deep";
+  return (
+    <>
+      <button type="button" aria-label="Close the menu" tabIndex={-1} onClick={onClose} className="fixed inset-0 z-[55] cursor-default" />
+      <div
+        role="menu"
+        aria-label="Account"
+        className={`anim-pop fixed z-[56] w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-line bg-card p-1.5 shadow-2xl shadow-ink/15 ${
+          placement === "top" ? "right-3 top-[calc(max(0.6rem,env(safe-area-inset-top))+2.9rem)]" : "bottom-[5.25rem] left-4"
+        }`}
+        data-account-menu
+      >
+        <div className="flex items-center gap-3 px-3 pb-3 pt-2.5">
+          <Avatar name={state.user.name} picture={state.user.picture} size={12} />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-semibold">{state.user.name}</span>
+            <span className="block truncate text-xs text-ink-faint">{state.user.email}</span>
+          </span>
+        </div>
+        <div className="border-t border-line pt-1.5">
+          <Link
+            href="/settings"
+            role="menuitem"
+            onClick={(e) => {
+              e.preventDefault();
+              onClose();
+              navigateApp("/settings");
+            }}
+            className={item}
+            data-menu-settings
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-ink-soft" aria-hidden>
+              <path d="M2 4h5.5M10.5 4H14M2 8h2.5M7.5 8H14M2 12h7.5M12.5 12H14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <circle cx="9" cy="4" r="1.5" stroke="currentColor" strokeWidth="1.5" />
+              <circle cx="6" cy="8" r="1.5" stroke="currentColor" strokeWidth="1.5" />
+              <circle cx="11" cy="12" r="1.5" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
+            Settings
+          </Link>
+          <Link href="/support" role="menuitem" onClick={onClose} className={item}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-ink-soft" aria-hidden>
+              <circle cx="8" cy="8" r="6.25" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M6.25 6.25a1.8 1.8 0 0 1 3.5.55c0 1.2-1.75 1.5-1.75 2.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx="8" cy="11.6" r="0.85" fill="currentColor" />
+            </svg>
+            Help &amp; guides
+          </Link>
+          {state.user.appLockEnabled && (
+            <button type="button" role="menuitem" onClick={() => {
+              onClose();
+              lockApp();
+            }} className={item}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-ink-soft" aria-hidden>
+                <path d="M4.5 7V5.25a3.5 3.5 0 0 1 7 0V7M3.25 7h9.5v6.75h-9.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Lock Kairo now
+            </button>
+          )}
+        </div>
+        {others.length > 0 && (
+          <div className="mt-1.5 border-t border-line pt-1.5">
+            <p className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">Switch account</p>
+            {others.map((a) => (
+              <button key={a.id} type="button" role="menuitem" disabled={busy !== null} onClick={() => void switchTo(a.id)} className={`${item} disabled:opacity-60`}>
+                <Avatar name={a.name} picture={a.picture} size={8} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate">{a.name}</span>
+                  <span className="block truncate text-xs font-normal text-ink-faint">{busy === a.id ? "Switching…" : a.email}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+        <form action="/api/auth/signout" method="POST" className="mt-1.5 border-t border-line pt-1.5">
+          <button type="submit" role="menuitem" className={`${item} text-clay hover:bg-clay-soft`}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+              <path d="M6.5 13.75H3.25v-11.5H6.5M10.5 11l3-3-3-3M13.25 8H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Sign out
+          </button>
+        </form>
+      </div>
+    </>
   );
 }
 
@@ -393,185 +528,6 @@ function Avatar({ name, picture, size }: { name: string; picture?: string; size:
   );
 }
 
-function ProfileSheet({
-  name,
-  email,
-  picture,
-  onClose,
-}: {
-  name: string;
-  email: string;
-  picture?: string;
-  onClose: () => void;
-}) {
-  const { state, setAvatarChoice } = useApp();
-  const [picking, setPicking] = useState(false);
-
-  // which option is currently worn, read straight off the picture itself.
-  // The Google ring lights only when the google photo is actually worn — an
-  // account with neither photo nor choice wears a hash-picked animal, and
-  // ringing "Google photo" there was a lie.
-  const current = /\/avatars\/avatar-([1-6])\.png$/.exec(state.user.picture ?? "")?.[1];
-  const wearingGoogle = Boolean(state.user.googlePicture) && state.user.picture === state.user.googlePicture;
-
-  return (
-    <Modal onClose={onClose}>
-      <div className="p-6">
-        <div className="flex items-center gap-3">
-          <span className="relative shrink-0">
-            <Avatar name={name} picture={picture} size={12} />
-            <button
-              onClick={() => setPicking((v) => !v)}
-              aria-label="Change avatar"
-              data-tip="Change avatar"
-              data-tip-side="bottom"
-              className="absolute -bottom-0.5 -right-0.5 grid size-5 place-items-center rounded-full bg-ink text-paper shadow-md transition-transform hover:scale-110"
-            >
-              <svg width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden>
-                <path
-                  d="M9.8 2.8l3.4 3.4L5.6 13.8l-3.9.5.5-3.9 7.6-7.6zM11.4 1.2l3.4 3.4"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-base font-bold">{name}</div>
-            <div className="truncate text-sm text-ink-soft">{email}</div>
-          </div>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-ink-faint hover:bg-paper-deep" aria-label="Close" data-tip="Close" data-tip-side="bottom">
-            <IconX />
-          </button>
-        </div>
-
-        {picking && (
-          <div className="anim-pop mt-4 rounded-2xl border border-line bg-paper-deep/50 p-3">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">
-              Pick your face
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                onClick={() => setAvatarChoice("google")}
-                aria-label="Use your Google photo"
-                data-tip="Your Google photo"
-                className={`grid size-11 place-items-center overflow-hidden rounded-full transition-transform hover:scale-105 ${
-                  wearingGoogle ? "ring-2 ring-sun ring-offset-2 ring-offset-paper-deep" : ""
-                }`}
-              >
-                {state.user.googlePicture ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={state.user.googlePicture} alt="" className="size-full rounded-full object-cover" referrerPolicy="no-referrer" />
-                ) : (
-                  <span className="grid size-full place-items-center rounded-full bg-sun-soft font-bold text-sun-deep">
-                    {name.charAt(0).toUpperCase()}
-                  </span>
-                )}
-              </button>
-              {["1", "2", "3", "4", "5", "6"].map((n) => (
-                <button
-                  key={n}
-                  onClick={() => setAvatarChoice(`animal-${n}`)}
-                  aria-label={`Use animal avatar ${n}`}
-                  className={`grid size-11 place-items-center overflow-hidden rounded-full bg-sun-soft transition-transform hover:scale-105 ${
-                    current === n ? "ring-2 ring-sun ring-offset-2 ring-offset-paper-deep" : ""
-                  }`}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={`/avatars/avatar-${n}.png`} alt="" className="size-full object-contain p-[6%]" />
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="mt-6">
-          <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">
-            Appearance
-          </div>
-          <ThemeToggle />
-        </div>
-
-        <SpacesSettings />
-
-        <NotificationSettings />
-
-        <AppLockSettings />
-
-        <ConnectionsSettings />
-
-        <DataSettings onClose={onClose} />
-
-        <SubscriptionSettings />
-
-        <AccountSwitcher />
-
-        <Link
-          href="/support"
-          className="mt-6 flex items-center justify-between rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:border-sun hover:text-sun-deep"
-        >
-          Help &amp; guides
-          <span aria-hidden>→</span>
-        </Link>
-
-        <ShareKairoRow />
-
-        <AdminLink />
-
-        <CoffeeRow />
-
-        <form action="/api/auth/signout" method="POST" className="mt-6 border-t border-line pt-4">
-          <button
-            type="submit"
-            className="w-full rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-semibold text-clay transition-colors hover:border-clay hover:bg-clay-soft"
-          >
-            Sign out of this account
-          </button>
-        </form>
-
-        {/* "/" redirects to /today once you're signed in, so this is the only
-            way back to the landing page without signing out */}
-        <div className="mt-4 text-center">
-          <Link
-            href="/home"
-            onClick={onClose}
-            className="text-xs text-ink-faint underline-offset-2 transition-colors hover:text-ink-soft hover:underline"
-          >
-            View the home page
-          </Link>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-/**
- * Only rendered for admins — but this is convenience, not security. The
- * /admin segment authorises every request server-side, so hand-typing the URL
- * gets a 404 for anyone else.
- */
-function AdminLink() {
-  const { state } = useApp();
-  if (!state.user.isAdmin) return null;
-  return (
-    <Link
-      href="/admin/dashboard"
-      className="mt-3 flex w-full items-center justify-between rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:border-sun hover:text-sun-deep"
-    >
-      <span className="flex items-center gap-2">
-        <span className="rounded-md bg-ink px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-paper">
-          admin
-        </span>
-        Dashboard
-      </span>
-      <span aria-hidden>→</span>
-    </Link>
-  );
-}
-
-/** The tip jar, hidden from anyone who already pays for Kairo. */
 /**
  * What you're working on, from anywhere.
  *
@@ -615,339 +571,6 @@ function WorkingOn({ className = "" }: { className?: string }) {
           <rect x="2.5" y="2.5" width="7" height="7" rx="1.5" />
         </svg>
       </button>
-    </div>
-  );
-}
-
-function CoffeeRow() {
-  const { state } = useApp();
-  if (state.user.isPaying) return null;
-  return <CoffeeButton variant="row" />;
-}
-
-function NotificationSettings() {
-  const [status, setStatus] = useState<"loading" | "enabled" | "disabled" | "denied" | "unsupported" | "insecure">("loading");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    import("@/lib/push-client").then(async ({ pushPermission, pushEnabled }) => {
-      const insecure = typeof window !== "undefined" && window.isSecureContext === false;
-      const perm = pushPermission();
-      const next = insecure
-        ? ("insecure" as const)
-        : perm === "unsupported"
-          ? ("unsupported" as const)
-          : perm === "denied"
-            ? ("denied" as const)
-            : (await pushEnabled())
-              ? ("enabled" as const)
-              : ("disabled" as const);
-      if (!cancelled) setStatus(next);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const toggle = async () => {
-    if (busy) return;
-    setBusy(true);
-    setError(null);
-    const { enablePush, disablePush } = await import("@/lib/push-client");
-    if (status === "enabled") {
-      await disablePush();
-      setStatus("disabled");
-    } else {
-      const result = await enablePush();
-      if (result.status === "enabled") setStatus("enabled");
-      else if (result.status === "denied") setStatus("denied");
-      else if (result.status === "insecure") setStatus("insecure");
-      else if (result.status === "unsupported") setStatus("unsupported");
-      else {
-        setStatus("disabled");
-        setError(`Couldn't enable: ${result.detail}`);
-      }
-    }
-    setBusy(false);
-  };
-
-  return (
-    <div className="mt-6">
-      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">
-        Notifications
-      </div>
-      {status === "insecure" ? (
-        <p className="text-sm text-ink-faint">
-          Push needs a secure connection (HTTPS or localhost). Opening Kairo via a LAN IP like
-          192.168.x.x can&apos;t receive notifications, use it on this machine at localhost, or host it
-          with HTTPS.
-        </p>
-      ) : status === "unsupported" ? (
-        <p className="text-sm text-ink-faint">
-          This browser doesn&apos;t support push notifications. On iPhone, install Kairo to the home
-          screen first (Share → Add to Home Screen), then enable from inside the installed app.
-        </p>
-      ) : status === "denied" ? (
-        <p className="text-sm text-ink-faint">
-          Blocked, allow notifications for this site in your browser settings (tap the lock icon
-          in the address bar), then try again.
-        </p>
-      ) : (
-        <>
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm text-ink-soft">Reminders for tasks and habits, and focus timers ending, on this device.</p>
-            <button
-              onClick={toggle}
-              disabled={status === "loading" || busy}
-              className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
-                status === "enabled"
-                  ? "bg-sun-soft text-sun-deep"
-                  : "border border-line bg-card text-ink-soft hover:border-sun hover:text-sun-deep"
-              }`}
-            >
-              {busy ? "…" : status === "enabled" ? "On ✓" : "Enable"}
-            </button>
-          </div>
-          {status === "enabled" && (
-            <button
-              onClick={async () => {
-                const res = await fetch("/api/push/test", { method: "POST" });
-                setError(res.ok ? null : "Test send failed, check the server logs");
-              }}
-              className="mt-2 text-xs font-medium text-ink-faint underline hover:text-ink"
-            >
-              Send a test notification
-            </button>
-          )}
-          {error && (
-            <p className="mt-2 text-xs text-clay">{error}</p>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
-
-/**
- * Your data: what's written in Kairo can leave with it, and the journal's own
- * PIN is a tap away rather than hidden inside the journal.
- */
-function DataSettings({ onClose }: { onClose: () => void }) {
-  const { state } = useApp();
-  const pill =
-    "flex h-9 items-center rounded-full border border-line bg-card px-3.5 text-xs font-semibold text-ink-soft transition-colors hover:border-ink-faint hover:text-ink";
-  return (
-    <div className="mt-6" data-data-settings>
-      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">Your data</div>
-      <p className="mb-2 text-sm text-ink-soft">Everything you write in Kairo can come with you, as Markdown files.</p>
-      <div className="flex flex-wrap gap-2">
-        <form action="/api/notes/export" method="GET">
-          <button type="submit" className={pill}>
-            Download notes
-          </button>
-        </form>
-        <JournalDownload className={pill} label="Download journal" />
-      </div>
-      {state.user.spaces.journal && (
-        <Link
-          href="/journal#settings"
-          onClick={(e) => {
-            e.preventDefault();
-            onClose();
-            navigateApp("/journal#settings");
-          }}
-          className="mt-3 flex items-center justify-between rounded-xl border border-line bg-card px-4 py-2.5 text-sm text-ink-soft transition-colors hover:border-ink-faint hover:text-ink"
-        >
-          <span>
-            <span className="block font-medium text-ink">Journal PIN</span>
-            <span className="block text-xs text-ink-faint">A lock of its own for your journal, set in its settings.</span>
-          </span>
-          <span aria-hidden>→</span>
-        </Link>
-      )}
-    </div>
-  );
-}
-
-/**
- * Your Kairo: the optional places, each with a switch. Planning stays; the
- * habits, journal and notes can be put away. Hiding one keeps everything in
- * it, and turning it back on brings it back as it was.
- */
-function SpacesSettings() {
-  const { state, setSpaces } = useApp();
-  const prefs = state.user.spaces;
-  return (
-    <div className="mt-6" data-spaces-settings>
-      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">Your Kairo</div>
-      <p className="mb-2 text-sm text-ink-soft">Today, Calendar, Lists and the Log are always here. Keep only what else you use.</p>
-      <ul className="divide-y divide-line rounded-2xl border border-line bg-card">
-        {SPACE_CHOICES.map((c) => (
-          <li key={c.key} className="flex items-center gap-3 px-3.5 py-2.5">
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-medium">{c.title}</span>
-              <span className="block text-xs text-ink-faint">{prefs[c.key] ? c.body : "Hidden. Everything in it is kept."}</span>
-            </span>
-            <PlaceToggle checked={prefs[c.key]} onChange={(v) => void setSpaces({ ...prefs, [c.key]: v })} label={c.title} />
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function AppLockSettings() {
-  const { state, lockApp } = useApp();
-  const can = useCan();
-  const [modal, setModal] = useState<AppLockMode | null>(null);
-  const enabled = state.user.appLockEnabled;
-  // An existing lock stays fully usable after a downgrade — including removing
-  // it. Only setting a new one is gated, which is also how the API behaves.
-  const canSetUp = can("app-lock");
-
-  return (
-    <div className="mt-6">
-      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">
-        App lock
-      </div>
-      {enabled ? (
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm text-ink-soft">PIN lock is on.</p>
-          <span className="flex flex-wrap gap-1.5">
-            <button
-              onClick={lockApp}
-              className="rounded-full bg-sun-soft px-4 py-1.5 text-xs font-semibold text-sun-deep"
-            >
-              🔒 Lock now
-            </button>
-            <button
-              onClick={() => setModal("change")}
-              className="rounded-full border border-line bg-card px-3 py-1.5 text-xs font-medium text-ink-soft hover:border-ink-faint"
-            >
-              Change PIN
-            </button>
-            <button
-              onClick={() => setModal("remove")}
-              className="rounded-full border border-line bg-card px-3 py-1.5 text-xs font-medium text-ink-soft hover:border-clay hover:text-clay"
-            >
-              Remove
-            </button>
-          </span>
-        </div>
-      ) : (
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-sm text-ink-soft">
-            Lock Kairo behind a numeric PIN.
-            {!canSetUp && (
-              <span className="block text-xs text-ink-faint">
-                Locking individual lists stays available on every plan.
-              </span>
-            )}
-          </p>
-          {canSetUp ? (
-            <button
-              onClick={() => setModal("set")}
-              className="shrink-0 rounded-full border border-line bg-card px-4 py-1.5 text-xs font-semibold text-ink-soft hover:border-sun hover:text-sun-deep"
-            >
-              Set up
-            </button>
-          ) : (
-            <Link
-              href={upgradeHref("app-lock")}
-              className="shrink-0 rounded-full border border-sun/50 bg-sun-soft px-4 py-1.5 text-xs font-semibold text-sun-deep"
-            >
-              Upgrade
-            </Link>
-          )}
-        </div>
-      )}
-      {modal && <AppLockModal mode={modal} onClose={() => setModal(null)} />}
-    </div>
-  );
-}
-
-function AccountSwitcher() {
-  const { state } = useApp();
-  const can = useCan();
-  const canMultiAccount = can("multi-account");
-  const [busy, setBusy] = useState<string | null>(null);
-
-  const switchTo = async (userId: string) => {
-    if (busy) return;
-    setBusy(userId);
-    try {
-      const res = await fetch("/api/auth/switch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
-      });
-      if (res.ok) {
-        // Leaving an account ends its unlocked session: without this, someone
-        // on account B could switch to a locked A and have A's earlier
-        // session-unlock silently open it without a PIN.
-        try {
-          sessionStorage.removeItem(`kairo-applock:${state.user.id}`);
-        } catch {}
-        // full reload: the new account's data, lock state, and theme apply cleanly
-        window.location.assign("/today");
-        return;
-      }
-    } catch {}
-    setBusy(null);
-  };
-
-  return (
-    <div className="mt-6">
-      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">
-        Accounts
-      </div>
-      <div className="space-y-1.5">
-        {state.accounts.map((a) => {
-          const current = a.id === state.user.id;
-          return (
-            <button
-              key={a.id}
-              onClick={() => !current && switchTo(a.id)}
-              disabled={current || busy !== null}
-              className={`flex w-full items-center gap-2.5 rounded-xl border px-3 py-2 text-left transition-colors ${
-                current
-                  ? "border-sun/50 bg-sun-soft/50"
-                  : "border-line bg-card hover:border-ink-faint"
-              }`}
-            >
-              <Avatar name={a.name} picture={a.picture} size={8} />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium">{a.name}</span>
-                <span className="block truncate text-xs text-ink-faint">{a.email}</span>
-              </span>
-              {current ? (
-                <span className="shrink-0 text-xs font-semibold text-sun-deep">✓ current</span>
-              ) : (
-                <span className="shrink-0 text-xs font-medium text-ink-faint">
-                  {busy === a.id ? "…" : "Switch"}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-      {/* Still offered when the plan doesn't include it, but it goes to the
-          upgrade page instead of the sign-in flow — a control that vanishes is
-          harder to understand than one that explains itself. The sign-in
-          callback refuses the second account regardless. */}
-      <a
-        href={canMultiAccount ? "/api/auth/google" : upgradeHref("multi-account")}
-        className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line px-3 py-2 text-center text-sm font-medium text-ink-soft transition-colors hover:border-sun hover:text-sun-deep"
-      >
-        + Add another account
-        {!canMultiAccount && (
-          <span className="rounded-full bg-sun-soft px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sun-deep">
-            Upgrade
-          </span>
-        )}
-      </a>
     </div>
   );
 }

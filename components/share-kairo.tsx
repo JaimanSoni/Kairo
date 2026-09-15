@@ -19,27 +19,7 @@ const PITCH =
 
 const SHARE_URL = SITE_URL;
 
-export function ShareKairoRow() {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <>
-      <button
-        onClick={() => setOpen(true)}
-        className="mt-3 flex w-full items-center justify-between rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:border-sun hover:text-sun-deep"
-      >
-        <span className="flex items-center gap-2">
-          <span aria-hidden>🤝</span> Tell a friend about Kairo
-        </span>
-        <span aria-hidden>→</span>
-      </button>
-
-      {open && <ShareKairoSheet onClose={() => setOpen(false)} />}
-    </>
-  );
-}
-
-function ShareKairoSheet({ onClose }: { onClose: () => void }) {
+export function ShareKairoSheet({ onClose }: { onClose: () => void }) {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

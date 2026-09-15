@@ -64,7 +64,7 @@ export const QUICK_START = ["philosophy", "capture", "today", "notifications"];
  * sitemap is only worth sending if it's true, and a date that moves on every
  * deploy teaches crawlers to ignore it.
  */
-export const DOCS_UPDATED = "2026-09-15";
+export const DOCS_UPDATED = "2026-09-16";
 
 const ALL_ARTICLES: Article[] = [
   /* ---------------------------------------------------------------- basics */
@@ -210,7 +210,7 @@ const ALL_ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Planning is always there. **Habits** and **Notes** are yours to keep or put away. The first time you open Kairo it asks which you'd like; after that, open your profile, then **Settings**, and use the switches under **Your Kairo**.",
+            text: "Planning is always there. **Habits** and **Notes** are yours to keep or put away. The first time you open Kairo it asks which you'd like; after that, open **Settings** (tap your picture, then **Settings**) and use the switches under **Your Kairo**.",
           },
           {
             t: "ul",
@@ -1526,8 +1526,8 @@ const ALL_ARTICLES: Article[] = [
           {
             t: "ol",
             items: [
-              "Open your profile (your avatar, top right on mobile, bottom of the sidebar on desktop).",
-              "Under **Notifications**, click **Enable**.",
+              "Open **Settings**: tap your picture (top right on a phone, bottom of the sidebar on a computer), then **Settings**.",
+              "Under **Notifications**, switch on **On this device**.",
               "Allow notifications when your browser asks.",
             ],
           },
@@ -1911,7 +1911,8 @@ const ALL_ARTICLES: Article[] = [
           {
             t: "ol",
             items: [
-              "Open your profile and find **App lock**.",
+              "Open **Settings** and go to **Privacy & security**.",
+              "Find **App lock**.",
               "Click **Set up**, then choose and confirm a PIN.",
             ],
           },
@@ -1992,7 +1993,7 @@ const ALL_ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Open your profile and tap the little pencil on your picture. Seven choices appear: your Google photo, and six hand-drawn animals. Whichever you pick is what everyone sees, in shared lists and on assignments too.",
+            text: "Open **Settings**; under **Profile**, **Picture** shows seven choices: your Google photo, and six hand-drawn animals. Whichever you pick is what everyone sees, in shared lists and on assignments too.",
           },
           {
             t: "note",
@@ -2007,8 +2008,8 @@ const ALL_ARTICLES: Article[] = [
           {
             t: "ol",
             items: [
-              "Open your profile and find **Accounts**.",
-              "Click **+ Add another account**.",
+              "Open **Settings** and go to **Accounts**.",
+              "Click **Add another account**.",
               "Sign in with the other Google account.",
             ],
           },
@@ -2024,7 +2025,7 @@ const ALL_ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Tap any account in the list. Kairo reloads straight into that account's tasks, lists, and settings, no re-login.",
+            text: "Tap your picture: your other accounts are listed right in the menu. Or use **Switch** under **Accounts** in Settings. Kairo reloads straight into that account's tasks, lists, and settings, no re-login.",
           },
         ],
       },
@@ -2049,7 +2050,7 @@ const ALL_ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "**Sign out of this account** removes only the current one. If others are still signed in, you land in the first account on your list; sign out of the last and you return to the landing page. There's no “sign out everywhere” button, sign out once per account.",
+            text: "**Sign out** (in the menu under your picture, or at the bottom of **Accounts** in Settings) removes only the current account. If others are still signed in, you land in the first account on your list; sign out of the last and you return to the landing page. There's no “sign out everywhere” button, sign out once per account.",
           },
         ],
       },
@@ -2685,7 +2686,7 @@ const ALL_ARTICLES: Article[] = [
           {
             t: "ol",
             items: [
-              "Open your profile (top right) and find **Connections**.",
+              "Open **Settings** and go to **Connections**.",
               "Tap **Connect**, then **New connection**.",
               "Name it after where it will live, `ChatGPT on my laptop`, so you know which one to revoke later.",
               "Choose whether it may change things or only read.",
@@ -2877,7 +2878,7 @@ const ALL_ARTICLES: Article[] = [
           {
             t: "ul",
             items: [
-              "Use **Send a test notification** in your profile, it verifies the whole chain in two seconds.",
+              "Use **Send a test notification** under **Notifications** in Settings, it verifies the whole chain in two seconds.",
               "On iPhone, Kairo must be [installed to the home screen](/support/getting-started) first.",
               "Push needs HTTPS. Opening Kairo through a local network address like `192.168.x.x` can't receive notifications.",
               "Check your device's Do Not Disturb or Focus mode.",

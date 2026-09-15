@@ -8,6 +8,7 @@ import { TodayView } from "./today-view";
 import { CalendarSection } from "./calendar-section";
 import { ListsView } from "./lists-view";
 import { LogView } from "./log-view";
+import SettingsView from "./settings/settings-view";
 import dynamic from "next/dynamic";
 
 /**
@@ -76,6 +77,7 @@ const TITLES: Record<string, string> = {
   "/journal": "Journal · Kairo",
   "/notes": "Notes · Kairo",
   "/habits": "Habits · Kairo",
+  "/settings": "Settings · Kairo",
 };
 
 /** Swap the view without a server round trip. */
@@ -125,6 +127,7 @@ function View({ pathname }: { pathname: string }) {
   if (pathname.startsWith("/calendar")) return <CalendarSection />;
   if (pathname.startsWith("/lists")) return <ListsView />;
   if (pathname.startsWith("/log")) return <LogView />;
+  if (pathname === "/settings" || pathname.startsWith("/settings/")) return <SettingsView />;
   if (pathname.startsWith("/journal")) return JOURNAL_SHOWN ? <JournalSection /> : null;
   if (pathname.startsWith("/notes")) return <NotesSection />;
   if (pathname === "/habits" || pathname.startsWith("/habits/") || pathname === "/garden" || pathname.startsWith("/garden/")) return <GardenSection />;

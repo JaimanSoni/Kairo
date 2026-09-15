@@ -119,6 +119,14 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
             { id: "plant-habit", label: "New habit", run: () => navigateApp("/habits?new=1") },
             { id: "garden-community", label: "Habit leaderboards", run: () => navigateApp("/habits/community") },
           ]),
+      ...(guest
+        ? []
+        : [
+            { id: "go-settings", label: "Open Settings", run: () => navigateApp("/settings") },
+            { id: "settings-notifications", label: "Notification settings", run: () => navigateApp("/settings#notifications") },
+            { id: "settings-theme", label: "Change the theme", run: () => navigateApp("/settings#appearance") },
+          ]),
+      { id: "help", label: "Help and guides", run: () => window.location.assign("/support") },
       ...(state.user.appLockEnabled ? [{ id: "lock", label: "Lock Kairo now", run: lockApp }] : []),
     ];
     const owner: Record<string, keyof typeof show> = {

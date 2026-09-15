@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 const SESSION_COOKIE = "kairo_session";
-const PROTECTED = ["/today", "/calendar", "/lists", "/log", "/journal", "/notes", "/habits", "/admin", "/billing", "/upgrade"];
+const PROTECTED = ["/today", "/calendar", "/lists", "/log", "/journal", "/notes", "/habits", "/settings", "/admin", "/billing", "/upgrade"];
 
 /** Callers that are never a browser page of ours, and carry their own proof: a signature, a secret, a bearer key. */
 const CROSS_SITE_OK = [/^\/api\/billing\/webhook\/?$/, /^\/api\/cron\//, /^\/api\/mcp\/?$/, /^\/mcp\/?$/];
@@ -61,6 +61,7 @@ export const config = {
     "/journal/:path*",
     "/notes/:path*",
     "/habits/:path*",
+    "/settings/:path*",
     "/admin/:path*",
     "/billing/:path*",
     "/upgrade/:path*",

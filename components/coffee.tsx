@@ -12,7 +12,7 @@ import { Icon3d } from "./img3d";
 /** Max a tip jar should ever accept — a typo like 99999 is a typo, not a tip. */
 const MAX_AMOUNT = 20000;
 
-function CoffeeModal({ onClose, earned }: { onClose: () => void; earned?: boolean }) {
+export function CoffeeModal({ onClose, earned }: { onClose: () => void; earned?: boolean }) {
   const [amount, setAmount] = useState<number | null>(COFFEE.amounts[0]);
   const [custom, setCustom] = useState(false);
   const [customText, setCustomText] = useState("");
@@ -242,7 +242,7 @@ function CoffeeModal({ onClose, earned }: { onClose: () => void; earned?: boolea
  * Trigger + modal. Renders nothing at all when no UPI ID is configured, so a
  * partially-set-up deploy never shows a payment button that goes nowhere.
  */
-export function CoffeeButton({ variant = "link" }: { variant?: "link" | "row" | "inline" }) {
+export function CoffeeButton({ variant = "link" }: { variant?: "link" | "inline" }) {
   const [open, setOpen] = useState(false);
   if (!coffeeEnabled) return null;
 
@@ -267,26 +267,13 @@ export function CoffeeButton({ variant = "link" }: { variant?: "link" | "row" | 
 
   return (
     <>
-      {variant === "row" ? (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="mt-3 flex w-full items-center justify-between rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:border-sun hover:text-sun-deep"
-        >
-          <span className="flex items-center gap-2">
-            <Icon3d name="coffee" size={16} /> Buy me a coffee
-          </span>
-          <span aria-hidden>→</span>
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="underline underline-offset-2 transition-colors hover:text-ink-soft"
-        >
-          <Icon3d name="coffee" size={15} /> Buy me a coffee
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="underline underline-offset-2 transition-colors hover:text-ink-soft"
+      >
+        <Icon3d name="coffee" size={15} /> Buy me a coffee
+      </button>
 
       {open && <CoffeeModal onClose={() => setOpen(false)} />}
     </>

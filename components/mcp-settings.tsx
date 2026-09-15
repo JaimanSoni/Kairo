@@ -66,10 +66,9 @@ function CopyButton({ value, label = "Copy" }: { value: string; label?: string }
   );
 }
 
-export function ConnectionsSettings() {
-  const [open, setOpen] = useState(false);
+/** How many assistants are connected, refreshed whenever `key` changes (the modal closing, say). Null while loading. */
+export function useConnectionCount(key: unknown): number | null {
   const [count, setCount] = useState<number | null>(null);
-
   useEffect(() => {
     let cancelled = false;
     fetch("/api/mcp/keys")
@@ -81,37 +80,11 @@ export function ConnectionsSettings() {
     return () => {
       cancelled = true;
     };
-  }, [open]);
-
-  return (
-    <div className="mt-6">
-      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">
-        Connections
-      </div>
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-ink-soft">
-          Let ChatGPT, Claude, Gemini or Grok read and change your tasks.
-          <span className="block text-xs text-ink-faint">
-            {count === null
-              ? " "
-              : count === 0
-                ? "No connections yet."
-                : `${count} active ${count === 1 ? "connection" : "connections"}.`}
-          </span>
-        </p>
-        <button
-          onClick={() => setOpen(true)}
-          className="shrink-0 rounded-full border border-line bg-card px-4 py-1.5 text-xs font-semibold text-ink-soft transition-colors hover:border-sun hover:text-sun-deep"
-        >
-          {count ? "Manage" : "Connect"}
-        </button>
-      </div>
-      {open && <ConnectionsModal onClose={() => setOpen(false)} />}
-    </div>
-  );
+  }, [key]);
+  return count;
 }
 
-function ConnectionsModal({ onClose }: { onClose: () => void }) {
+export function ConnectionsModal({ onClose }: { onClose: () => void }) {
   const [keys, setKeys] = useState<KeyInfo[] | null>(null);
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
