@@ -180,6 +180,30 @@ export const ARTICLES: Article[] = [
         ],
       },
       {
+        id: "find-your-way",
+        heading: "How Kairo is laid out",
+        blocks: [
+          {
+            t: "p",
+            text: "Everything in Kairo lives in one of four places, and they sit in the same order on a computer and a phone.",
+          },
+          {
+            t: "table",
+            head: ["Place", "What's in it"],
+            rows: [
+              ["**Today**", "The day you're in: what to do, the habits due, and what you've finished."],
+              ["**Plan**", "**Calendar** for when things happen, **Lists** for what they belong to, and the **Log** of what you finished."],
+              ["**Write**", "Your **Journal**, a page a day, and **Notes**, pages for everything else."],
+              ["**Garden**", "Your habits, growing as plants."],
+            ],
+          },
+          {
+            t: "p",
+            text: "On a computer the sidebar lists every page under its place. On a phone the bottom bar has one tab for each place, with **Capture** in the middle; inside Plan and Write, a switch at the top moves between their pages, and each tab remembers the page you were last on.",
+          },
+        ],
+      },
+      {
         id: "first-five-minutes",
         heading: "Your first five minutes",
         blocks: [
@@ -1398,6 +1422,10 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "p",
+            text: "It sits under **Plan**, beside Calendar and Lists: in the sidebar on a computer, or press `4`; on a phone, tap **Plan**, then **Log** at the top.",
+          },
+          {
+            t: "p",
             text: "There are no streaks and no gaps highlighted. A quiet week isn't a broken chain, it's just a quiet week.",
           },
         ],
@@ -2128,7 +2156,7 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "p",
-            text: "On a computer it's in the sidebar, or press `5`. Press `J` to jump straight to today's page. On a phone it's in the bottom bar, and the Log now sits in the top bar.",
+            text: "On a computer it's in the sidebar under **Write**, or press `5`. Press `J` to jump straight to today's page. On a phone, tap **Write** in the bottom bar, then **Journal** at the top.",
           },
           {
             t: "note",
@@ -2291,7 +2319,7 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "p",
-            text: "On a computer it's in the sidebar, or press `6`. The panel beside your pages shows the whole tree, and `Ctrl+\\` hides it. On a phone, tap the round notes button in the bottom-right corner; inside Notes the same button makes a new page.",
+            text: "On a computer it's in the sidebar under **Write**, or press `6`. The panel beside your pages shows the whole tree, and `Ctrl+\\` hides it. On a phone, tap **Write** in the bottom bar, then **Notes** at the top; **New page** is at the top of Notes.",
           },
           {
             t: "ul",
@@ -2422,7 +2450,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "**Garden** is where habits live. On a computer it's in the sidebar, or press `7`. On a phone, tap the sprout at the top of the screen — and the plants due today also sit at the top of **Today**, one tap each.",
+            text: "**Garden** is where habits live. On a computer it's in the sidebar, or press `7`. On a phone it's the last tab in the bottom bar, with a blue dot while a plant still needs water today — and the plants due today also sit at the top of **Today**, one tap each.",
           },
           {
             t: "ul",

@@ -22,30 +22,61 @@ import { ConnectionsSettings } from "./mcp-settings";
 import { ShareKairoRow } from "./share-kairo";
 import { Mark } from "./mark";
 import { IconBook, IconCalendar, IconInbox, IconJournal, IconNotes, IconPlus, IconSprout, IconSun, IconX, Kbd, Modal } from "./ui";
-import { notesApi, notesStore } from "@/lib/notes-client";
 import { gardenStore } from "@/lib/habits-client";
-import { metaOf } from "./notes/actions";
-import { useKeyboardInset } from "./editor/viewport";
 
-const NAV = [
-  { href: "/today", label: "Today", icon: IconSun, key: "1" },
-  { href: "/calendar", label: "Calendar", icon: IconCalendar, key: "2" },
-  { href: "/lists", label: "Lists", icon: IconInbox, key: "3" },
-  { href: "/log", label: "Log", icon: IconBook, key: "4" },
-  { href: "/journal", label: "Journal", icon: IconJournal, key: "5" },
-  { href: "/notes", label: "Notes", icon: IconNotes, key: "6" },
-  { href: "/garden", label: "Garden", icon: IconSprout, key: "7" },
-];
+type NavItem = { href: string; label: string; icon: (p: { size?: number; className?: string }) => React.ReactNode; key: string };
+
+const TODAY: NavItem = { href: "/today", label: "Today", icon: IconSun, key: "1" };
 
 /**
- * The phone's bottom bar holds four tabs around Capture, and a strict grid
- * keeps Capture dead centre — so it can't simply grow a fifth. Journal takes
- * Log's place there: a diary is something opened daily, on a phone, in the
- * evening, while the Log is somewhere you look back. Log moves to the top bar.
+ * Kairo in four places, the same on every screen: Today, the day you're in;
+ * Plan, where tasks wait for their day; Write, the journal and notes; and the
+ * garden. A desktop lists every page under its space; a phone has one tab per
+ * space, and a switch at the top of a space moves between its pages.
  */
-const navItem = (href: string) => NAV.find((n) => n.href === href)!;
-const MOBILE_LEFT = [navItem("/today"), navItem("/calendar")];
-const MOBILE_RIGHT = [navItem("/lists"), navItem("/journal")];
+export const SPACES: { id: string; label: string; icon: NavItem["icon"]; items: NavItem[] }[] = [
+  {
+    id: "plan",
+    label: "Plan",
+    icon: IconCalendar,
+    items: [
+      { href: "/calendar", label: "Calendar", icon: IconCalendar, key: "2" },
+      { href: "/lists", label: "Lists", icon: IconInbox, key: "3" },
+      { href: "/log", label: "Log", icon: IconBook, key: "4" },
+    ],
+  },
+  {
+    id: "write",
+    label: "Write",
+    icon: IconJournal,
+    items: [
+      { href: "/journal", label: "Journal", icon: IconJournal, key: "5" },
+      { href: "/notes", label: "Notes", icon: IconNotes, key: "6" },
+    ],
+  },
+  {
+    id: "grow",
+    label: "Grow",
+    icon: IconSprout,
+    items: [{ href: "/garden", label: "Garden", icon: IconSprout, key: "7" }],
+  },
+];
+
+const NAV: NavItem[] = [TODAY, ...SPACES.flatMap((s) => s.items)];
+
+const inItem = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);
+const spaceOf = (pathname: string) => SPACES.find((s) => s.items.some((i) => inItem(pathname, i.href))) ?? null;
+
+/** Where a space's tab goes: the page of it last open on this device, or its first. */
+function spaceHref(space: (typeof SPACES)[number]): string {
+  try {
+    const last = localStorage.getItem(`kairo-space:${space.id}`);
+    if (last && space.items.some((i) => i.href === last)) return last;
+  } catch {
+    // no storage, no memory: the space's first page
+  }
+  return space.items[0].href;
+}
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const { state, setOmnibar } = useApp();
@@ -61,6 +92,17 @@ export function Shell({ children }: { children: React.ReactNode }) {
       (t) => t.status === "inbox" && !(t.listId && hidden.has(t.listId))
     ).length;
   }, [state]);
+
+  useEffect(() => {
+    const space = spaceOf(pathname);
+    const item = space?.items.find((i) => inItem(pathname, i.href));
+    if (!space || !item || space.items.length < 2) return;
+    try {
+      localStorage.setItem(`kairo-space:${space.id}`, item.href);
+    } catch {
+      // a private window forgets, which is fine
+    }
+  }, [pathname]);
 
   // service worker for web push (timer-end notifications)
   useEffect(() => {
@@ -187,34 +229,25 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
         <WorkingOn className="mt-4" />
 
-        <nav className="mt-6 space-y-1">
-          {NAV.map(({ href, label, icon: Icon }) => {
-            const active = pathname.startsWith(href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                onClick={(e) => {
-                  // a view swap, not a server round trip; the href stays for
-                  // middle-click, copy-link and everything else a real link does
-                  e.preventDefault();
-                  navigateApp(href);
-                }}
-                className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
-                  active ? "bg-card text-ink shadow-sm" : "text-ink-soft hover:bg-card/60"
-                }`}
-              >
-                <Icon size={16} className={active ? "text-sun-deep" : ""} />
-                {label}
-                {href === "/lists" && inboxCount > 0 && (
-                  <span className="ml-auto rounded-full bg-paper-deep px-2 py-0.5 text-xs text-ink-soft">
-                    {inboxCount}
-                  </span>
-                )}
-                {href === "/garden" && <GardenDot inline />}
-              </Link>
-            );
-          })}
+        <nav className="mt-6" aria-label="Kairo">
+          <SideLink item={TODAY} pathname={pathname} />
+          {SPACES.map((space) => (
+            <div key={space.id} className="mt-4" role="group" aria-labelledby={`space-${space.id}`}>
+              <div id={`space-${space.id}`} className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
+                {space.label}
+              </div>
+              <div className="space-y-0.5">
+                {space.items.map((item) => (
+                  <SideLink key={item.href} item={item} pathname={pathname}>
+                    {item.href === "/lists" && inboxCount > 0 && (
+                      <span className="ml-auto rounded-full bg-paper-deep px-2 py-0.5 text-xs text-ink-soft">{inboxCount}</span>
+                    )}
+                    {item.href === "/garden" && <GardenDot inline />}
+                  </SideLink>
+                ))}
+              </div>
+            </div>
+          ))}
         </nav>
 
         <div className="mt-auto space-y-3">
@@ -273,40 +306,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </button>
-            {/* Log's home on a phone, now that Journal holds its bottom tab */}
-            <Link
-              href="/log"
-              onClick={(e) => {
-                e.preventDefault();
-                navigateApp("/log");
-              }}
-              aria-label="Log"
-              data-tip="Log"
-              data-tip-side="bottom"
-              className={`grid size-8 place-items-center rounded-full hover:bg-paper-deep ${
-                pathname.startsWith("/log") ? "text-sun-deep" : "text-ink-soft"
-              }`}
-            >
-              <IconBook size={17} />
-            </Link>
-            {/* the garden's way in on a phone: the bottom bar is full */}
-            <Link
-              href="/garden"
-              onClick={(e) => {
-                e.preventDefault();
-                navigateApp("/garden");
-              }}
-              aria-label="Garden"
-              data-tip="Garden"
-              data-tip-side="bottom"
-              data-track="garden-topbar"
-              className={`relative grid size-8 place-items-center rounded-full hover:bg-paper-deep ${
-                pathname.startsWith("/garden") ? "text-moss" : "text-ink-soft"
-              }`}
-            >
-              <IconSprout size={18} />
-              <GardenDot />
-            </Link>
             {guest ? (
               <a
                 href="/api/auth/google"
@@ -330,15 +329,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
         {/* on a phone the sidebar isn't there to hold it */}
         <WorkingOn className="mx-4 mt-2 md:hidden" />
+        <SpaceSwitch pathname={pathname} />
 
         {children}
       </main>
 
       {/* bottom nav — mobile: strict 5-column grid keeps the + dead center */}
       <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 items-center border-t border-line bg-card/95 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur md:hidden">
-        {MOBILE_LEFT.map(({ href, label, icon: Icon }) => (
-          <MobileTab key={href} href={href} label={label} Icon={Icon} active={pathname.startsWith(href)} />
-        ))}
+        <MobileTab href={TODAY.href} label={TODAY.label} Icon={TODAY.icon} active={inItem(pathname, TODAY.href) || pathname === "/"} />
+        <SpaceTab space={SPACES[0]} pathname={pathname} />
         <div className="flex justify-center">
           <button
             onClick={() => setOmnibar(true)}
@@ -352,12 +351,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </svg>
           </button>
         </div>
-        {MOBILE_RIGHT.map(({ href, label, icon: Icon }) => (
-          <MobileTab key={href} href={href} label={label} Icon={Icon} active={pathname.startsWith(href)} />
-        ))}
+        <SpaceTab space={SPACES[1]} pathname={pathname} />
+        <SpaceTab space={SPACES[2]} pathname={pathname}>
+          <GardenDot />
+        </SpaceTab>
       </nav>
-
-      <NotesFab pathname={pathname} guest={guest} lifted={Boolean(state.focus?.minimized)} />
 
       {/* overlays */}
       {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}
@@ -912,54 +910,92 @@ function AccountSwitcher() {
   );
 }
 
-/**
- * Notes on a phone. The tab bar is full, so notes get a button of their own in
- * the corner a right thumb rests on: anywhere else it opens Notes, and inside
- * Notes it makes a new page. It steps aside wherever something is being
- * written, so it never sits on a page's toolbar or the keyboard.
- */
-function NotesFab({ pathname, guest, lifted }: { pathname: string; guest: boolean; lifted: boolean }) {
-  const { showToast } = useApp();
-  const inset = useKeyboardInset();
-  const [busy, setBusy] = useState(false);
-  const home = pathname === "/notes" || pathname === "/notes/";
-  const writing = /^\/notes\/[a-f0-9]{24}/.test(pathname) || /^\/journal\/\d{4}-\d{2}-\d{2}/.test(pathname);
-  if (writing || inset > 0 || (home && guest)) return null;
-
-  const onClick = async () => {
-    if (!home) {
-      navigateApp("/notes");
-      return;
-    }
-    if (busy) return;
-    setBusy(true);
-    const r = await notesApi.create({});
-    setBusy(false);
-    if (r.ok) {
-      notesStore.upsert(metaOf(r.data.page));
-      navigateApp(`/notes/${r.data.page.id}`);
-    } else {
-      showToast({ message: r.kind === "offline" ? "You're offline, so a new page can't be made just now." : "Couldn't make a new page." });
-    }
-  };
-
+/** A page in the sidebar. */
+function SideLink({ item, pathname, children }: { item: NavItem; pathname: string; children?: React.ReactNode }) {
+  const active = inItem(pathname, item.href);
+  const Icon = item.icon;
   return (
-    <button
-      type="button"
-      onClick={() => void onClick()}
-      aria-label={home ? "New page" : "Notes"}
-      data-track={home ? "notes-fab-new" : "notes-fab-open"}
-      className="anim-pop fixed right-4 z-40 grid size-12 place-items-center rounded-2xl border border-line bg-card text-ink shadow-lg shadow-ink/15 transition-transform active:scale-95 md:hidden"
-      style={{ bottom: lifted ? "calc(9.25rem + env(safe-area-inset-bottom))" : "calc(5.25rem + env(safe-area-inset-bottom))" }}
+    <Link
+      href={item.href}
+      onClick={(e) => {
+        // a view swap, not a server round trip; the href stays for
+        // middle-click, copy-link and everything else a real link does
+        e.preventDefault();
+        navigateApp(item.href);
+      }}
+      aria-current={active ? "page" : undefined}
+      className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
+        active ? "bg-card text-ink shadow-sm" : "text-ink-soft hover:bg-card/60"
+      }`}
     >
-      {busy ? (
-        <span className="size-4 animate-spin rounded-full border-2 border-ink-faint border-t-sun" aria-hidden />
-      ) : home ? (
-        <IconPlus size={20} className="text-sun-deep" />
-      ) : (
-        <IconNotes size={20} className="text-sun-deep" />
-      )}
-    </button>
+      <Icon size={16} className={active ? "text-sun-deep" : ""} />
+      {item.label}
+      {children}
+    </Link>
+  );
+}
+
+/** A space on the phone's bottom bar: it opens the page of the space you were last on. */
+function SpaceTab({ space, pathname, children }: { space: (typeof SPACES)[number]; pathname: string; children?: React.ReactNode }) {
+  const active = space.items.some((i) => inItem(pathname, i.href));
+  const Icon = space.icon;
+  const label = space.items.length === 1 ? space.items[0].label : space.label;
+  return (
+    <Link
+      href={space.items[0].href}
+      onClick={(e) => {
+        e.preventDefault();
+        // tapped from elsewhere: back to where you were in it; tapped again deep inside: up to that page's top
+        const here = space.items.find((i) => inItem(pathname, i.href));
+        const to = here ? here.href : spaceHref(space);
+        if (to !== pathname) navigateApp(to);
+      }}
+      aria-current={active ? "page" : undefined}
+      data-space={space.id}
+      className={`relative flex flex-col items-center gap-0.5 py-1 text-[10px] font-medium ${active ? "text-sun-deep" : "text-ink-faint"}`}
+    >
+      <span className="relative">
+        <Icon size={18} />
+        {children}
+      </span>
+      {label}
+    </Link>
+  );
+}
+
+/**
+ * The pages of a space, as a switch across the top of a phone screen: the
+ * bottom bar has one tab per space, so this is how Calendar reaches Lists.
+ * Only on a space's own pages, never inside a note or a journal day.
+ */
+function SpaceSwitch({ pathname }: { pathname: string }) {
+  const space = SPACES.find((s) => s.items.length > 1 && s.items.some((i) => pathname === i.href || pathname === `${i.href}/`));
+  if (!space) return null;
+  return (
+    <div className="px-4 pt-3 md:hidden">
+      <div role="tablist" aria-label={space.label} className="flex rounded-full border border-line bg-paper-deep p-0.5">
+        {space.items.map((item) => {
+          const active = inItem(pathname, item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              role="tab"
+              aria-selected={active}
+              onClick={(e) => {
+                e.preventDefault();
+                if (!active) navigateApp(item.href);
+              }}
+              className={`flex-1 rounded-full py-1.5 text-center text-xs font-semibold transition-colors ${
+                active ? "bg-card text-ink shadow-sm" : "text-ink-faint hover:text-ink-soft"
+              }`}
+            >
+              {item.label}
+            </Link>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -980,7 +1016,7 @@ function GardenDot({ inline = false }: { inline?: boolean }) {
   return inline ? (
     <span className="ml-auto size-2 rounded-full bg-sky" aria-label="plants need water" />
   ) : (
-    <span className="absolute right-1 top-1 size-2 rounded-full bg-sky ring-2 ring-paper" aria-hidden />
+    <span className="absolute -right-1 -top-0.5 size-2 rounded-full bg-sky ring-2 ring-card" aria-hidden />
   );
 }
 
