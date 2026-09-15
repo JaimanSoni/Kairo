@@ -1,8 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
 import { COVERS } from "@/lib/notes-shared";
-import { EMOJI_GROUPS, randomEmoji, searchEmoji } from "./emoji";
+import { ICON_NAMES, PAGE_ICONS, pageIconKey } from "@/lib/icons";
+import { Icon3d } from "../img3d";
+import { GlyphPage } from "./glyphs";
+
+/**
+ * A page's icon, wherever a page is listed: one of Kairo's 3D icons, or the
+ * plain page mark when it has none (or an old emoji with no match).
+ */
+export function PageIcon({ icon, size = 18, className = "" }: { icon: string | null | undefined; size?: number; className?: string }) {
+  const key = pageIconKey(icon);
+  if (key) return <Icon3d name={key} size={size} className={className} />;
+  return <GlyphPage size={Math.round(size * 0.85)} className={`text-ink-faint ${className}`} />;
+}
 
 /**
  * The page icon and cover pickers. Both are popovers anchored where they were
@@ -20,19 +32,25 @@ function Popover({
   children: React.ReactNode;
   label: string;
 }) {
+  // Escape closes it wherever focus is: a click in the page hands focus back to the editor
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.preventDefault();
+      e.stopPropagation();
+      onClose();
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [onClose]);
+
   return (
     <>
       <button type="button" aria-hidden tabIndex={-1} className="fixed inset-0 z-[70] cursor-default" onClick={onClose} />
       <div
         role="dialog"
         aria-label={label}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") {
-            e.stopPropagation();
-            onClose();
-          }
-        }}
-        className={`anim-pop absolute z-[71] w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-line bg-card p-2 shadow-2xl shadow-ink/10 ${className}`}
+        className={`anim-pop absolute z-[71] w-[min(21rem,calc(100vw-2rem))] rounded-2xl border border-line bg-card p-2 shadow-2xl shadow-ink/10 ${className}`}
       >
         {children}
       </div>
@@ -40,78 +58,55 @@ function Popover({
   );
 }
 
-export function EmojiPicker({
+function PickerHead({ title, onRemove }: { title: string; onRemove?: () => void }) {
+  return (
+    <div className="flex h-7 items-center justify-between px-1.5 pb-1">
+      <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-ink-faint">{title}</span>
+      {onRemove && (
+        <button type="button" onClick={onRemove} className="rounded-md px-1.5 py-0.5 text-xs font-medium text-ink-soft hover:bg-clay-soft hover:text-clay">
+          Remove
+        </button>
+      )}
+    </div>
+  );
+}
+
+export function IconPicker({
+  current,
   onPick,
   onRemove,
   onClose,
   className,
+  label = "Choose an icon",
 }: {
-  onPick: (emoji: string) => void;
+  current: string | null;
+  onPick: (key: string) => void;
   onRemove?: () => void;
   onClose: () => void;
   className?: string;
+  label?: string;
 }) {
-  const [q, setQ] = useState("");
-  const results = searchEmoji(q);
-
-  const cell = (emoji: string) => (
-    <button
-      key={emoji}
-      type="button"
-      onClick={() => onPick(emoji)}
-      aria-label={`Use ${emoji}`}
-      className="grid size-9 place-items-center rounded-lg text-[1.35rem] transition-transform hover:scale-110 hover:bg-paper-deep"
-    >
-      {emoji}
-    </button>
-  );
-
+  const selected = pageIconKey(current);
   return (
-    <Popover onClose={onClose} className={className} label="Choose an icon">
-      <div className="flex items-center gap-1.5 p-1">
-        <input
-          autoFocus
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search icons"
-          aria-label="Search icons"
-          className="h-9 min-w-0 flex-1 rounded-xl border border-line bg-paper px-3 text-sm outline-none focus:border-sun"
-        />
-        <button
-          type="button"
-          onClick={() => onPick(randomEmoji(Math.floor(Math.random() * 10_000)))}
-          className="h-9 shrink-0 rounded-xl border border-line px-2.5 text-xs font-medium text-ink-soft hover:border-ink-faint"
-          title="Surprise me"
-        >
-          🎲
-        </button>
-        {onRemove && (
+    <Popover onClose={onClose} className={className} label={label}>
+      <PickerHead title="Icons" onRemove={onRemove} />
+      <div className="grid grid-cols-6 gap-1 p-0.5">
+        {PAGE_ICONS.map((key, i) => (
           <button
+            key={key}
             type="button"
-            onClick={onRemove}
-            className="h-9 shrink-0 rounded-xl border border-line px-2.5 text-xs font-medium text-ink-soft hover:border-clay hover:text-clay"
+            autoFocus={selected ? key === selected : i === 0}
+            onClick={() => onPick(key)}
+            aria-label={ICON_NAMES[key]}
+            aria-pressed={key === selected}
+            title={ICON_NAMES[key]}
+            className={`group grid aspect-square place-items-center rounded-xl outline-none transition-all hover:bg-paper-deep focus-visible:ring-2 focus-visible:ring-sun ${
+              key === selected ? "bg-sun-soft ring-2 ring-sun" : ""
+            }`}
           >
-            Remove
+            <Icon3d name={key} size={30} className="transition-transform group-hover:scale-105" />
           </button>
-        )}
-      </div>
-      <div className="no-scrollbar mt-1 h-72 overflow-y-auto overscroll-contain px-1 pb-1">
-        {q ? (
-          results.length ? (
-            <div className="grid grid-cols-8 gap-0.5">{results.map(cell)}</div>
-          ) : (
-            <p className="px-2 py-6 text-center text-sm text-ink-faint">No icon matches “{q}”.</p>
-          )
-        ) : (
-          EMOJI_GROUPS.map((g) => (
-            <div key={g.name} className="mb-2">
-              <div className="sticky top-0 z-[1] bg-card px-1 pb-1 pt-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-ink-faint">
-                {g.name}
-              </div>
-              <div className="grid grid-cols-8 gap-0.5">{g.items.map(([e]) => cell(e))}</div>
-            </div>
-          ))
-        )}
+        ))}
       </div>
     </Popover>
   );
@@ -132,14 +127,7 @@ export function CoverPicker({
 }) {
   return (
     <Popover onClose={onClose} className={className} label="Choose a cover">
-      <div className="flex items-center justify-between px-1.5 pb-2 pt-1">
-        <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-ink-faint">Covers</span>
-        {onRemove && (
-          <button type="button" onClick={onRemove} className="text-xs font-medium text-ink-soft hover:text-clay">
-            Remove
-          </button>
-        )}
-      </div>
+      <PickerHead title="Covers" onRemove={onRemove} />
       <div className="grid grid-cols-2 gap-2 p-1">
         {COVERS.map((c) => (
           <button

@@ -9,6 +9,8 @@ import { useCoarsePointer } from "../editor/viewport";
 import { titleOf, useNoteActions, type NoteActions } from "./actions";
 import { notesUi, useTreeTick, useUiTick } from "./ui-state";
 import { MoveDialog } from "./dialogs";
+import { GlyphCopy, GlyphLink, GlyphMoveTo, GlyphPencil, GlyphTrash } from "./glyphs";
+import { PageIcon } from "./pickers";
 
 /**
  * The page tree: favorites, then every page, nested. Rows drag onto each other
@@ -262,8 +264,8 @@ function RowBody({
           </svg>
         </button>
       )}
-      <span className={`grid w-6 shrink-0 place-items-center text-[0.95rem] leading-none ${flat ? "ml-1" : ""}`} aria-hidden>
-        {page.icon ?? "📄"}
+      <span className={`grid w-6 shrink-0 place-items-center ${flat ? "ml-1" : ""}`} aria-hidden>
+        <PageIcon icon={page.icon} size={18} />
       </span>
 
       {renaming ? (
@@ -368,7 +370,7 @@ function RowMenu({ page, ctx, onRename }: { page: NoteMeta; ctx: RowContext; onR
         danger ? "text-clay hover:bg-clay-soft" : "text-ink-soft hover:bg-paper-deep hover:text-ink"
       }`}
     >
-      <span className="grid w-4 place-items-center text-xs" aria-hidden>
+      <span className="grid w-4 place-items-center" aria-hidden>
         {icon}
       </span>
       {label}
@@ -379,15 +381,15 @@ function RowMenu({ page, ctx, onRename }: { page: NoteMeta; ctx: RowContext; onR
     <>
       <button type="button" aria-hidden tabIndex={-1} className="fixed inset-0 z-40 cursor-default" onClick={close} />
       <div role="menu" className="anim-pop absolute right-0 top-8 z-50 w-52 rounded-xl border border-line bg-card p-1 shadow-2xl shadow-ink/10">
-        {item(page.favorite ? "Remove from favorites" : "Add to favorites", <IconStar size={12} filled={page.favorite} />, () =>
+        {item(page.favorite ? "Remove from favorites" : "Add to favorites", <IconStar size={14} filled={page.favorite} />, () =>
           void ctx.actions.toggleFavorite(page.id)
         )}
-        {onRename && item("Rename", "✎", onRename)}
-        {item("Duplicate", "⧉", () => void ctx.actions.duplicate(page.id))}
-        {item("Move to…", "↳", () => ctx.setMoving(page.id))}
-        {item("Copy link", "🔗", () => void ctx.actions.copyLink(page.id))}
+        {onRename && item("Rename", <GlyphPencil size={14} />, onRename)}
+        {item("Duplicate", <GlyphCopy size={14} />, () => void ctx.actions.duplicate(page.id))}
+        {item("Move to…", <GlyphMoveTo size={14} />, () => ctx.setMoving(page.id))}
+        {item("Copy link", <GlyphLink size={14} />, () => void ctx.actions.copyLink(page.id))}
         <div className="my-1 h-px bg-line" />
-        {item("Move to trash", "🗑", () => void ctx.actions.trash(page.id), true)}
+        {item("Move to trash", <GlyphTrash size={14} />, () => void ctx.actions.trash(page.id), true)}
       </div>
     </>
   );

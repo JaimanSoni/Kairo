@@ -17,6 +17,24 @@ import {
   turnInto,
   type BlockKind,
 } from "./extensions";
+import {
+  GlyphBack,
+  GlyphBullets,
+  GlyphCallout,
+  GlyphCode,
+  GlyphCopy,
+  GlyphDown,
+  GlyphHeading,
+  GlyphNumbers,
+  GlyphQuote,
+  GlyphTask,
+  GlyphText,
+  GlyphTodo,
+  GlyphToggle,
+  GlyphTrash,
+  GlyphTurn,
+  GlyphUp,
+} from "./glyphs";
 
 /**
  * The handle beside each block, on a pointer that can hover: "+" adds a block
@@ -148,18 +166,18 @@ export function BlockHandle({ editor, area }: { editor: Editor; area: React.RefO
   );
 }
 
-const TURN_INTO: { kind: BlockKind; label: string; icon: string }[] = [
-  { kind: "text", label: "Text", icon: "¶" },
-  { kind: "h1", label: "Heading 1", icon: "H1" },
-  { kind: "h2", label: "Heading 2", icon: "H2" },
-  { kind: "h3", label: "Heading 3", icon: "H3" },
-  { kind: "todo", label: "To-do list", icon: "☑" },
-  { kind: "bullet", label: "Bulleted list", icon: "•" },
-  { kind: "numbered", label: "Numbered list", icon: "1." },
-  { kind: "toggle", label: "Toggle list", icon: "▸" },
-  { kind: "quote", label: "Quote", icon: "❝" },
-  { kind: "callout", label: "Callout", icon: "💡" },
-  { kind: "code", label: "Code", icon: "</>" },
+const TURN_INTO: { kind: BlockKind; label: string; icon: React.ReactNode }[] = [
+  { kind: "text", label: "Text", icon: <GlyphText size={15} /> },
+  { kind: "h1", label: "Heading 1", icon: <GlyphHeading level={1} /> },
+  { kind: "h2", label: "Heading 2", icon: <GlyphHeading level={2} /> },
+  { kind: "h3", label: "Heading 3", icon: <GlyphHeading level={3} /> },
+  { kind: "todo", label: "To-do list", icon: <GlyphTodo size={15} /> },
+  { kind: "bullet", label: "Bulleted list", icon: <GlyphBullets size={15} /> },
+  { kind: "numbered", label: "Numbered list", icon: <GlyphNumbers size={15} /> },
+  { kind: "toggle", label: "Toggle list", icon: <GlyphToggle size={15} /> },
+  { kind: "quote", label: "Quote", icon: <GlyphQuote size={15} /> },
+  { kind: "callout", label: "Callout", icon: <GlyphCallout size={15} /> },
+  { kind: "code", label: "Code", icon: <GlyphCode size={15} /> },
 ];
 
 function BlockMenu({ editor, spot, onClose }: { editor: Editor; spot: Spot; onClose: () => void }) {
@@ -205,7 +223,7 @@ function BlockMenu({ editor, spot, onClose }: { editor: Editor; spot: Spot; onCl
         danger ? "text-clay hover:bg-clay-soft" : "text-ink-soft hover:bg-paper-deep hover:text-ink"
       }`}
     >
-      <span className="grid w-5 place-items-center text-xs font-semibold" aria-hidden>
+      <span className="grid w-5 place-items-center" aria-hidden>
         {icon}
       </span>
       <span className="flex-1">{label}</span>
@@ -228,20 +246,20 @@ function BlockMenu({ editor, spot, onClose }: { editor: Editor; spot: Spot; onCl
       >
         {turning ? (
           <>
-            {row("Back", "‹", () => setTurning(false))}
+            {row("Back", <GlyphBack size={15} />, () => setTurning(false))}
             <div className="my-1 h-px bg-line" />
             {TURN_INTO.map((t) => row(t.label, t.icon, () => run(() => turnInto(editor, spot.pos, t.kind))))}
           </>
         ) : (
           <>
-            {canTurn && row("Turn into", "↻", () => setTurning(true))}
-            {canTask && row("Make it a Kairo task", "✓", () => void makeTask())}
+            {canTurn && row("Turn into", <GlyphTurn size={15} />, () => setTurning(true))}
+            {canTask && row("Make it a Kairo task", <GlyphTask size={15} />, () => void makeTask())}
             {(canTurn || canTask) && <div className="my-1 h-px bg-line" />}
-            {row("Duplicate", "⧉", () => run(() => duplicateBlock(editor, spot.pos)), `${mod}D`)}
-            {row("Move up", "↑", () => run(() => moveBlock(editor, spot.pos, -1)), `${mod}⇧↑`)}
-            {row("Move down", "↓", () => run(() => moveBlock(editor, spot.pos, 1)), `${mod}⇧↓`)}
+            {row("Duplicate", <GlyphCopy size={15} />, () => run(() => duplicateBlock(editor, spot.pos)), `${mod}D`)}
+            {row("Move up", <GlyphUp size={15} />, () => run(() => moveBlock(editor, spot.pos, -1)), `${mod}⇧↑`)}
+            {row("Move down", <GlyphDown size={15} />, () => run(() => moveBlock(editor, spot.pos, 1)), `${mod}⇧↓`)}
             <div className="my-1 h-px bg-line" />
-            {row("Delete", "🗑", () => run(() => deleteBlock(editor, spot.pos)), undefined, true)}
+            {row("Delete", <GlyphTrash size={15} />, () => run(() => deleteBlock(editor, spot.pos)), undefined, true)}
           </>
         )}
       </div>

@@ -11,6 +11,29 @@ import { useApp, visibleLists } from "../store";
 import { blockAt, moveBlock, type MenuStore, type MentionItem } from "./extensions";
 import { titleOf } from "./actions";
 import { pathOf } from "./format";
+import {
+  GlyphBullets,
+  GlyphCallout,
+  GlyphCode,
+  GlyphDate,
+  GlyphDivider,
+  GlyphDown,
+  GlyphHeading,
+  GlyphLinkPage,
+  GlyphNumbers,
+  GlyphPage,
+  GlyphQuote,
+  GlyphRedo,
+  GlyphTable,
+  GlyphTask,
+  GlyphText,
+  GlyphTodo,
+  GlyphToggle,
+  GlyphUndo,
+  GlyphUp,
+} from "./glyphs";
+import { PageIcon } from "./pickers";
+import { IconPlus } from "../ui";
 
 /* ------------------------------------------------------------ slash items */
 
@@ -28,34 +51,34 @@ export function buildNoteSlashItems(opts: {
   const KAIRO = "From Kairo";
 
   return [
-    { id: "text", group: BASIC, icon: "¶", title: "Text", hint: "Just start writing", keywords: ["paragraph", "plain", "p"],
+    { id: "text", group: BASIC, icon: <GlyphText />, title: "Text", hint: "Just start writing", keywords: ["paragraph", "plain", "p"],
       run: (e, r) => clear(e, r).setParagraph().run() },
-    { id: "h1", group: BASIC, icon: "H1", title: "Heading 1", hint: "Big section heading", keywords: ["heading", "title", "h1", "#"],
+    { id: "h1", group: BASIC, icon: <GlyphHeading level={1} />, title: "Heading 1", hint: "Big section heading", keywords: ["heading", "title", "h1", "#"],
       run: (e, r) => clear(e, r).setNode("heading", { level: 1 }).run() },
-    { id: "h2", group: BASIC, icon: "H2", title: "Heading 2", hint: "Medium section heading", keywords: ["heading", "subtitle", "h2", "##"],
+    { id: "h2", group: BASIC, icon: <GlyphHeading level={2} />, title: "Heading 2", hint: "Medium section heading", keywords: ["heading", "subtitle", "h2", "##"],
       run: (e, r) => clear(e, r).setNode("heading", { level: 2 }).run() },
-    { id: "h3", group: BASIC, icon: "H3", title: "Heading 3", hint: "Small section heading", keywords: ["heading", "h3", "###"],
+    { id: "h3", group: BASIC, icon: <GlyphHeading level={3} />, title: "Heading 3", hint: "Small section heading", keywords: ["heading", "h3", "###"],
       run: (e, r) => clear(e, r).setNode("heading", { level: 3 }).run() },
-    { id: "todo", group: BASIC, icon: "☑", title: "To-do list", hint: "Track things with a checkbox", keywords: ["todo", "checkbox", "check", "task", "[]"],
+    { id: "todo", group: BASIC, icon: <GlyphTodo />, title: "To-do list", hint: "Track things with a checkbox", keywords: ["todo", "checkbox", "check", "task", "[]"],
       run: (e, r) => clear(e, r).toggleTaskList().run() },
-    { id: "bullets", group: BASIC, icon: "•", title: "Bulleted list", hint: "A simple list", keywords: ["list", "ul", "bullet", "-"],
+    { id: "bullets", group: BASIC, icon: <GlyphBullets />, title: "Bulleted list", hint: "A simple list", keywords: ["list", "ul", "bullet", "-"],
       run: (e, r) => clear(e, r).toggleBulletList().run() },
-    { id: "numbers", group: BASIC, icon: "1.", title: "Numbered list", hint: "A list in order", keywords: ["list", "ol", "ordered", "1"],
+    { id: "numbers", group: BASIC, icon: <GlyphNumbers />, title: "Numbered list", hint: "A list in order", keywords: ["list", "ol", "ordered", "1"],
       run: (e, r) => clear(e, r).toggleOrderedList().run() },
-    { id: "toggle", group: BASIC, icon: "▸", title: "Toggle list", hint: "Tuck details away inside", keywords: ["toggle", "collapse", "details", "fold", "accordion"],
+    { id: "toggle", group: BASIC, icon: <GlyphToggle />, title: "Toggle list", hint: "Tuck details away inside", keywords: ["toggle", "collapse", "details", "fold", "accordion"],
       run: (e, r) => clear(e, r).setDetails().run() },
-    { id: "quote", group: BASIC, icon: "❝", title: "Quote", hint: "Something someone said", keywords: ["blockquote", "cite", ">"],
+    { id: "quote", group: BASIC, icon: <GlyphQuote />, title: "Quote", hint: "Something someone said", keywords: ["blockquote", "cite", ">"],
       run: (e, r) => clear(e, r).toggleBlockquote().run() },
-    { id: "callout", group: BASIC, icon: "💡", title: "Callout", hint: "Make something stand out", keywords: ["callout", "note", "info", "tip", "warning"],
-      run: (e, r) => clear(e, r).setCallout("💡").run() },
-    { id: "divider", group: BASIC, icon: "—", title: "Divider", hint: "Split the page", keywords: ["hr", "line", "separator", "---"],
+    { id: "callout", group: BASIC, icon: <GlyphCallout />, title: "Callout", hint: "Make something stand out", keywords: ["callout", "note", "info", "tip", "warning"],
+      run: (e, r) => clear(e, r).setCallout("sparkle").run() },
+    { id: "divider", group: BASIC, icon: <GlyphDivider />, title: "Divider", hint: "Split the page", keywords: ["hr", "line", "separator", "---"],
       run: (e, r) => clear(e, r).setHorizontalRule().run() },
-    { id: "code", group: BASIC, icon: "</>", title: "Code", hint: "Monospaced, untouched", keywords: ["codeblock", "pre", "```", "snippet"],
+    { id: "code", group: BASIC, icon: <GlyphCode />, title: "Code", hint: "Monospaced, untouched", keywords: ["codeblock", "pre", "```", "snippet"],
       run: (e, r) => clear(e, r).toggleCodeBlock().run() },
-    { id: "table", group: BASIC, icon: "▦", title: "Table", hint: "Rows and columns", keywords: ["table", "grid", "spreadsheet", "columns"],
+    { id: "table", group: BASIC, icon: <GlyphTable />, title: "Table", hint: "Rows and columns", keywords: ["table", "grid", "spreadsheet", "columns"],
       run: (e, r) => clear(e, r).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
 
-    { id: "page", group: PAGES, icon: "📄", title: "Page", hint: "A new page inside this one", keywords: ["page", "subpage", "child", "new"],
+    { id: "page", group: PAGES, icon: <GlyphPage />, title: "Page", hint: "A new page inside this one", keywords: ["page", "subpage", "child", "new"],
       run: async (e, r) => {
         clear(e, r).run();
         const id = await opts.newSubPage();
@@ -63,15 +86,15 @@ export function buildNoteSlashItems(opts: {
         e.chain().focus().insertPageLink(id).run();
         opts.openPage(id);
       } },
-    { id: "link", group: PAGES, icon: "@", title: "Link to page", hint: "Mention another page", keywords: ["link", "mention", "reference", "@", "[["],
+    { id: "link", group: PAGES, icon: <GlyphLinkPage />, title: "Link to page", hint: "Mention another page", keywords: ["link", "mention", "reference", "@", "[["],
       run: (e, r) => clear(e, r).insertContent("@").run() },
 
-    { id: "task", group: KAIRO, icon: "✓", title: "Kairo task", hint: "A real task, ticked here or anywhere", keywords: ["task", "kairo", "todo", "remind", "plan"],
+    { id: "task", group: KAIRO, icon: <GlyphTask />, title: "Kairo task", hint: "A real task, ticked here or anywhere", keywords: ["task", "kairo", "todo", "remind", "plan"],
       run: (e, r) => {
         clear(e, r).run();
         opts.askTask();
       } },
-    { id: "date", group: KAIRO, icon: "📅", title: "Today's date", hint: "Stamp the date", keywords: ["date", "today", "now", "day"],
+    { id: "date", group: KAIRO, icon: <GlyphDate />, title: "Today's date", hint: "Stamp the date", keywords: ["date", "today", "now", "day"],
       run: (e, r) => clear(e, r).insertContent(opts.todayLabel()).run() },
   ];
 }
@@ -122,8 +145,8 @@ export function MentionMenu({ store }: { store: MenuStore<MentionItem> }) {
             onClick={() => s.pick?.(item)}
             className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-left transition-colors ${active ? "bg-sun-soft" : "hover:bg-paper-deep"}`}
           >
-            <span className="w-5 shrink-0 text-center" aria-hidden>
-              {item.kind === "page" ? item.page.icon ?? "📄" : "+"}
+            <span className="grid w-5 shrink-0 place-items-center" aria-hidden>
+              {item.kind === "page" ? <PageIcon icon={item.page.icon} size={18} /> : <IconPlus size={13} className="text-sun-deep" />}
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm">
@@ -337,23 +360,23 @@ export function NotesDock({ editor }: { editor: Editor }) {
           <span className="text-xs font-bold">H</span>
         </Tool>
         <Tool label="To-do list" active={st.todo} onClick={() => editor.chain().focus().toggleTaskList().run()}>
-          ☑
+          <GlyphTodo />
         </Tool>
         <Tool label="Bulleted list" active={st.bullet} onClick={() => editor.chain().focus().toggleBulletList().run()}>
-          •
+          <GlyphBullets />
         </Tool>
         <Divider />
         <Tool label="Move block up" onClick={() => move(-1)}>
-          ↑
+          <GlyphUp />
         </Tool>
         <Tool label="Move block down" onClick={() => move(1)}>
-          ↓
+          <GlyphDown />
         </Tool>
         <Tool label="Undo" onClick={() => editor.chain().focus().undo().run()} className={st.canUndo ? "" : "opacity-35"}>
-          ↶
+          <GlyphUndo />
         </Tool>
         <Tool label="Redo" onClick={() => editor.chain().focus().redo().run()} className={st.canRedo ? "" : "opacity-35"}>
-          ↷
+          <GlyphRedo />
         </Tool>
         <Tool label="Done" onClick={() => editor.commands.blur()}>
           <span className="text-xs font-semibold text-sun-deep">Done</span>

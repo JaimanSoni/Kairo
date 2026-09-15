@@ -19,6 +19,7 @@ import {
   type AttrRule,
   type JNode,
 } from "./doc-model";
+import { pageIconKey } from "./icons";
 
 /* ---------------------------------------------------------------- limits */
 
@@ -127,12 +128,12 @@ export function cleanNoteTitle(v: unknown): string {
   return typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, NOTE_TITLE_MAX) : "";
 }
 
-/** One emoji, or nothing. A page icon is never a smuggled string. */
+/**
+ * One of Kairo's icons, by key, or nothing. An emoji, from an older page or an
+ * assistant, becomes its closest icon: a page icon is never a smuggled string.
+ */
 export function cleanIcon(v: unknown): string | null {
-  if (typeof v !== "string") return null;
-  const s = v.trim();
-  if (!s || s.length > 16 || /[\s<>]/.test(s)) return null;
-  return /\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(s) ? s : null;
+  return pageIconKey(v);
 }
 
 export function cleanCover(v: unknown): string | null {
@@ -216,7 +217,7 @@ export function noteToMarkdown(
   opts: { depth?: number; titleOf?: (id: string) => string | null; path?: string[] } = {}
 ): string {
   const depth = Math.min(5, Math.max(1, opts.depth ?? 1));
-  const heading = `${"#".repeat(depth)} ${page.icon ? `${page.icon} ` : ""}${escapeMd(page.title || "Untitled")}`;
+  const heading = `${"#".repeat(depth)} ${escapeMd(page.title || "Untitled")}`;
   const parts = [heading];
   if (opts.path?.length) parts.push(`_${opts.path.map((p) => escapeMd(p || "Untitled")).join(" / ")}_`);
   const body = blocksToMarkdown(page.doc.content, { shift: depth, titleOf: opts.titleOf });

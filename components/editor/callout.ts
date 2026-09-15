@@ -1,21 +1,35 @@
 import { Node, mergeAttributes } from "@tiptap/react";
+import { isIconKey, pageIconKey } from "@/lib/icons";
 
 declare module "@tiptap/react" {
   interface Commands<ReturnType> {
     callout: {
       setCallout: (emoji: string) => ReturnType;
-      /** Changes the emoji of the callout at a position. */
+      /** Changes the icon of the callout at a position. */
       setCalloutEmoji: (pos: number, emoji: string) => ReturnType;
     };
   }
 }
 
-/** A soft box with an emoji — for the thing worth finding again. */
-export const Callout = Node.create({
+type CalloutOptions = {
+  /** Draw every callout with an icon: an emoji written before icons shows its closest one. */
+  icons: boolean;
+};
+
+/**
+ * A soft box with a mark: for the thing worth finding again. The mark is one
+ * of Kairo's icons by key (notes) or an emoji (the journal); the attribute
+ * keeps its first name so pages written before icons still open.
+ */
+export const Callout = Node.create<CalloutOptions>({
   name: "callout",
   group: "block",
   content: "block+",
   defining: true,
+
+  addOptions() {
+    return { icons: false };
+  },
 
   addAttributes() {
     return {
@@ -32,10 +46,16 @@ export const Callout = Node.create({
   },
 
   renderHTML({ node, HTMLAttributes }) {
+    const mark = String(node.attrs.emoji);
+    const icon = this.options.icons ? (pageIconKey(mark) ?? "sparkle") : isIconKey(mark) ? mark : null;
     return [
       "div",
       mergeAttributes(HTMLAttributes, { "data-callout": "", class: "jr-callout" }),
-      ["span", { class: "jr-callout-emoji", contenteditable: "false" }, String(node.attrs.emoji)],
+      [
+        "span",
+        { class: "jr-callout-emoji", contenteditable: "false" },
+        icon ? ["img", { src: `/img/${icon}.png`, alt: "", draggable: "false", class: "jr-callout-icon" }] : mark,
+      ],
       ["div", { class: "jr-callout-body" }, 0],
     ];
   },

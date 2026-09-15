@@ -817,6 +817,15 @@ button {
   line-height: 1.5;
   user-select: none;
 }
+/* a callout's 3D icon sits on the first line of its words */
+.jr-callout-icon {
+  display: block;
+  width: 1.3em;
+  height: 1.3em;
+  margin: 0.1em 0;
+  object-fit: contain;
+  pointer-events: none;
+}
 .jr-callout-body {
   flex: 1;
   min-width: 0;
@@ -1139,7 +1148,9 @@ button {
   background: var(--color-paper-deep);
 }
 .nt-mention-icon {
-  margin-right: 0.2em;
+  display: inline-flex;
+  margin-right: 0.25em;
+  vertical-align: -0.15em;
 }
 .nt-mention.is-gone {
   color: var(--color-ink-faint);

@@ -13,6 +13,8 @@
  * (the journal, notes) brings its own list; the checking is done here.
  */
 
+import { isIconKey } from "./icons";
+
 export type JMark = { type: string; attrs?: Record<string, unknown> };
 export type JNode = {
   type: string;
@@ -107,7 +109,7 @@ export const BASE_NODES: Record<string, AttrRule> = {
   codeBlock: (a) => ({
     language: typeof a.language === "string" && /^[a-z0-9+#.-]{1,24}$/i.test(a.language) ? a.language : null,
   }),
-  // a callout carries one emoji; anything longer is a smuggled string
+  // a callout carries one icon key or emoji; anything longer is a smuggled string
   callout: (a) => ({
     emoji: typeof a.emoji === "string" && a.emoji.length > 0 && a.emoji.length <= 16 ? a.emoji : "💭",
   }),
@@ -358,8 +360,10 @@ function mdBlock(n: JNode, indent: string, ctx: MdContext): string {
     case "blockquote":
     case "callout": {
       const inner = (n.content ?? []).map((b) => mdBlock(b, "", ctx)).join("\n\n");
-      const emoji = n.type === "callout" ? `${String(n.attrs?.emoji ?? "💭")} ` : "";
-      return (emoji + inner)
+      // an icon is a picture on the page; Markdown keeps only an emoji
+      const mark = n.type === "callout" ? String(n.attrs?.emoji ?? "💭") : "";
+      const lead = mark && !isIconKey(mark) ? `${mark} ` : "";
+      return (lead + inner)
         .split("\n")
         .map((line) => `${indent}> ${line}`.trimEnd())
         .join("\n");

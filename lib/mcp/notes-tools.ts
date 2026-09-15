@@ -1,6 +1,7 @@
 import { docToText, type JNode } from "../doc-model";
 import { markdownToBlocks } from "../markdown-blocks";
 import { createNote, getNote, hideLockedChips, listTree, saveNoteDoc, searchNotes } from "../notes";
+import { PAGE_ICONS } from "../icons";
 import { cleanIcon, isNoteId, NoteContentError, noteToMarkdown, type NoteMeta } from "../notes-shared";
 import { SITE_URL } from "../site";
 import { canWrite, type McpContext } from "./context";
@@ -167,7 +168,11 @@ const notesCreate: Tool = {
       content: { type: "string", maxLength: 50000, description: "The body, as Markdown. May be empty." },
       parentId: { type: "string", description: "Create it inside this page." },
       parentTitle: { type: "string", maxLength: 200, description: "Create it inside the page with this exact title." },
-      icon: { type: "string", maxLength: 16, description: "One emoji for the page, if it suits." },
+      icon: {
+        type: "string",
+        enum: [...PAGE_ICONS],
+        description: "An icon for the page, if one suits. The list-* icons are topics (list-work is a briefcase, list-goals a target); the rest are what they're called.",
+      },
     },
     ["title"]
   ),

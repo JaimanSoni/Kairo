@@ -13,6 +13,8 @@ import { NotesHome } from "./home";
 import { NotePageView } from "./note-page";
 import { PageTree } from "./tree";
 import { notesUi, useTreeTick, useUiTick } from "./ui-state";
+import { GlyphPanel, GlyphPencil, GlyphSearch, GlyphTrash } from "./glyphs";
+import { IconPlus } from "../ui";
 
 /**
  * /notes is the home; /notes/<id> is a page. On a wide screen the page tree
@@ -133,18 +135,13 @@ function NotesPanel({ activeId, onFind, onTrash }: { activeId: string | null; on
           Notes
         </button>
         <button type="button" onClick={onFind} aria-label="Search notes" title="Search (Ctrl+P)" className={iconButton}>
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
-            <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
+          <GlyphSearch size={14} />
         </button>
         <button type="button" onClick={() => void actions.create()} aria-label="New page" title="New page" className={iconButton}>
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
-            <path d="M9.8 2.8l3.4 3.4L5.6 13.8l-3.9.5.5-3.9 7.6-7.6z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-          </svg>
+          <GlyphPencil size={14} />
         </button>
         <button type="button" onClick={() => notesUi.setPanel(false)} aria-label="Hide the page panel" title="Hide (Ctrl+\)" className={iconButton}>
-          «
+          <GlyphPanel size={14} />
         </button>
       </div>
 
@@ -174,7 +171,7 @@ function NotesPanel({ activeId, onFind, onTrash }: { activeId: string | null; on
           className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-ink-soft transition-colors hover:bg-card hover:text-ink"
         >
           <span className="grid w-5 place-items-center" aria-hidden>
-            +
+            <IconPlus size={13} />
           </span>
           New page
         </button>
@@ -184,7 +181,7 @@ function NotesPanel({ activeId, onFind, onTrash }: { activeId: string | null; on
           className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-ink-soft transition-colors hover:bg-card hover:text-ink"
         >
           <span className="grid w-5 place-items-center" aria-hidden>
-            🗑
+            <GlyphTrash size={14} />
           </span>
           Trash
         </button>

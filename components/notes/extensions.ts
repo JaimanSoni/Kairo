@@ -444,7 +444,7 @@ export function turnInto(editor: Editor, pos: number, kind: BlockKind): boolean 
     case "quote":
       return base.setBlockquote().run();
     case "callout":
-      return base.setCallout("💡").run();
+      return base.setCallout("sparkle").run();
     case "code":
       return base.setCodeBlock().run();
   }

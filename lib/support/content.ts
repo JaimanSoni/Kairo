@@ -2342,7 +2342,7 @@ export const ARTICLES: Article[] = [
             items: [
               "**Toggle lists** tuck details away until you open them. Click the arrow to open or close one.",
               "**Tables** grow with **+ Row** and **+ Column** in the bar above them. Drag a column's edge to widen it.",
-              "**Callouts** make something stand out. Click the emoji to change it.",
+              "**Callouts** make something stand out. Click the icon to change it.",
               "**Sub-pages** made with `/` then **Page** appear as a link on the page they live in.",
             ],
           },

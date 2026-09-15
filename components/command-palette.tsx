@@ -9,6 +9,8 @@ import type { Task } from "@/lib/types";
 import { friendlyDay } from "@/lib/dates";
 import { hiddenListIds, useApp, visibleLists } from "./store";
 import { Chip, Kbd, Modal } from "./ui";
+import { ListMark } from "./img3d";
+import { PageIcon } from "./notes/pickers";
 
 type PaletteItem =
   | { kind: "action"; id: string; label: string; hint?: string; run: () => void }
@@ -227,13 +229,17 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
                     </>
                   ) : item.kind === "note" ? (
                     <>
-                      <span className="shrink-0 text-sm" aria-hidden>{item.page.icon ?? "📄"}</span>
+                      <span className="grid shrink-0 place-items-center" aria-hidden>
+                        <PageIcon icon={item.page.icon} size={16} />
+                      </span>
                       <span className="min-w-0 flex-1 truncate text-sm">{item.page.title || "Untitled"}</span>
                       <Chip>note</Chip>
                     </>
                   ) : item.kind === "list" ? (
                     <>
-                      <span className="shrink-0 text-sm" aria-hidden>📁</span>
+                      <span className="grid shrink-0 place-items-center" aria-hidden>
+                        <ListMark value={item.emoji} size={16} />
+                      </span>
                       <span className="min-w-0 flex-1 truncate text-sm">{item.label}</span>
                       <Chip>list</Chip>
                     </>

@@ -33,7 +33,9 @@ import {
 } from "@/lib/notes-shared";
 import { useApp, visibleLists } from "../store";
 import { navigateApp } from "../app-views";
-import { IconStar } from "../ui";
+import { IconPlus, IconStar } from "../ui";
+import { Icon3d } from "../img3d";
+import { pageIconKey } from "@/lib/icons";
 import { Callout } from "../editor/callout";
 import { createSlashStore, filterSlash, SlashCommand, type SlashItem } from "../editor/slash";
 import { SlashMenu } from "../editor/slash-menu";
@@ -42,7 +44,8 @@ import { useCoarsePointer } from "../editor/viewport";
 import { BlockKeys, createMenuStore, createPageMention, MarkdownPaste, PageLink, TaskRef, type MentionItem } from "./extensions";
 import { buildNoteSlashItems, MentionMenu, NotesDock, TableBar, TaskPrompt } from "./menus";
 import { BlockHandle } from "./block-handle";
-import { CoverPicker, EmojiPicker } from "./pickers";
+import { CoverPicker, IconPicker, PageIcon } from "./pickers";
+import { GlyphArrowLeft, GlyphFace, GlyphImage, GlyphLock, GlyphPanel, GlyphSearch, GlyphTask } from "./glyphs";
 import { MoveDialog } from "./dialogs";
 import { metaOf, titleOf, useNoteActions } from "./actions";
 import { ago } from "./format";
@@ -167,7 +170,7 @@ export function NotePageView({ id, onFind }: { id: string; onFind: () => void })
         content: [
           ...(theirs.doc.content ?? []),
           { type: "horizontalRule" },
-          { type: "callout", attrs: { emoji: "📱" }, content: [{ type: "paragraph", content: [{ type: "text", text: "Also written on another device" }] }] },
+          { type: "callout", attrs: { emoji: "repeat" }, content: [{ type: "paragraph", content: [{ type: "text", text: "Also written on another device" }] }] },
           ...(mine.content ?? []),
         ],
       };
@@ -182,7 +185,7 @@ export function NotePageView({ id, onFind }: { id: string; onFind: () => void })
   if (status === "missing") {
     return (
       <div className="mx-auto max-w-md px-6 pb-32 pt-24 text-center">
-        <div className="text-4xl">🗂️</div>
+        <Icon3d name="list-folder" size={64} className="mx-auto" />
         <h1 className="font-display mt-3 text-2xl">This page isn&apos;t here</h1>
         <p className="mt-2 text-sm text-ink-soft">It may have been deleted for good, or the link is from another account.</p>
         <button onClick={() => navigateApp("/notes")} className="mt-5 rounded-full bg-ink px-5 py-2 text-sm font-semibold text-paper">
@@ -195,7 +198,7 @@ export function NotePageView({ id, onFind }: { id: string; onFind: () => void })
   if (status === "offline") {
     return (
       <div className="mx-auto max-w-md px-6 pb-32 pt-24 text-center">
-        <div className="text-4xl">📡</div>
+        <Icon3d name="sun-cloud" size={64} className="mx-auto" />
         <h1 className="font-display mt-3 text-2xl">This page isn&apos;t on this device yet</h1>
         <p className="mt-2 text-sm text-ink-soft">You look offline. It opens once you&apos;re back.</p>
         <button
@@ -315,7 +318,7 @@ function NoteSurface({
   const [linked, setLinked] = useState(() => new Set(linksIn(loaded.doc)));
   const [menuOpen, setMenuOpen] = useState(false);
   const [picker, setPicker] = useState<"icon" | "cover" | null>(null);
-  const [calloutPick, setCalloutPick] = useState<{ pos: number; top: number; left: number } | null>(null);
+  const [calloutPick, setCalloutPick] = useState<({ pos: number } & Anchor) | null>(null);
   const [askTaskAt, setAskTaskAt] = useState<number | null>(null);
   const [moving, setMoving] = useState(false);
 
@@ -530,7 +533,7 @@ function NoteSurface({
           return "Type / for blocks, @ to link a page";
         },
       }),
-      Callout,
+      Callout.configure({ icons: true }),
       PageLink,
       TaskRef,
       pageMention,
@@ -638,7 +641,7 @@ function NoteSurface({
   }, [loaded]);
 
   // the tab carries the page's name
-  const tabTitle = `${page.icon ? `${page.icon} ` : ""}${titleOf(page)} · Kairo`;
+  const tabTitle = `${titleOf(page)} · Kairo`;
   useEffect(() => {
     document.title = tabTitle;
   }, [tabTitle]);
@@ -658,7 +661,7 @@ function NoteSurface({
     if (!tpl || !editor) return;
     const patch: NoteMetaPatch = {};
     if (!page.title && tpl.title) patch.title = tpl.title;
-    if (!page.icon) patch.icon = tpl.icon;
+    if (!pageIconKey(page.icon)) patch.icon = tpl.icon;
     if (Object.keys(patch).length) setMeta(patch);
     editor.chain().setContent(tpl.doc, { emitUpdate: true }).focus("start").run();
   };
@@ -709,7 +712,7 @@ function NoteSurface({
       for (let d = $p.depth; d > 0; d--) {
         if ($p.node(d).type.name === "callout") {
           const r = emoji.getBoundingClientRect();
-          setCalloutPick({ pos: $p.before(d), top: r.bottom + 6, left: r.left });
+          setCalloutPick({ pos: $p.before(d), top: r.top, bottom: r.bottom, left: r.left });
           return;
         }
       }
@@ -724,6 +727,8 @@ function NoteSurface({
   const crumbs = ancestors.length > 3 ? [ancestors[0], null, ...ancestors.slice(-2)] : ancestors;
   const kids = trashed ? [] : notesStore.children(id).filter((k) => !linked.has(k.id));
   const cover = coverCss(page.cover);
+  // an old emoji with no matching icon counts as no icon, so "Add icon" offers one
+  const iconKey = pageIconKey(page.icon);
   const panelOpen = notesUi.panelOpen();
   const width = page.fullWidth ? "max-w-none px-6 sm:px-16" : "max-w-3xl px-5 sm:px-14";
 
@@ -740,7 +745,7 @@ function NoteSurface({
               title="Show pages (Ctrl+\)"
               className="hidden size-8 shrink-0 place-items-center rounded-lg text-ink-faint hover:bg-card hover:text-ink md:grid"
             >
-              »
+              <GlyphPanel size={15} />
             </button>
           )}
           <button
@@ -749,7 +754,7 @@ function NoteSurface({
             aria-label="Back to the page above"
             className="grid size-8 shrink-0 place-items-center rounded-lg text-ink-soft hover:bg-card md:hidden"
           >
-            ←
+            <GlyphArrowLeft size={15} />
           </button>
           <nav aria-label="Breadcrumb" className="flex min-w-0 flex-1 items-center gap-0.5 text-sm">
             <button type="button" onClick={() => navigateApp("/notes")} className="hidden shrink-0 rounded-md px-1.5 py-1 text-ink-faint hover:bg-card hover:text-ink sm:block">
@@ -762,10 +767,10 @@ function NoteSurface({
                   <button
                     type="button"
                     onClick={() => navigateApp(`/notes/${c.id}`)}
-                    className="hidden min-w-0 max-w-[10rem] truncate rounded-md px-1.5 py-1 text-ink-faint hover:bg-card hover:text-ink sm:block"
+                    className="hidden min-w-0 max-w-[10rem] items-center gap-1.5 rounded-md px-1.5 py-1 text-ink-faint hover:bg-card hover:text-ink sm:flex"
                   >
-                    {c.icon ? `${c.icon} ` : ""}
-                    {titleOf(c)}
+                    {pageIconKey(c.icon) && <PageIcon icon={c.icon} size={15} className="shrink-0" />}
+                    <span className="truncate">{titleOf(c)}</span>
                   </button>
                 ) : (
                   <span className="hidden px-1 text-ink-faint sm:inline">…</span>
@@ -773,27 +778,25 @@ function NoteSurface({
               </span>
             ))}
             <span className="hidden px-0.5 text-ink-faint/60 sm:inline">/</span>
-            <span className="min-w-0 truncate px-1.5 font-medium text-ink">
-              {page.icon ? `${page.icon} ` : ""}
-              {titleOf(page)}
+            <span className="flex min-w-0 items-center gap-1.5 px-1.5 font-medium text-ink">
+              {pageIconKey(page.icon) && <PageIcon icon={page.icon} size={16} className="shrink-0" />}
+              <span className="truncate">{titleOf(page)}</span>
             </span>
             {page.locked && !trashed && (
               <button
                 type="button"
                 onClick={() => setMeta({ locked: false })}
-                className="ml-1 shrink-0 rounded-full bg-paper-deep px-2 py-0.5 text-[11px] font-medium text-ink-soft hover:bg-sun-soft hover:text-sun-deep"
+                className="ml-1 flex shrink-0 items-center gap-1 rounded-full border border-line bg-card px-2 py-0.5 text-[11px] font-medium text-ink-soft hover:border-sun/50 hover:text-sun-deep"
                 title="Unlock to edit"
               >
-                🔒 Locked
+                <GlyphLock size={11} />
+                Locked
               </button>
             )}
           </nav>
           <SaveBadge state={frozen ? "conflict" : save} onRetry={() => flushRef.current()} />
           <button type="button" onClick={onFind} aria-label="Search notes" title="Search notes (Ctrl+P)" className="hidden size-8 shrink-0 place-items-center rounded-lg text-ink-faint hover:bg-card hover:text-ink sm:grid">
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
-              <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
+            <GlyphSearch size={15} />
           </button>
           {!trashed && (
             <button
@@ -905,42 +908,44 @@ function NoteSurface({
 
       <main className={`mx-auto w-full ${width} pb-40 ${cover ? "" : "pt-10 sm:pt-16"}`}>
         <div className="group/head relative">
-          {page.icon && (
-            <div className={`relative ${cover ? "-mt-11" : ""}`}>
+          {iconKey && (
+            <div className={`relative ${cover ? "-mt-12" : ""}`}>
               <button
                 type="button"
                 onClick={() => !readOnly && setPicker("icon")}
                 aria-label="Change icon"
-                className={`rounded-2xl text-[4.2rem] leading-none transition-colors ${readOnly ? "cursor-default" : "hover:bg-paper-deep/70"}`}
+                data-icon={iconKey}
+                className={`block rounded-2xl p-1 transition-colors ${readOnly ? "cursor-default" : "hover:bg-paper-deep/70"}`}
               >
-                {page.icon}
+                <Icon3d name={iconKey} size={76} className="drop-shadow-sm" />
               </button>
             </div>
           )}
-          {!readOnly && (!page.icon || !page.cover) && (
-            <div className={`mt-2 flex h-7 gap-1 text-sm text-ink-faint transition-opacity ${coarse ? "" : "opacity-0 focus-within:opacity-100 group-hover/head:opacity-100"} ${!page.icon && cover ? "mt-4" : ""}`}>
-              {!page.icon && (
-                <button type="button" onClick={() => setPicker("icon")} className="rounded-md px-2 py-0.5 hover:bg-paper-deep hover:text-ink-soft">
-                  ☺ Add icon
+          {!readOnly && (!iconKey || !page.cover) && (
+            <div className={`mt-2 flex h-7 gap-1 text-sm text-ink-faint transition-opacity ${coarse ? "" : "opacity-0 focus-within:opacity-100 group-hover/head:opacity-100"} ${!iconKey && cover ? "mt-4" : ""}`}>
+              {!iconKey && (
+                <button type="button" onClick={() => setPicker("icon")} className="flex items-center gap-1.5 rounded-md px-2 py-0.5 hover:bg-paper-deep hover:text-ink-soft">
+                  <GlyphFace size={14} /> Add icon
                 </button>
               )}
               {!page.cover && (
                 <button
                   type="button"
                   onClick={() => setMeta({ cover: ["lagoon", "dawn", "bloom", "mint", "aurora"][words % 5] })}
-                  className="rounded-md px-2 py-0.5 hover:bg-paper-deep hover:text-ink-soft"
+                  className="flex items-center gap-1.5 rounded-md px-2 py-0.5 hover:bg-paper-deep hover:text-ink-soft"
                 >
-                  ▭ Add cover
+                  <GlyphImage size={14} /> Add cover
                 </button>
               )}
             </div>
           )}
           {picker === "icon" && (
-            <EmojiPicker
+            <IconPicker
               className="left-0 top-full mt-1"
-              onPick={(emoji) => {
+              current={page.icon}
+              onPick={(key) => {
                 setPicker(null);
-                setMeta({ icon: emoji });
+                setMeta({ icon: key });
               }}
               onRemove={
                 page.icon
@@ -987,9 +992,9 @@ function NoteSurface({
                   type="button"
                   onClick={() => applyTemplate(t.id)}
                   title={t.hint}
-                  className="flex items-center gap-1.5 rounded-full border border-line bg-card px-3 py-1 text-sm text-ink-soft transition-colors hover:border-sun hover:text-sun-deep"
+                  className="flex h-9 items-center gap-2 rounded-full border border-line bg-card pl-2 pr-3.5 text-sm text-ink-soft transition-colors hover:border-ink-faint hover:text-ink"
                 >
-                  <span aria-hidden>{t.icon}</span>
+                  <Icon3d name={t.icon} size={20} />
                   {t.name}
                 </button>
               ))}
@@ -1012,7 +1017,9 @@ function NoteSurface({
                     onClick={() => navigateApp(`/notes/${k.id}`)}
                     className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[0.95rem] hover:bg-paper-deep"
                   >
-                    <span aria-hidden>{k.icon ?? "📄"}</span>
+                    <span className="grid w-5 shrink-0 place-items-center" aria-hidden>
+                      <PageIcon icon={k.icon} size={18} />
+                    </span>
                     <span className="min-w-0 flex-1 truncate underline decoration-line underline-offset-4">{titleOf(k)}</span>
                     <span className="shrink-0 text-xs text-ink-faint">{ago(k.updatedAt)}</span>
                   </button>
@@ -1027,7 +1034,7 @@ function NoteSurface({
             onClick={() => void actions.create({ parentId: id })}
             className="mt-2 flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-ink-faint transition-colors hover:bg-paper-deep hover:text-ink-soft"
           >
-            + Add a page inside
+            <IconPlus size={13} /> Add a page inside
           </button>
         )}
 
@@ -1046,7 +1053,9 @@ function NoteSurface({
                       onClick={() => navigateApp(`/notes/${b.id}`)}
                       className="flex w-full items-center gap-2 rounded-lg px-1.5 py-1 text-left text-sm text-ink-soft hover:bg-paper-deep hover:text-ink"
                     >
-                      <span aria-hidden>{(live ?? b).icon ?? "📄"}</span>
+                      <span className="grid w-5 shrink-0 place-items-center" aria-hidden>
+                        <PageIcon icon={(live ?? b).icon} size={16} />
+                      </span>
                       <span className="truncate">{titleOf(live ?? b)}</span>
                     </button>
                   </li>
@@ -1075,7 +1084,9 @@ function NoteSurface({
               <>
                 <Divider />
                 <Tool label="Make it a Kairo task" onClick={() => void makeTaskFromSelection()}>
-                  <span className="px-1 text-xs font-semibold">✓ Task</span>
+                  <span className="flex items-center gap-1 px-1 text-xs font-semibold">
+                    <GlyphTask size={13} /> Task
+                  </span>
                 </Tool>
               </>
             }
@@ -1090,21 +1101,51 @@ function NoteSurface({
       <MentionMenu store={mentionStore} />
 
       {calloutPick && editor && (
-        <div style={{ position: "fixed", top: calloutPick.top, left: Math.min(calloutPick.left, window.innerWidth - 360) }} className="z-[72]">
-          <div className="relative">
-            <EmojiPicker
-              className="left-0 top-0"
-              onPick={(emoji) => {
-                editor.chain().focus().setCalloutEmoji(calloutPick.pos, emoji).run();
-                setCalloutPick(null);
-              }}
-              onClose={() => setCalloutPick(null)}
-            />
-          </div>
-        </div>
+        <FloatingAt anchor={calloutPick}>
+          <IconPicker
+            className="left-0 top-0"
+            label="Choose the callout's icon"
+            current={String(editor.state.doc.nodeAt(calloutPick.pos)?.attrs.emoji ?? "")}
+            onPick={(key) => {
+              editor.chain().focus().setCalloutEmoji(calloutPick.pos, key).run();
+              setCalloutPick(null);
+            }}
+            onClose={() => setCalloutPick(null)}
+          />
+        </FloatingAt>
       )}
 
       {moving && <MoveDialog id={id} onClose={() => setMoving(false)} />}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------- floating */
+
+type Anchor = { top: number; bottom: number; left: number };
+
+/**
+ * A popover pinned beside something on screen: below it when there's room,
+ * above it when there isn't, and never past the edge. Placed by writing to the
+ * node once it can be measured, so it never draws in the wrong place first.
+ */
+function FloatingAt({ anchor, children }: { anchor: Anchor; children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const box = el?.querySelector<HTMLElement>('[role="dialog"]');
+    if (!el || !box) return;
+    const h = box.offsetHeight;
+    const w = box.offsetWidth;
+    const below = anchor.bottom + 6;
+    const top = below + h > window.innerHeight - 8 ? Math.max(8, anchor.top - 6 - h) : below;
+    el.style.top = `${top}px`;
+    el.style.left = `${Math.max(8, Math.min(anchor.left, window.innerWidth - w - 8))}px`;
+    el.style.visibility = "visible";
+  }, [anchor]);
+  return (
+    <div ref={ref} style={{ position: "fixed", top: 0, left: 0, visibility: "hidden" }} className="z-[72]">
+      <div className="relative">{children}</div>
     </div>
   );
 }

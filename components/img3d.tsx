@@ -1,72 +1,11 @@
 import Image from "next/image";
+import { iconKeyFor } from "@/lib/icons";
 
 /**
- * The 3D icon set living in /public/img. See IMAGE-PROMPTS.md for the
- * generation spec. Every key here must have a matching 256px PNG.
+ * The 3D icon set living in /public/img. The keys live in lib/icons.ts, where
+ * the server can read them too; see IMAGE-PROMPTS.md for the generation spec.
  */
-export const LIST_ICONS = [
-  "list-folder",
-  "list-work",
-  "list-home",
-  "list-heart",
-  "list-errands",
-  "list-books",
-  "list-fitness",
-  "list-art",
-  "list-travel",
-  "list-growth",
-  "list-mind",
-  "list-goals",
-] as const;
-
-/** Tier 2 — key moments and empty states. */
-export const SYSTEM_ICONS = [
-  "sunrise",
-  "moon",
-  "inbox",
-  "party",
-  "bird",
-  "book",
-  "lock",
-  "sparkle",
-] as const;
-
-/** Tier 3 — small property icons for the task editor and menus. */
-export const PROPERTY_ICONS = [
-  "sun",
-  "repeat",
-  "bell",
-  "coffee",
-  "sun-cloud",
-  "timer",
-  "flag",
-  "pencil",
-  "leaf",
-  "feather",
-] as const;
-
-const ALL_ICONS = new Set<string>([...LIST_ICONS, ...SYSTEM_ICONS, ...PROPERTY_ICONS]);
-
-/** Legacy lists stored emoji — map them onto the icon set so old data upgrades itself. */
-const EMOJI_TO_ICON: Record<string, string> = {
-  "📁": "list-folder",
-  "💼": "list-work",
-  "🏡": "list-home",
-  "❤️": "list-heart",
-  "🛒": "list-errands",
-  "📚": "list-books",
-  "💪": "list-fitness",
-  "🎨": "list-art",
-  "✈️": "list-travel",
-  "🌱": "list-growth",
-  "🧠": "list-mind",
-  "🎯": "list-goals",
-};
-
-export function iconKeyFor(value: string): string | null {
-  if (ALL_ICONS.has(value)) return value;
-  return EMOJI_TO_ICON[value] ?? null;
-}
+export { LIST_ICONS, PROPERTY_ICONS, SYSTEM_ICONS, iconKeyFor } from "@/lib/icons";
 
 /** Renders a known 3D icon by key. */
 export function Icon3d({

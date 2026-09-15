@@ -3,6 +3,7 @@ import type { JNode } from "@/lib/doc-model";
 /**
  * Starting points for a blank page. Each is only a shape — headings, a
  * checklist, a table — never filler text a person has to delete first.
+ * Icons are keys into Kairo's 3D set, for the page and for its callouts.
  */
 
 export type Template = {
@@ -30,7 +31,7 @@ const numbered = (...items: string[]): JNode => ({
   attrs: { start: 1 },
   content: items.map((i) => ({ type: "listItem", content: [i ? p(t(i)) : p()] })),
 });
-const callout = (emoji: string, ...content: JNode[]): JNode => ({ type: "callout", attrs: { emoji }, content });
+const callout = (icon: string, ...content: JNode[]): JNode => ({ type: "callout", attrs: { emoji: icon }, content });
 const toggle = (summary: string, ...content: JNode[]): JNode => ({
   type: "details",
   attrs: { open: false },
@@ -54,7 +55,7 @@ export const TEMPLATES: Template[] = [
   {
     id: "meeting",
     name: "Meeting notes",
-    icon: "📝",
+    icon: "pencil",
     hint: "Who, what, and who does what next",
     title: "Meeting notes",
     doc: doc(
@@ -71,11 +72,11 @@ export const TEMPLATES: Template[] = [
   {
     id: "project",
     name: "Project brief",
-    icon: "🚀",
+    icon: "flag",
     hint: "The why, the scope, the milestones",
     title: "Project brief",
     doc: doc(
-      callout("🎯", p(t("In one sentence: ", [{ type: "bold" }]))),
+      callout("list-goals", p(t("In one sentence: ", [{ type: "bold" }]))),
       h(2, "Why it matters"),
       p(),
       h(2, "Scope"),
@@ -89,7 +90,7 @@ export const TEMPLATES: Template[] = [
   {
     id: "reading",
     name: "Reading notes",
-    icon: "📚",
+    icon: "list-books",
     hint: "Ideas worth keeping from a book or article",
     title: "Reading notes",
     doc: doc(
@@ -106,7 +107,7 @@ export const TEMPLATES: Template[] = [
   {
     id: "weekly",
     name: "Weekly review",
-    icon: "🗓️",
+    icon: "repeat",
     hint: "Look back kindly, plan lightly",
     title: "Weekly review",
     doc: doc(
@@ -116,13 +117,13 @@ export const TEMPLATES: Template[] = [
       bullets(""),
       h(2, "Next week"),
       todos(""),
-      callout("🌱", p(t("One small thing to try:")))
+      callout("list-growth", p(t("One small thing to try:")))
     ),
   },
   {
     id: "todo",
     name: "To-do list",
-    icon: "✅",
+    icon: "inbox",
     hint: "A plain checklist, nothing else",
     title: "To-do",
     doc: doc(todos("", "", "")),
@@ -130,11 +131,11 @@ export const TEMPLATES: Template[] = [
   {
     id: "idea",
     name: "Idea",
-    icon: "💡",
+    icon: "sparkle",
     hint: "Catch it before it wanders off",
     title: "",
     doc: doc(
-      callout("💡", p(t("The idea: ", [{ type: "bold" }]))),
+      callout("sparkle", p(t("The idea: ", [{ type: "bold" }]))),
       h(2, "Why it could work"),
       p(),
       h(2, "How to try it"),

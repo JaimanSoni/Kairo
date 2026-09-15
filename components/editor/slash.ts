@@ -1,6 +1,7 @@
 import { Extension, type Editor, type Range } from "@tiptap/react";
 import { PluginKey } from "@tiptap/pm/state";
 import Suggestion from "@tiptap/suggestion";
+import type { ReactNode } from "react";
 
 /**
  * The slash menu's machinery, shared by every Kairo editor. Each editor brings
@@ -11,8 +12,8 @@ export type SlashItem = {
   id: string;
   title: string;
   hint: string;
-  /** A glyph, drawn in the menu's icon well. */
-  icon: string;
+  /** A glyph or line icon, drawn in the menu's icon well. */
+  icon: ReactNode;
   /** The heading this item is listed under. Groups appear in the order their first item does. */
   group: string;
   keywords: string[];

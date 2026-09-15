@@ -2,13 +2,22 @@
 
 import { notesStore } from "@/lib/notes-client";
 import { coverCss } from "@/lib/notes-shared";
+import { pageIconKey } from "@/lib/icons";
 import { navigateApp } from "../app-views";
+import { Icon3d } from "../img3d";
 import { IconPlus } from "../ui";
 import { titleOf, useNoteActions } from "./actions";
 import { ago, pathOf } from "./format";
+import { GlyphPage, GlyphSearch, GlyphTrash } from "./glyphs";
+import { PageIcon } from "./pickers";
 import { TEMPLATES } from "./templates";
 import { PageTree } from "./tree";
 import { useTreeTick } from "./ui-state";
+
+const pill =
+  "flex h-9 items-center gap-1.5 rounded-full border border-line bg-card px-3.5 text-xs font-semibold text-ink-soft transition-colors hover:border-ink-faint hover:text-ink";
+const primary = "flex h-9 items-center gap-1.5 rounded-full bg-ink px-4 text-xs font-semibold text-paper transition-transform hover:-translate-y-0.5";
+const label = "mb-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-faint";
 
 /**
  * The notes home: what you were last working on, what you starred, and a way
@@ -35,22 +44,11 @@ export function NotesHome({ onFind, onTrash }: { onFind: () => void; onTrash: ()
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onFind}
-            className="flex items-center gap-2 rounded-full border border-line bg-card px-3.5 py-2 text-sm text-ink-soft transition-colors hover:border-ink-faint"
-          >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
-              <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
+          <button type="button" onClick={onFind} className={pill}>
+            <GlyphSearch size={14} />
             Search
           </button>
-          <button
-            type="button"
-            onClick={() => void actions.create()}
-            className="flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-paper transition-transform hover:-translate-y-0.5"
-          >
+          <button type="button" onClick={() => void actions.create()} className={primary}>
             <IconPlus size={14} /> New page
           </button>
         </div>
@@ -65,7 +63,7 @@ export function NotesHome({ onFind, onTrash }: { onFind: () => void; onTrash: ()
       ) : status === "error" ? (
         <div className="mt-10 text-center">
           <p className="text-sm text-ink-soft">Couldn&apos;t load your pages. Check your connection.</p>
-          <button type="button" onClick={() => void notesStore.reload()} className="mt-3 rounded-full bg-ink px-4 py-1.5 text-sm font-semibold text-paper">
+          <button type="button" onClick={() => void notesStore.reload()} className={`${primary} mx-auto mt-3`}>
             Try again
           </button>
         </div>
@@ -73,18 +71,14 @@ export function NotesHome({ onFind, onTrash }: { onFind: () => void; onTrash: ()
         <section className="anim-rise mt-10 overflow-hidden rounded-3xl border border-line bg-card">
           <div className="h-24" style={{ background: coverCss("aurora") ?? undefined }} />
           <div className="px-6 pb-6">
-            <div className="-mt-8 text-6xl" aria-hidden>
-              🗒️
+            <div className="-mt-9 grid size-[4.5rem] place-items-center rounded-2xl border border-line bg-card shadow-sm" aria-hidden>
+              <Icon3d name="feather" size={48} />
             </div>
             <h2 className="font-display mt-3 text-2xl">Your first page</h2>
             <p className="mt-1 max-w-lg text-sm text-ink-soft">
               A page can be anything — a plan, a list, a recipe, a place for everything about one project. Pages go inside pages, so your notes grow into a shape that fits you.
             </p>
-            <button
-              type="button"
-              onClick={() => void actions.create()}
-              className="mt-4 flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-paper"
-            >
+            <button type="button" onClick={() => void actions.create()} className={`${primary} mt-4`}>
               <IconPlus size={14} /> Start with a blank page
             </button>
             <Templates onPick={(t) => void actions.create({ title: t.title, icon: t.icon, doc: t.doc })} />
@@ -93,18 +87,18 @@ export function NotesHome({ onFind, onTrash }: { onFind: () => void; onTrash: ()
       ) : (
         <>
           <section className="mt-8">
-            <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-faint">Recently edited</h2>
+            <h2 className={label}>Recently edited</h2>
             <div className="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0">
               {recent.map((p) => (
                 <button
                   key={p.id}
                   type="button"
                   onClick={() => navigateApp(`/notes/${p.id}`)}
-                  className="group flex h-36 w-44 shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-line bg-card text-left transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-ink/5 sm:w-auto"
+                  className="group flex h-36 w-44 shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-line bg-card text-left transition-all hover:-translate-y-0.5 hover:border-ink-faint/40 hover:shadow-lg hover:shadow-ink/5 sm:w-auto"
                 >
                   <div className="h-12 w-full shrink-0" style={{ background: coverCss(p.cover) ?? "var(--color-paper-deep)" }} />
-                  <div className="-mt-5 px-3.5 text-[1.9rem] leading-none" aria-hidden>
-                    {p.icon ?? "📄"}
+                  <div className="-mt-5 px-3.5" aria-hidden>
+                    <CardMark icon={p.icon} />
                   </div>
                   <div className="mt-2 truncate px-3.5 text-sm font-semibold">{titleOf(p)}</div>
                   <div className="mt-auto truncate px-3.5 pb-3 text-xs text-ink-faint">{[pathOf(p.id), ago(p.updatedAt)].filter(Boolean).join(" · ")}</div>
@@ -115,16 +109,16 @@ export function NotesHome({ onFind, onTrash }: { onFind: () => void; onTrash: ()
 
           {favorites.length > 0 && (
             <section className="mt-8 hidden md:block">
-              <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-faint">Favorites</h2>
+              <h2 className={label}>Favorites</h2>
               <div className="flex flex-wrap gap-2">
                 {favorites.map((p) => (
                   <button
                     key={p.id}
                     type="button"
                     onClick={() => navigateApp(`/notes/${p.id}`)}
-                    className="flex items-center gap-2 rounded-full border border-line bg-card px-3.5 py-1.5 text-sm text-ink-soft transition-colors hover:border-sun hover:text-sun-deep"
+                    className="flex h-9 items-center gap-2 rounded-full border border-line bg-card pl-2.5 pr-3.5 text-sm text-ink-soft transition-colors hover:border-ink-faint hover:text-ink"
                   >
-                    <span aria-hidden>{p.icon ?? "📄"}</span>
+                    <PageIcon icon={p.icon} size={18} />
                     {titleOf(p)}
                   </button>
                 ))}
@@ -140,12 +134,12 @@ export function NotesHome({ onFind, onTrash }: { onFind: () => void; onTrash: ()
               onClick={onTrash}
               className="mt-3 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm text-ink-faint hover:bg-card hover:text-ink-soft"
             >
-              🗑 Trash
+              <GlyphTrash size={14} /> Trash
             </button>
           </section>
 
           <section className="mt-8">
-            <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-faint">Start from a template</h2>
+            <h2 className={label}>Start from a template</h2>
             <Templates onPick={(t) => void actions.create({ title: t.title, icon: t.icon, doc: t.doc })} />
           </section>
         </>
@@ -154,18 +148,29 @@ export function NotesHome({ onFind, onTrash }: { onFind: () => void; onTrash: ()
   );
 }
 
+/** A page's mark on its card: its 3D icon, or a quiet page tile when it has none. */
+function CardMark({ icon }: { icon: string | null }) {
+  const key = pageIconKey(icon);
+  if (key) return <Icon3d name={key} size={40} className="drop-shadow-sm" />;
+  return (
+    <span className="grid size-10 place-items-center rounded-xl border border-line bg-card text-ink-faint shadow-sm">
+      <GlyphPage size={17} />
+    </span>
+  );
+}
+
 function Templates({ onPick }: { onPick: (t: (typeof TEMPLATES)[number]) => void }) {
   return (
-    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+    <div className="mt-3 grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:grid-cols-3">
       {TEMPLATES.map((t) => (
         <button
           key={t.id}
           type="button"
           onClick={() => onPick(t)}
-          className="flex items-start gap-2.5 rounded-2xl border border-line bg-card p-3 text-left transition-all hover:-translate-y-0.5 hover:border-sun/50"
+          className="flex items-center gap-3 rounded-2xl border border-line bg-card p-3 text-left transition-all hover:-translate-y-0.5 hover:border-ink-faint/40"
         >
-          <span className="text-xl leading-none" aria-hidden>
-            {t.icon}
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-paper" aria-hidden>
+            <Icon3d name={t.icon} size={28} />
           </span>
           <span className="min-w-0">
             <span className="block truncate text-sm font-semibold">{t.name}</span>

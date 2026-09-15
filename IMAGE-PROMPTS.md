@@ -104,8 +104,9 @@ material, palette and camera angle for every icon that follows."*
    node scripts/process-icons.mjs            # or reprocess all of them
    ```
 
-3. Add the key to `SYSTEM_ICONS` or `PROPERTY_ICONS` in `components/img3d.tsx` — every key
-   there must have a matching PNG.
+3. Add the key to `SYSTEM_ICONS` or `PROPERTY_ICONS` in `lib/icons.ts`, with its name in
+   `ICON_NAMES` — every key there must have a matching PNG. Notes offers every key as a page
+   and callout icon, so a new one appears in its picker too.
 
 Then use it with `<Icon3d name="coffee" size={20} />`. Because of the normalisation in step 2,
 `size` is the real rendered size — no need to inflate it to compensate for empty margin.

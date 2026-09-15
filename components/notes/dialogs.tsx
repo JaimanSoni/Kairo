@@ -6,10 +6,12 @@ import type { NoteMeta, NoteSearchHit, TrashItem } from "@/lib/notes-shared";
 import { TRASH_DAYS } from "@/lib/notes-shared";
 import { navigateApp } from "../app-views";
 import { useApp } from "../store";
-import { IconX, Kbd, Modal } from "../ui";
+import { IconPlus, IconX, Kbd, Modal } from "../ui";
 import { titleOf, useNoteActions } from "./actions";
 import { ago, pathOf } from "./format";
 import { useTreeTick } from "./ui-state";
+import { GlyphSearch, GlyphTopLevel, GlyphTrash } from "./glyphs";
+import { PageIcon } from "./pickers";
 
 /* ------------------------------------------------------------------ move */
 
@@ -75,8 +77,8 @@ export function MoveDialog({ id, onClose }: { id: string; onClose: () => void })
               onClick={() => choose(p)}
               className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left ${sel === i ? "bg-sun-soft" : ""}`}
             >
-              <span className="w-5 shrink-0 text-center" aria-hidden>
-                {p ? p.icon ?? "📄" : "⤒"}
+              <span className="grid w-5 shrink-0 place-items-center" aria-hidden>
+                {p ? <PageIcon icon={p.icon} size={18} /> : <GlyphTopLevel size={15} className="text-ink-faint" />}
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm">{p ? titleOf(p) : "Top level"}</span>
@@ -170,8 +172,8 @@ export function TrashDialog({ onClose }: { onClose: () => void }) {
                     }}
                     className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
                   >
-                    <span className="w-5 shrink-0 text-center" aria-hidden>
-                      {item.icon ?? "📄"}
+                    <span className="grid w-5 shrink-0 place-items-center" aria-hidden>
+                      <PageIcon icon={item.icon} size={18} />
                     </span>
                     <span className="min-w-0">
                       <span className="block truncate text-sm">{titleOf(item)}</span>
@@ -206,9 +208,9 @@ export function TrashDialog({ onClose }: { onClose: () => void }) {
                         type="button"
                         onClick={() => setConfirm(item.id)}
                         aria-label={`Delete ${titleOf(item)} forever`}
-                        className="rounded-full px-2 py-1 text-xs text-ink-faint hover:text-clay"
+                        className="grid size-7 place-items-center rounded-full text-ink-faint transition-colors hover:bg-clay-soft hover:text-clay"
                       >
-                        🗑
+                        <GlyphTrash size={14} />
                       </button>
                     </span>
                   )}
@@ -308,10 +310,7 @@ export function QuickFind({ onClose }: { onClose: () => void }) {
     <Modal onClose={onClose} anchor="top">
       <div className="p-3">
         <div className="flex items-center gap-2.5 border-b border-line px-2 pb-3">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 text-ink-faint" aria-hidden>
-            <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
+          <GlyphSearch className="shrink-0 text-ink-faint" />
           <input
             autoFocus
             value={q}
@@ -360,8 +359,8 @@ export function QuickFind({ onClose }: { onClose: () => void }) {
                 >
                   {item.kind === "new" ? (
                     <>
-                      <span className="w-5 shrink-0 text-center text-sun" aria-hidden>
-                        +
+                      <span className="grid w-5 shrink-0 place-items-center text-sun-deep" aria-hidden>
+                        <IconPlus size={13} />
                       </span>
                       <span className="min-w-0 flex-1 truncate text-sm">
                         New page “<b>{item.title}</b>”
@@ -369,8 +368,8 @@ export function QuickFind({ onClose }: { onClose: () => void }) {
                     </>
                   ) : (
                     <>
-                      <span className="w-5 shrink-0 text-center" aria-hidden>
-                        {(item.kind === "page" ? item.page.icon : item.hit.icon) ?? "📄"}
+                      <span className="grid w-5 shrink-0 place-items-center" aria-hidden>
+                        <PageIcon icon={item.kind === "page" ? item.page.icon : item.hit.icon} size={18} />
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm">{titleOf(item.kind === "page" ? item.page : item.hit)}</span>

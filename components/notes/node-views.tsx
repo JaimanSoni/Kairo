@@ -5,6 +5,8 @@ import { NodeViewWrapper, type ReactNodeViewProps } from "@tiptap/react";
 import { notesStore } from "@/lib/notes-client";
 import { hiddenListIds, useApp } from "../store";
 import { navigateApp } from "../app-views";
+import { GlyphCheck, GlyphTrash } from "./glyphs";
+import { PageIcon } from "./pickers";
 
 /**
  * How links to pages and Kairo tasks look inside a page. Each reads the live
@@ -34,7 +36,7 @@ export function PageMentionView({ node }: ReactNodeViewProps) {
       }}
     >
       <span className="nt-mention-icon" aria-hidden>
-        {meta?.icon ?? "📄"}
+        <PageIcon icon={meta?.icon} size={16} />
       </span>
       <span className="nt-mention-title">{title}</span>
     </NodeViewWrapper>
@@ -55,8 +57,8 @@ export function PageLinkView({ node, selected }: ReactNodeViewProps) {
         onClick={() => id && !gone && navigateApp(`/notes/${id}`)}
         className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-paper-deep"
       >
-        <span className="text-lg leading-none" aria-hidden>
-          {gone ? "🗑️" : meta?.icon ?? "📄"}
+        <span className="grid w-5 shrink-0 place-items-center" aria-hidden>
+          {gone ? <GlyphTrash size={15} className="text-ink-faint" /> : <PageIcon icon={meta?.icon} size={20} />}
         </span>
         <span className={`min-w-0 flex-1 truncate font-medium ${gone ? "text-ink-faint line-through" : "underline decoration-line underline-offset-4"}`}>
           {gone ? "A page that's in the trash" : meta?.title || "Untitled"}
@@ -91,7 +93,7 @@ export function TaskRefView({ node }: ReactNodeViewProps) {
           else completeTask(id);
         }}
       >
-        {done ? "✓" : ""}
+        {done ? <GlyphCheck size={9} /> : null}
       </button>
       <button
         type="button"
