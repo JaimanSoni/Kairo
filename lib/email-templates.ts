@@ -344,3 +344,61 @@ export function adminMismatchEmail(input: {
  * otherwise swallow the one email that says money went missing.
  */
 export const ADMIN_EMAIL = "jaimansoni@gmail.com";
+
+/* ------------------------------------------------------------- Kairo City */
+
+/**
+ * A plot saved in Kairo City, sent to a friend. The one email here with a
+ * picture: the garden and the plot beside it, drawn by the invite's own
+ * preview image, under a sky-coloured band. Everything else stays inline and
+ * table-free, so it holds together in Gmail, Outlook and Apple Mail.
+ */
+export function cityInviteEmail(input: {
+  inviterName: string;
+  level: number;
+  levelName: string;
+  habits: number;
+  doneToday: number;
+  claimUrl: string;
+  imageUrl: string;
+  email: string;
+}): Rendered {
+  const who = h(input.inviterName);
+  const reason = `You received this because ${who} saved you a plot in Kairo City and sent it to this address.`;
+  const stat = (value: string, label: string) =>
+    `<td style="padding:0 6px;text-align:center;"><div style="font-size:20px;font-weight:800;color:${INK};">${value}</div><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:${FAINT};margin-top:2px;">${label}</div></td>`;
+  const html = `<!doctype html><html><body style="margin:0;padding:0;background:#dff3fb;">
+<div style="max-width:560px;margin:0 auto;padding:28px 16px;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${INK};">
+  <div style="font-size:20px;font-weight:700;letter-spacing:-0.02em;margin:0 6px 16px;">
+    <img src="${SITE_URL}/email-mark.png" width="20" height="20" alt="" style="vertical-align:-3px;border:0;"/> kairo <span style="font-size:12px;font-weight:700;letter-spacing:0.16em;color:${TEAL};margin-left:6px;">KAIRO CITY</span>
+  </div>
+  <div style="background:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 12px 40px rgba(12,60,90,0.12);">
+    <div style="background:#3aa1ea;background-image:linear-gradient(180deg,#3aa1ea 0%,#8ad0f6 60%,#d8f2fb 100%);padding:30px 26px 22px;text-align:center;">
+      <div style="display:inline-block;background:#ffd166;color:#3b2a00;font-size:12px;font-weight:800;letter-spacing:0.14em;border-radius:999px;padding:6px 14px;">A PLOT, SAVED FOR YOU</div>
+      <h1 style="font-size:30px;line-height:36px;margin:14px 0 6px;font-weight:800;color:#ffffff;text-shadow:0 2px 12px rgba(0,0,0,0.18);">${who} saved you the plot next to their garden</h1>
+      <p style="font-size:15px;line-height:22px;margin:0;color:#ffffff;">Build a habit, and your garden grows right beside theirs.</p>
+    </div>
+    <a href="${input.claimUrl}" style="display:block;border:0;"><img src="${input.imageUrl}" width="560" alt="${who}'s garden in Kairo City, and a plot beside it reserved for you" style="display:block;width:100%;height:auto;border:0;"/></a>
+    <div style="padding:24px 26px 28px;text-align:center;">
+      <table role="presentation" align="center" style="margin:0 auto 18px;border-collapse:collapse;"><tr>
+        ${stat(`Lv ${input.level}`, h(input.levelName))}
+        ${stat(String(input.habits), input.habits === 1 ? "habit growing" : "habits growing")}
+        ${stat(String(input.doneToday), "done today")}
+      </tr></table>
+      <p style="font-size:15px;line-height:24px;margin:0 0 20px;color:${SOFT};">Kairo City is a street of real gardens, each one grown by somebody's habits. Claim your plot and you'll be neighbours: on each other's street, with a bench for two in both gardens.</p>
+      <a href="${input.claimUrl}" style="display:inline-block;background:#ffd166;color:#3b2a00;text-decoration:none;font-size:17px;font-weight:800;padding:15px 34px;border-radius:999px;box-shadow:0 6px 18px rgba(255,180,40,0.35);">Claim your plot</a>
+      <p style="font-size:12px;line-height:18px;margin:18px 0 0;color:${FAINT};">Free to join. Sign in with Google and you're in.</p>
+    </div>
+  </div>
+  <p style="font-size:12px;line-height:18px;color:${FAINT};margin:20px 8px 0;">
+    ${reason} Not expecting it? Ignore this email and nothing happens. Questions? Write to <a href="mailto:${SUPPORT_INBOX}" style="color:${FAINT};">${SUPPORT_INBOX}</a>.
+    <br/>Kairo &middot; <a href="${SITE_URL}" style="color:${FAINT};">kairo.jaimansoni.com</a>
+  </p>
+</div>
+</body></html>`;
+  return {
+    subject: `${input.inviterName} saved you a plot in Kairo City`,
+    html,
+    text: `${input.inviterName} saved you the plot next to their garden in Kairo City.\n\nTheir garden is a Level ${input.level} ${input.levelName}, with ${input.habits} ${input.habits === 1 ? "habit" : "habits"} growing. Build a habit, and your garden grows right beside theirs.\n\nClaim your plot:\n${input.claimUrl}\n\nFree to join. Not expecting it? Ignore this email and nothing happens.${footerText(reason)}`,
+  };
+}

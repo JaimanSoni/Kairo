@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { requireSession, unauthorized } from "@/lib/api-auth";
-import { createInvite, InviteRefused } from "@/lib/city";
+import { createInvite, InviteRefused, sentInviteEmails } from "@/lib/city";
 import { habitFailure } from "@/lib/habit-api";
+
+/** The addresses you've sent plots to before: suggestions for the next invite. */
+export async function GET() {
+  const session = await requireSession();
+  if (!session) return unauthorized();
+  return NextResponse.json({ sent: await sentInviteEmails(new ObjectId(session.userId)) });
+}
 
 /** Saves a free plot beside your garden for a friend, and hands back its code. */
 export async function POST() {

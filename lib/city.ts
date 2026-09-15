@@ -61,10 +61,23 @@ const FADE = 0.97;
 type CheerRecord = { _id: ObjectId; toUserId: ObjectId; fromUserId: ObjectId; day: string; at: Date };
 
 /** A free plot saved for a friend: a link, until someone claims it. */
-type InviteRecord = { _id: ObjectId; code: string; fromUserId: ObjectId; createdAt: Date; claimedBy: ObjectId | null; claimedAt: Date | null; seenByInviter: boolean };
+type InviteRecord = {
+  _id: ObjectId;
+  code: string;
+  fromUserId: ObjectId;
+  createdAt: Date;
+  claimedBy: ObjectId | null;
+  claimedAt: Date | null;
+  seenByInviter: boolean;
+  /** Emailed to this address, when it was sent by email. */
+  sentTo?: string | null;
+  sentAt?: Date | null;
+};
 
 /** How many plots one gardener can hold for friends at once. */
 export const MAX_OPEN_INVITES = 10;
+/** How many invite emails one gardener can send in a day: enough for friends, too few for spam. */
+export const MAX_INVITE_EMAILS_PER_DAY = 15;
 
 let indexReady: Promise<void> | null = null;
 async function ensureCityIndexes(): Promise<void> {
@@ -413,6 +426,7 @@ export async function forgetCityOf(userId: ObjectId): Promise<number> {
 /* ----------------------------------------------------------------- invites */
 
 export class InviteRefused extends Error {}
+export class InviteSendFailed extends Error {}
 
 /** Your saved plots, and the friends who've claimed one since you last looked (told once). */
 async function invitesOf(userId: ObjectId): Promise<NonNullable<City["invites"]>> {
@@ -512,4 +526,67 @@ export async function claimInvite(userId: ObjectId, code: string, input: { name?
     void notify().catch(() => undefined);
   }
   return { inviter: owner?.gardener?.public && owner.gardener.slug ? { name: owner.gardener.name, id: owner.gardener.slug } : null };
+}
+
+/* ------------------------------------------------------------ invite emails */
+
+const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,24}$/;
+
+/** The addresses you've sent plots to, newest first: suggestions for the next one. */
+export async function sentInviteEmails(userId: ObjectId): Promise<{ email: string; claimed: boolean }[]> {
+  const rows = await (await invites()).find({ fromUserId: userId, sentTo: { $type: "string" } }, { projection: { sentTo: 1, claimedBy: 1, sentAt: 1 } }).sort({ sentAt: -1 }).limit(60).toArray();
+  const seen = new Map<string, { email: string; claimed: boolean }>();
+  for (const r of rows) {
+    const email = r.sentTo as string;
+    if (!seen.has(email)) seen.set(email, { email, claimed: Boolean(r.claimedBy) });
+  }
+  return [...seen.values()].slice(0, 20);
+}
+
+/**
+ * Sends a saved plot to someone by email: a letter with a picture of the
+ * garden and the plot beside it, and one button to claim it. One plot goes to
+ * one address; sending it again to someone else moves it to them. A day's
+ * sends are capped, and the same plot never mails the same person twice.
+ */
+export async function emailInvite(userId: ObjectId, code: string, rawEmail: unknown, today: string): Promise<{ sent: boolean; dry: boolean; email: string }> {
+  if (!/^[a-f0-9]{10}$/.test(code)) throw new HabitInputError("That plot isn't one of yours.");
+  const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
+  if (!EMAIL_RE.test(email)) throw new HabitInputError("That doesn't look like an email address.");
+  await ensureCityIndexes();
+  const col = await invites();
+  const invite = await col.findOne({ code, fromUserId: userId });
+  if (!invite) throw new HabitInputError("That plot isn't one of yours.");
+  if (invite.claimedBy) throw new InviteRefused("Someone has already claimed this plot. Save another for them.");
+  const people = await users();
+  const me = await people.findOne({ _id: userId }, { projection: { gardener: 1, garden: 1, email: 1, name: 1 } });
+  if (!me?.gardener?.public) throw new InviteRefused("Claim your own plot first, then invite a friend beside it.");
+  if (String(me.email ?? "").toLowerCase() === email) throw new HabitInputError("That's your own address. Send it to a friend.");
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  if ((await col.countDocuments({ fromUserId: userId, sentAt: { $gte: since } })) >= MAX_INVITE_EMAILS_PER_DAY) {
+    throw new InviteRefused(`That's ${MAX_INVITE_EMAILS_PER_DAY} invites by email today. Copy the link instead, or send more tomorrow.`);
+  }
+
+  const { sendEmail } = await import("./email");
+  const { cityInviteEmail } = await import("./email-templates");
+  const { SITE_URL } = await import("./site");
+  const snap = agedSnapshot(me.garden, today);
+  const score = snap?.score ?? 0;
+  const level = gardenLevelOf(score);
+  const rendered = cityInviteEmail({
+    inviterName: me.gardener.name,
+    level: level.level,
+    levelName: level.name,
+    habits: snap?.habits ?? 0,
+    doneToday: snap?.doneToday ?? 0,
+    claimUrl: `${SITE_URL}/i/${code}`,
+    imageUrl: `${SITE_URL}/i/${code}/opengraph-image`,
+    email,
+  });
+  const result = await sendEmail({ key: `city-invite:${code}:${email}`, to: email, ...rendered });
+  if (!result.sent && result.skipped !== "duplicate") {
+    throw new InviteSendFailed(result.skipped === "unconfigured" ? "Email isn't set up on this server. Copy the link instead." : "The invite didn't send. Try again, or copy the link.");
+  }
+  await col.updateOne({ _id: invite._id }, { $set: { sentTo: email, sentAt: new Date() } });
+  return { sent: true, dry: result.skipped === "dry", email };
 }

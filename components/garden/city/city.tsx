@@ -512,6 +512,7 @@ export function KairoCity({ onClose }: { onClose: () => void }) {
             setInviting(null);
             setReload((n) => n + 1);
           }}
+          onNewCode={() => setReload((n) => n + 1)}
         />
       )}
       {joining && (

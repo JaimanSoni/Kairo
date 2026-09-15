@@ -86,6 +86,8 @@ export const gardenApi = {
   cheer: (id: string) => call<{ cheers: CityGarden["cheers"] }>(`/api/garden/city/${id}/cheer`, { method: "POST", body: JSON.stringify({ today: todayStr() }) }),
   invite: () => call<{ code: string }>("/api/garden/invites", { method: "POST" }),
   cancelInvite: (code: string) => call<{ ok: true }>(`/api/garden/invites/${code}`, { method: "DELETE" }),
+  sentInvites: () => call<{ sent: { email: string; claimed: boolean }[] }>("/api/garden/invites"),
+  emailInvite: (code: string, email: string) => call<{ sent: boolean; dry: boolean; email: string }>(`/api/garden/invites/${code}/email`, { method: "POST", body: JSON.stringify({ email, today: todayStr() }) }),
   inviteInfo: (code: string) => call<{ status: "open" | "claimed" | "mine"; inviter: CityGarden | null; inviterName: string | null }>(`/api/garden/invites/${code}?today=${todayStr()}`),
   claim: (code: string, profile: { name?: string; animal?: string }) =>
     call<{ inviter: { name: string; id: string } | null }>(`/api/garden/invites/${code}/claim`, { method: "POST", body: JSON.stringify({ ...profile, today: todayStr() }) }),
