@@ -19,7 +19,7 @@ export function SeedsPage() {
   const params = useSearchParams();
   const asked = params.get("start") ?? params.get("plant");
   const [stats, setStats] = useState<Map<string, SeedStat>>(new Map());
-  const [open, setOpen] = useState<{ seed: Seed | null } | null>(null);
+  const [open, setOpen] = useState<{ seed: Seed | null; name?: string } | null>(null);
   const growing = new Set(habits.filter((h) => h.seedId).map((h) => h.seedId as string));
 
   useEffect(() => {
@@ -33,7 +33,7 @@ export function SeedsPage() {
   }, []);
 
   // a deep link (from the habits page or search) opens the sheet straight away
-  const linked = asked === "custom" ? { seed: null } : asked && seedOf(asked) && !growing.has(asked) ? { seed: seedOf(asked) } : null;
+  const linked = asked === "custom" ? { seed: null, name: "" } : asked && seedOf(asked) && !growing.has(asked) ? { seed: seedOf(asked) } : null;
   const sheet = open ?? linked;
   const close = () => {
     setOpen(null);
@@ -50,7 +50,7 @@ export function SeedsPage() {
         </div>
         <button
           type="button"
-          onClick={() => setOpen({ seed: null })}
+          onClick={() => setOpen({ seed: null, name: "" })}
           className="flex h-9 items-center gap-1.5 rounded-full bg-ink px-4 text-xs font-semibold text-paper transition-colors hover:bg-ink/90"
         >
           <IconPlus size={14} /> Your own habit
@@ -73,7 +73,7 @@ export function SeedsPage() {
         );
       })}
 
-      {sheet && <PlantSheet seed={sheet.seed} onClose={close} />}
+      {sheet && <PlantSheet seed={sheet.seed} name={sheet.name} onClose={close} />}
     </div>
   );
 }

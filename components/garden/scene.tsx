@@ -1,11 +1,14 @@
 "use client";
 
-import { useClock } from "./fx";
+import { Burst, Moment, useClock } from "./fx";
 
 /**
  * The garden's world: a sky that follows the clock, a sun or moon on its arc,
- * weather that follows the day, hills, and the ground everything grows in.
- * The plots are passed in as children and laid out on the ground.
+ * weather that clears as the day's habits get done, mountains and hills, and
+ * the ground everything grows in. The plots are passed in as children.
+ *
+ * When every habit due today is done, the garden says so without words: the
+ * clouds go, a rainbow comes out and petals drift down.
  */
 
 export type Weather = "clear" | "partly" | "cloudy";
@@ -22,65 +25,83 @@ function phaseOf(min: number): Phase {
 }
 
 const SKY: Record<Phase, string> = {
-  night: "linear-gradient(180deg, #0a1631 0%, #1c3157 60%, #2c4a72 100%)",
-  dawn: "linear-gradient(180deg, #7f93dc 0%, #f4b6a3 62%, #ffd9a8 100%)",
-  day: "linear-gradient(180deg, #5eb8f0 0%, #9fd9f6 60%, #d6f1fb 100%)",
-  golden: "linear-gradient(180deg, #f08a5d 0%, #f7b267 55%, #ffe0a3 100%)",
-  dusk: "linear-gradient(180deg, #2e2f73 0%, #7a5a9e 55%, #f09372 100%)",
+  night: "linear-gradient(180deg, #081229 0%, #16284b 55%, #2a4570 100%)",
+  dawn: "linear-gradient(180deg, #7489d8 0%, #e9aab0 58%, #ffd6a0 100%)",
+  day: "linear-gradient(180deg, #3fa6ec 0%, #8fd3f7 58%, #d4f1fb 100%)",
+  golden: "linear-gradient(180deg, #e9785a 0%, #f6aa63 52%, #ffe19e 100%)",
+  dusk: "linear-gradient(180deg, #25286a 0%, #6e5199 52%, #ee8f70 100%)",
 };
 
-const HILLS: Record<Phase, [string, string, string]> = {
-  night: ["#1d3a3c", "#244a45", "#2d5a4c"],
-  dawn: ["#8cbf8a", "#74b073", "#5e9f63"],
-  day: ["#9fd48c", "#7fc475", "#62b163"],
-  golden: ["#b8c77a", "#94b765", "#74a557"],
-  dusk: ["#4f6e6a", "#46655a", "#3d5c4f"],
+/** Far mountains, mid hills, near hills. */
+const LAND: Record<Phase, { far: string; farSnow: string; trees: string; hills: [string, string, string] }> = {
+  night: { far: "#243a5c", farSnow: "#3b5478", trees: "#16362f", hills: ["#1d3a3c", "#244a45", "#2d5a4c"] },
+  dawn: { far: "#9d8fc4", farSnow: "#f4d9e2", trees: "#5f9a68", hills: ["#8cbf8a", "#74b073", "#5e9f63"] },
+  day: { far: "#8fb3d6", farSnow: "#f4fbff", trees: "#4f9a5e", hills: ["#9fd48c", "#7fc475", "#62b163"] },
+  golden: { far: "#c48f7c", farSnow: "#ffe9cf", trees: "#6f8f4e", hills: ["#b8c77a", "#94b765", "#74a557"] },
+  dusk: { far: "#5b4f86", farSnow: "#b7a3cf", trees: "#35544a", hills: ["#4f6e6a", "#46655a", "#3d5c4f"] },
 };
 
 const GROUND: Record<Phase, string> = {
-  night: "linear-gradient(180deg, #2f5a48 0%, #274b3c 100%)",
-  dawn: "linear-gradient(180deg, #6fae67 0%, #5b9a57 100%)",
-  day: "linear-gradient(180deg, #74bd66 0%, #5da955 100%)",
-  golden: "linear-gradient(180deg, #86b25e 0%, #6c9c4f 100%)",
-  dusk: "linear-gradient(180deg, #46705a 0%, #3b604c 100%)",
+  night: "linear-gradient(180deg, #2f5a48 0%, #22443a 100%)",
+  dawn: "linear-gradient(180deg, #6fae67 0%, #57955a 100%)",
+  day: "linear-gradient(180deg, #74bd66 0%, #56a452 100%)",
+  golden: "linear-gradient(180deg, #86b25e 0%, #67984d 100%)",
+  dusk: "linear-gradient(180deg, #46705a 0%, #365a48 100%)",
 };
 
-const STARS = Array.from({ length: 34 }, (_, i) => ({ x: (i * 53) % 100, y: (i * 29) % 62, r: i % 5 === 0 ? 1.6 : 1, d: (i % 7) * 0.4 }));
+const STARS = Array.from({ length: 40 }, (_, i) => ({ x: (i * 53) % 100, y: (i * 29) % 70, r: i % 6 === 0 ? 1.7 : 1, d: (i % 7) * 0.4 }));
+/** Grass tufts and wildflowers, placed once, the same on every visit. */
+const TUFTS = Array.from({ length: 26 }, (_, i) => ({ x: (i * 37 + 11) % 97, y: 8 + ((i * 53) % 86), s: 0.7 + ((i * 7) % 5) / 10, d: (i % 5) * 0.6 }));
+const FLOWERS = Array.from({ length: 18 }, (_, i) => ({ x: (i * 61 + 5) % 96, y: 12 + ((i * 41) % 80), c: ["#ffffff", "#ffd54f", "#f48fb1", "#b39ddb", "#ffab91"][i % 5] }));
 
 export function GardenScene({
   weather,
   thriving = 0,
   children,
   compact = false,
+  allDone = false,
+  celebrate = 0,
+  hud,
 }: {
   weather: Weather;
   /** How many plants are thriving: the more, the more life flies about. */
   thriving?: number;
   children: React.ReactNode;
   compact?: boolean;
+  /** Everything due today is done: the rainbow comes out. */
+  allDone?: boolean;
+  /** Counts up the moment the last habit of the day is done, for a burst of colour. */
+  celebrate?: number;
+  /** A small overlay on the sky: today's progress. */
+  hud?: React.ReactNode;
 }) {
   const min = useClock();
   const phase = phaseOf(min);
   const night = phase === "night";
+  const dark = night || phase === "dusk";
   // the sun rises at 6 and sets at 19; the moon crosses the rest of the night
   const dayT = Math.min(1, Math.max(0, (min / 60 - 6) / 13));
   const nightT = ((min / 60 + 24 - 19) % 24) / 11;
-  const t = night || phase === "dusk" ? Math.min(1, nightT) : dayT;
-  const orbX = 8 + t * 84;
-  const orbY = 62 - Math.sin(t * Math.PI) * 48;
-  const clouds = weather === "clear" ? 1 : weather === "partly" ? 3 : 5;
-  const grey = weather === "cloudy";
-  const hills = HILLS[phase];
+  const t = dark ? Math.min(1, nightT) : dayT;
+  const orbX = 10 + t * 80;
+  const orbY = 58 - Math.sin(t * Math.PI) * 40;
+  const shown = allDone ? "clear" : weather;
+  const clouds = shown === "clear" ? 2 : shown === "partly" ? 4 : 6;
+  const grey = shown === "cloudy";
+  const land = LAND[phase];
+  const birds = !dark && !grey && !compact;
+  const bugs = Math.min(5, Math.floor(thriving / 1.2) + (allDone ? 2 : 0));
 
   return (
     <div
-      className={`gd-scene relative isolate overflow-hidden rounded-[1.75rem] border border-line/60 shadow-xl shadow-ink/5 ${compact ? "" : ""}`}
+      className="gd-scene relative isolate overflow-hidden rounded-[1.75rem] border border-line/60 shadow-xl shadow-ink/10"
       data-phase={phase}
-      data-weather={weather}
+      data-weather={shown}
+      data-all-done={allDone || undefined}
     >
       {/* sky */}
-      <div className={`relative ${compact ? "h-28" : "h-40 sm:h-52"}`} style={{ background: SKY[phase] }}>
-        {(night || phase === "dusk") &&
+      <div className={`relative ${compact ? "h-32" : "h-48 sm:h-60"}`} style={{ background: SKY[phase] }}>
+        {dark &&
           STARS.map((s, i) => (
             <span
               key={i}
@@ -88,83 +109,159 @@ export function GardenScene({
               style={{ left: `${s.x}%`, top: `${s.y}%`, width: s.r * 2, height: s.r * 2, animationDelay: `${s.d}s`, opacity: phase === "dusk" ? 0.5 : 0.9 }}
             />
           ))}
-        <div
-          className="absolute transition-[left,top] duration-1000"
-          style={{ left: `${orbX}%`, top: `${orbY}%`, transform: "translate(-50%, -50%)" }}
-          aria-hidden
-        >
-          {night || phase === "dusk" ? (
-            <div className="relative size-10 rounded-full bg-[#f4f1de] shadow-[0_0_30px_8px_rgba(244,241,222,0.35)]">
+        {night && !compact && <span className="gd-shooting absolute left-[62%] top-[14%] block h-px w-24 rounded-full bg-gradient-to-l from-white to-transparent" aria-hidden />}
+
+        {/* the sun, or the moon */}
+        <div className="absolute transition-[left,top] duration-1000" style={{ left: `${orbX}%`, top: `${orbY}%`, transform: "translate(-50%, -50%)" }} aria-hidden>
+          {dark ? (
+            <div className="relative size-11 rounded-full bg-[#f4f1de] shadow-[0_0_40px_12px_rgba(244,241,222,0.3)]">
               <span className="absolute left-2 top-3 size-2 rounded-full bg-[#dcd7bf]" />
-              <span className="absolute bottom-2 right-3 size-1.5 rounded-full bg-[#dcd7bf]" />
+              <span className="absolute bottom-2.5 right-3 size-1.5 rounded-full bg-[#dcd7bf]" />
+              <span className="absolute right-2 top-2 size-1 rounded-full bg-[#dcd7bf]" />
             </div>
           ) : (
-            <div className={`size-12 rounded-full bg-[#ffd35c] shadow-[0_0_40px_14px_rgba(255,211,92,0.55)] ${grey ? "opacity-60" : ""}`} />
+            <div className={`relative grid place-items-center transition-opacity duration-700 ${grey ? "opacity-50" : ""}`}>
+              <span className="gd-rays absolute size-40 rounded-full" />
+              <span className="relative size-14 rounded-full bg-[radial-gradient(circle_at_40%_38%,#fff6c4,#ffd35c_55%,#ffb938)] shadow-[0_0_50px_18px_rgba(255,211,92,0.55)]" />
+            </div>
           )}
         </div>
+
+        {/* the rainbow, once the day's habits are all done */}
+        {!dark && (
+          <svg
+            className={`gd-rainbow pointer-events-none absolute inset-x-0 bottom-6 h-[85%] w-full transition-opacity duration-[1600ms] ${allDone ? "opacity-80" : "opacity-0"}`}
+            viewBox="0 0 400 160"
+            preserveAspectRatio="xMidYMax meet"
+            aria-hidden
+          >
+            {["#ff6b6b", "#ffa94d", "#ffd43b", "#69db7c", "#4dabf7", "#9775fa"].map((c, i) => (
+              <path key={c} d={`M ${60 + i * 7} 160 A ${140 - i * 7} ${140 - i * 7} 0 0 1 ${340 - i * 7} 160`} fill="none" stroke={c} strokeWidth="6.5" opacity={0.85} />
+            ))}
+          </svg>
+        )}
+
         {Array.from({ length: clouds }, (_, i) => (
           <div
             key={i}
             className="gd-cloud absolute"
-            style={{ top: `${10 + ((i * 23) % 46)}%`, animationDuration: `${70 + i * 18}s`, animationDelay: `${-i * 21}s` }}
+            style={{ top: `${6 + ((i * 23) % 44)}%`, animationDuration: `${80 + i * 22}s`, animationDelay: `${-i * 19}s` }}
             aria-hidden
           >
-            <svg width={90 + (i % 2) * 40} viewBox="0 0 120 44">
+            <svg width={100 + (i % 3) * 36} viewBox="0 0 120 44">
               <path
                 d="M20 40 C 4 40, 2 22, 18 20 C 18 6, 40 2, 48 14 C 56 2, 82 4, 84 20 C 102 16, 118 30, 104 40 Z"
-                fill={night ? "#3b4f73" : grey ? "#d5dde3" : "#ffffff"}
-                opacity={night ? 0.55 : grey ? 0.95 : 0.9}
+                fill={night ? "#3b4f73" : grey ? "#c9d3da" : "#ffffff"}
+                opacity={night ? 0.5 : grey ? 0.95 : 0.92}
               />
             </svg>
           </div>
         ))}
-        {/* hills, where the sky meets the ground */}
-        <svg className="absolute inset-x-0 bottom-0 h-20 w-full" viewBox="0 0 400 80" preserveAspectRatio="none" aria-hidden>
-          <path d="M0 50 C 60 18, 120 22, 180 44 C 240 64, 300 20, 400 36 L400 80 L0 80 Z" fill={hills[0]} />
-          <path d="M0 62 C 80 40, 150 48, 220 60 C 290 72, 340 46, 400 54 L400 80 L0 80 Z" fill={hills[1]} />
-          <path d="M0 74 C 100 62, 200 68, 280 72 C 340 75, 370 66, 400 70 L400 80 L0 80 Z" fill={hills[2]} />
-          {/* a fence along the far edge */}
-          {Array.from({ length: 22 }, (_, i) => (
-            <rect key={i} x={i * 19 + 4} y={62} width={2.2} height={12} fill={night ? "#50473b" : "#b98d5e"} opacity={0.75} />
+        {grey && <div className="pointer-events-none absolute inset-0 bg-[#8aa0b0]/25 transition-opacity duration-700" aria-hidden />}
+
+        {birds &&
+          [0, 1, 2].map((i) => (
+            <svg
+              key={i}
+              className="gd-bird absolute"
+              style={{ top: `${14 + i * 9}%`, animationDelay: `${-i * 7}s`, animationDuration: `${26 + i * 5}s` }}
+              width={14 - i * 2}
+              height={8}
+              viewBox="0 0 14 8"
+              aria-hidden
+            >
+              <path className="gd-flap" d="M1 2 Q4 6 7 4 Q10 6 13 2" fill="none" stroke={phase === "golden" ? "#5b3a2e" : "#2f4858"} strokeWidth="1.4" strokeLinecap="round" />
+            </svg>
           ))}
-          <rect x={0} y={65} width={400} height={1.6} fill={night ? "#50473b" : "#b98d5e"} opacity={0.7} />
+
+        {/* the land: far mountains, a treeline, and the hills the garden sits in */}
+        <svg className="absolute inset-x-0 bottom-0 h-28 w-full sm:h-32" viewBox="0 0 400 110" preserveAspectRatio="none" aria-hidden>
+          <path d="M0 58 L38 30 L62 44 L96 16 L130 46 L160 34 L196 54 L232 22 L270 50 L300 36 L338 56 L372 28 L400 44 L400 110 L0 110 Z" fill={land.far} opacity="0.75" />
+          <path d="M88 22 L96 16 L104 23 L99 22 L96 25 Z M226 28 L232 22 L239 29 L233 27 L230 30 Z M366 33 L372 28 L378 34 L373 32 Z" fill={land.farSnow} opacity="0.9" />
+          {Array.from({ length: 34 }, (_, i) => (
+            <ellipse key={i} cx={i * 12 + 4} cy={62 + ((i * 7) % 5)} rx={6 + (i % 3)} ry={8 + (i % 4)} fill={land.trees} opacity="0.85" />
+          ))}
+          <path d="M0 64 C 60 40, 120 44, 180 60 C 240 76, 300 40, 400 54 L400 110 L0 110 Z" fill={land.hills[0]} />
+          <path d="M0 80 C 80 60, 150 66, 220 78 C 290 90, 340 64, 400 72 L400 110 L0 110 Z" fill={land.hills[1]} />
+          <path d="M0 96 C 100 84, 200 90, 280 94 C 340 97, 370 88, 400 92 L400 110 L0 110 Z" fill={land.hills[2]} />
+          {Array.from({ length: 22 }, (_, i) => (
+            <rect key={i} x={i * 19 + 4} y={84} width={2.2} height={12} fill={night ? "#50473b" : "#b98d5e"} opacity={0.75} />
+          ))}
+          <rect x={0} y={87} width={400} height={1.6} fill={night ? "#50473b" : "#b98d5e"} opacity={0.7} />
         </svg>
+
+        {hud && <div className="absolute left-3 top-3 z-10 sm:left-4 sm:top-4">{hud}</div>}
       </div>
 
       {/* ground */}
       <div className="relative" style={{ background: GROUND[phase] }}>
         <div
-          className="pointer-events-none absolute inset-0 opacity-[0.16]"
+          className="pointer-events-none absolute inset-0 opacity-[0.14]"
           style={{ backgroundImage: "radial-gradient(circle at 20% 30%, #fff 0 1px, transparent 1.5px), radial-gradient(circle at 70% 60%, #fff 0 1px, transparent 1.5px)", backgroundSize: "34px 30px, 46px 38px" }}
           aria-hidden
         />
+        {!compact && (
+          <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 400 300" preserveAspectRatio="none" aria-hidden>
+            {/* a winding path of stepping stones, from the gate to the front */}
+            <path d="M200 0 C 170 60, 250 110, 205 170 C 170 220, 230 260, 210 300" fill="none" stroke={night ? "#3d6a55" : "#cdb88e"} strokeWidth="26" strokeLinecap="round" opacity={night ? 0.35 : 0.28} />
+          </svg>
+        )}
+        {!compact &&
+          TUFTS.map((g, i) => (
+            <svg key={i} className="gd-tuft pointer-events-none absolute" style={{ left: `${g.x}%`, top: `${g.y}%`, animationDelay: `${g.d}s` }} width={14 * g.s} height={10 * g.s} viewBox="0 0 14 10" aria-hidden>
+              <path d="M2 10 Q3 4 1 1 M6 10 Q6 3 7 0 M10 10 Q10 4 13 2" fill="none" stroke={night ? "#4f8a6a" : "#3f8f4a"} strokeWidth="1.4" strokeLinecap="round" />
+            </svg>
+          ))}
+        {!compact &&
+          !night &&
+          FLOWERS.map((f, i) => (
+            <span key={i} className="pointer-events-none absolute block size-1.5 rounded-full" style={{ left: `${f.x}%`, top: `${f.y}%`, background: f.c, boxShadow: "0 0 0 1.5px rgba(255,255,255,0.25)" }} aria-hidden />
+          ))}
+
         {children}
+
         {night &&
-          Array.from({ length: 9 }, (_, i) => (
+          Array.from({ length: 10 }, (_, i) => (
             <span
               key={i}
               className="gd-firefly pointer-events-none absolute size-1.5 rounded-full bg-[#fff59d]"
-              style={{ left: `${(i * 37) % 95}%`, top: `${10 + ((i * 17) % 75)}%`, animationDelay: `${-i * 1.3}s` }}
+              style={{ left: `${(i * 37) % 95}%`, top: `${8 + ((i * 17) % 78)}%`, animationDelay: `${-i * 1.3}s` }}
               aria-hidden
             />
           ))}
-        {!night &&
-          Array.from({ length: Math.min(4, Math.floor(thriving / 1.5) + (weather === "clear" && thriving > 0 ? 1 : 0)) }, (_, i) => (
+        {!dark &&
+          Array.from({ length: bugs }, (_, i) => (
             <div
               key={i}
               className="gd-butterfly pointer-events-none absolute"
-              style={{ left: `${12 + ((i * 31) % 70)}%`, top: `${8 + ((i * 19) % 40)}%`, animationDelay: `${-i * 2.7}s` }}
+              style={{ left: `${10 + ((i * 31) % 72)}%`, top: `${6 + ((i * 19) % 44)}%`, animationDelay: `${-i * 2.7}s` }}
               aria-hidden
             >
-              <svg width="16" height="14" viewBox="0 0 16 14">
+              <svg width="18" height="15" viewBox="0 0 16 14">
                 <g className="gd-wings">
-                  <ellipse cx="4.5" cy="5" rx="4" ry="4.5" fill={["#ffb74d", "#f06292", "#9575cd", "#4fc3f7"][i % 4]} />
-                  <ellipse cx="11.5" cy="5" rx="4" ry="4.5" fill={["#ffcc80", "#f48fb1", "#b39ddb", "#81d4fa"][i % 4]} />
+                  <ellipse cx="4.5" cy="5" rx="4" ry="4.5" fill={["#ffb74d", "#f06292", "#9575cd", "#4fc3f7", "#aed581"][i % 5]} />
+                  <ellipse cx="11.5" cy="5" rx="4" ry="4.5" fill={["#ffcc80", "#f48fb1", "#b39ddb", "#81d4fa", "#c5e1a5"][i % 5]} />
                 </g>
                 <rect x="7.3" y="3" width="1.4" height="9" rx="0.7" fill="#4e342e" />
               </svg>
             </div>
           ))}
+        <div className="pointer-events-none absolute inset-x-0 top-1/3 z-20" aria-hidden>
+          <Moment id={celebrate} ms={2200}>
+            <Burst count={44} />
+          </Moment>
+        </div>
+        {allDone && !compact && (
+          <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+            {Array.from({ length: 14 }, (_, i) => (
+              <span
+                key={i}
+                className="gd-petal absolute block size-2 rounded-[60%_0_60%_0]"
+                style={{ left: `${(i * 29 + 7) % 96}%`, background: ["#f8bbd0", "#fff59d", "#ffffff", "#e1bee7"][i % 4], animationDelay: `${-i * 0.9}s`, animationDuration: `${7 + (i % 4)}s` }}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

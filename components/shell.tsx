@@ -185,16 +185,22 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
         <nav className="mt-6" aria-label="Kairo">
           <SideLink item={TODAY} pathname={pathname} />
-          {spaces.map((space) => (
-            <div key={space.id} className="mt-4" role="group" aria-labelledby={space.items.length > 1 ? `space-${space.id}` : undefined} aria-label={space.items.length > 1 ? undefined : space.items[0].label}>
-              {/* a place with one page is just that page; only a place with several gets a heading */}
-              {space.items.length > 1 && (
-                <div id={`space-${space.id}`} className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
-                  {space.label}
+          {navBlocks(spaces).map((block) => (
+            <div
+              key={block.key}
+              className={block.label ? "mt-4" : "mx-0 mt-4 border-t border-line/70 pt-3"}
+              role="group"
+              aria-labelledby={block.label ? `space-${block.key}` : undefined}
+              aria-label={block.label ? undefined : block.items.map((i) => i.label).join(", ")}
+            >
+              {/* a place with several pages gets a heading; places of one page sit together under a rule */}
+              {block.label && (
+                <div id={`space-${block.key}`} className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
+                  {block.label}
                 </div>
               )}
               <div className="space-y-0.5">
-                {space.items.map((item) => (
+                {block.items.map((item) => (
                   <SideLink key={item.href} item={item} pathname={pathname}>
                     {item.href === "/lists" && inboxCount > 0 && (
                       <span className="ml-auto rounded-full bg-paper-deep px-2 py-0.5 text-xs text-ink-soft">{inboxCount}</span>
@@ -947,6 +953,22 @@ function AccountSwitcher() {
 }
 
 /** A page in the sidebar. */
+/**
+ * The sidebar's blocks: a place with several pages keeps its heading, and
+ * neighbouring places of one page (Notes, Habits) share one block, so they
+ * don't each float alone with a gap of their own.
+ */
+function navBlocks(spaces: ReturnType<typeof visibleSpaces>): { key: string; label?: string; items: NavItem[] }[] {
+  const blocks: { key: string; label?: string; items: NavItem[] }[] = [];
+  for (const space of spaces) {
+    const last = blocks[blocks.length - 1];
+    if (space.items.length > 1) blocks.push({ key: space.id, label: space.label, items: space.items });
+    else if (last && !last.label) last.items.push(...space.items);
+    else blocks.push({ key: space.id, items: [...space.items] });
+  }
+  return blocks;
+}
+
 function SideLink({ item, pathname, children }: { item: NavItem; pathname: string; children?: React.ReactNode }) {
   const active = inItem(pathname, item.href);
   const Icon = item.icon;

@@ -15,8 +15,9 @@ import {
   type HabitView,
 } from "@/lib/habits-shared";
 import { gardenApi, gardenStore } from "@/lib/habits-client";
-import { useApp } from "../store";
 import { navigateApp } from "../app-views";
+import { IconTrash } from "../ui";
+import { DeleteHabitDialog } from "./delete-habit";
 import { Burst, Moment, WaterPour } from "./fx";
 import { IconDrop, IconFlame, IconTick, IconTrophy } from "./icons";
 import { Plant } from "./plants";
@@ -55,10 +56,9 @@ export function PlantPage({ id }: { id: string }) {
 const WEEK_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
 
 function PlantDetail({ habit, today }: { habit: HabitView; today: string }) {
-  const { showToast } = useApp();
   const { moments, water, compost } = useGardenActions();
   const [editing, setEditing] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [history, setHistory] = useState<HabitLogView[] | null>(null);
   const info = plotOf(habit, today);
   const { live, stage, streak } = info;
@@ -95,30 +95,30 @@ function PlantDetail({ habit, today }: { habit: HabitView; today: string }) {
 
   const week = Array.from({ length: 7 }, (_, i) => addDays(mondayOf(today), i));
 
-  const removeForever = async () => {
-    const r = await gardenApi.deleteForever(habit.id);
-    if (!r.ok) {
-      showToast({ message: r.kind === "invalid" ? r.message : "Couldn't delete that just now." });
-      return;
-    }
-    gardenStore.remove(habit.id);
-    showToast({ message: `${habit.name} is deleted.` });
-    navigateApp("/habits");
-  };
-
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-32 pt-6 sm:px-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <BackLink href="/habits" label="Habits" />
-        {!archived && (
+        <div className="flex items-center gap-2">
+          {!archived && (
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="flex h-9 items-center rounded-full border border-line bg-card px-3.5 text-xs font-semibold text-ink-soft transition-colors hover:border-ink-faint hover:text-ink"
+            >
+              Edit
+            </button>
+          )}
           <button
             type="button"
-            onClick={() => setEditing(true)}
-            className="flex h-9 items-center rounded-full border border-line bg-card px-3.5 text-xs font-semibold text-ink-soft transition-colors hover:border-ink-faint hover:text-ink"
+            onClick={() => setDeleting(true)}
+            aria-label="Delete habit"
+            title="Delete habit"
+            className="grid size-9 place-items-center rounded-full border border-line bg-card text-ink-faint transition-colors hover:border-clay/50 hover:text-clay"
           >
-            Edit
+            <IconTrash size={15} />
           </button>
-        )}
+        </div>
       </div>
 
       <div className="mt-3">
@@ -162,15 +162,9 @@ function PlantDetail({ habit, today }: { habit: HabitView; today: string }) {
             <button type="button" onClick={() => void compost(habit, false)} className="h-9 rounded-full bg-ink px-4 text-sm font-semibold text-paper">
               Restore
             </button>
-            {confirmDelete ? (
-              <button type="button" onClick={() => void removeForever()} className="h-9 rounded-full bg-clay px-4 text-sm font-semibold text-white">
-                Yes, delete it and its history
-              </button>
-            ) : (
-              <button type="button" onClick={() => setConfirmDelete(true)} className="h-9 rounded-full border border-line px-4 text-sm font-semibold text-clay">
-                Delete forever
-              </button>
-            )}
+            <button type="button" onClick={() => setDeleting(true)} className="h-9 rounded-full border border-line px-4 text-sm font-semibold text-clay">
+              Delete forever
+            </button>
           </div>
         </div>
       ) : (
@@ -268,15 +262,40 @@ function PlantDetail({ habit, today }: { habit: HabitView; today: string }) {
       {seed && !archived && <BoardCard seedId={seed.id} seedName={seed.name} weekly={weekly} />}
 
       {!archived && (
-        <div className="mt-10 border-t border-line pt-4">
-          <button type="button" onClick={() => void compost(habit, true).then((ok) => ok && navigateApp("/habits"))} className="text-sm font-medium text-ink-faint hover:text-clay">
-            Archive habit
-          </button>
-          <p className="mt-1 text-xs text-ink-faint">Takes it off your list and stops its reminders. Its history is kept, and you can restore it any time.</p>
-        </div>
+        <section className="mt-10 border-t border-line pt-5" aria-label="Stop this habit" data-manage>
+          <SectionTitle>Stop this habit</SectionTitle>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => void compost(habit, true).then((ok) => ok && navigateApp("/habits"))}
+              className="rounded-2xl border border-line bg-card px-4 py-3 text-left transition-colors hover:border-ink-faint/50"
+            >
+              <span className="block text-sm font-semibold text-ink">Archive habit</span>
+              <span className="mt-0.5 block text-xs text-ink-faint">Off your list, no reminders. History kept; restore it any time.</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeleting(true)}
+              className="rounded-2xl border border-clay/30 bg-card px-4 py-3 text-left transition-colors hover:border-clay/60 hover:bg-clay-soft/40"
+            >
+              <span className="block text-sm font-semibold text-clay">Delete habit</span>
+              <span className="mt-0.5 block text-xs text-ink-faint">Removes it and every day you marked. Can&apos;t be undone.</span>
+            </button>
+          </div>
+        </section>
       )}
 
       {editing && <PlantSheet habit={habit} onClose={() => setEditing(false)} />}
+      {deleting && (
+        <DeleteHabitDialog
+          habit={habit}
+          onClose={() => setDeleting(false)}
+          onDone={() => {
+            setDeleting(false);
+            navigateApp("/habits");
+          }}
+        />
+      )}
     </div>
   );
 }

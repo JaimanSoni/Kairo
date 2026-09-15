@@ -63,6 +63,18 @@ export function plotOf(habit: HabitView, today: string): PlotInfo {
 
 export type Moments = Record<string, { water: number; burst: number }>;
 
+/** Whether every habit that asks for something today has had it. */
+function allDueDone(today: string): boolean {
+  let due = 0;
+  for (const h of gardenStore.habits()) {
+    const lv = gardenStore.live(h, today);
+    if (!lv.dueToday && !lv.todayDone) continue;
+    due++;
+    if (!lv.todayDone) return false;
+  }
+  return due > 0;
+}
+
 /**
  * Marking a habit done, with what comes after it: a small moment on the
  * plant, a sound, a buzz. Marking one undone always offers Undo, so a stray
@@ -73,6 +85,8 @@ export function useGardenActions() {
   // the same "today" every habit screen draws with, even in the minute after midnight
   const today = state.today;
   const [moments, setMoments] = useState<Moments>({});
+  // the moment the last habit of the day is done
+  const [celebrate, setCelebrate] = useState(0);
 
   const bump = useCallback((id: string, kind: "water" | "burst") => {
     setMoments((m) => {
@@ -96,6 +110,7 @@ export function useGardenActions() {
         change = { delta: opts.step ?? 1 };
       }
       const wasDone = Boolean(log?.done);
+      const wasAll = date === today && allDueDone(today);
       const adding = (change.count ?? 1) > 0 && (change.delta ?? 1) > 0;
       if (adding) {
         bump(habit.id, "water");
@@ -112,7 +127,12 @@ export function useGardenActions() {
         track("habit-water");
         bump(habit.id, "burst");
         if (date !== today) {
-          showToast({ message: `Yesterday's marked done. Your ${r.data.events.streak}-day streak carries on.` });
+          showToast({ message: `Yesterday's marked done. Your ${r.data.events.streak}-${habit.schedule.kind === "weekly" ? "week" : "day"} streak carries on.` });
+        } else if (!wasAll && allDueDone(today)) {
+          setCelebrate((n) => n + 1);
+          plink(true);
+          buzz([16, 60, 24]);
+          showToast({ message: "Everything's done today. Your garden is in full bloom." });
         }
       } else if (wasDone && !nowDone) {
         // taking a day back is allowed, and never silent: Undo puts back exactly what was there
@@ -144,7 +164,31 @@ export function useGardenActions() {
     [showToast]
   );
 
-  return { moments, water, compost, bump };
+  /** Deletes a habit and every day marked for it. An active habit is archived on the way, as the server asks. */
+  const remove = useCallback(
+    async (habit: HabitView) => {
+      if (!habit.archivedAt) {
+        const a = await gardenApi.archive(habit.id, true);
+        if (!a.ok) {
+          showToast({ message: a.kind === "offline" ? "You're offline, so that didn't delete. Try again when you're back." : "Couldn't delete that just now." });
+          return false;
+        }
+        gardenStore.put(a.data.habit);
+      }
+      const r = await gardenApi.deleteForever(habit.id);
+      if (!r.ok) {
+        showToast({ message: r.kind === "invalid" ? r.message : "Couldn't delete that just now. It's in Archived for now." });
+        return false;
+      }
+      gardenStore.remove(habit.id);
+      track("habit-delete");
+      showToast({ message: `${habit.name} is deleted.` });
+      return true;
+    },
+    [showToast]
+  );
+
+  return { moments, celebrate, water, compost, remove, bump };
 }
 
 async function restore(id: string) {

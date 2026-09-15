@@ -2504,8 +2504,9 @@ const ALL_ARTICLES: Article[] = [
           {
             t: "ul",
             items: [
-              "**New habit** starts one from scratch. Give it a name, how often (every day, certain days, or a number of times a week), and, if you like, a daily target such as 8 glasses, a reminder time and why it matters to you.",
-              "**Ideas** has ready-made habits: drink water, read, meditate, work out and more. People doing the same idea share a leaderboard.",
+              "**New habit** opens on ideas: drink water, read, meditate, work out and more. Tap one and it arrives filled in. Or type your own and tap **Create**.",
+              "Then there are only three things to choose: its name, how often (every day, weekdays, a number of times a week, or days you pick) and whether to be reminded in the morning, the evening or at a time you set. A daily goal like 8 glasses, why it matters and its plant and colour wait under **More options**.",
+              "People doing the same idea share a leaderboard. **Ideas**, at the top of Habits, lists them all.",
               "Keep it small enough to do on a busy day. Two minutes of reading still counts, and small habits are the ones that last.",
               "You can keep up to 40 habits. Most people do best with three or four.",
             ],
@@ -2558,7 +2559,8 @@ const ALL_ARTICLES: Article[] = [
             t: "ul",
             items: [
               "**Just started** below 10%, **Taking root** from 10%, **Growing strong** from 40%, **Almost automatic** from 70%, and **Rooted** from 85%. A habit's page shows about how many more days it takes to reach the next.",
-              "Each habit has a plant, and it grows with strength: a sprout while the habit is new, in bloom once it's rooted. **Your garden**, under the list, shows them all together. Pick a different plant or colour under **Plant and colour** when you edit a habit.",
+              "Each habit has a plant, and it grows with strength: a sprout while the habit is new, in bloom once it's rooted. The garden at the top of Habits shows them all together, and a plant can be tapped to mark its habit done.",
+              "The garden follows your day. The sky follows the clock, clouds gather while habits are still to do, and when everything due today is done the sky clears for a rainbow.",
             ],
           },
         ],
@@ -2589,13 +2591,13 @@ const ALL_ARTICLES: Article[] = [
       },
       {
         id: "archive",
-        heading: "Archive, and your data",
+        heading: "Archive or delete a habit",
         blocks: [
           {
             t: "ul",
             items: [
               "**Archive habit**, at the bottom of a habit's page, takes it off your list and stops its reminders. Its history is kept. Archived habits are listed at the bottom of Habits, where you can **Restore** them.",
-              "An archived habit can be **deleted forever**, with its whole history.",
+              "**Delete habit** removes a habit and every day you marked it, for good. It's the bin button at the top of a habit's page, at the bottom under **Stop this habit**, and in **Edit**. Kairo asks once before deleting, and offers to archive instead.",
               "Assistants you connect to Kairo only reach your habits if you tick **Include habits** on their [connection key](/support/connect-ai). Then they can see your habits, mark one done when you tell them you did it, and start new ones. They can't archive or delete anything.",
               "Deleting your account deletes your habits and every day you marked.",
             ],

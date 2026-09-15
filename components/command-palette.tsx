@@ -116,7 +116,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
       ...(guest
         ? []
         : [
-            { id: "plant-habit", label: "New habit", run: () => navigateApp("/habits/ideas?start=custom") },
+            { id: "plant-habit", label: "New habit", run: () => navigateApp("/habits?new=1") },
             { id: "garden-community", label: "Habit leaderboards", run: () => navigateApp("/habits/community") },
           ]),
       ...(state.user.appLockEnabled ? [{ id: "lock", label: "Lock Kairo now", run: lockApp }] : []),
