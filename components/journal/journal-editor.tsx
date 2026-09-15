@@ -46,6 +46,12 @@ import { AutoStamp, EntryTime } from "./extensions";
 import { buildSlashItems, nowHHMM, WritingDock } from "./menus";
 import { JournalLockGate } from "./lock-gate";
 import { promptFor } from "./prompts";
+import dynamic from "next/dynamic";
+import { habitsOn, useGardenDays } from "../day/day-data";
+import { WeatherIcon } from "../day/weather";
+
+/** The day's watered plants bring the garden's art, so they load after the page. */
+const DayHabits = dynamic(() => import("../day/day-habits"), { ssr: false });
 
 /* ------------------------------------------------------------------ types */
 
@@ -372,6 +378,9 @@ function PageSurface({
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [wins, setWins] = useState<string[] | null>(null);
+  // the plants watered this day belong to "This day in Kairo" as much as the tasks do
+  const gardenReady = useGardenDays(!state.user.guest, today, state.user.id);
+  const watered = gardenReady ? habitsOn(date, today).watered : [];
 
   // the latest of everything, for saves that fire after a render has passed
   const versionRef = useRef(loaded.baseVersion);
@@ -716,7 +725,8 @@ function PageSurface({
 
   const addWins = () => {
     const ed = editorRef.current;
-    if (!ed || !wins?.length) return;
+    const lines = [...(wins ?? []), ...watered.map((w) => `Watered: ${w.habit.name}`)];
+    if (!ed || !lines.length) return;
     ed.chain()
       .focus("end")
       .insertContent([
@@ -727,7 +737,7 @@ function PageSurface({
             { type: "paragraph", content: [{ type: "text", text: "What I finished", marks: [{ type: "bold" }] }] },
             {
               type: "taskList",
-              content: wins.map((text) => ({
+              content: lines.map((text) => ({
                 type: "taskItem",
                 attrs: { checked: true },
                 content: [{ type: "paragraph", content: [{ type: "text", text }] }],
@@ -938,13 +948,19 @@ function PageSurface({
         </div>
 
         {/* This day in Kairo: the part of a diary no other journal can write for you */}
-        {wins && wins.length > 0 && !focusMode && (
-          <section className="anim-rise mt-2 rounded-2xl border border-line bg-card/70 p-4">
+        {((wins && wins.length > 0) || watered.length > 0) && !focusMode && (
+          <section className="anim-rise mt-2 rounded-2xl border border-line bg-card/70 p-4" data-this-day>
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-ink-faint">This day in Kairo</div>
                 <div className="mt-0.5 text-sm text-ink-soft">
-                  You finished {wins.length} {wins.length === 1 ? "thing" : "things"}.
+                  {[
+                    wins && wins.length > 0 ? `You finished ${wins.length} ${wins.length === 1 ? "thing" : "things"}` : null,
+                    watered.length > 0 ? `${wins && wins.length > 0 ? "watered" : "You watered"} ${watered.length} ${watered.length === 1 ? "plant" : "plants"}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" and ")}
+                  .
                 </div>
               </div>
               <button onClick={addWins} className="shrink-0 rounded-full border border-line bg-card px-3.5 py-1.5 text-xs font-semibold text-ink-soft transition-colors hover:border-sun hover:text-sun-deep">
@@ -952,14 +968,15 @@ function PageSurface({
               </button>
             </div>
             <ul className="mt-3 space-y-1.5">
-              {wins.slice(0, 6).map((w) => (
+              {(wins ?? []).slice(0, 6).map((w) => (
                 <li key={w} className="flex items-center gap-2 text-sm text-ink-soft">
                   <span className="grid size-4 shrink-0 place-items-center rounded-full bg-moss text-[9px] text-white">✓</span>
                   <span className="truncate">{w}</span>
                 </li>
               ))}
-              {wins.length > 6 && <li className="pl-6 text-xs text-ink-faint">and {wins.length - 6} more</li>}
+              {wins && wins.length > 6 && <li className="pl-6 text-xs text-ink-faint">and {wins.length - 6} more</li>}
             </ul>
+            <DayHabits date={date} today={today} wateredOnly className={wins && wins.length > 0 ? "mt-3" : "mt-1"} />
           </section>
         )}
 
@@ -969,8 +986,8 @@ function PageSurface({
             {words >= 200 && ` · ${Math.max(1, Math.round(words / 230))} min read`}
           </span>
           {moodInfo && (
-            <span>
-              {moodInfo.emoji} {moodInfo.label}
+            <span className="flex items-center gap-1">
+              <WeatherIcon mood={moodInfo.value} size={13} /> {moodInfo.label}
             </span>
           )}
         </footer>
@@ -1114,12 +1131,12 @@ function MoodRow({ mood, onPick, dim, disabled }: { mood: Mood | null; onPick: (
                   aria-label={m.label}
                   aria-pressed={active}
                   title={m.label}
-                  className={`group relative grid size-10 place-items-center rounded-full text-xl transition-all duration-200 hover:-translate-y-0.5 hover:scale-110 ${
+                  className={`group relative grid size-10 place-items-center rounded-full transition-all duration-200 hover:-translate-y-0.5 hover:scale-110 ${
                     active ? "scale-110 bg-card shadow-md" : "hover:bg-card"
                   }`}
                   style={active ? { boxShadow: `0 0 0 2px ${m.color}` } : undefined}
                 >
-                  {m.emoji}
+                  <WeatherIcon mood={m.value} size={21} />
                 </button>
               );
             })}
@@ -1133,7 +1150,7 @@ function MoodRow({ mood, onPick, dim, disabled }: { mood: Mood | null; onPick: (
             className="flex items-center gap-1.5 rounded-full border border-line bg-card/70 py-1 pl-2 pr-3 text-sm text-ink-soft transition-colors hover:border-ink-faint"
             style={{ boxShadow: `inset 3px 0 0 ${chosen.color}` }}
           >
-            <span className="text-base">{chosen.emoji}</span>
+            <WeatherIcon mood={chosen.value} size={16} />
             {chosen.label}
           </button>
         )

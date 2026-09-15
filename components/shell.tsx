@@ -172,17 +172,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   const editingTask = state.editingId ? state.tasks[state.editingId] : null;
 
-  /* The morning sweep only renders on Today, so it only blocks there. */
-  const sweepPending = useMemo(
-    () =>
-      !state.sweepDismissed &&
-      pathname.startsWith("/today") &&
-      Object.values(state.tasks).some(
-        (t) => t.status === "planned" && t.plannedFor && t.plannedFor < state.today && !t.repeat
-      ),
-    [state.tasks, state.sweepDismissed, state.today, pathname]
-  );
-
   /* Anything the coffee nudge should wait behind rather than interrupt. */
   const somethingOnScreen =
     paletteOpen ||
@@ -190,8 +179,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     state.omnibarOpen ||
     state.appLocked ||
     Boolean(editingTask) ||
-    Boolean(state.focus) ||
-    sweepPending;
+    Boolean(state.focus);
 
   return (
     <div className="flex min-h-dvh w-full">

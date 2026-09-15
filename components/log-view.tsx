@@ -1,12 +1,22 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import type { Subtask, Task } from "@/lib/types";
-import { addDays, friendlyDay, localDayOf, todayStr } from "@/lib/dates";
+import { addDays, friendlyDay, localDayOf } from "@/lib/dates";
+import { gardenStore } from "@/lib/habits-client";
 import { hiddenListIds, useApp } from "./store";
 import { TaskItem } from "./task-item";
 import { ListMark } from "./img3d";
 import { Chip, EmptyState } from "./ui";
+import { monthsBetween, useGardenDays, useJournalMonths } from "./day/day-data";
+import { DayJournal } from "./day/day-journal";
+
+/** Watered plants bring the garden's art with them, so they load after the list. */
+const DayHabits = dynamic(() => import("./day/day-habits"), { ssr: false });
+
+/** How far back the Log reads plants and pages: the garden keeps ten weeks of days. */
+const DAY_CONTEXT_DAYS = 70;
 
 /** A finished step, carrying enough of its parent to make sense on its own. */
 type StepWin = { kind: "step"; key: string; at: string; step: Subtask; parent: Task };
@@ -52,10 +62,16 @@ function LoggedStep({ step, parent }: { step: Subtask; parent: Task }) {
 
 /**
  * The Log is the anti-guilt mirror: evidence of what you DID finish.
- * No streaks, no gaps highlighted — just wins, newest first.
+ * No streaks, no gaps highlighted — just wins, newest first. A day's wins
+ * include the plants watered and the page written that day, with the
+ * weather it had; a plant not watered never shows.
  */
 export function LogView() {
   const { state } = useApp();
+  const today = state.today;
+  const context = !state.user.guest && !state.appLocked;
+  const gardenReady = useGardenDays(context, today, state.user.id);
+  const journal = useJournalMonths(monthsBetween(addDays(today, -DAY_CONTEXT_DAYS), today), today, context);
   const [older, setOlder] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -105,6 +121,22 @@ export function LogView() {
     return out;
   }, [state, older]);
 
+  /* the days something else was done: a plant watered, a page written */
+  const since = addDays(today, -DAY_CONTEXT_DAYS);
+  const wateredDays = new Map<string, number>();
+  if (gardenReady) {
+    for (const h of gardenStore.habits()) {
+      for (const [date, log] of gardenStore.logs(h.id)) {
+        if (log.done && date >= since && date <= today) wateredDays.set(date, (wateredDays.get(date) ?? 0) + 1);
+      }
+    }
+  }
+  const pageDays: string[] = [];
+  if (journal.access === "ready") {
+    for (let d = today; d >= since; d = addDays(d, -1)) if (journal.day(d)) pageDays.push(d);
+  }
+  const contextKey = `${[...wateredDays.keys()].sort().join()}|${pageDays.join()}`;
+
   const groups = useMemo(() => {
     const wins: Win[] = [
       ...done.map((t) => ({ kind: "task" as const, key: t.id, at: t.completedAt ?? "", task: t })),
@@ -118,10 +150,14 @@ export function LogView() {
       if (!map.has(day)) map.set(day, []);
       map.get(day)!.push(w);
     }
-    return [...map.entries()];
-  }, [done, stepWins]);
+    // a day with only a watered plant or a written page is still a day you showed up
+    const [watered, pages] = contextKey.split("|");
+    for (const day of [...watered.split(","), ...pages.split(",")]) {
+      if (day && !map.has(day)) map.set(day, []);
+    }
+    return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+  }, [done, stepWins, contextKey]);
 
-  const today = todayStr();
   const weekStart = addDays(today, -6);
   const doneThisWeek =
     done.filter((t) => t.completedAt && localDayOf(t.completedAt) >= weekStart).length +
@@ -144,7 +180,7 @@ export function LogView() {
         <div className="py-12 text-center text-sm text-ink-faint">Opening the archives…</div>
       )}
 
-      {!loading && done.length === 0 && stepWins.length === 0 && (
+      {!loading && groups.length === 0 && (
         <EmptyState
           icon="book"
           title="Nothing here yet"
@@ -153,25 +189,34 @@ export function LogView() {
       )}
 
       <div className="space-y-8">
-        {groups.map(([day, wins]) => (
-          <section key={day}>
-            <div className="mb-2 flex items-baseline gap-2">
-              <h2 className="text-sm font-bold">{friendlyDay(day, today)}</h2>
-              <span className="text-xs text-ink-faint">
-                {wins.length} {wins.length === 1 ? "win" : "wins"}
-              </span>
-            </div>
-            <div className="space-y-2 opacity-90">
-              {wins.map((w) =>
-                w.kind === "task" ? (
-                  <TaskItem key={w.key} task={w.task} context="log" />
-                ) : (
-                  <LoggedStep key={w.key} step={w.step} parent={w.parent} />
-                )
+        {groups.map(([day, wins]) => {
+          const page = journal.day(day);
+          return (
+            <section key={day} data-log-day={day}>
+              <div className="mb-2 flex items-baseline gap-2">
+                <h2 className="text-sm font-bold">{friendlyDay(day, today)}</h2>
+                {wins.length > 0 && (
+                  <span className="text-xs text-ink-faint">
+                    {wins.length} {wins.length === 1 ? "win" : "wins"}
+                  </span>
+                )}
+              </div>
+              {wins.length > 0 && (
+                <div className="space-y-2 opacity-90">
+                  {wins.map((w) =>
+                    w.kind === "task" ? (
+                      <TaskItem key={w.key} task={w.task} context="log" />
+                    ) : (
+                      <LoggedStep key={w.key} step={w.step} parent={w.parent} />
+                    )
+                  )}
+                </div>
               )}
-            </div>
-          </section>
-        ))}
+              {wateredDays.has(day) && <DayHabits date={day} today={today} wateredOnly className={wins.length > 0 ? "mt-3" : ""} />}
+              {page && <DayJournal date={day} today={today} summary={page} access={journal.access} className="mt-3" />}
+            </section>
+          );
+        })}
       </div>
     </div>
   );

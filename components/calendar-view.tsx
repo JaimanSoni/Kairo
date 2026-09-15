@@ -8,6 +8,14 @@ import { StepRow } from "./step-row";
 import { TaskItem } from "./task-item";
 import { AddRow } from "./today-view";
 import { Modal } from "./ui";
+import dynamic from "next/dynamic";
+import type { JournalSummary } from "@/lib/journal-shared";
+import { monthsBetween, useJournalMonths, type JournalAccess } from "./day/day-data";
+import { DayJournal } from "./day/day-journal";
+import { WeatherIcon } from "./day/weather";
+
+/** A day's plants bring the garden's art with them, so they load when a day is opened. */
+const DayHabits = dynamic(() => import("./day/day-habits"), { ssr: false });
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -208,6 +216,9 @@ export function CalendarView() {
   const gridStart = addDays(toDateStr(firstOfMonth), -startOffset);
   const days = Array.from({ length: cellCount }, (_, i) => addDays(gridStart, i));
 
+  /* the journal's pages for the days on screen: each day shows its weather */
+  const journal = useJournalMonths(monthsBetween(days[0], days[days.length - 1]), today, !state.user.guest && !state.appLocked);
+
   /* per-day data for the visible range */
   const { plannedByDay, doneByDay, stepsByDay } = useMemo(() => {
     const planned = new Map<string, Task[]>();
@@ -365,16 +376,19 @@ export function CalendarView() {
                   >
                     {Number(day.slice(8))}
                   </span>
-                  {load > 0 && (
-                    <span
-                      className={`hidden text-[9px] tabular-nums sm:inline ${
-                        load > DAY_CAPACITY_MIN ? "font-semibold text-sun-deep" : "text-ink-faint"
-                      }`}
-                      title={load > DAY_CAPACITY_MIN ? "Holds more than 6h, heavy day" : undefined}
-                    >
-                      {fmtMinutes(load)}
-                    </span>
-                  )}
+                  <span className="flex items-center gap-1">
+                    {load > 0 && (
+                      <span
+                        className={`hidden text-[9px] tabular-nums sm:inline ${
+                          load > DAY_CAPACITY_MIN ? "font-semibold text-sun-deep" : "text-ink-faint"
+                        }`}
+                        title={load > DAY_CAPACITY_MIN ? "Holds more than 6h, heavy day" : undefined}
+                      >
+                        {fmtMinutes(load)}
+                      </span>
+                    )}
+                    <PageMark summary={journal.day(day)} />
+                  </span>
                 </div>
 
                 {/* desktop: text chips */}
@@ -475,7 +489,7 @@ export function CalendarView() {
       {/* day detail — side panel on desktop */}
       <aside className="hidden min-w-0 lg:sticky lg:top-8 lg:block lg:self-start">
         <div className="rounded-2xl border border-line bg-paper-deep/50 p-4">
-          <DayPanel day={selected} plannedByDay={plannedByDay} doneByDay={doneByDay} all={all} today={today} />
+          <DayPanel day={selected} plannedByDay={plannedByDay} doneByDay={doneByDay} all={all} today={today} page={journal.day(selected)} access={journal.access} />
         </div>
       </aside>
 
@@ -483,7 +497,7 @@ export function CalendarView() {
       {sheetOpen && (
         <Modal onClose={() => setSheetOpen(false)}>
           <div className="p-5">
-            <DayPanel day={selected} plannedByDay={plannedByDay} doneByDay={doneByDay} all={all} today={today} />
+            <DayPanel day={selected} plannedByDay={plannedByDay} doneByDay={doneByDay} all={all} today={today} page={journal.day(selected)} access={journal.access} />
           </div>
         </Modal>
       )}
@@ -491,18 +505,38 @@ export function CalendarView() {
   );
 }
 
+/** A day with a journal page: its weather, or a small page mark when it had none. */
+function PageMark({ summary }: { summary: JournalSummary | null }) {
+  if (!summary) return null;
+  return summary.mood ? (
+    <span title="Written in the journal" data-page-mark className="grid size-3.5 place-items-center">
+      <WeatherIcon mood={summary.mood} size={12} />
+    </span>
+  ) : (
+    <span title="Written in the journal" data-page-mark className="size-1.5 rounded-full bg-ink-faint/70" />
+  );
+}
+
+/**
+ * Everything about one day: what's planned and finished, the plants it asked
+ * for, and its journal page.
+ */
 function DayPanel({
   day,
   plannedByDay,
   doneByDay,
   all,
   today,
+  page,
+  access,
 }: {
   day: string;
   plannedByDay: Map<string, Task[]>;
   doneByDay: Map<string, Task[]>;
   all: Task[];
   today: string;
+  page: JournalSummary | null;
+  access: JournalAccess;
 }) {
   const tasks = plannedByDay.get(day) ?? [];
   const doneTasks = doneByDay.get(day) ?? [];
@@ -522,7 +556,7 @@ function DayPanel({
       {load > 0 && (
         <p className={`mb-2 text-xs ${load > DAY_CAPACITY_MIN ? "font-medium text-sun-deep" : "text-ink-soft"}`}>
           holds ~{fmtMinutes(load)}
-          {load > DAY_CAPACITY_MIN ? "that's a lot" : " · fits ✓"}
+          {load > DAY_CAPACITY_MIN ? ", that's a lot" : " · fits ✓"}
         </p>
       )}
 
@@ -553,6 +587,9 @@ function DayPanel({
       )}
 
       {day >= today && <AddRow placeholder={`Add to ${friendlyDay(day, today)}…`} plannedFor={day} />}
+
+      <DayHabits date={day} today={today} className="mt-4" />
+      <DayJournal date={day} today={today} summary={page} access={access} className="mt-4" />
     </>
   );
 }

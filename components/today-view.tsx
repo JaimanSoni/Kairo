@@ -10,8 +10,9 @@ import { Icon3d } from "./img3d";
 import { FreshStart } from "./fresh-start";
 import { StepRow } from "./step-row";
 import { TaskItem } from "./task-item";
-import { EmptyState, IconPlus } from "./ui";
-import { BestieNudge, ShareWithBestie } from "./bestie-share";
+import { EmptyState, IconLock, IconPlus } from "./ui";
+import { ShareWithBestie } from "./bestie-share";
+import { CloseTheDay, useHour } from "./day/close-day";
 import dynamic from "next/dynamic";
 
 /** The garden's plants come with their own art; Today shouldn't wait for it. */
@@ -19,9 +20,19 @@ const TodayGardenStrip = dynamic(() => import("./garden/today-strip"), { ssr: fa
 
 const DAY_CAPACITY_MIN = 6 * 60; // soft cap — a suggestion, never a wall
 
+/** Morning, afternoon or evening, by the browser's clock; plain "Today" until it's known. */
+function greetingFor(hour: number, name: string | undefined): string {
+  if (hour < 0) return "Today";
+  const part = hour < 5 ? "Good evening" : hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const first = name?.split(" ")[0];
+  return first && first !== "Friend" ? `${part}, ${first}` : part;
+}
+
 export function TodayView() {
   const { state, updateTask, reopenSweep } = useApp();
   const today = state.today;
+  const hour = useHour();
+  const guest = Boolean(state.user.guest);
   const hidden = useMemo(() => hiddenListIds(state), [state]);
   const all = useMemo(
     () => Object.values(state.tasks).filter((t) => !(t.listId && hidden.has(t.listId))),
@@ -109,16 +120,12 @@ export function TodayView() {
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 pb-32 pt-8 sm:px-6">
-      {/* never while locked: the sweep is a portal, so it would mount above the
-          lock gate and read out yesterday's task titles to whoever is looking */}
-      {carryover.length > 0 && !state.sweepDismissed && !state.appLocked && (
-        <FreshStart carryover={carryover} />
-      )}
-
       {/* header */}
       <header className="anim-rise mb-6">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h1 className="font-display text-4xl">Today</h1>
+          <h1 className="font-display text-4xl" data-greeting>
+            {greetingFor(hour, state.user.name)}
+          </h1>
           <span className="text-sm text-ink-soft">{fullDate(today)}</span>
         </div>
         <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-ink-soft">
@@ -142,11 +149,17 @@ export function TodayView() {
               className="rounded-full border border-line bg-card px-3 py-1 font-medium text-ink-faint hover:border-ink-faint hover:text-ink"
               title="Tasks in locked lists. Unlock them in Lists"
             >
-              🔒 {lockedTodayCount} hidden
+              <span className="flex items-center gap-1">
+                <IconLock size={11} /> {lockedTodayCount} hidden
+              </span>
             </Link>
           )}
         </div>
       </header>
+
+      {/* yesterday's leftovers, settled at the top of the day rather than over it;
+          never while locked, when their titles would read out past the lock */}
+      {carryover.length > 0 && !state.sweepDismissed && !state.appLocked && <FreshStart carryover={carryover} />}
 
       {!state.appLocked && <TodayGardenStrip />}
 
@@ -170,12 +183,6 @@ export function TodayView() {
             ))}
           </div>
         </section>
-      )}
-
-      {/* Sits under the day's work, not above it — a reason to finish, offered
-          once the list has been read rather than before it. */}
-      {todayTasks.length > 0 && (
-        <BestieNudge remaining={todayTasks.length} done={doneToday.length} />
       )}
 
       {/* empty / celebration states */}
@@ -221,7 +228,8 @@ export function TodayView() {
         <div className="anim-rise mt-8 text-center">
           <Icon3d name="party" size={52} className="mx-auto" />
           <div className="font-display mt-2 text-3xl">Day won.</div>
-          {shareable.count > 0 && (
+          {/* a guest has no evening card, so the share stays here for them */}
+          {guest && shareable.count > 0 && (
             <ShareWithBestie
               done={shareable.titles}
               doneCount={shareable.count}
@@ -232,6 +240,28 @@ export function TodayView() {
             />
           )}
         </div>
+      )}
+
+      {/* the end of the day: how it felt, what got done, and the page to write it on */}
+      {!guest && !state.appLocked && (
+        <CloseTheDay
+          today={today}
+          doneCount={doneToday.length}
+          dayWon={dayWon}
+          share={
+            shareable.count > 0 ? (
+              <ShareWithBestie
+                variant="pill"
+                done={shareable.titles}
+                doneCount={shareable.count}
+                dateLabel={fullDate(today)}
+                name={state.user.name?.split(" ")[0] || "Someone"}
+                picture={state.user.picture}
+                hiddenCount={shareable.withheld}
+              />
+            ) : undefined
+          }
+        />
       )}
 
       {/* done today */}

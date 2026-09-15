@@ -20,6 +20,7 @@ import { Icon3d } from "../img3d";
 import { Modal } from "../ui";
 import { JournalLockGate } from "./lock-gate";
 import { promptFor } from "./prompts";
+import { WeatherIcon } from "../day/weather";
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -382,7 +383,7 @@ function TodayCard({ entry, today, loading }: { entry: JournalSummary | null; to
           </div>
           <div className="font-display mt-1 text-3xl">{dayMonth}</div>
         </div>
-        {mood ? <span className="text-3xl">{mood.emoji}</span> : <Icon3d name="feather" size={44} className="opacity-90" />}
+        {mood ? <WeatherIcon mood={mood.value} size={34} /> : <Icon3d name="feather" size={44} className="opacity-90" />}
       </div>
 
       <div className="relative mt-4 min-h-[2.75rem]">
@@ -566,7 +567,7 @@ function Memories({ memories, today }: { memories: NonNullable<ReturnType<typeof
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-sun-deep">{label}</span>
-                {mood && <span>{mood.emoji}</span>}
+                {mood && <WeatherIcon mood={mood.value} size={15} />}
               </div>
               <div className="mt-1 text-xs text-ink-faint">{longDate(entry.date)}</div>
               <p className="font-display mt-2 line-clamp-3 text-[15px] italic leading-snug text-ink-soft">
@@ -598,7 +599,11 @@ function EntryRow({ entry, today }: { entry: JournalSummary; today: string }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate text-sm font-semibold">{entry.title || friendlyDay(entry.date, today)}</span>
-          {mood && <span className="shrink-0 text-sm" title={mood.label}>{mood.emoji}</span>}
+          {mood && (
+            <span className="shrink-0" title={mood.label}>
+              <WeatherIcon mood={mood.value} size={14} />
+            </span>
+          )}
         </div>
         <p className="mt-0.5 line-clamp-2 text-sm leading-relaxed text-ink-soft">{entry.preview || "A feeling, no words."}</p>
       </div>
@@ -635,7 +640,7 @@ function SearchResults({ results, query, searching, today }: { results: SearchHi
               <div className="flex items-center gap-2 text-xs text-ink-faint">
                 <span className="font-semibold text-ink-soft">{friendlyDay(r.date, today)}</span>
                 <span>{longDate(r.date)}</span>
-                {mood && <span className="ml-auto">{mood.emoji}</span>}
+                {mood && <WeatherIcon mood={mood.value} size={14} className="ml-auto" />}
               </div>
               {r.title && <div className="mt-1 text-sm font-semibold">{highlightMatch(r.title, query)}</div>}
               <p className="mt-1 text-sm leading-relaxed text-ink-soft">{highlightMatch(r.snippet, query)}</p>

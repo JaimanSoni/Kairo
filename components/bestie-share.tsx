@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { canvasToBlob, drawShareCard } from "@/lib/share-card";
 import { track } from "@/lib/analytics-client";
-import { Modal } from "./ui";
+import { IconSend, Modal } from "./ui";
 
 /**
  * Sharing a finished day with someone who's rooting for you.
  *
- * Two halves of the same idea: a quiet line while there's still work left, and
- * the card itself once the day is done.
+ * The card is offered once there's a finished day to show, from the evening
+ * card on Today.
  *
  * The card is drawn in the browser and previewed before it goes anywhere. Task
  * titles are the private contents of somebody's day, so nothing is generated on
@@ -30,64 +30,6 @@ function captionFor(date: string): string {
   return CAPTIONS[n % CAPTIONS.length];
 }
 
-/* --------------------------------------------------------------- the nudge */
-
-const NUDGE_KEY = "kairo-bestie-nudge-hidden";
-
-// hidden during SSR and hydration, then whatever the browser remembers; the
-// dismissal itself re-renders through setHidden, so no subscription is needed
-const subscribeNever = () => () => {};
-function nudgeDismissed(): boolean {
-  try {
-    return Boolean(localStorage.getItem(NUDGE_KEY));
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Shown while the day is unfinished. Dismissible, and quiet by design — Kairo's
- * whole argument is that a list shouldn't make you feel bad, so this can be a
- * reason to finish but never a reproach for not having. Closing it is final:
- * the dismissal is remembered in localStorage, so it never comes back on a
- * refresh or another day.
- */
-export function BestieNudge({ remaining, done }: { remaining: number; done: number }) {
-  const [hidden, setHidden] = useState(false);
-  const dismissed = useSyncExternalStore(subscribeNever, nudgeDismissed, () => true);
-
-  const dismiss = () => {
-    setHidden(true);
-    try {
-      localStorage.setItem(NUDGE_KEY, "1");
-    } catch {
-      // no storage means it returns next visit; the close still works now
-    }
-  };
-
-  if (hidden || dismissed || remaining <= 0) return null;
-
-  return (
-    <div className="anim-rise mt-4 flex items-start gap-3 rounded-2xl border border-sun/25 bg-sun-soft/40 px-4 py-3">
-      <span className="mt-0.5 shrink-0 text-base" aria-hidden>
-        👀
-      </span>
-      <p className="min-w-0 flex-1 text-[13px] leading-6 text-ink-soft">
-        {done === 0
-          ? "Your bestie might be waiting to see your progress. Finish today and you'll have something worth sending."
-          : `${remaining} to go. Your bestie might be waiting to see how today went, clear these and you can share it.`}
-      </p>
-      <button
-        onClick={dismiss}
-        aria-label="Hide this"
-        className="shrink-0 text-ink-faint transition-opacity hover:opacity-70"
-      >
-        ✕
-      </button>
-    </div>
-  );
-}
-
 /* --------------------------------------------------------------- the share */
 
 export function ShareWithBestie({
@@ -97,6 +39,7 @@ export function ShareWithBestie({
   name,
   picture,
   hiddenCount,
+  variant = "hero",
 }: {
   /** Titles to print, already stripped of anything from a locked list. */
   done: string[];
@@ -106,6 +49,8 @@ export function ShareWithBestie({
   picture?: string | null;
   /** How many finished tasks were withheld because their list is locked. */
   hiddenCount: number;
+  /** "pill" sits quietly beside other actions; "hero" is the day's one big button. */
+  variant?: "hero" | "pill";
 }) {
   const [open, setOpen] = useState(false);
 
@@ -114,9 +59,13 @@ export function ShareWithBestie({
       <button
         onClick={() => setOpen(true)}
         data-track="share-bestie-open"
-        className="anim-rise mt-5 inline-flex items-center gap-2 rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-paper shadow-lg shadow-ink/15 transition-transform active:scale-[0.99]"
+        className={
+          variant === "pill"
+            ? "flex h-9 items-center gap-1.5 rounded-full border border-line bg-card px-3.5 text-xs font-semibold text-ink-soft transition-colors hover:border-ink-faint hover:text-ink"
+            : "anim-rise mt-5 inline-flex items-center gap-2 rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-paper shadow-lg shadow-ink/15 transition-transform active:scale-[0.99]"
+        }
       >
-        <span aria-hidden>💌</span> Share it with your bestie
+        <IconSend size={variant === "pill" ? 13 : 15} /> {variant === "pill" ? "Share your day" : "Share it with your bestie"}
       </button>
 
       {open && (

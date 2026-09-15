@@ -125,7 +125,7 @@ export const ARTICLES: Article[] = [
           {
             t: "ol",
             items: [
-              "**Morning.** Open Kairo. If anything is left over, the Fresh Start sweep asks what to do with it, one decision each.",
+              "**Morning.** Open Kairo. If anything is left over, the Fresh Start card at the top of Today asks what to do with it, one decision each.",
               "**Plan.** Pull a few things into today from your inbox and star up to three as Spotlight.",
               "**During the day.** Capture whatever lands in your head with `N`. Don't organize it, that's what planning time is for.",
               "**Evening.** Check off what you did. Whatever's left is tomorrow's problem, and tomorrow will offer you a clean slate.",
@@ -669,6 +669,7 @@ export const ARTICLES: Article[] = [
               "**Spotlight** at the top: up to three must-wins.",
               "**Steps today**, if you scheduled individual [steps](/support/steps) of bigger tasks.",
               "**Done today**, so the day's wins stay visible.",
+              "In the evening, **Tonight**: how the day felt, what you finished and watered, and a way into today's journal page.",
             ],
           },
           {
@@ -733,6 +734,28 @@ export const ARTICLES: Article[] = [
           },
         ],
       },
+      {
+        id: "close-the-day",
+        heading: "Close the day",
+        blocks: [
+          {
+            t: "p",
+            text: "From five in the evening, once the day is won, or as soon as today has a journal page, a card at the bottom of Today closes the day. It asks how the day felt, as the same five kinds of [weather](/support/journal) your journal uses, and sums up what you finished, watered and wrote.",
+          },
+          {
+            t: "ul",
+            items: [
+              "The weather you pick is saved to today's journal page, so the page and Today always agree.",
+              "**Write about today** opens today's page; **Keep writing** once you've started.",
+              "**Share your day** makes the day's card for a friend, once you've finished something.",
+            ],
+          },
+          {
+            t: "note",
+            text: "If your journal has its own PIN and is locked, the card leaves the weather alone and takes you to the journal to unlock it.",
+          },
+        ],
+      },
     ],
   },
   {
@@ -758,7 +781,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "If tasks were planned for a day that has passed and are still unfinished, Kairo opens the **Fresh start** panel the next time you visit Today. It lists each leftover and asks for a single decision.",
+            text: "If tasks were planned for a day that has passed and are still unfinished, a **Fresh start** card sits at the top of Today the next time you visit. It lists each leftover and asks for a single decision, while the rest of your day stays in view below it.",
           },
           {
             t: "p",
@@ -783,7 +806,7 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "p",
-            text: "There are also **all → today** and **all → later** buttons for when the answer is the same for everything. Anything you don't explicitly choose defaults to **Later**.",
+            text: "With more than one leftover there are also **All to today** and **All to later** buttons for when the answer is the same for everything. Anything you don't explicitly choose defaults to **Later**. **Start the day** applies your choices.",
           },
           {
             t: "warn",
@@ -821,7 +844,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "**Not now** closes the panel without changing anything. A small button then appears in the Today header, `🌅 3 from before`, to reopen it whenever you're ready. It returns on its own the next morning.",
+            text: "The **×** in its corner (Not now) folds the card away without changing anything. A small button then appears in the Today header, **3 from before**, to bring it back whenever you're ready. It returns on its own the next morning.",
           },
         ],
       },
@@ -963,7 +986,8 @@ export const ARTICLES: Article[] = [
             items: [
               "**Desktop:** each day shows up to three task chips, plus `+2 more` when there are extras.",
               "**Mobile:** each day shows coloured dots instead, so the grid stays readable.",
-              "**Click any day** to open its detail panel, the full task list, planned steps, what's done, and an add row for that date.",
+              "**Click any day** to open its detail panel, the full task list, planned steps, what's done, and an add row for that date. It also shows the day's plants from your Garden (watered, or due on days to come) and its journal page.",
+              "**A small weather icon** marks each day you wrote in your journal, in that day's weather; a grey dot means a page with no weather picked.",
               "**Drag chips** between days to reschedule.",
             ],
           },
@@ -1419,6 +1443,10 @@ export const ARTICLES: Article[] = [
           {
             t: "p",
             text: "Every completed task, newest first, grouped by day, with a count of what you finished in the last seven days.",
+          },
+          {
+            t: "p",
+            text: "Each day also shows the plants you watered and the journal page you wrote, with the day's weather. A day where you only watered a plant or wrote a page still counts. Plants you didn't water never show here.",
           },
           {
             t: "p",
@@ -2209,7 +2237,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Each page asks once how the day felt, as weather rather than a score: **Stormy**, **Cloudy**, **Mixed**, **Sunny** or **Radiant**. It's optional. The calendar is tinted by it, so over a month you can see the shape of how things have been.",
+            text: "Each page asks once how the day felt, as weather rather than a score: **Stormy**, **Cloudy**, **Mixed**, **Sunny** or **Radiant**. It's optional, and you can also pick it from the evening card on [Today](/support/today). The journal's calendar is tinted by it, and the main [Calendar](/support/calendar) and the [Log](/support/log) show each day's weather beside its tasks, so over a month you can see the shape of how things have been.",
           },
         ],
       },
@@ -2219,7 +2247,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Under each page, **This day in Kairo** lists the tasks and steps you completed that day. Tap **Add to page** to bring them in as a checklist, or type `/` then **What I finished** anywhere on the page.",
+            text: "Under each page, **This day in Kairo** lists the tasks and steps you completed that day and the plants you watered in your [Garden](/support/habits). Tap **Add to page** to bring them in as a checklist, or type `/` then **What I finished** anywhere on the page.",
           },
           { t: "note", text: "Tasks in [PIN-locked lists](/support/locks) never appear here." },
         ],
