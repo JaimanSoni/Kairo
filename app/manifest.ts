@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Kairo",
     short_name: "Kairo",
     description:
-      "A daily planner that forgives. Plan a day you can actually finish, no red badges, no overdue guilt.",
+      "Where good days grow. Plan a day you'll actually finish, and grow your habits into a garden you can see.",
     start_url: "/today",
     display: "standalone",
     orientation: "portrait",

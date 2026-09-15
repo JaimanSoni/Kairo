@@ -5,7 +5,7 @@ import { Mark } from "@/components/mark";
 export const metadata: Metadata = {
   title: { default: "Kairo Blog", template: "%s" },
   description:
-    "Guides, honest comparisons, and planning methods from Kairo, the daily planner that forgives.",
+    "Guides, honest comparisons, and planning methods from Kairo, where good days grow.",
 };
 
 /**
@@ -55,7 +55,7 @@ export default function BlogLayout({ children }: { children: React.ReactNode }) 
       <footer className="border-t border-line/80 py-8">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 text-xs text-ink-faint sm:px-5">
           <span>
-            <Mark size={12} className="inline text-sun" /> kairo, a daily planner that forgives
+            <Mark size={12} className="inline text-sun" /> kairo, where good days grow
           </span>
           <span className="flex flex-wrap gap-4">
             <Link href="/blog" className="hover:text-ink-soft">

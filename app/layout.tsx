@@ -3,7 +3,7 @@ import { DM_Sans, Fraunces, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@/components/analytics";
 import { PageTracker } from "@/components/track";
-import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/site";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from "@/lib/site";
 
 const bodyFont = DM_Sans({
   variable: "--font-body",
@@ -29,20 +29,20 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   // Search Console ownership — renders the google-site-verification meta tag
   verification: { google: "ZtLYr13WzGlwe7RYE0jWONSTmu4ZVUbmv7T4h94Y2Rk" },
-  title: `${SITE_NAME}, ${SITE_TAGLINE}`,
+  title: SITE_TITLE,
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
   openGraph: {
     type: "website",
     siteName: SITE_NAME,
-    title: `${SITE_NAME}, ${SITE_TAGLINE}`,
+    title: SITE_TITLE,
     description: SITE_DESCRIPTION,
     url: "/",
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: `${SITE_NAME}, ${SITE_TAGLINE}` }],
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: SITE_TITLE }],
   },
   twitter: {
     card: "summary_large_image",
-    title: `${SITE_NAME}, ${SITE_TAGLINE}`,
+    title: SITE_TITLE,
     description: SITE_DESCRIPTION,
     images: ["/og.png"],
   },

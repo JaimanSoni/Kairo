@@ -1,5 +1,7 @@
 "use client";
 
+import { useId } from "react";
+
 /**
  * Kairo City's scenery, drawn in code: the lawn a garden sits on, its fence,
  * what each garden level adds to it, and the street around it (lamp posts,
@@ -8,22 +10,32 @@
 
 export type CityPhase = "night" | "dawn" | "day" | "golden" | "dusk";
 
+/**
+ * An id for an SVG gradient that belongs to this drawing alone. With a shared
+ * id every lot points at the first lot's gradient, and when that lot is hidden
+ * (display: none, as on a phone) the others lose their grass and water.
+ */
+function useSvgId(name: string) {
+  return `${name}-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
+}
+
 /** The lawn a garden stands on, with the soil edge that makes it a plot. */
 export function Lawn({ phase, gold = false }: { phase: CityPhase; gold?: boolean }) {
   const night = phase === "night" || phase === "dusk";
   const top = night ? "#3d6f55" : phase === "golden" ? "#8fbf63" : "#7cc46c";
   const bottom = night ? "#2c5443" : phase === "golden" ? "#6fa04c" : "#5aa651";
+  const grad = useSvgId("lawn");
   return (
     <svg className="absolute inset-x-0 bottom-0 h-[78%] w-full" viewBox="0 0 300 200" preserveAspectRatio="none" aria-hidden>
       <defs>
-        <linearGradient id={`lawn-${phase}`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={grad} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={top} />
           <stop offset="100%" stopColor={bottom} />
         </linearGradient>
       </defs>
       {/* the soil edge, then the lawn over it */}
       <path d="M8 40 Q150 18 292 40 L300 190 Q150 204 0 190 Z" fill={night ? "#3a2a1e" : "#8a5a3b"} />
-      <path d="M8 34 Q150 12 292 34 L298 180 Q150 194 2 180 Z" fill={`url(#lawn-${phase})`} />
+      <path d="M8 34 Q150 12 292 34 L298 180 Q150 194 2 180 Z" fill={`url(#${grad})`} />
       <path d="M8 34 Q150 12 292 34" fill="none" stroke={gold ? "#f4c95d" : night ? "#5e8f74" : "#a6dc8c"} strokeWidth={gold ? 3 : 2} opacity="0.8" />
       {Array.from({ length: 18 }, (_, i) => (
         <path key={i} d={`M${14 + ((i * 53) % 270)} ${60 + ((i * 37) % 110)} l-2 -6 M${16 + ((i * 53) % 270)} ${60 + ((i * 37) % 110)} l1 -7 M${18 + ((i * 53) % 270)} ${60 + ((i * 37) % 110)} l3 -5`} stroke={night ? "#4f8a6a" : "#3f8f4a"} strokeWidth="1.3" strokeLinecap="round" opacity="0.7" />
@@ -93,17 +105,18 @@ export function StonePath({ phase }: { phase: CityPhase }) {
 
 /** Level 4: a pond with lily pads, and light on the water. */
 export function Pond() {
+  const grad = useSvgId("pond");
   return (
     <svg className="absolute bottom-[8%] left-[3%] h-[20%] w-[30%]" viewBox="0 0 100 40" aria-hidden>
       <defs>
-        <radialGradient id="pond" cx="45%" cy="40%" r="65%">
+        <radialGradient id={grad} cx="45%" cy="40%" r="65%">
           <stop offset="0%" stopColor="#bfe9ff" />
           <stop offset="60%" stopColor="#5fb2e0" />
           <stop offset="100%" stopColor="#3a86b7" />
         </radialGradient>
       </defs>
       <ellipse cx="50" cy="22" rx="48" ry="16" fill="#8a6a4a" opacity="0.5" />
-      <ellipse cx="50" cy="21" rx="45" ry="14" fill="url(#pond)" />
+      <ellipse cx="50" cy="21" rx="45" ry="14" fill={`url(#${grad})`} />
       <ellipse className="gd-shimmer" cx="38" cy="16" rx="12" ry="2" fill="#fff" opacity="0.6" />
       <g fill="#4caf50">
         <path d="M68 24 a7 4 0 1 0 0.1 0 Z M68 24 l6 -2" />

@@ -155,6 +155,101 @@ input,
   }
 }
 
+/* ---------- home page: habits and notes demos ---------- */
+.lp-fill {
+  transform-origin: left;
+  animation: lp-fill 6s cubic-bezier(0.2, 0.7, 0.2, 1) infinite both;
+}
+@keyframes lp-fill {
+  0%,
+  8% {
+    transform: scaleX(0.05);
+  }
+  40%,
+  90% {
+    transform: scaleX(1);
+  }
+  100% {
+    transform: scaleX(0.05);
+  }
+}
+.lp-check {
+  animation: lp-check 6s ease infinite both;
+}
+@keyframes lp-check {
+  0%,
+  12% {
+    background: transparent;
+    border-color: color-mix(in srgb, var(--color-sun) 60%, transparent);
+    color: transparent;
+  }
+  20%,
+  90% {
+    background: var(--color-moss);
+    border-color: var(--color-moss);
+    color: #fff;
+  }
+  100% {
+    background: transparent;
+    color: transparent;
+  }
+}
+.lp-box {
+  animation: lp-check 7s ease infinite both;
+}
+.lp-strike {
+  animation: lp-strike 7s ease infinite both;
+}
+@keyframes lp-strike {
+  0%,
+  12% {
+    color: var(--color-ink);
+    text-decoration-color: transparent;
+  }
+  20%,
+  90% {
+    color: var(--color-ink-faint);
+    text-decoration: line-through;
+    text-decoration-color: var(--color-ink-faint);
+  }
+  100% {
+    color: var(--color-ink);
+  }
+}
+.lp-type {
+  display: inline-block;
+  max-width: 100%;
+  animation: demo-type 5s steps(24) infinite both;
+}
+.lp-float {
+  animation: lp-float 5s ease-in-out infinite;
+}
+@keyframes lp-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-fill,
+  .lp-check,
+  .lp-box,
+  .lp-strike,
+  .lp-type,
+  .lp-float {
+    animation: none;
+  }
+  /* the finished state, for anyone who'd rather nothing moved */
+  .lp-check,
+  .lp-box {
+    background: var(--color-moss);
+    border-color: var(--color-moss);
+  }
+}
+
 /* ---------- landing demos: small looping "screen recordings" ---------- */
 
 @keyframes demo-chip {

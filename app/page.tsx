@@ -15,16 +15,16 @@ import { GuestExperience } from "@/components/guest-mode";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
-  title: "Kairo, a daily planner that forgives",
+  title: "Kairo, where good days grow",
   description:
-    "Start planning right now, no account needed. Type your day in one messy sentence, pick the 3 things that matter, and win the day. Sign in later and your tasks follow you.",
+    "Start right now, no account needed. Plan a day you'll actually finish, grow habits into a garden you can see, and walk around Kairo City. Sign in later and everything follows you.",
   openGraph: {
-    title: "Kairo, a daily planner that forgives",
-    description: "Try it instantly, no sign-up. Your to-do list shouldn't make you feel bad.",
+    title: "Kairo, where good days grow",
+    description: "Plan the day, grow your habits into a garden, and walk Kairo City. Try it instantly, no sign-up.",
     type: "website",
     siteName: "Kairo",
     url: "/",
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: "Kairo, a daily planner that forgives" }],
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "Kairo, where good days grow" }],
   },
 };
 

@@ -34,7 +34,7 @@ export async function generateMetadata({
       title: `${article.title} · Kairo Help`,
       description: article.summary,
       type: "article",
-      images: [{ url: "/og.png", width: 1200, height: 630, alt: "Kairo, a daily planner that forgives" }],
+      images: [{ url: "/og.png", width: 1200, height: 630, alt: "Kairo, where good days grow" }],
     },
   };
 }

@@ -1,52 +1,49 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  CalendarDemo,
-  CaptureDemo,
-  FocusDemo,
-  FreshStartDemo,
-  LockDemo,
-  ShareDemo,
-  TodayDemo,
-} from "@/components/landing/demos";
+import { CaptureDemo, FreshStartDemo, ShareDemo, TodayDemo } from "@/components/landing/demos";
+import { CityBand } from "@/components/landing/city-band";
+import { HeroGarden } from "@/components/landing/hero-garden";
+import { HabitsDemo, NotesDemo } from "@/components/landing/more-demos";
 import { Testimonials } from "@/components/landing/testimonials";
 import { Pricing } from "@/components/landing/pricing";
 import { CoffeeButton } from "@/components/coffee";
+import { Plant } from "@/components/garden/plants";
 import { Mark } from "@/components/mark";
+import { GARDEN_LEVELS } from "@/lib/habits-shared";
 import { getSession } from "@/lib/session";
 import { PRICE_CURRENCY, PRICE_MINOR } from "@/lib/razorpay";
-import { SITE_NAME, SITE_URL, SUPPORT_EMAIL } from "@/lib/site";
+import { SITE_NAME, SITE_TITLE, SITE_URL, SUPPORT_EMAIL } from "@/lib/site";
 
 export const metadata: Metadata = {
   // "/" now opens straight into the product for visitors, so this page is
   // the marketing story's own canonical home.
   alternates: { canonical: "/home" },
   description:
-    "Kairo is a daily planner that forgives. Voice + AI capture, a bounded Today, a guilt-free morning reset, focus timer, shared lists, task assignment and PIN locks. No red badges, no overdue guilt.",
+    "Kairo is where good days grow. Plan a day you'll actually finish, keep habits that grow into a living garden, write notes and a journal, and move in next door to your friends in Kairo City. No red badges, no overdue guilt.",
   keywords: [
     "daily planner",
+    "habit tracker",
+    "habit garden",
     "todo app",
-    "task planner",
+    "notes app",
     "shared task list",
-    "assign tasks",
-    "private todo list",
-    "focus timer",
     "AI task capture",
     "guilt-free productivity",
+    "build habits with friends",
   ],
   openGraph: {
-    title: "Kairo, a daily planner that forgives",
+    title: SITE_TITLE,
     description:
-      "Plan a day you can actually finish. Voice + AI capture, a morning reset instead of overdue guilt, focus timer, shared lists, assignments and PIN locks.",
+      "Plan a day you'll actually finish, grow your habits into a garden you can see, and move in next door to your friends in Kairo City.",
     type: "website",
     siteName: "Kairo",
     url: "/",
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: "Kairo, a daily planner that forgives" }],
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: SITE_TITLE }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Kairo, a daily planner that forgives",
-    description: "Plan a day you can actually finish. No red badges, no overdue guilt.",
+    title: SITE_TITLE,
+    description: "Plan the day. Grow your habits into a garden. Visit your friends' gardens in Kairo City.",
     images: ["/og.png"],
   },
 };
@@ -64,7 +61,7 @@ const JSON_LD = {
   applicationCategory: "ProductivityApplication",
   operatingSystem: "Web, iOS, Android",
   description:
-    "A daily planner that forgives: bounded days, guilt-free fresh starts, voice and AI capture, focus timer, shared lists with assignments, and PIN-locked privacy.",
+    "Where good days grow: a daily planner with guilt-free fresh starts and AI capture, habits that grow into a living garden, notes and a journal, and Kairo City, a street of gardens you share with friends.",
   offers: {
     "@type": "Offer",
     price: (PRICE_MINOR / 100).toFixed(2),
@@ -97,6 +94,58 @@ function GoogleMark({ size = 18 }: { size?: number }) {
   );
 }
 
+/* The four parts of Kairo, each drawn to the same 24px grid. */
+const Stroke = ({ children }: { children: React.ReactNode }) => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    {children}
+  </svg>
+);
+const PlanIcon = () => (
+  <Stroke>
+    <rect x="3.5" y="5" width="17" height="15" rx="3" />
+    <path d="M3.5 10h17M8 3v4M16 3v4M9 14.5l2 2 4-4" />
+  </Stroke>
+);
+const GrowIcon = () => (
+  <Stroke>
+    <path d="M12 21v-9" />
+    <path d="M12 12c0-4 3-6.5 7-6.5 0 4-3 6.5-7 6.5zM12 14.5C12 11.5 9.5 9.5 6 9.5c0 3 2.5 5 6 5z" />
+    <path d="M7 21h10" />
+  </Stroke>
+);
+const WriteIcon = () => (
+  <Stroke>
+    <path d="M6 3.5h8l4 4V20a.5.5 0 0 1-.5.5h-11A.5.5 0 0 1 6 20V4a.5.5 0 0 1 .5-.5z" />
+    <path d="M14 3.5V8h4M9 12h6M9 15.5h4" />
+  </Stroke>
+);
+const CityIcon = () => (
+  <Stroke>
+    <path d="M3 20.5h18M5 20.5V11l4-3 4 3v9.5M13 20.5V8.5l3.5-3 3.5 3v12" />
+    <path d="M8 14h2M16 11.5h1M16 15h1" />
+  </Stroke>
+);
+
+const PILLARS = [
+  { id: "plan", icon: <PlanIcon />, tint: "bg-sun/12 text-sun-deep", title: "Plan", body: "A day with edges. Three that matter, and a clean slate every morning." },
+  { id: "grow", icon: <GrowIcon />, tint: "bg-moss/12 text-moss", title: "Grow", body: "Habits that get stronger each time, and a garden that shows it." },
+  { id: "write", icon: <WriteIcon />, tint: "bg-lilac/12 text-lilac", title: "Write", body: "Notes for everything else, and a journal for the day itself." },
+  { id: "city", icon: <CityIcon />, tint: "bg-sky/12 text-sky", title: "Kairo City", body: "Your garden on a street of real ones. Friends move in next door." },
+];
+
+/** A numbered chapter heading: the page tells the story in four parts. */
+function Chapter({ id, n, kicker, title, body }: { id: string; n: string; kicker: string; title: React.ReactNode; body: string }) {
+  return (
+    <header id={id} className="mx-auto max-w-2xl scroll-mt-28 px-5 pt-20 text-center sm:pt-28">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-faint">
+        <span className="tabular-nums text-sun-deep">{n}</span> <span aria-hidden>/</span> {kicker}
+      </p>
+      <h2 className="font-display mt-3 text-4xl leading-[1.05] tracking-tight sm:text-6xl">{title}</h2>
+      <p className="mx-auto mt-4 max-w-lg text-[16px] leading-7 text-ink-soft">{body}</p>
+    </header>
+  );
+}
+
 /** Alternating feature row: copy on one side, a live demo on the other. */
 function Feature({
   eyebrow,
@@ -114,12 +163,12 @@ function Feature({
   flip?: boolean;
 }) {
   return (
-    <section className="mx-auto grid max-w-5xl items-center gap-8 px-5 py-12 sm:py-16 lg:grid-cols-2 lg:gap-14">
+    <section className="mx-auto grid max-w-5xl items-center gap-8 px-5 py-10 sm:py-14 lg:grid-cols-2 lg:gap-14">
       <div className={flip ? "lg:order-2" : ""}>
         <p className="text-[11px] font-semibold uppercase tracking-wider text-sun-deep">{eyebrow}</p>
-        <h2 className="font-display mt-2 text-3xl leading-tight tracking-tight sm:text-4xl">
+        <h3 className="font-display mt-2 text-3xl leading-tight tracking-tight sm:text-4xl">
           {title}
-        </h2>
+        </h3>
         <p className="mt-3 text-[15px] leading-7 text-ink-soft">{body}</p>
         <ul className="mt-5 space-y-2.5">
           {points.map((p) => (
@@ -135,13 +184,19 @@ function Feature({
   );
 }
 
+const CITY_POINTS = [
+  { title: "Visit any garden", body: "Walk the street and look over the fence. Every plant there was grown by a real habit." },
+  { title: "Cheer in one tap", body: "A little sunshine for a friend's good day. No comments, no pressure." },
+  { title: "Save the plot next door", body: "Invite a friend by link or email, and their garden grows beside yours." },
+];
+
 const EXTRAS = [
-  { icon: "↻", title: "Recurring tasks", body: "Daily, weekly, or monthly. Miss one and it just moves on." },
-  { icon: "🔔", title: "Reminders that arrive", body: "Real notifications, even with the app closed." },
-  { icon: "↳", title: "Steps with their own days", body: "Break a big task up. Give each step its own day." },
-  { icon: "⌘", title: "Search everything", body: "One shortcut finds any task or list." },
-  { icon: "👥", title: "Multiple accounts", body: "Work and personal, a tap apart." },
-  { icon: "🌙", title: "Light, dark, auto", body: "Follows your system. Installs like a real app." },
+  { title: "Focus timer", body: "Press play on a task. It keeps counting even with the app closed." },
+  { title: "Week and month", body: "A calendar with a colour for every list. Drag a task to another day." },
+  { title: "PIN-locked lists", body: "Lock a list, or all of Kairo. Locked tasks vanish from everywhere." },
+  { title: "Recurring tasks", body: "Daily, weekly, or monthly. Miss one and it just moves on." },
+  { title: "Reminders that arrive", body: "Real notifications for tasks and habits, even with the app closed." },
+  { title: "Light, dark, anywhere", body: "Follows your system, and installs like a real app on any phone." },
 ];
 
 export default async function Landing({
@@ -155,6 +210,26 @@ export default async function Landing({
   // /home — where offering "Continue with Google" to someone already signed in
   // would be nonsense.
   const signedIn = Boolean(await getSession());
+  // Guests walk the city from the front door, which is the product in guest
+  // mode; "/" would bounce a signed-in visitor to /today and drop the query.
+  const cityHref = signedIn ? "/today?city=open" : "/?city=open";
+
+  const primary = signedIn ? (
+    <Link
+      href="/today"
+      className="rounded-full bg-sun px-8 py-4 text-base font-semibold text-on-accent shadow-xl shadow-sun/25 transition-all hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-sun/30 active:translate-y-0"
+    >
+      Open Kairo →
+    </Link>
+  ) : (
+    <a
+      href="/api/auth/google"
+      data-track="signin-google"
+      className="flex items-center gap-3 rounded-full bg-sun py-2.5 pl-2.5 pr-8 text-base font-semibold text-on-accent shadow-xl shadow-sun/25 transition-all hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-sun/30 active:translate-y-0"
+    >
+      <GoogleBadge size={34} /> Start free with Google
+    </a>
+  );
 
   return (
     // overflow-x on main would make it a scroll container and quietly kill
@@ -170,7 +245,16 @@ export default async function Landing({
         <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight">
           <Mark size={20} className="text-sun" /> kairo
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
+          {PILLARS.map((p) => (
+            <a
+              key={p.id}
+              href={`#${p.id}`}
+              className="hidden rounded-full px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:text-ink md:block"
+            >
+              {p.title}
+            </a>
+          ))}
           <Link
             href="/support"
             className="hidden rounded-full px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:text-ink sm:block"
@@ -249,48 +333,81 @@ export default async function Landing({
       )}
 
       {/* hero */}
-      <section aria-label="Intro" className="mx-auto max-w-5xl px-5 pb-10 pt-16 sm:pt-24">
+      <section aria-label="Intro" className="mx-auto max-w-5xl px-5 pb-8 pt-14 sm:pt-20">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="mx-auto mb-5 w-max rounded-full glass px-4 py-1.5 text-xs font-medium text-ink-soft">
-            the daily planner that forgives
-          </p>
-          <h1 className="font-display mx-auto text-5xl leading-[1.04] tracking-tight sm:text-7xl">
-            Your to-do list shouldn&apos;t make you{" "}
-            <em className="bg-gradient-to-r from-sun to-sky bg-clip-text text-transparent">
-              feel bad
-            </em>
-            .
+          <a
+            href="#city"
+            className="glass mx-auto mb-6 flex w-max max-w-full items-center gap-2 rounded-full py-1.5 pl-1.5 pr-4 text-xs font-medium text-ink-soft transition-colors hover:text-ink"
+          >
+            <span className="rounded-full bg-sky px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">New</span>
+            Kairo City is open. Come see the gardens
+          </a>
+          <h1 className="font-display mx-auto text-6xl leading-[0.98] tracking-tight sm:text-8xl">
+            Where good days{" "}
+            <em className="bg-gradient-to-r from-sun via-moss to-sky bg-clip-text pr-[0.12em] -mr-[0.08em] text-transparent">grow</em>.
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-ink-soft">
-            Speak a thought and AI files it. Plan a day you can actually finish. When life happens,
-            start fresh, no red badges, no &ldquo;62 overdue&rdquo;, no shame spiral.
+            Plan a day you&apos;ll actually finish. Keep habits that grow into a garden you can see.
+            Then move in next door to your friends in Kairo City.
           </p>
 
-          <div className="mt-9 flex flex-col items-center gap-3">
-            {signedIn ? (
-              <Link
-                href="/today"
-                className="rounded-full bg-sun px-8 py-4 text-base font-semibold text-on-accent shadow-xl shadow-sun/25 transition-all hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-sun/30 active:translate-y-0"
-              >
-                Open Kairo →
-              </Link>
-            ) : (
-              <a
-                href="/api/auth/google"
-              data-track="signin-google"
-                className="flex items-center gap-3 rounded-full bg-sun py-2.5 pl-2.5 pr-8 text-base font-semibold text-on-accent shadow-xl shadow-sun/25 transition-all hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-sun/30 active:translate-y-0"
-              >
-                <GoogleBadge size={34} /> Continue with Google
-              </a>
-            )}
-            <span className="text-xs text-ink-faint">
-              {signedIn ? "You're signed in." : "Free. Your tasks stay yours."}
-            </span>
+          <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            {primary}
+            <a
+              href={cityHref}
+              className="glass flex items-center gap-2 rounded-full px-6 py-4 text-base font-semibold transition-all hover:-translate-y-0.5 hover:shadow-lg"
+            >
+              <span className="text-sky">
+                <CityIcon />
+              </span>
+              Walk around Kairo City
+            </a>
           </div>
+          <p className="mt-3 text-xs text-ink-faint">
+            {signedIn ? "You're signed in." : "Free to start. No card, and your days stay yours."}
+          </p>
+        </div>
+
+        <div className="mt-12 sm:mt-14">
+          <HeroGarden />
         </div>
       </section>
 
-      {/* feature walkthrough */}
+      {/* the four parts */}
+      <section aria-label="What's inside" className="mx-auto max-w-5xl px-5 pt-10">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {PILLARS.map((p) => (
+            <a
+              key={p.id}
+              href={`#${p.id}`}
+              className="glass group rounded-3xl p-5 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-ink/5"
+            >
+              <span className={`grid size-10 place-items-center rounded-2xl ${p.tint}`}>{p.icon}</span>
+              <h2 className="mt-4 text-base font-semibold">
+                {p.title}
+                <span className="ml-1 inline-block text-ink-faint transition-transform group-hover:translate-x-1" aria-hidden>
+                  →
+                </span>
+              </h2>
+              <p className="mt-1 text-[13px] leading-6 text-ink-soft">{p.body}</p>
+            </a>
+          ))}
+        </div>
+      </section>
+
+      {/* 01 plan */}
+      <Chapter
+        id="plan"
+        n="01"
+        kicker="Plan"
+        title={
+          <>
+            A day you can <em className="text-sun">finish</em>
+          </>
+        }
+        body="Say what's on your mind, pick the few that matter, and let yesterday go gently. Nothing in Kairo ever turns red."
+      />
+
       <Feature
         eyebrow="Capture"
         title={<>Say it. AI files it.</>}
@@ -305,7 +422,7 @@ export default async function Landing({
       />
 
       <Feature
-        eyebrow="Plan"
+        eyebrow="Today"
         title={<>A day with edges</>}
         body="Today holds only what you picked for today. Never the whole pile."
         points={[
@@ -317,7 +434,7 @@ export default async function Landing({
       />
 
       <Feature
-        eyebrow="Forgiveness"
+        eyebrow="Fresh start"
         title={
           <>
             Nothing ever turns <em className="text-clay">red</em>
@@ -333,20 +450,122 @@ export default async function Landing({
         flip
       />
 
-      <Feature
-        eyebrow="Focus"
-        title={<>Start the clock, not another list</>}
-        body="Add an estimate and press play. The timer keeps running even if you close the app."
-        points={[
-          "Pause, reset, or add five minutes.",
-          "Run over and it counts up, quietly.",
-          "Shrink it to a pill and carry on.",
-        ]}
-        demo={<FocusDemo />}
+      {/* 02 grow */}
+      <Chapter
+        id="grow"
+        n="02"
+        kicker="Grow"
+        title={
+          <>
+            Habits you can <em className="text-moss">see</em>
+          </>
+        }
+        body="Every habit is a plant. Do it and it grows. Miss a day and it wilts a little, then springs back the moment you water it. A plant never dies."
       />
 
       <Feature
-        eyebrow="Together"
+        eyebrow="Habits"
+        title={<>Stronger every time, not all or nothing</>}
+        body="Pick one from the ideas or write your own. Kairo tracks how strong it's getting, not just how long the streak is."
+        points={[
+          "Two taps to start a habit, with ideas ready to go.",
+          "Every day, weekdays, or a few times a week.",
+          "Dew drops cover a missed day, so one slip keeps the streak.",
+        ]}
+        demo={<HabitsDemo />}
+      />
+
+      <section aria-label="Garden levels" className="mx-auto max-w-5xl px-5 py-8">
+        <div className="glass rounded-[2rem] p-6 sm:p-8">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-moss">Your garden levels up</p>
+              <h3 className="font-display mt-1 text-2xl tracking-tight sm:text-3xl">From a bare plot to a legendary garden</h3>
+            </div>
+            <p className="max-w-xs text-[13px] leading-6 text-ink-soft">Your five strongest habits set the level. Each one adds something new.</p>
+          </div>
+          <ol className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+            {GARDEN_LEVELS.map((l) => (
+              <li
+                key={l.level}
+                className={`rounded-2xl p-3 ${l.level === GARDEN_LEVELS.length ? "bg-gradient-to-br from-[#f7d774]/35 to-[#e0a93b]/25 ring-1 ring-[#e0a93b]/40" : "bg-card/70"}`}
+              >
+                <span className="mb-2 flex h-14 items-end" aria-hidden>
+                  <Plant species="apple" stage={l.level - 1} ripe={l.level === 7 ? 3 : 0} golden={l.level === 7 ? 2 : 0} size={44} sway={false} ground="none" fit="tight" />
+                </span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-faint">Level {l.level}</span>
+                <span className="mt-0.5 block text-[13px] font-semibold leading-5">{l.name}</span>
+                <span className="mt-1 block text-[12px] leading-5 text-ink-soft">{l.adds}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* 03 write */}
+      <Chapter
+        id="write"
+        n="03"
+        kicker="Write"
+        title={
+          <>
+            Room for every <em className="text-lilac">thought</em>
+          </>
+        }
+        body="Trip plans, meeting notes, the list of books to read. And a journal for how the day actually went."
+      />
+
+      <Feature
+        eyebrow="Notes and journal"
+        title={<>Pages inside pages</>}
+        body="Write the way you think. Headings, checklists and pages nested inside each other, a slash away."
+        points={[
+          "Type / for headings, lists, checklists and more.",
+          "Nest pages as deep as the idea goes.",
+          "A daily journal with a prompt when the page is blank.",
+        ]}
+        demo={<NotesDemo />}
+        flip
+      />
+
+      {/* 04 city */}
+      <Chapter
+        id="city"
+        n="04"
+        kicker="Together"
+        title={
+          <>
+            Welcome to <em className="text-sky">Kairo City</em>
+          </>
+        }
+        body="Every gardener gets a plot on one shared street. Keep your habits, watch your garden grow, and move your friends in next door."
+      />
+
+      <section aria-label="Kairo City" className="mx-auto max-w-6xl px-3 pt-10 sm:px-5">
+        <CityBand />
+        <div className="mx-auto mt-4 grid max-w-5xl gap-3 sm:grid-cols-3">
+          {CITY_POINTS.map((c) => (
+            <div key={c.title} className="glass rounded-3xl p-5">
+              <h3 className="text-sm font-semibold">{c.title}</h3>
+              <p className="mt-1 text-[13px] leading-6 text-ink-soft">{c.body}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-8 flex flex-col items-center gap-2 text-center">
+          <a
+            href={cityHref}
+            className="inline-flex items-center gap-2 rounded-full bg-ink px-7 py-3.5 text-base font-semibold text-paper shadow-xl shadow-ink/15 transition-all hover:-translate-y-0.5 hover:shadow-2xl"
+          >
+            Walk around Kairo City →
+          </a>
+          <p className="max-w-sm text-xs leading-5 text-ink-faint">
+            Only gardeners who join show up on the street. Habits you wrote yourself keep their names private.
+          </p>
+        </div>
+      </section>
+
+      <Feature
+        eyebrow="Shared lists"
         title={<>Share a list. Assign the work.</>}
         body="Invite someone by email and you share the list. Your own Today stays yours."
         points={[
@@ -355,46 +574,20 @@ export default async function Landing({
           "Or send one task across on its own.",
         ]}
         demo={<ShareDemo />}
-        flip
-      />
-
-      <Feature
-        eyebrow="Private"
-        title={<>Some lists aren&apos;t for the room</>}
-        body="Lock a list, or all of Kairo, with a PIN. Locked tasks disappear from everywhere."
-        points={[
-          "4–8 digits, never stored as plain text.",
-          "Gone from search, calendar and the AI.",
-          "Lock the whole app in one tap.",
-        ]}
-        demo={<LockDemo />}
-      />
-
-      <Feature
-        eyebrow="Perspective"
-        title={<>The week and month, in colour</>}
-        body="See the week ahead, or the whole month with a colour for each list."
-        points={[
-          "Drag a task to another day.",
-          "Every list gets its own colour.",
-          "Busy days show up early.",
-        ]}
-        demo={<CalendarDemo />}
-        flip
       />
 
       {/* everything else */}
-      <section aria-label="More features" className="mx-auto max-w-5xl px-5 py-14">
+      <section aria-label="More features" className="mx-auto max-w-5xl px-5 py-12">
         <h2 className="font-display text-center text-3xl tracking-tight sm:text-4xl">
           And the rest of it
         </h2>
-        <div className="mt-9 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {EXTRAS.map((f) => (
             <div key={f.title} className="glass rounded-2xl p-5">
-              <div className="text-lg" aria-hidden>
-                {f.icon}
-              </div>
-              <h3 className="mt-2 text-sm font-semibold">{f.title}</h3>
+              <h3 className="flex items-center gap-2 text-sm font-semibold">
+                <span className="size-1.5 rounded-full bg-sun" aria-hidden />
+                {f.title}
+              </h3>
               <p className="mt-1 text-[13px] leading-6 text-ink-soft">{f.body}</p>
             </div>
           ))}
@@ -405,7 +598,7 @@ export default async function Landing({
       <section aria-label="Why Kairo" className="mx-auto max-w-4xl px-5 py-10">
         <div className="glass rounded-[2rem] p-8 shadow-lg shadow-ink/5 sm:p-10">
           <h2 className="font-display text-center text-3xl tracking-tight sm:text-4xl">
-            Other apps track tasks. <span className="text-sun">Kairo protects your day.</span>
+            Other apps track your days. <span className="text-sun">Kairo helps them grow.</span>
           </h2>
           <div className="mt-8 grid gap-8 sm:grid-cols-2">
             <div>
@@ -415,9 +608,9 @@ export default async function Landing({
               <ul className="space-y-2.5 text-sm text-ink-soft">
                 {[
                   "62 overdue tasks glowing red",
-                  "Fake due dates on everything",
-                  "Broken streaks, guilt trips",
-                  "40 features, 12 settings pages",
+                  "One missed day and the streak is gone",
+                  "Habit charts that feel like homework",
+                  "A planner, a tracker and notes in three apps",
                 ].map((x) => (
                   <li key={x} className="flex items-center gap-2.5">
                     <span className="text-clay" aria-hidden>✕</span> {x}
@@ -432,9 +625,9 @@ export default async function Landing({
               <ul className="space-y-2.5 text-sm font-medium">
                 {[
                   "A fresh start every morning",
-                  "Planned days ≠ deadlines",
-                  "A log of what you did finish",
-                  "Capture, plan, finish. That's it",
+                  "Plants that wilt a little, and never die",
+                  "A garden you actually want to visit",
+                  "Plan, grow, write, together. One app",
                 ].map((x) => (
                   <li key={x} className="flex items-center gap-2.5">
                     <span className="text-moss" aria-hidden>✓</span> {x}
@@ -451,24 +644,20 @@ export default async function Landing({
       <Pricing signedIn={signedIn} />
 
       {/* final CTA */}
-      <section aria-label="Get started" className="mx-auto max-w-3xl px-5 py-16 text-center">
-        <h2 className="font-display text-4xl tracking-tight sm:text-5xl">
-          Win <em className="text-sun">today</em>. Repeat tomorrow.
+      <section aria-label="Get started" className="mx-auto max-w-3xl px-5 py-20 text-center">
+        <h2 className="font-display text-5xl leading-[1.02] tracking-tight sm:text-6xl">
+          Grow a good day.
+          <br />
+          <em className="bg-gradient-to-r from-sun via-moss to-sky bg-clip-text pr-2 text-transparent">Starting today.</em>
         </h2>
-        <p className="mx-auto mt-4 max-w-md text-ink-soft">
-          Three must-wins, an honest plan, and a clean slate whenever you need one.
+        <p className="mx-auto mt-5 max-w-md text-ink-soft">
+          Plan three things, water one habit, and watch the first sprout come up.
         </p>
-        <a
-          href="/api/auth/google"
-              data-track="signin-google"
-          className="mt-8 inline-flex items-center gap-3 rounded-full bg-ink px-8 py-4 text-base font-semibold text-paper shadow-xl shadow-ink/20 transition-all hover:-translate-y-0.5 hover:shadow-2xl"
-        >
-          Start your first day →
-        </a>
+        <div className="mt-8 flex justify-center">{primary}</div>
       </section>
 
-      <footer className="border-t border-line/60 py-8 text-center text-xs text-ink-faint">
-        <Mark size={12} className="inline text-sun" /> kairo, made for humans with unfinished lists
+      <footer className="border-t border-line/60 px-5 py-8 text-center text-xs leading-6 text-ink-faint">
+        <Mark size={12} className="inline text-sun" /> kairo, where good days grow
         {" · "}
         <Link href="/support" className="underline underline-offset-2 hover:text-ink-soft">
           Help

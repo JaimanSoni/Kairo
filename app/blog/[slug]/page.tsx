@@ -32,7 +32,7 @@ export async function generateMetadata({
       url: `/blog/${post.slug}`,
       publishedTime: post.published,
       modifiedTime: post.updated,
-      images: [{ url: "/og.png", width: 1200, height: 630, alt: "Kairo, a daily planner that forgives" }],
+      images: [{ url: "/og.png", width: 1200, height: 630, alt: "Kairo, where good days grow" }],
     },
   };
 }

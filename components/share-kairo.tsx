@@ -15,7 +15,7 @@ import { SITE_URL } from "@/lib/site";
  */
 
 const PITCH =
-  "Kairo is a daily planner that forgives, nothing ever turns red, and every morning starts clean. It's the first one I've actually kept using.";
+  "Kairo is where my good days grow: I plan the day, keep my habits, and watch them grow into a garden. It's the first one I've actually kept using.";
 
 const SHARE_URL = SITE_URL;
 
