@@ -63,19 +63,23 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
   const gardenTick = useSyncExternalStore(gardenStore.subscribe, gardenStore.snapshot, () => 0);
   const guest = Boolean(state.user.guest);
   const userId = state.user.id;
+  // a place put away in Settings stays out of search too
+  const show = state.user.spaces;
   const [journalHits, setJournalHits] = useState<{ q: string; hits: SearchHit[] }>({ q: "", hits: [] });
 
   // pages and plants are searchable here too; each loads the first time anyone looks
   useEffect(() => {
     if (guest) return;
-    void notesStore.ensureLoaded();
-    gardenStore.forUser(userId);
-    void gardenStore.ensureLoaded();
-  }, [guest, userId]);
+    if (show.notes) void notesStore.ensureLoaded();
+    if (show.garden) {
+      gardenStore.forUser(userId);
+      void gardenStore.ensureLoaded();
+    }
+  }, [guest, userId, show.notes, show.garden]);
 
   // the journal is searched on the server, a moment after typing stops
   useEffect(() => {
-    if (guest || query.length < 2) return;
+    if (guest || !show.journal || query.length < 2) return;
     let cancelled = false;
     const timer = setTimeout(() => {
       journalApi.search(query).then((r) => {
@@ -86,7 +90,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [query, guest]);
+  }, [query, guest, show.journal]);
 
   const actions = useMemo<PaletteItem[]>(() => {
     const base: { id: string; label: string; hint?: string; run: () => void }[] = [
@@ -114,10 +118,22 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
           ]),
       ...(state.user.appLockEnabled ? [{ id: "lock", label: "Lock Kairo now", run: lockApp }] : []),
     ];
+    const owner: Record<string, keyof typeof show> = {
+      "capture-note": "notes",
+      "go-notes": "notes",
+      "new-note": "notes",
+      "capture-journal": "journal",
+      "go-journal": "journal",
+      "write-today": "journal",
+      "go-garden": "garden",
+      "plant-habit": "garden",
+      "garden-community": "garden",
+    };
     return base
+      .filter((a) => !owner[a.id] || show[owner[a.id]])
       .filter((a) => !query || a.label.toLowerCase().includes(query))
       .map((a) => ({ kind: "action" as const, ...a }));
-  }, [query, setOmnibar, lockApp, state.user.appLockEnabled, state.today, guest, noteActions]);
+  }, [query, setOmnibar, lockApp, state.user.appLockEnabled, state.today, guest, noteActions, show]);
 
   const taskItems = useMemo<PaletteItem[]>(() => {
     const candidates = Object.values(state.tasks).filter(
@@ -155,7 +171,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
   }, [state, query]);
 
   const noteItems = useMemo<PaletteItem[]>(() => {
-    if (!query || notesTick < 0) return [];
+    if (!query || notesTick < 0 || !show.notes) return [];
     return notesStore
       .all()
       .map((page) => ({ page, s: score(page.title || "untitled", query) }))
@@ -163,15 +179,15 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
       .sort((a, b) => b.s - a.s || b.page.updatedAt.localeCompare(a.page.updatedAt))
       .slice(0, 5)
       .map(({ page }) => ({ kind: "note" as const, id: page.id, page }));
-  }, [query, notesTick]);
+  }, [query, notesTick, show.notes]);
 
   const journalItems = useMemo<PaletteItem[]>(
-    () => (query.length >= 2 && journalHits.q === query ? journalHits.hits.map((hit) => ({ kind: "journal" as const, id: hit.date, hit })) : []),
-    [query, journalHits]
+    () => (show.journal && query.length >= 2 && journalHits.q === query ? journalHits.hits.map((hit) => ({ kind: "journal" as const, id: hit.date, hit })) : []),
+    [query, journalHits, show.journal]
   );
 
   const habitItems = useMemo<PaletteItem[]>(() => {
-    if (!query || gardenTick < 0 || gardenStore.status() !== "ready") return [];
+    if (!query || gardenTick < 0 || !show.garden || gardenStore.status() !== "ready") return [];
     return gardenStore
       .habits()
       .map((habit) => ({ habit, s: score(habit.name, query) }))
@@ -179,7 +195,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
       .sort((a, b) => b.s - a.s)
       .slice(0, 3)
       .map(({ habit }) => ({ kind: "habit" as const, id: habit.id, habit }));
-  }, [query, gardenTick]);
+  }, [query, gardenTick, show.garden]);
 
   const items = useMemo(
     () => [...taskItems, ...listItems, ...noteItems, ...journalItems, ...habitItems, ...actions],

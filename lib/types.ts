@@ -93,6 +93,11 @@ export type AccountInfo = {
   picture?: string;
 };
 
+/** Which of Kairo's optional places an account keeps. Planning (Today, Calendar, Lists, Log) is always on. */
+export type SpacePrefs = { journal: boolean; notes: boolean; garden: boolean };
+
+export const ALL_SPACES: SpacePrefs = { journal: true, notes: true, garden: true };
+
 export type UserProfile = {
   id: string;
   email: string;
@@ -113,4 +118,8 @@ export type UserProfile = {
   /** True for the try-before-signup visitor on "/": tasks live in
    *  localStorage, and signing in carries them into a real account. */
   guest?: boolean;
+  /** The optional places shown. A hidden one keeps its data and still opens from a link. */
+  spaces: SpacePrefs;
+  /** A brand-new account's first visit: the welcome asks which places to keep. */
+  welcome?: boolean;
 };

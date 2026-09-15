@@ -379,7 +379,7 @@ function PageSurface({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [wins, setWins] = useState<string[] | null>(null);
   // the plants watered this day belong to "This day in Kairo" as much as the tasks do
-  const gardenReady = useGardenDays(!state.user.guest, today, state.user.id);
+  const gardenReady = useGardenDays(!state.user.guest && state.user.spaces.garden, today, state.user.id);
   const watered = gardenReady ? habitsOn(date, today).watered : [];
 
   // the latest of everything, for saves that fire after a render has passed

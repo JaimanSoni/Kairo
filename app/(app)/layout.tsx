@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession, getSessionAccounts } from "@/lib/session";
 import { loadUserData } from "@/lib/tasks";
-import { getUserById } from "@/lib/users";
+import { getUserById, shouldWelcome, spacesOf } from "@/lib/users";
 import { isAdminEmail } from "@/lib/admin";
 import { accessFor, getBillingSettings, type UserBilling } from "@/lib/billing";
 import { Paywall, TrialBanner } from "@/components/paywall";
@@ -90,6 +90,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         // money has actually changed hands: a live subscription, or a period
         // already paid for. Trial and comped accounts are not paying.
         isPaying: access.reason === "subscribed" || access.reason === "grace",
+        spaces: spacesOf(userDoc),
+        welcome: !appLocked && shouldWelcome(userDoc, tasks.length + lists.length),
       }}
       accounts={(roster?.accounts ?? []).map((a) => ({
         id: a.userId,

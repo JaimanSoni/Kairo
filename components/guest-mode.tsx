@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { List, UserProfile } from "@/lib/types";
+import { type List, type UserProfile, ALL_SPACES } from "@/lib/types";
 import { FEATURE_KEYS } from "@/lib/features";
 import { track } from "@/lib/analytics-client";
 import { AppProvider, GUEST_CAP_EVENT, GUEST_STORAGE_KEY, GUEST_TASK_CAP, useApp } from "./store";
@@ -28,6 +28,7 @@ export const GUEST_USER: UserProfile = {
   isAdmin: false,
   isPaying: false,
   guest: true,
+  spaces: ALL_SPACES,
 };
 
 /** Starter lists so filing ("#personal") works before any setup. */

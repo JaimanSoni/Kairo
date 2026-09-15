@@ -122,7 +122,7 @@ export function CloseTheDay({
     setSaving(false);
   };
 
-  const { watered, waiting } = habitsOn(today, today);
+  const { watered, waiting } = state.user.spaces.garden ? habitsOn(today, today) : { watered: [], waiting: [] };
   const plants = watered.length + waiting.length;
   const parts: string[] = [];
   if (doneCount > 0) parts.push(`finished ${doneCount} ${doneCount === 1 ? "thing" : "things"}`);

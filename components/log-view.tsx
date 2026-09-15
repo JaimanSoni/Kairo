@@ -70,8 +70,8 @@ export function LogView() {
   const { state } = useApp();
   const today = state.today;
   const context = !state.user.guest && !state.appLocked;
-  const gardenReady = useGardenDays(context, today, state.user.id);
-  const journal = useJournalMonths(monthsBetween(addDays(today, -DAY_CONTEXT_DAYS), today), today, context);
+  const gardenReady = useGardenDays(context && state.user.spaces.garden, today, state.user.id);
+  const journal = useJournalMonths(monthsBetween(addDays(today, -DAY_CONTEXT_DAYS), today), today, context && state.user.spaces.journal);
   const [older, setOlder] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 

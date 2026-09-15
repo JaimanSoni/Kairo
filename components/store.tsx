@@ -9,7 +9,7 @@ import {
   useReducer,
   useRef,
 } from "react";
-import type { AccountInfo, List, Task, UserProfile } from "@/lib/types";
+import type { AccountInfo, List, Task, UserProfile, SpacePrefs } from "@/lib/types";
 import { friendlyDay, todayStr } from "@/lib/dates";
 import { nextOccurrence } from "@/lib/repeat";
 import { cancelPush } from "@/lib/push-client";
@@ -67,6 +67,7 @@ type Action =
   | { type: "SET_APP_LOCKED"; locked: boolean }
   | { type: "SET_APPLOCK_ENABLED"; enabled: boolean }
   | { type: "SET_USER_PICTURE"; picture: string | undefined }
+  | { type: "SET_SPACES"; spaces: SpacePrefs; welcome: boolean | undefined }
   | { type: "REPLACE_ALL"; tasks: Task[]; lists: List[]; people: AccountInfo[] }
   | { type: "BULK_UPSERT"; tasks: Task[] };
 
@@ -136,6 +137,8 @@ function reducer(state: State, action: Action): State {
       };
     case "SET_USER_PICTURE":
       return { ...state, user: { ...state.user, picture: action.picture } };
+    case "SET_SPACES":
+      return { ...state, user: { ...state.user, spaces: action.spaces, welcome: action.welcome } };
     default:
       return state;
   }
@@ -275,6 +278,8 @@ type AppContextValue = {
   setAppLockEnabled: (enabled: boolean) => void;
   /** Wears a different face: an animal, or back to the Google photo. */
   setAvatarChoice: (choice: string) => void;
+  /** Shows or hides the journal, notes and garden; `welcomed` also answers the first-run welcome. Resolves to whether it saved. */
+  setSpaces: (spaces: SpacePrefs, opts?: { welcomed?: boolean }) => Promise<boolean>;
   /** Re-pulls tasks+lists from the server (shared lists change under you). */
   refreshData: () => Promise<void>;
 };
@@ -1136,6 +1141,24 @@ export function AppProvider({
     [syncError]
   );
 
+  const setSpaces = useCallback(
+    async (spaces: SpacePrefs, opts?: { welcomed?: boolean }) => {
+      const prev = stateRef.current.user.spaces;
+      const prevWelcome = stateRef.current.user.welcome;
+      dispatch({ type: "SET_SPACES", spaces, welcome: opts?.welcomed ? false : prevWelcome });
+      track("spaces-change", { ...spaces, welcomed: Boolean(opts?.welcomed) });
+      if (guestMode) return true;
+      try {
+        await api("/api/profile/spaces", { method: "PUT", body: JSON.stringify({ ...spaces, ...(opts?.welcomed ? { welcomed: true } : {}) }) });
+        return true;
+      } catch {
+        syncError(() => dispatch({ type: "SET_SPACES", spaces: prev, welcome: prevWelcome }));
+        return false;
+      }
+    },
+    [syncError]
+  );
+
   // setting a PIN grants this browser on the server, so nothing to remember here
   const setAppLockEnabled = useCallback((enabled: boolean) => {
     dispatch({ type: "SET_APPLOCK_ENABLED", enabled });
@@ -1190,13 +1213,14 @@ export function AppProvider({
       unlockApp,
       setAppLockEnabled,
       setAvatarChoice,
+      setSpaces,
       refreshData,
     }),
     [
       state, addTask, getTask, updateTask, toggleStarted, duplicateTask, completeTask, uncompleteTask, deleteTask,
       reorderTasks, sweep, createList, renameList, upsertList, reorderLists, deleteList, showToast,
       setOmnibar, setEditing, dismissSweep, reopenSweep, startFocus, stopFocus, minimizeFocus,
-      setListUnlocked, lockApp, unlockApp, setAppLockEnabled, setAvatarChoice, refreshData,
+      setListUnlocked, lockApp, unlockApp, setAppLockEnabled, setAvatarChoice, setSpaces, refreshData,
     ]
   );
 

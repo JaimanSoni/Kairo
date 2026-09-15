@@ -217,7 +217,7 @@ export function CalendarView() {
   const days = Array.from({ length: cellCount }, (_, i) => addDays(gridStart, i));
 
   /* the journal's pages for the days on screen: each day shows its weather */
-  const journal = useJournalMonths(monthsBetween(days[0], days[days.length - 1]), today, !state.user.guest && !state.appLocked);
+  const journal = useJournalMonths(monthsBetween(days[0], days[days.length - 1]), today, !state.user.guest && !state.appLocked && state.user.spaces.journal);
 
   /* per-day data for the visible range */
   const { plannedByDay, doneByDay, stepsByDay } = useMemo(() => {

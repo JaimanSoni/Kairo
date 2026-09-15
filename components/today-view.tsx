@@ -161,7 +161,7 @@ export function TodayView() {
           never while locked, when their titles would read out past the lock */}
       {carryover.length > 0 && !state.sweepDismissed && !state.appLocked && <FreshStart carryover={carryover} />}
 
-      {!state.appLocked && <TodayGardenStrip />}
+      {!state.appLocked && state.user.spaces.garden && <TodayGardenStrip />}
 
       {/* One list, in the order you put it in. Starred tasks stay in place
           rather than being hoisted, so dragging a card somewhere actually
@@ -228,8 +228,8 @@ export function TodayView() {
         <div className="anim-rise mt-8 text-center">
           <Icon3d name="party" size={52} className="mx-auto" />
           <div className="font-display mt-2 text-3xl">Day won.</div>
-          {/* a guest has no evening card, so the share stays here for them */}
-          {guest && shareable.count > 0 && (
+          {/* without the evening card (a guest, or the journal put away) the share stays here */}
+          {(guest || !state.user.spaces.journal) && shareable.count > 0 && (
             <ShareWithBestie
               done={shareable.titles}
               doneCount={shareable.count}
@@ -243,7 +243,7 @@ export function TodayView() {
       )}
 
       {/* the end of the day: how it felt, what got done, and the page to write it on */}
-      {!guest && !state.appLocked && (
+      {!guest && !state.appLocked && state.user.spaces.journal && (
         <CloseTheDay
           today={today}
           doneCount={doneToday.length}

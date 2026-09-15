@@ -61,8 +61,8 @@ export function Omnibar() {
   const guest = Boolean(state.user.guest);
   const modes: { id: CaptureMode; label: string }[] = [
     { id: "task", label: "Task" },
-    ...(!guest ? [{ id: "note" as const, label: "Note" }] : []),
-    ...(!guest ? [{ id: "journal" as const, label: "Journal" }] : []),
+    ...(!guest && state.user.spaces.notes ? [{ id: "note" as const, label: "Note" }] : []),
+    ...(!guest && state.user.spaces.journal ? [{ id: "journal" as const, label: "Journal" }] : []),
   ];
   const [mode, setMode] = useState<CaptureMode>(() => {
     const m = nextMode;

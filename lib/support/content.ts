@@ -204,6 +204,24 @@ export const ARTICLES: Article[] = [
         ],
       },
       {
+        id: "make-it-yours",
+        heading: "Keep only what you use",
+        blocks: [
+          {
+            t: "p",
+            text: "Planning is always there. The **Garden**, the **Journal** and **Notes** are yours to keep or put away. The first time you open Kairo it asks which you'd like; after that, open your profile, then **Settings**, and use the switches under **Your Kairo**.",
+          },
+          {
+            t: "ul",
+            items: [
+              "A place you put away leaves the sidebar, the bottom bar, search, Capture and the day views, and its number key stops working.",
+              "Nothing in it is deleted, and a link to one of its pages still opens. Turn it back on and it's all there as you left it.",
+              "If you put away both the Journal and Notes, **Write** leaves the bar; keep just one and its tab is named after it.",
+            ],
+          },
+        ],
+      },
+      {
         id: "first-five-minutes",
         heading: "Your first five minutes",
         blocks: [

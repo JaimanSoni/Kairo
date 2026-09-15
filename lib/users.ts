@@ -4,6 +4,7 @@ import type { GoogleProfile } from "./google";
 import { TRIAL_DAYS } from "./access";
 import { sendEmail } from "./email";
 import { welcomeEmail } from "./email-templates";
+import type { SpacePrefs } from "./types";
 
 export type DbUser = {
   _id: ObjectId;
@@ -38,7 +39,22 @@ export type DbUser = {
   pending?: boolean;
   invitedAt?: Date;
   invitedBy?: ObjectId;
+  /** Places this account chose to hide. Absent means shown. */
+  spaces?: Partial<SpacePrefs>;
+  /** When the welcome was answered; absent on accounts that never saw it. */
+  welcomedAt?: Date;
 };
+
+/** A first visit: an account made in the last three days, never welcomed, with nothing in it yet. */
+export function shouldWelcome(doc: Pick<DbUser, "createdAt" | "welcomedAt">, things: number): boolean {
+  return !doc.welcomedAt && things === 0 && Date.now() - new Date(doc.createdAt).getTime() < 3 * 86_400_000;
+}
+
+/** The places an account shows: everything, unless it chose to hide something. */
+export function spacesOf(doc: { spaces?: Partial<SpacePrefs> } | null | undefined): SpacePrefs {
+  const s = doc?.spaces ?? {};
+  return { journal: s.journal !== false, notes: s.notes !== false, garden: s.garden !== false };
+}
 
 export type AdminUserRow = {
   id: string;

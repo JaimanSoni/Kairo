@@ -13,7 +13,7 @@ const CHECKOUT_SRC = "https://checkout.razorpay.com/v1/checkout.js";
  * with a PIN asks for it right here — there's no Journal to open behind the
  * paywall — and downloads once it's accepted.
  */
-function JournalDownload() {
+export function JournalDownload({ className = "underline underline-offset-2 hover:text-ink-soft", label = "Download your journal" }: { className?: string; label?: string }) {
   const [asking, setAsking] = useState(false);
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -62,8 +62,8 @@ function JournalDownload() {
 
   if (!asking) {
     return (
-      <button type="button" onClick={() => void start()} className="underline underline-offset-2 hover:text-ink-soft">
-        Download your journal
+      <button type="button" onClick={() => void start()} className={className}>
+        {label}
       </button>
     );
   }

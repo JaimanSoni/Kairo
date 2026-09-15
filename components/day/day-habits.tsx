@@ -23,7 +23,7 @@ export default function DayHabits({
   className?: string;
 }) {
   const { state } = useApp();
-  const ready = useGardenDays(!state.user.guest, today, state.user.id);
+  const ready = useGardenDays(!state.user.guest && state.user.spaces.garden, today, state.user.id);
   if (!ready) return null;
   const day = habitsOn(date, today);
   const watered = day.watered;

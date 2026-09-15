@@ -23,6 +23,9 @@ import { ShareKairoRow } from "./share-kairo";
 import { Mark } from "./mark";
 import { IconBook, IconCalendar, IconInbox, IconJournal, IconNotes, IconPlus, IconSprout, IconSun, IconX, Kbd, Modal } from "./ui";
 import { gardenStore } from "@/lib/habits-client";
+import type { SpacePrefs } from "@/lib/types";
+import { PlaceToggle, SPACE_CHOICES, Welcome } from "./welcome";
+import { JournalDownload } from "./paywall";
 
 type NavItem = { href: string; label: string; icon: (p: { size?: number; className?: string }) => React.ReactNode; key: string };
 
@@ -62,7 +65,13 @@ export const SPACES: { id: string; label: string; icon: NavItem["icon"]; items: 
   },
 ];
 
-const NAV: NavItem[] = [TODAY, ...SPACES.flatMap((s) => s.items)];
+/** The pages each optional place owns. */
+const OPTIONAL: Record<string, keyof SpacePrefs> = { "/journal": "journal", "/notes": "notes", "/garden": "garden" };
+
+/** The places this account keeps: hidden pages leave their space, and an empty space leaves altogether. */
+export function visibleSpaces(prefs: SpacePrefs): typeof SPACES {
+  return SPACES.map((s) => ({ ...s, items: s.items.filter((i) => !OPTIONAL[i.href] || prefs[OPTIONAL[i.href]]) })).filter((s) => s.items.length > 0);
+}
 
 const inItem = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);
 const spaceOf = (pathname: string) => SPACES.find((s) => s.items.some((i) => inItem(pathname, i.href))) ?? null;
@@ -85,6 +94,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const guest = Boolean(state.user.guest);
+  const prefs = state.user.spaces;
+  const spaces = useMemo(() => visibleSpaces(prefs), [prefs]);
 
   const inboxCount = useMemo(() => {
     const hidden = hiddenListIds(state);
@@ -157,18 +168,19 @@ export function Shell({ children }: { children: React.ReactNode }) {
         e.preventDefault();
         setOmnibar(true);
       }
-      // J goes straight to today's page, the way N goes straight to capture
-      if (e.key === "j") {
+      // J goes straight to today's page, the way N goes straight to capture (while the journal is kept)
+      if (e.key === "j" && prefs.journal) {
         e.preventDefault();
         navigateApp(`/journal/${today}`);
         return;
       }
-      const nav = NAV.find((n) => n.key === e.key);
+      // a hidden place's number does nothing, rather than open what was put away
+      const nav = [TODAY, ...spaces.flatMap((s) => s.items)].find((n) => n.key === e.key);
       if (nav) navigateApp(nav.href);
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [router, setOmnibar, appLocked, today]);
+  }, [router, setOmnibar, appLocked, today, spaces, prefs.journal]);
 
   const editingTask = state.editingId ? state.tasks[state.editingId] : null;
 
@@ -219,7 +231,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
         <nav className="mt-6" aria-label="Kairo">
           <SideLink item={TODAY} pathname={pathname} />
-          {SPACES.map((space) => (
+          {spaces.map((space) => (
             <div key={space.id} className="mt-4" role="group" aria-labelledby={`space-${space.id}`}>
               <div id={`space-${space.id}`} className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
                 {space.label}
@@ -317,7 +329,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
         {/* on a phone the sidebar isn't there to hold it */}
         <WorkingOn className="mx-4 mt-2 md:hidden" />
-        <SpaceSwitch pathname={pathname} />
+        <SpaceSwitch pathname={pathname} spaces={spaces} />
 
         {children}
       </main>
@@ -325,7 +337,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       {/* bottom nav — mobile: strict 5-column grid keeps the + dead center */}
       <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 items-center border-t border-line bg-card/95 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur md:hidden">
         <MobileTab href={TODAY.href} label={TODAY.label} Icon={TODAY.icon} active={inItem(pathname, TODAY.href) || pathname === "/"} />
-        <SpaceTab space={SPACES[0]} pathname={pathname} />
+        <SpaceTab space={spaces[0]} pathname={pathname} />
         <div className="flex justify-center">
           <button
             onClick={() => setOmnibar(true)}
@@ -339,10 +351,16 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </svg>
           </button>
         </div>
-        <SpaceTab space={SPACES[1]} pathname={pathname} />
-        <SpaceTab space={SPACES[2]} pathname={pathname}>
-          <GardenDot />
-        </SpaceTab>
+        {/* two places sit right of Capture; a hidden one leaves its cell empty, so Capture stays centred */}
+        {[spaces[1], spaces[2]].map((space, i) =>
+          space ? (
+            <SpaceTab key={space.id} space={space} pathname={pathname}>
+              {space.id === "grow" && <GardenDot />}
+            </SpaceTab>
+          ) : (
+            <span key={`empty-${i}`} aria-hidden />
+          )
+        )}
       </nav>
 
       {/* overlays */}
@@ -359,7 +377,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
       )}
       <FocusOverlay />
       <AppLockGate />
-      {!state.user.isPaying && !guest && <CoffeeNudge busy={somethingOnScreen} today={state.today} />}
+      {!state.user.isPaying && !guest && <CoffeeNudge busy={somethingOnScreen || Boolean(state.user.welcome)} today={state.today} />}
+      {state.user.welcome && !guest && !state.appLocked && <Welcome />}
 
       {/* toast */}
       {state.toast && (
@@ -512,11 +531,15 @@ function ProfileSheet({
           <ThemeToggle />
         </div>
 
+        <SpacesSettings />
+
         <NotificationSettings />
 
         <AppLockSettings />
 
         <ConnectionsSettings />
+
+        <DataSettings onClose={onClose} />
 
         <SubscriptionSettings />
 
@@ -711,7 +734,7 @@ function NotificationSettings() {
       ) : (
         <>
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm text-ink-soft">Get notified when a focus timer ends.</p>
+            <p className="text-sm text-ink-soft">Reminders for tasks and habits, and focus timers ending, on this device.</p>
             <button
               onClick={toggle}
               disabled={status === "loading" || busy}
@@ -740,6 +763,74 @@ function NotificationSettings() {
           )}
         </>
       )}
+    </div>
+  );
+}
+
+/**
+ * Your data: what's written in Kairo can leave with it, and the journal's own
+ * PIN is a tap away rather than hidden inside the journal.
+ */
+function DataSettings({ onClose }: { onClose: () => void }) {
+  const { state } = useApp();
+  const pill =
+    "flex h-9 items-center rounded-full border border-line bg-card px-3.5 text-xs font-semibold text-ink-soft transition-colors hover:border-ink-faint hover:text-ink";
+  return (
+    <div className="mt-6" data-data-settings>
+      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">Your data</div>
+      <p className="mb-2 text-sm text-ink-soft">Everything you write in Kairo can come with you, as Markdown files.</p>
+      <div className="flex flex-wrap gap-2">
+        <form action="/api/notes/export" method="GET">
+          <button type="submit" className={pill}>
+            Download notes
+          </button>
+        </form>
+        <JournalDownload className={pill} label="Download journal" />
+      </div>
+      {state.user.spaces.journal && (
+        <Link
+          href="/journal#settings"
+          onClick={(e) => {
+            e.preventDefault();
+            onClose();
+            navigateApp("/journal#settings");
+          }}
+          className="mt-3 flex items-center justify-between rounded-xl border border-line bg-card px-4 py-2.5 text-sm text-ink-soft transition-colors hover:border-ink-faint hover:text-ink"
+        >
+          <span>
+            <span className="block font-medium text-ink">Journal PIN</span>
+            <span className="block text-xs text-ink-faint">A lock of its own for your journal, set in its settings.</span>
+          </span>
+          <span aria-hidden>→</span>
+        </Link>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Your Kairo: the optional places, each with a switch. Planning stays; the
+ * garden, journal and notes can be put away. Hiding one keeps everything in
+ * it, and turning it back on brings it back as it was.
+ */
+function SpacesSettings() {
+  const { state, setSpaces } = useApp();
+  const prefs = state.user.spaces;
+  return (
+    <div className="mt-6" data-spaces-settings>
+      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">Your Kairo</div>
+      <p className="mb-2 text-sm text-ink-soft">Today, Calendar, Lists and the Log are always here. Keep only what else you use.</p>
+      <ul className="divide-y divide-line rounded-2xl border border-line bg-card">
+        {SPACE_CHOICES.map((c) => (
+          <li key={c.key} className="flex items-center gap-3 px-3.5 py-2.5">
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium">{c.title}</span>
+              <span className="block text-xs text-ink-faint">{prefs[c.key] ? c.body : "Hidden. Everything in it is kept."}</span>
+            </span>
+            <PlaceToggle checked={prefs[c.key]} onChange={(v) => void setSpaces({ ...prefs, [c.key]: v })} label={c.title} />
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -926,7 +1017,8 @@ function SideLink({ item, pathname, children }: { item: NavItem; pathname: strin
 /** A space on the phone's bottom bar: it opens the page of the space you were last on. */
 function SpaceTab({ space, pathname, children }: { space: (typeof SPACES)[number]; pathname: string; children?: React.ReactNode }) {
   const active = space.items.some((i) => inItem(pathname, i.href));
-  const Icon = space.icon;
+  // a space down to one page is named, and drawn, as that page
+  const Icon = space.items.length === 1 ? space.items[0].icon : space.icon;
   const label = space.items.length === 1 ? space.items[0].label : space.label;
   return (
     <Link
@@ -956,8 +1048,8 @@ function SpaceTab({ space, pathname, children }: { space: (typeof SPACES)[number
  * bottom bar has one tab per space, so this is how Calendar reaches Lists.
  * Only on a space's own pages, never inside a note or a journal day.
  */
-function SpaceSwitch({ pathname }: { pathname: string }) {
-  const space = SPACES.find((s) => s.items.length > 1 && s.items.some((i) => pathname === i.href || pathname === `${i.href}/`));
+function SpaceSwitch({ pathname, spaces }: { pathname: string; spaces: typeof SPACES }) {
+  const space = spaces.find((s) => s.items.length > 1 && s.items.some((i) => pathname === i.href || pathname === `${i.href}/`));
   if (!space) return null;
   return (
     <div className="px-4 pt-3 md:hidden">

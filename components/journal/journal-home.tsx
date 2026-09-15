@@ -97,7 +97,8 @@ export function JournalHome() {
   const [month, setMonth] = useState(thisMonth);
   const [status, setStatus] = useState<"loading" | "ready" | "locked" | "offline">("loading");
   const [hasPin, setHasPin] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  // Settings elsewhere links here with #settings, to set or change the journal's PIN
+  const [settingsOpen, setSettingsOpen] = useState(() => typeof window !== "undefined" && window.location.hash === "#settings");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchHit[] | null>(null);
   const [searching, setSearching] = useState(false);
@@ -349,7 +350,10 @@ export function JournalHome() {
       {settingsOpen && (
         <JournalSettings
           hasPin={hasPin}
-          onClose={() => setSettingsOpen(false)}
+          onClose={() => {
+            setSettingsOpen(false);
+            if (window.location.hash === "#settings") window.history.replaceState(null, "", window.location.pathname);
+          }}
           onPinChanged={(v) => setHasPin(v)}
         />
       )}
