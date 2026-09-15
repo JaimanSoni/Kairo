@@ -9,7 +9,19 @@ import { guestCapReached, useApp, visibleLists } from "./store";
 import { track } from "@/lib/analytics-client";
 import { getSpeechRecognition, type SpeechRec } from "@/lib/speech";
 import { Icon3d } from "./img3d";
-import { Chip, Kbd, Modal } from "./ui";
+import { Chip, IconJournal, IconNotes, Kbd, Modal } from "./ui";
+import { captureJournalLine, captureNote, type CaptureResult } from "./capture-targets";
+import { navigateApp } from "./app-views";
+
+/** What a capture becomes: a task (sorted by AI), a new note, or a line on today's journal page. */
+export type CaptureMode = "task" | "note" | "journal";
+
+/** The mode the next capture opens in, set by whatever opened it (search, a shortcut). */
+let nextMode: CaptureMode = "task";
+export function openCaptureAs(mode: CaptureMode, open: (v: boolean) => void) {
+  nextMode = mode;
+  open(true);
+}
 
 
 type AiParsed = {
@@ -46,6 +58,19 @@ const THINKING_LINES = [
 export function Omnibar() {
   const { state, addTask, getTask, updateTask, setOmnibar, showToast } = useApp();
   const [text, setText] = useState("");
+  const guest = Boolean(state.user.guest);
+  const modes: { id: CaptureMode; label: string }[] = [
+    { id: "task", label: "Task" },
+    ...(!guest ? [{ id: "note" as const, label: "Note" }] : []),
+    ...(!guest ? [{ id: "journal" as const, label: "Journal" }] : []),
+  ];
+  const [mode, setMode] = useState<CaptureMode>(() => {
+    const m = nextMode;
+    nextMode = "task";
+    return m;
+  });
+  const activeMode: CaptureMode = modes.some((m) => m.id === mode) ? mode : "task";
+  const [saving, setSaving] = useState(false);
   const [listening, setListening] = useState(false);
   const [phase, setPhase] = useState<Phase>("input");
   const [thinkLine, setThinkLine] = useState(0);
@@ -149,10 +174,41 @@ export function Omnibar() {
     }
   };
 
+  /** A note or a journal line: saved as typed, no AI, and said plainly where it went. */
+  const saveElsewhere = async (raw: string, keepOpen: boolean) => {
+    if (saving) return;
+    setSaving(true);
+    const r: CaptureResult = activeMode === "note" ? await captureNote(raw) : await captureJournalLine(raw, state.today, state.user.id);
+    setSaving(false);
+    const where = activeMode === "note" ? "Notes" : "today's journal page";
+    if (r.ok) {
+      track(activeMode === "note" ? "capture-note" : "capture-journal");
+      setText("");
+      showToast({ message: activeMode === "note" ? "Saved to Notes." : "Added to today's page.", action: { label: "Open", run: () => navigateApp(r.href) } });
+      if (!keepOpen) setOmnibar(false);
+      else queueMicrotask(() => inputRef.current?.focus());
+      return;
+    }
+    if (r.kind === "draft") {
+      showToast({
+        message: "Today's page has writing not yet saved on this device. Add it there.",
+        action: { label: "Open", run: () => { setOmnibar(false); navigateApp(`/journal/${state.today}`); } },
+      });
+    } else if (r.kind === "locked") {
+      showToast({ message: "Your journal is locked. Unlock it to add to today's page." });
+    } else {
+      showToast({ message: r.kind === "offline" ? `You're offline, so that didn't reach ${where}.` : `Couldn't save that to ${where}.` });
+    }
+  };
+
   const submit = (keepOpen: boolean) => {
     if (phase !== "input") return;
     const raw = text.trim();
     if (!raw) return;
+    if (activeMode !== "task") {
+      void saveElsewhere(raw, keepOpen);
+      return;
+    }
     // the guest slate is bounded; the cap modal makes the case for signing in
     if (guestCapReached()) return;
     // separate names so the funnel can count guests who actually tried it
@@ -376,6 +432,29 @@ export function Omnibar() {
   return (
     <Modal onClose={() => setOmnibar(false)} anchor="top">
       <div className="p-4">
+        {/* what this capture becomes; a task unless you say otherwise */}
+        {modes.length > 1 && phase === "input" && (
+          <div role="tablist" aria-label="Capture as" className="mb-3 flex w-max rounded-full border border-line bg-paper-deep p-0.5" data-capture-modes>
+            {modes.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                role="tab"
+                aria-selected={activeMode === m.id}
+                onClick={() => {
+                  setMode(m.id);
+                  inputRef.current?.focus();
+                }}
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                  activeMode === m.id ? "bg-card text-ink shadow-sm" : "text-ink-faint hover:text-ink-soft"
+                }`}
+              >
+                {m.id === "task" ? <Icon3d name="sparkle" size={13} /> : m.id === "note" ? <IconNotes size={13} /> : <IconJournal size={13} />}
+                {m.label}
+              </button>
+            ))}
+          </div>
+        )}
         {/* the input dims while AI narrates below it, and wakes for the next one */}
         <div
           className={`flex items-center gap-2 transition-opacity duration-300 ${
@@ -391,7 +470,16 @@ export function Omnibar() {
               // the Enter that commits an IME candidate must not also submit
               if (e.key === "Enter" && !e.nativeEvent.isComposing) submit(e.shiftKey);
             }}
-            placeholder={listening ? "Listening…" : "What's on your mind? Say it or type it."}
+            placeholder={
+              listening
+                ? "Listening…"
+                : activeMode === "note"
+                  ? "A note. Its first line becomes the title."
+                  : activeMode === "journal"
+                    ? "A line for today's page…"
+                    : "What's on your mind? Say it or type it."
+            }
+            aria-label={activeMode === "note" ? "New note" : activeMode === "journal" ? "A line for today's journal page" : "What's on your mind"}
             className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-ink-faint sm:text-lg"
             autoFocus
             enterKeyHint="done"
@@ -413,7 +501,7 @@ export function Omnibar() {
           )}
           <button
             onClick={() => submit(false)}
-            disabled={!parsed.title}
+            disabled={activeMode === "task" ? !parsed.title : !text.trim() || saving}
             aria-label="Capture"
             data-tip="Capture (Enter)"
             data-tip-side="bottom"
@@ -591,6 +679,11 @@ export function Omnibar() {
                 Just talk. <b className="font-medium text-ink">AI does the rest.</b>
               </span>
             </div>
+          ) : activeMode !== "task" ? (
+            <span className="flex items-center gap-1.5 text-[12px] leading-snug text-ink-soft">
+              {activeMode === "note" ? <IconNotes size={13} className="text-ink-faint" /> : <IconJournal size={13} className="text-ink-faint" />}
+              {activeMode === "note" ? "Saved as a new page in Notes, just as you typed it." : "Added to today's journal page, under the time."}
+            </span>
           ) : !text.trim() ? (
             <div className="anim-shimmer flex items-center gap-2">
               {/* shrink-0 is the fix: without it flex crushed this pill and
@@ -633,9 +726,9 @@ export function Omnibar() {
         {phase === "input" && (
         <div className="mt-3 hidden items-center justify-between border-t border-line pt-3 text-xs text-ink-faint sm:flex">
           <span>
-            <Kbd>enter</Kbd> capture · <Kbd>shift+enter</Kbd> more
+            <Kbd>enter</Kbd> {activeMode === "task" ? "capture" : "save"} · <Kbd>shift+enter</Kbd> {activeMode === "task" ? "more" : "save, add another"}
           </span>
-          <span>try: pay rent fri 6pm ~15m #life</span>
+          <span>{activeMode === "task" ? "try: pay rent fri 6pm ~15m #life" : activeMode === "note" ? "try: gift ideas for mum" : "try: the walk cleared my head"}</span>
         </div>
         )}
       </div>

@@ -50,6 +50,33 @@ export function ListsView() {
     });
   }, [collapsedKey]);
 
+  /*
+   * Opening one list from elsewhere (search): "#list-<id>" when the page
+   * loads, or an event when it's already open. The list unfolds, scrolls
+   * into view and glows for a moment so the eye lands on it.
+   */
+  useEffect(() => {
+    const show = (id: string) => {
+      queueMicrotask(() => {
+        setCollapsed((c) => (c.includes(id) ? c.filter((x) => x !== id) : c));
+        requestAnimationFrame(() => {
+          const el = document.getElementById(`list-${id}`);
+          if (!el) return;
+          el.scrollIntoView({ block: "start", behavior: "smooth" });
+          el.animate(
+            [{ boxShadow: "0 0 0 3px color-mix(in srgb, var(--color-sun) 45%, transparent)" }, { boxShadow: "0 0 0 3px transparent" }],
+            { duration: 1800, easing: "ease-out" }
+          );
+        });
+      });
+    };
+    const fromHash = /^#list-(.+)$/.exec(window.location.hash);
+    if (fromHash) show(decodeURIComponent(fromHash[1]));
+    const onShow = (e: Event) => show(String((e as CustomEvent<string>).detail));
+    window.addEventListener("kairo:show-list", onShow);
+    return () => window.removeEventListener("kairo:show-list", onShow);
+  }, []);
+
   const setFolded = (ids: string[]) => {
     setCollapsed(ids);
     try {
@@ -370,6 +397,7 @@ export function ListsView() {
         return (
           <Section
             key={list.id}
+            anchor={`list-${list.id}`}
             mark={<ListMark value={list.emoji} size={24} />}
             name={list.name}
             count={isHidden ? null : tasks.length}
@@ -572,7 +600,10 @@ function Section({
   onShare,
   folded = false,
   onToggleFold,
+  anchor,
 }: {
+  /** The section's id on the page, so it can be scrolled to. */
+  anchor?: string;
   mark: React.ReactNode;
   name: string;
   count: number | null;
@@ -594,7 +625,7 @@ function Section({
   const [name, setName] = useState("");
 
   return (
-    <section className={`group/section ${folded ? "mb-4 sm:mb-3" : "mb-12 sm:mb-10"}`}>
+    <section id={anchor} className={`group/section scroll-mt-20 rounded-2xl ${folded ? "mb-4 sm:mb-3" : "mb-12 sm:mb-10"}`}>
       <div className="mb-2 flex min-h-9 items-center gap-x-2">
         {onToggleFold && (
           <button

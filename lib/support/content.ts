@@ -345,6 +345,33 @@ export const ARTICLES: Article[] = [
         ],
       },
       {
+        id: "notes-and-journal",
+        heading: "Capture a note or a journal line",
+        blocks: [
+          {
+            t: "p",
+            text: "Capture isn't only for tasks. Across its top are **Task**, **Note** and **Journal**; pick one before you type.",
+          },
+          {
+            t: "table",
+            head: ["Pick", "What happens"],
+            rows: [
+              ["**Task**", "The usual: AI reads it and fills in the day, time, list and steps."],
+              ["**Note**", "A new page in [Notes](/support/notes). A short thought is its title; a longer one takes its first sentence as the title and keeps the rest as the page."],
+              ["**Journal**", "A line on today's [journal](/support/journal) page. Each new line goes under the time you wrote it."],
+            ],
+          },
+          {
+            t: "p",
+            text: "Notes and journal lines are saved exactly as typed, with no AI. A small message says where it went, with **Open** to go straight there. `Shift Enter` saves and keeps the box open for the next one.",
+          },
+          {
+            t: "note",
+            text: "If your journal is locked, nothing is added until you unlock it. If today's page has writing on this device that hasn't saved yet, Capture sends you to the page rather than risk it.",
+          },
+        ],
+      },
+      {
         id: "where-it-goes",
         heading: "Where a captured task ends up",
         blocks: [
@@ -2039,7 +2066,7 @@ export const ARTICLES: Article[] = [
   {
     slug: "search",
     title: "Find anything with search",
-    summary: "One shortcut opens a palette that searches every task and list, and runs common actions.",
+    summary: "One shortcut opens a palette that searches your tasks, lists, notes, journal and habits, and runs common actions.",
     categoryId: "account",
     keywords: ["search", "find", "command palette", "cmd k", "filter", "lookup"],
     sections: [
@@ -2061,8 +2088,11 @@ export const ARTICLES: Article[] = [
             t: "ul",
             items: [
               "Task titles **and** notes.",
-              "List names.",
-              "Actions: capture a task, jump to Today / Calendar / Lists / Log, and lock Kairo.",
+              "List names. Picking one opens Lists right at that list.",
+              "Note titles.",
+              "The words in your journal pages, a moment after you stop typing. A locked journal is never searched.",
+              "Habit names, which open that plant in your Garden.",
+              "Actions: capture a task, a note or a journal line, jump to any page, and lock Kairo.",
             ],
           },
           {
