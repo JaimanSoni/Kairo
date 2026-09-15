@@ -9,13 +9,13 @@ import { IconArrowRight, Modal } from "./ui";
 
 /**
  * The first thing a new account sees: what Kairo can hold, and a choice of
- * which parts to keep. Planning is always there; the garden, the journal and
+ * which parts to keep. Planning is always there; habits, the journal and
  * notes can each be left out, and brought back from Settings any time. It is
  * the answer to "that's a lot of features": you only get the ones you asked for.
  */
 
 export const SPACE_CHOICES: { key: keyof SpacePrefs; title: string; body: string; icon: string }[] = [
-  { key: "garden" as const, title: "Grow habits", body: "A garden where each habit is a plant that grows as you keep it.", icon: "list-growth" },
+  { key: "garden" as const, title: "Build habits", body: "Mark small habits done each day, and watch them get stronger.", icon: "list-growth" },
   { key: "journal" as const, title: "Keep a journal", body: "A page for each day, and the weather inside it.", icon: "book" },
   { key: "notes" as const, title: "Take notes", body: "Pages inside pages, for plans, ideas and everything else.", icon: "pencil" },
 ].filter((c) => c.key !== "journal" || JOURNAL_SHOWN);

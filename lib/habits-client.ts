@@ -6,7 +6,6 @@ import {
   type Gardener,
   type HabitLogView,
   type HabitView,
-  type Harvest,
   type LiveHabit,
   type LogLite,
   type SeedStat,
@@ -74,14 +73,11 @@ export const gardenApi = {
       method: "POST",
       body: JSON.stringify({ ...input, today: todayStr() }),
     }),
-  harvest: (id: string, kind: "fruit" | "golden") =>
-    call<{ harvest: Harvest; habit: HabitView }>(`/api/habits/${id}/harvest`, { method: "POST", body: JSON.stringify({ kind }) }),
   history: (id: string, from: string, to: string) => call<{ logs: HabitLogView[] }>(`/api/habits/${id}/history?from=${from}&to=${to}`),
   seeds: () => call<{ stats: SeedStat[] }>("/api/garden/seeds"),
   board: (seed: string, scope: "global" | "friends") => call<Board>(`/api/garden/board?seed=${seed}&scope=${scope}&today=${todayStr()}`),
   profile: () => call<{ gardener: Gardener | null }>("/api/garden/profile"),
   setProfile: (g: Gardener) => call<{ gardener: Gardener }>("/api/garden/profile", { method: "PUT", body: JSON.stringify(g) }),
-  basket: () => call<{ harvests: Harvest[] }>("/api/garden/basket"),
 };
 
 /* ----------------------------------------------------------------- store */

@@ -40,7 +40,7 @@ const NotesSection = dynamic(() => import("./notes/notes-section"), {
   ),
 });
 
-/** The garden brings its own art and animation; it loads when it's visited. */
+/** Habits bring their own art and animation; they load when visited. */
 const GardenSection = dynamic(() => import("./garden/garden-section"), {
   ssr: false,
   loading: () => (
@@ -72,7 +72,7 @@ const TITLES: Record<string, string> = {
   "/log": "Log · Kairo",
   "/journal": "Journal · Kairo",
   "/notes": "Notes · Kairo",
-  "/garden": "Garden · Kairo",
+  "/habits": "Habits · Kairo",
 };
 
 /** Swap the view without a server round trip. */
@@ -94,8 +94,8 @@ export function AppViews() {
       return;
     }
     if (/^\/notes\/[a-f0-9]{24}/.test(pathname)) return;
-    // the garden names its own pages
-    if (pathname.startsWith("/garden")) return;
+    // habits name their own pages
+    if (pathname.startsWith("/habits") || pathname.startsWith("/garden")) return;
     const title =
       TITLES[pathname] ??
       (pathname.startsWith("/journal/") ? TITLES["/journal"] : pathname.startsWith("/notes/") ? TITLES["/notes"] : undefined);
@@ -113,6 +113,6 @@ export function AppViews() {
   if (pathname.startsWith("/log")) return <LogView />;
   if (pathname.startsWith("/journal")) return JOURNAL_SHOWN ? <JournalSection /> : null;
   if (pathname.startsWith("/notes")) return <NotesSection />;
-  if (pathname === "/garden" || pathname.startsWith("/garden/")) return <GardenSection />;
+  if (pathname === "/habits" || pathname.startsWith("/habits/") || pathname === "/garden" || pathname.startsWith("/garden/")) return <GardenSection />;
   return <TodayView />;
 }

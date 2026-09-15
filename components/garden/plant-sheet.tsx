@@ -6,7 +6,6 @@ import {
   PALETTE,
   scheduleLabel,
   SPECIES,
-  stageOf,
   WEEKDAY_SHORT,
   type HabitColor,
   type HabitSchedule,
@@ -20,6 +19,7 @@ import { useApp } from "../store";
 import { IconPlus, Modal } from "../ui";
 import { navigateApp } from "../app-views";
 import { Plant } from "./plants";
+import { plotOf } from "./use-garden";
 
 export const SWATCH: Record<HabitColor, string> = {
   sun: "#0c9384",
@@ -56,11 +56,11 @@ function draftFrom(seed: Seed | null, habit: HabitView | null): Draft {
 }
 
 /**
- * Planting a seed, or changing one that's growing. A seed from the catalogue
- * arrives filled in; a custom habit starts from a sunflower.
+ * Starting a habit, or changing one. An idea from the list arrives filled in;
+ * your own starts blank, with a sunflower for its plant.
  */
 export function PlantSheet({ seed = null, habit = null, onClose }: { seed?: Seed | null; habit?: HabitView | null; onClose: () => void }) {
-  const { showToast } = useApp();
+  const { state, showToast } = useApp();
   const [d, setD] = useState<Draft>(() => draftFrom(seed, habit));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -100,9 +100,9 @@ export function PlantSheet({ seed = null, habit = null, onClose }: { seed?: Seed
       return;
     }
     track("habit-plant", { seed: seed?.id ?? "custom" });
-    showToast({ message: `${r.data.habit.name} is planted. Water it today to see it sprout.` });
+    showToast({ message: `${r.data.habit.name} is on your list. Mark it done today to get started.` });
     onClose();
-    navigateApp("/garden");
+    navigateApp("/habits");
   };
 
   return (
@@ -119,12 +119,12 @@ export function PlantSheet({ seed = null, habit = null, onClose }: { seed?: Seed
             className="grid size-20 shrink-0 place-items-end justify-center overflow-hidden rounded-2xl"
             style={{ background: `linear-gradient(180deg, color-mix(in srgb, ${SWATCH[d.color]} 6%, transparent), color-mix(in srgb, ${SWATCH[d.color]} 20%, transparent))` }}
           >
-            <Plant species={d.species} stage={habit ? Math.max(1, stageOf(habit.growth).index) : 5} size={64} ground="none" fit="snug" />
+            <Plant species={d.species} stage={habit ? Math.max(1, plotOf(habit, state.today).stage) : 4} size={64} ground="none" fit="snug" />
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="font-display text-2xl leading-tight">{editing ? "Tend this plant" : seed ? `Plant “${seed.name}”` : "Plant your own seed"}</h2>
+            <h2 className="font-display text-2xl leading-tight">{editing ? "Edit habit" : seed ? `Start “${seed.name}”` : "New habit"}</h2>
             <p className="mt-1 text-xs text-ink-faint">
-              {editing ? "Change how it grows. Its growth and fruit stay." : "Water it on the days you keep the habit, and it grows."}
+              {editing ? "Your history stays as it is." : "Keep it small enough to do on a busy day. Mark it done each time, and it gets stronger."}
             </p>
           </div>
         </div>
@@ -143,28 +143,6 @@ export function PlantSheet({ seed = null, habit = null, onClose }: { seed?: Seed
             />
           </div>
         </div>
-
-        <fieldset className="mt-4">
-          <legend className="text-xs font-semibold text-ink-soft">Plant</legend>
-          <div className="mt-1 grid grid-cols-4 gap-1.5 sm:grid-cols-6">
-            {SPECIES.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => set("species", s.id)}
-                aria-pressed={d.species === s.id}
-                aria-label={s.label}
-                title={`${s.label} — bears ${s.fruit.toLowerCase()}`}
-                className={`flex flex-col items-center rounded-xl border pb-1 transition-all ${
-                  d.species === s.id ? "border-sun bg-sun-soft" : "border-line bg-paper hover:border-sun/50"
-                }`}
-              >
-                <Plant species={s.id} stage={6} size={46} sway={false} ground="none" ripe={1} />
-                <span className="-mt-1 w-full truncate px-0.5 text-center text-[10px] text-ink-soft">{s.label.replace(" tree", "").replace(" blossom", "")}</span>
-              </button>
-            ))}
-          </div>
-        </fieldset>
 
         <fieldset className="mt-4">
           <legend className="text-xs font-semibold text-ink-soft">How often</legend>
@@ -205,33 +183,17 @@ export function PlantSheet({ seed = null, habit = null, onClose }: { seed?: Seed
           </label>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <label className="block">
-            <span className="text-xs font-semibold text-ink-soft">Reminder</span>
-            <input
-              type="time"
-              value={d.reminder}
-              onChange={(e) => set("reminder", e.target.value)}
-              className="mt-1 h-9 w-full rounded-lg border border-line bg-paper px-2 text-sm outline-none focus:border-sun"
-            />
-          </label>
-          <fieldset>
-            <legend className="text-xs font-semibold text-ink-soft">Colour</legend>
-            <div className="mt-1 flex h-9 items-center gap-1.5">
-              {PALETTE.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => set("color", c)}
-                  aria-label={c}
-                  aria-pressed={d.color === c}
-                  className={`size-6 rounded-full transition-transform ${d.color === c ? "scale-110 ring-2 ring-ink ring-offset-2 ring-offset-card" : ""}`}
-                  style={{ background: SWATCH[c] }}
-                />
-              ))}
-            </div>
-          </fieldset>
-        </div>
+        <label className="mt-4 block">
+          <span className="block text-xs font-semibold text-ink-soft">Reminder (optional)</span>
+          <input
+            type="time"
+            value={d.reminder}
+            onChange={(e) => set("reminder", e.target.value)}
+            className="mt-1 block h-9 w-40 rounded-lg border border-line bg-paper px-2 text-sm outline-none focus:border-sun"
+            aria-label="Reminder time"
+          />
+          <span className="mt-1 block text-[11px] text-ink-faint">A notification at this time on days it&apos;s due, unless it&apos;s already done.</span>
+        </label>
 
         <label className="mt-4 block">
           <span className="text-xs font-semibold text-ink-soft">Why it matters (optional)</span>
@@ -244,9 +206,51 @@ export function PlantSheet({ seed = null, habit = null, onClose }: { seed?: Seed
           />
         </label>
 
+        <details className="group mt-4 rounded-xl border border-line" data-look>
+          <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2.5 text-xs font-semibold text-ink-soft [&::-webkit-details-marker]:hidden">
+            Plant and colour
+            <span className="font-normal text-ink-faint group-open:hidden">Change</span>
+            <span className="hidden font-normal text-ink-faint group-open:inline">Hide</span>
+          </summary>
+          <div className="border-t border-line px-3 pb-3 pt-2">
+            <p className="text-[11px] text-ink-faint">Just for looks. The plant grows as the habit gets stronger.</p>
+            <div className="mt-2 grid grid-cols-4 gap-1.5 sm:grid-cols-6" role="group" aria-label="Plant">
+              {SPECIES.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => set("species", s.id)}
+                  aria-pressed={d.species === s.id}
+                  aria-label={s.label}
+                  title={s.label}
+                  className={`flex flex-col items-center rounded-xl border pb-1 transition-all ${
+                    d.species === s.id ? "border-sun bg-sun-soft" : "border-line bg-paper hover:border-sun/50"
+                  }`}
+                >
+                  <Plant species={s.id} stage={5} size={46} sway={false} ground="none" />
+                  <span className="-mt-1 w-full truncate px-0.5 text-center text-[10px] text-ink-soft">{s.label.replace(" tree", "").replace(" blossom", "")}</span>
+                </button>
+              ))}
+            </div>
+            <div className="mt-3 flex items-center gap-1.5" role="group" aria-label="Colour">
+              {PALETTE.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => set("color", c)}
+                  aria-label={c}
+                  aria-pressed={d.color === c}
+                  className={`size-6 rounded-full transition-transform ${d.color === c ? "scale-110 ring-2 ring-ink ring-offset-2 ring-offset-card" : ""}`}
+                  style={{ background: SWATCH[c] }}
+                />
+              ))}
+            </div>
+          </div>
+        </details>
+
         {rulesChanged && (
           <p className="mt-3 rounded-xl bg-sun-soft px-3 py-2 text-xs text-sun-deep">
-            New rules re-count the current streak under them. Growth, fruit and your best streak stay.
+            New rules re-count the current streak under them. Your history and best streak stay.
           </p>
         )}
         {error && (
@@ -270,7 +274,7 @@ export function PlantSheet({ seed = null, habit = null, onClose }: { seed?: Seed
           >
             {busy ? "Saving…" : editing ? "Save" : (
               <>
-                <IconPlus size={14} /> Plant it
+                <IconPlus size={14} /> Start habit
               </>
             )}
           </button>

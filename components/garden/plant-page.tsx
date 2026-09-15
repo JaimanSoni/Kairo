@@ -3,15 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import {
   addDays,
-  fruitsEarned,
-  GOLDEN_STREAKS,
+  MAX_DROPS,
   mondayOf,
-  nextFruitAt,
-  nextGoldenAt,
+  nextLevel,
   scheduleLabel,
   seedOf,
-  speciesOf,
-  STAGES,
+  STRENGTH_LEVELS,
   weekdayOf,
   type Board,
   type HabitLogView,
@@ -21,14 +18,14 @@ import { gardenApi, gardenStore } from "@/lib/habits-client";
 import { useApp } from "../store";
 import { navigateApp } from "../app-views";
 import { Burst, Moment, WaterPour } from "./fx";
-import { IconDrop, IconFlame, IconSparkle, IconTick, IconTrophy } from "./icons";
-import { FruitGlyph, Plant } from "./plants";
+import { IconDrop, IconFlame, IconTick, IconTrophy } from "./icons";
+import { Plant } from "./plants";
 import { PlantSheet } from "./plant-sheet";
 import { GardenScene } from "./scene";
 import { Avatar, BackLink, RankBadge, rescueText, SectionTitle, Stat } from "./bits";
 import { plotOf, useGarden, useGardenActions } from "./use-garden";
 
-/** One plant up close: how it's growing, its fruit, its history and its board. */
+/** One habit up close: today, how strong it is, its history and its board. */
 export function PlantPage({ id }: { id: string }) {
   const { status, today } = useGarden();
   const habit = status === "ready" ? gardenStore.get(id) : null;
@@ -44,10 +41,10 @@ export function PlantPage({ id }: { id: string }) {
   if (!habit) {
     return (
       <div className="mx-auto max-w-md px-6 pb-32 pt-24 text-center">
-        <h1 className="font-display text-2xl">This plant isn&apos;t here</h1>
-        <p className="mt-2 text-sm text-ink-soft">It may have been deleted, or it belongs to another garden.</p>
-        <button onClick={() => navigateApp("/garden")} className="mt-5 rounded-full bg-ink px-5 py-2 text-sm font-semibold text-paper">
-          Back to the garden
+        <h1 className="font-display text-2xl">This habit isn&apos;t here</h1>
+        <p className="mt-2 text-sm text-ink-soft">It may have been deleted, or it belongs to someone else.</p>
+        <button onClick={() => navigateApp("/habits")} className="mt-5 rounded-full bg-ink px-5 py-2 text-sm font-semibold text-paper">
+          Back to Habits
         </button>
       </div>
     );
@@ -59,17 +56,17 @@ const WEEK_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
 
 function PlantDetail({ habit, today }: { habit: HabitView; today: string }) {
   const { showToast } = useApp();
-  const { moments, water, pick, compost } = useGardenActions();
+  const { moments, water, compost } = useGardenActions();
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [history, setHistory] = useState<HabitLogView[] | null>(null);
   const info = plotOf(habit, today);
-  const { live, stage, ripe, golden, thirsty } = info;
-  const species = speciesOf(habit.species);
+  const { live, stage, streak } = info;
+  const weekly = habit.schedule.kind === "weekly";
   const seed = seedOf(habit.seedId);
   const archived = Boolean(habit.archivedAt);
-  const m = moments[habit.id] ?? { water: 0, burst: 0, golden: false };
-  const best = Math.max(live.best, habit.settled.best);
+  const m = moments[habit.id] ?? { water: 0, burst: 0 };
+  const best = Math.max(live.best, habit.settled.best, streak);
   const counted = habit.target > 1;
 
   const from = addDays(mondayOf(today), -7 * 25);
@@ -81,7 +78,7 @@ function PlantDetail({ habit, today }: { habit: HabitView; today: string }) {
     return () => {
       alive = false;
     };
-    // refetch after a watering changes growth, so the heatmap keeps up
+    // refetch after a day is marked, so the history keeps up
   }, [habit.id, from, today, habit.growth]);
 
   const done = { set: new Set<string>(), frozen: new Set<string>() };
@@ -97,8 +94,6 @@ function PlantDetail({ habit, today }: { habit: HabitView; today: string }) {
   }
 
   const week = Array.from({ length: 7 }, (_, i) => addDays(mondayOf(today), i));
-  const toFruit = nextFruitAt(habit.growth) - habit.growth;
-  const toGolden = nextGoldenAt(best);
 
   const removeForever = async () => {
     const r = await gardenApi.deleteForever(habit.id);
@@ -107,14 +102,14 @@ function PlantDetail({ habit, today }: { habit: HabitView; today: string }) {
       return;
     }
     gardenStore.remove(habit.id);
-    showToast({ message: `${habit.name} is gone for good.` });
-    navigateApp("/garden");
+    showToast({ message: `${habit.name} is deleted.` });
+    navigateApp("/habits");
   };
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-32 pt-6 sm:px-6">
       <div className="flex items-center justify-between">
-        <BackLink href="/garden" label="Garden" />
+        <BackLink href="/habits" label="Habits" />
         {!archived && (
           <button
             type="button"
@@ -127,47 +122,25 @@ function PlantDetail({ habit, today }: { habit: HabitView; today: string }) {
       </div>
 
       <div className="mt-3">
-        <GardenScene weather={thirsty ? "partly" : "clear"} thriving={live.health === "thriving" ? 3 : live.health === "healthy" ? 1 : 0} compact>
+        <GardenScene weather={info.due ? "partly" : "clear"} thriving={live.health === "thriving" ? 3 : live.health === "healthy" ? 1 : 0} compact>
           <div className="relative flex flex-col items-center pb-5">
             <button
               type="button"
               disabled={archived}
               onClick={() => void water(habit)}
-              aria-label={archived ? habit.name : live.todayDone && !counted ? `Unwater ${habit.name}` : `Water ${habit.name}`}
+              aria-label={archived ? habit.name : live.todayDone && !counted ? `Unmark ${habit.name}` : `Mark ${habit.name} done`}
               className="relative -mt-16 rounded-[3rem] outline-none focus-visible:ring-4 focus-visible:ring-white/60 disabled:cursor-default"
             >
               <span className={`block ${m.water ? "gd-perk" : ""}`} key={`perk-${m.water}`}>
-                <Plant
-                  species={habit.species}
-                  stage={stage.index}
-                  health={thirsty && live.health === "thriving" ? "healthy" : live.health}
-                  ripe={ripe}
-                  golden={golden}
-                  size={200}
-                  fit="snug"
-                />
+                <Plant species={habit.species} stage={stage} health={info.due && live.health === "thriving" ? "healthy" : live.health} size={200} fit="snug" />
               </span>
               <Moment id={m.water} ms={1300}>
                 <WaterPour />
               </Moment>
               <Moment id={m.burst} ms={1200}>
-                <Burst golden={m.golden} count={26} />
+                <Burst count={26} />
               </Moment>
             </button>
-            {(ripe > 0 || golden > 0) && !archived && (
-              <div className="-mt-2 flex flex-wrap justify-center gap-2">
-                {golden > 0 && (
-                  <button type="button" onClick={() => void pick(habit, "golden")} className="gd-pick flex items-center gap-1.5 rounded-full bg-[#ffd96a] px-3.5 py-1.5 text-sm font-semibold text-[#5c4300] shadow-lg">
-                    <IconSparkle size={14} /> Pick golden fruit
-                  </button>
-                )}
-                {ripe > 0 && (
-                  <button type="button" onClick={() => void pick(habit, "fruit")} className="gd-pick flex items-center gap-1.5 rounded-full bg-white py-1.5 pl-2 pr-3.5 text-sm font-semibold text-[#1c2624] shadow-lg">
-                    <FruitGlyph species={habit.species} size={18} /> Pick {ripe > 1 ? `${ripe} ripe` : "ripe fruit"}
-                  </button>
-                )}
-              </div>
-            )}
           </div>
         </GardenScene>
       </div>
@@ -175,7 +148,7 @@ function PlantDetail({ habit, today }: { habit: HabitView; today: string }) {
       <header className="mt-6">
         <h1 className="font-display break-words text-4xl">{habit.name}</h1>
         <p className="mt-1 text-sm text-ink-soft">
-          {species.label} · {stage.label} · {scheduleLabel(habit.schedule)}
+          {scheduleLabel(habit.schedule)}
           {counted && ` · ${habit.target}${habit.unit ? ` ${habit.unit}` : " times"} a day`}
           {habit.reminder && ` · reminder at ${habit.reminder}`}
         </p>
@@ -183,15 +156,15 @@ function PlantDetail({ habit, today }: { habit: HabitView; today: string }) {
       </header>
 
       {archived ? (
-        <div className="mt-5 rounded-2xl border border-line bg-card p-4">
-          <p className="text-sm text-ink-soft">This plant is resting in the compost. Its growth and fruit are kept.</p>
+        <div className="mt-5 rounded-2xl border border-line bg-card p-4" data-archived-card>
+          <p className="text-sm text-ink-soft">This habit is archived. It&apos;s off your list and sends no reminders. Its history is kept.</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button type="button" onClick={() => void compost(habit, false)} className="h-9 rounded-full bg-ink px-4 text-sm font-semibold text-paper">
-              Replant it
+              Restore
             </button>
             {confirmDelete ? (
               <button type="button" onClick={() => void removeForever()} className="h-9 rounded-full bg-clay px-4 text-sm font-semibold text-white">
-                Yes, delete its whole history
+                Yes, delete it and its history
               </button>
             ) : (
               <button type="button" onClick={() => setConfirmDelete(true)} className="h-9 rounded-full border border-line px-4 text-sm font-semibold text-clay">
@@ -204,12 +177,9 @@ function PlantDetail({ habit, today }: { habit: HabitView; today: string }) {
         <>
           {live.rescue && !live.rescue.covered && live.rescue.keeps > 0 && (
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-card px-4 py-3">
-              <p className="flex items-center gap-2 text-sm text-ink-soft">
-                <IconDrop size={14} className="shrink-0 text-sky" />
-                {rescueText(habit, live.rescue.keeps)}
-              </p>
+              <p className="text-sm text-ink-soft">{rescueText(habit, live.rescue.keeps)}</p>
               <button type="button" onClick={() => void water(habit, { date: addDays(today, -1), fill: true })} className="h-8 rounded-full bg-ink px-3.5 text-xs font-semibold text-paper">
-                Water yesterday
+                Mark yesterday done
               </button>
             </div>
           )}
@@ -225,10 +195,10 @@ function PlantDetail({ habit, today }: { habit: HabitView; today: string }) {
                 <button
                   type="button"
                   onClick={() => void water(habit, { step: 1 })}
-                  className={`grid size-9 place-items-center rounded-full text-white ${live.todayDone ? "bg-moss" : "bg-sky"}`}
+                  className={`grid size-9 place-items-center rounded-full ${live.todayDone ? "bg-moss text-white" : "bg-sun text-on-accent"}`}
                   aria-label="One more"
                 >
-                  {live.todayDone ? <IconTick size={14} /> : <IconDrop size={15} />}
+                  {live.todayDone ? <IconTick size={14} /> : <span className="text-lg font-semibold leading-none">+</span>}
                 </button>
               </div>
             ) : (
@@ -240,21 +210,24 @@ function PlantDetail({ habit, today }: { habit: HabitView; today: string }) {
                   live.todayDone ? "border border-moss/30 bg-moss-soft text-moss" : "bg-sun text-on-accent shadow-sm shadow-sun/25 hover:bg-sun-deep"
                 }`}
               >
-                {live.todayDone ? <IconTick size={14} /> : <IconDrop size={15} />}
-                {live.todayDone ? "Watered today" : "Water today"}
+                <IconTick size={14} />
+                {live.todayDone ? "Done today" : "Mark done"}
               </button>
             )}
-            {!live.dueToday && !live.todayDone && <span className="text-sm text-ink-faint">Resting today, nothing due.</span>}
+            {!live.dueToday && !live.todayDone && <span className="text-sm text-ink-faint">{weekly ? "This week is already met." : "Nothing due today."}</span>}
           </div>
         </>
       )}
 
-      <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Stat value={live.streak} label={habit.schedule.kind === "weekly" ? "Week streak" : "Day streak"} icon={<IconFlame size={13} className="text-clay" />} />
+      <StrengthCard strength={info.strength} weekly={weekly} />
+
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <Stat value={streak} label={weekly ? "Week streak" : "Day streak"} icon={<IconFlame size={13} className="text-clay" />} />
         <Stat value={best} label="Best streak" icon={<IconTrophy size={13} />} />
-        <Stat value={`${live.drops}/3`} label="Dew drops" icon={<IconDrop size={13} className="text-sky" />} />
-        <Stat value={habit.growth} label="Times watered" icon={<IconTick size={13} className="text-moss" />} />
+        <Stat value={habit.growth} label="Times done" icon={<IconTick size={13} className="text-moss" />} />
+        <Stat value={`${live.drops} of ${MAX_DROPS}`} label="Streak savers" icon={<IconDrop size={13} className="text-sky" />} />
       </div>
+      <p className="mt-2 px-1 text-xs text-ink-faint">You earn a streak saver for every 7 in a row. If you miss a day, one is used and your streak carries on.</p>
 
       <section className="mt-8">
         <SectionTitle>This week</SectionTitle>
@@ -272,7 +245,7 @@ function PlantDetail({ habit, today }: { habit: HabitView; today: string }) {
                 <span className="text-[10px] font-semibold text-ink-faint">{WEEK_LETTERS[weekdayOf(d)]}</span>
                 <span
                   className={`grid size-6 place-items-center rounded-full ${isDone ? "bg-moss text-white" : isFrozen ? "bg-sky-soft text-sky" : ""}`}
-                  aria-label={isDone ? "watered" : isFrozen ? "covered by a dew drop" : future || before ? "" : "not watered"}
+                  aria-label={isDone ? "done" : isFrozen ? "covered by a streak saver" : future || before ? "" : "not done"}
                 >
                   {isDone ? <IconTick size={11} /> : isFrozen ? <IconDrop size={12} /> : <span className={`block rounded-full ${future || before ? "size-1 bg-line" : "size-1.5 bg-ink-faint/40"}`} />}
                 </span>
@@ -282,62 +255,9 @@ function PlantDetail({ habit, today }: { habit: HabitView; today: string }) {
         </div>
         {live.week && (
           <p className="mt-2 text-xs text-ink-soft">
-            {live.week.done} of {live.week.times} this week{live.week.done >= live.week.times ? ". The week is kept." : ""}
+            {live.week.done} of {live.week.times} this week{live.week.done >= live.week.times ? ". This week is met." : ""}
           </p>
         )}
-      </section>
-
-      <section className="mt-8">
-        <SectionTitle>Growth</SectionTitle>
-        <div className="rounded-2xl border border-line bg-card p-4">
-          <div className="flex items-end justify-between gap-1">
-            {STAGES.map((s, i) => (
-              <div key={s.id} className="flex min-w-0 flex-1 flex-col items-center">
-                <div className={i <= stage.index ? "" : "opacity-25 grayscale"}>
-                  <Plant species={habit.species} stage={i} size={i === stage.index ? 52 : 38} sway={false} ground="none" fit="tight" />
-                </div>
-                <span className={`mt-1 hidden truncate text-[10px] sm:block ${i === stage.index ? "font-semibold text-ink" : "text-ink-faint"}`}>{s.label}</span>
-              </div>
-            ))}
-          </div>
-          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-paper-deep">
-            <div className="h-full rounded-full bg-sun transition-all" style={{ width: `${Math.round(((stage.index + stage.progress) / (STAGES.length - 1)) * 100)}%` }} />
-          </div>
-          <p className="mt-2 text-xs text-ink-soft">
-            {stage.next ? `${stage.next.left} more ${stage.next.left === 1 ? "watering" : "waterings"} to ${stage.next.label.toLowerCase()}.` : "Fully grown. It keeps bearing fruit as you keep watering."}
-          </p>
-        </div>
-      </section>
-
-      <section className="mt-8">
-        <SectionTitle>Fruit</SectionTitle>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <div className="flex gap-3 rounded-2xl border border-line bg-card p-4">
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-paper-deep">
-              <FruitGlyph species={habit.species} size={24} />
-            </span>
-            <div className="min-w-0">
-              <div className="text-sm font-medium">
-                {fruitsEarned(habit.growth)} {species.fruit.toLowerCase()} grown
-              </div>
-              <p className="mt-0.5 text-xs text-ink-soft">
-                {habit.harvested.fruit} picked{ripe > 0 ? `, ${ripe} ripe now` : ""}. The next ripens in {toFruit} {toFruit === 1 ? "watering" : "waterings"}.
-              </p>
-            </div>
-          </div>
-          <div className="gd-golden-card flex gap-3 rounded-2xl border p-4">
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#ffd96a]/40 text-[#9a7300]">
-              <IconSparkle size={18} />
-            </span>
-            <div className="min-w-0">
-              <div className="text-sm font-medium">Golden fruit</div>
-              <p className="mt-0.5 text-xs text-ink-soft">
-                Ripens on a best streak of {GOLDEN_STREAKS.join(", ")}. {toGolden ? `${toGolden - best} more in a row for the next.` : "Every golden fruit there is has ripened."}
-                {habit.harvested.golden > 0 && ` ${habit.harvested.golden} picked.`}
-              </p>
-            </div>
-          </div>
-        </div>
       </section>
 
       <section className="mt-8">
@@ -345,19 +265,51 @@ function PlantDetail({ habit, today }: { habit: HabitView; today: string }) {
         <Heatmap from={from} today={today} startDate={habit.startDate} done={done.set} frozen={done.frozen} loading={history === null} />
       </section>
 
-      {seed && !archived && <BoardCard seedId={seed.id} seedName={seed.name} />}
+      {seed && !archived && <BoardCard seedId={seed.id} seedName={seed.name} weekly={weekly} />}
 
       {!archived && (
         <div className="mt-10 border-t border-line pt-4">
-          <button type="button" onClick={() => void compost(habit, true).then((ok) => ok && navigateApp("/garden"))} className="text-sm font-medium text-ink-faint hover:text-clay">
-            Move to compost
+          <button type="button" onClick={() => void compost(habit, true).then((ok) => ok && navigateApp("/habits"))} className="text-sm font-medium text-ink-faint hover:text-clay">
+            Archive habit
           </button>
-          <p className="mt-1 text-xs text-ink-faint">Stops reminders and takes it off the ground. Growth and fruit are kept, and you can replant it.</p>
+          <p className="mt-1 text-xs text-ink-faint">Takes it off your list and stops its reminders. Its history is kept, and you can restore it any time.</p>
         </div>
       )}
 
       {editing && <PlantSheet habit={habit} onClose={() => setEditing(false)} />}
     </div>
+  );
+}
+
+/** How rooted the habit is, what that means, and what's next. */
+function StrengthCard({ strength, weekly }: { strength: number; weekly: boolean }) {
+  const next = nextLevel(strength, weekly);
+  const level = STRENGTH_LEVELS.reduce((cur, l) => (strength >= l.min ? l : cur), STRENGTH_LEVELS[0]);
+  const unit = weekly ? (next?.left === 1 ? "week" : "weeks") : next?.left === 1 ? "day" : "days";
+  return (
+    <section className="mt-8 rounded-2xl border border-line bg-card p-4" aria-label="Strength" data-strength={strength}>
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-faint">Strength</h2>
+        <span className="text-xs font-semibold text-moss" data-level={level.id}>
+          {level.label}
+        </span>
+      </div>
+      <div className="font-display mt-1 text-4xl leading-none tabular-nums">{strength}%</div>
+      <div className="relative mt-3 h-2 rounded-full bg-paper-deep" aria-hidden>
+        <div className="h-full rounded-full bg-moss transition-[width] duration-500" style={{ width: `${strength}%` }} />
+        {STRENGTH_LEVELS.slice(1).map((l) => (
+          <span key={l.id} className="absolute top-0 h-2 w-0.5 bg-card" style={{ left: `${l.min}%` }} />
+        ))}
+      </div>
+      <p className="mt-3 text-sm text-ink-soft">
+        {next
+          ? `About ${next.left} more ${unit} in a row to reach “${next.level.label}”.`
+          : "Rooted. This habit is part of your routine now. Keep it going and it stays that way."}
+      </p>
+      <p className="mt-1 text-xs text-ink-faint">
+        Strength rises a little every {weekly ? "week you meet" : "day you keep"} it and dips a little when you miss. Most habits take about two months to feel automatic.
+      </p>
+    </section>
   );
 }
 
@@ -372,7 +324,7 @@ function Heatmap({ from, today, startDate, done, frozen, loading }: { from: stri
   return (
     <div className={`rounded-2xl border border-line bg-card p-4 ${loading ? "animate-pulse" : ""}`}>
       <div ref={scroller} className="no-scrollbar overflow-x-auto">
-        <div className="grid min-w-[30rem] grid-flow-col grid-cols-[repeat(26,minmax(0,1fr))] grid-rows-7 gap-[3px]" role="img" aria-label={`${done.size} days watered in the last 26 weeks`}>
+        <div className="grid min-w-[30rem] grid-flow-col grid-cols-[repeat(26,minmax(0,1fr))] grid-rows-7 gap-[3px]" role="img" aria-label={`Done on ${done.size} days in the last 26 weeks`}>
           {weeks.flat().map((d) => (
             <span
               key={d}
@@ -384,23 +336,23 @@ function Heatmap({ from, today, startDate, done, frozen, loading }: { from: stri
           ))}
         </div>
       </div>
-      <div className="mt-3 flex items-center gap-4 text-[11px] text-ink-faint">
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-ink-faint">
         <span className="flex items-center gap-1.5">
-          <span className="size-2.5 rounded-[3px] bg-moss" /> Watered
+          <span className="size-2.5 rounded-[3px] bg-moss" /> Done
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="size-2.5 rounded-[3px] bg-sky/60" /> Dew drop
+          <span className="size-2.5 rounded-[3px] bg-sky/60" /> Covered by a streak saver
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="size-2.5 rounded-[3px] bg-line" /> Missed
+          <span className="size-2.5 rounded-[3px] bg-line" /> Not done
         </span>
       </div>
     </div>
   );
 }
 
-/** A plant's leaderboard, in brief. */
-export function BoardCard({ seedId, seedName }: { seedId: string; seedName: string }) {
+/** A habit's leaderboard, in brief. */
+export function BoardCard({ seedId, seedName, weekly = false }: { seedId: string; seedName: string; weekly?: boolean }) {
   const { gardener } = useGarden();
   const [board, setBoard] = useState<Board | null>(null);
   useEffect(() => {
@@ -417,12 +369,13 @@ export function BoardCard({ seedId, seedName }: { seedId: string; seedName: stri
   const top = board.rows.slice(0, 3);
   const me = board.me;
   const above = me ? [...board.rows].reverse().find((r) => r.streak > me.streak) : null;
+  const gap = above && me ? above.streak - me.streak + 1 : 0;
   return (
     <section className="mt-8">
       <SectionTitle
         action={
-          <button type="button" onClick={() => navigateApp(`/garden/community?seed=${seedId}`)} className="text-xs font-semibold text-sun-deep hover:underline">
-            Full board
+          <button type="button" onClick={() => navigateApp(`/habits/community?seed=${seedId}`)} className="text-xs font-semibold text-sun-deep hover:underline">
+            Full leaderboard
           </button>
         }
       >
@@ -430,7 +383,7 @@ export function BoardCard({ seedId, seedName }: { seedId: string; seedName: stri
       </SectionTitle>
       <div className="overflow-hidden rounded-2xl border border-line bg-card">
         {top.length === 0 ? (
-          <p className="px-4 py-3 text-sm text-ink-soft">No public gardeners on this board yet. The top spot is open.</p>
+          <p className="px-4 py-3 text-sm text-ink-soft">Nobody public on this leaderboard yet. The top spot is open.</p>
         ) : (
           <ol className="divide-y divide-line">
             {top.map((r) => (
@@ -452,10 +405,10 @@ export function BoardCard({ seedId, seedName }: { seedId: string; seedName: stri
         {me && (
           <p className="border-t border-line px-4 py-2.5 text-xs text-ink-soft">
             {me.rank === 1 && board.rows.length > 0 && gardener?.public ? "You're at the top. Keep it that way." : `You'd be #${me.rank} of ${Math.max(board.gardeners, me.rank)}.`}{" "}
-            {above && `${above.streak - me.streak + 1} more ${above.streak - me.streak + 1 === 1 ? "day" : "days"} to pass ${above.name}.`}
+            {above && `${gap} more ${weekly ? (gap === 1 ? "week" : "weeks") : gap === 1 ? "day" : "days"} to pass ${above.name}.`}
             {!gardener?.public && (
-              <button type="button" onClick={() => navigateApp("/garden/community")} className="ml-1 font-semibold text-sun-deep hover:underline">
-                Join the board
+              <button type="button" onClick={() => navigateApp("/habits/community")} className="ml-1 font-semibold text-sun-deep hover:underline">
+                Join the leaderboard
               </button>
             )}
           </p>

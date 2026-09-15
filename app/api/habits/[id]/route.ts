@@ -36,6 +36,6 @@ export async function DELETE(_request: Request, ctx: Ctx) {
   const { id } = await ctx.params;
   const result = await deleteHabitForever(new ObjectId(session.userId), id);
   if (result === "missing") return notFound();
-  if (result === "active") return NextResponse.json({ error: "Retire the plant to the compost before deleting it." }, { status: 409 });
+  if (result === "active") return NextResponse.json({ error: "Archive the habit before deleting it." }, { status: 409 });
   return NextResponse.json({ ok: true });
 }

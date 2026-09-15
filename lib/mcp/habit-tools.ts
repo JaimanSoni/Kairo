@@ -1,14 +1,12 @@
 import {
   addDays,
-  fruitsEarned,
-  goldenEarned,
   isDateKey,
   live,
   scheduleLabel,
   SEEDS,
   seedOf,
-  speciesOf,
-  stageOf,
+  strengthLevel,
+  strengthOf,
   type HabitView,
   type LogLite,
 } from "../habits-shared";
@@ -21,9 +19,9 @@ import { optBool, optInt, optString, reqString, type Args } from "./args";
 import type { Tool } from "./tools";
 
 /**
- * The garden, over MCP: what's due today, checking a habit off, and planting a
- * new one. No deleting, no composting and no editing a streak by hand — an
- * assistant can water a plant the user says they kept, and nothing more.
+ * Habits, over MCP: what's due today, marking a habit done, and starting a new
+ * one. No deleting, no archiving and no editing a streak by hand — an assistant
+ * can mark done what the user says they did, and nothing more.
  */
 
 function obj(properties: Record<string, JsonSchema>, required: string[] = []): JsonSchema {
@@ -38,9 +36,9 @@ const habitRef = {
 type Garden = Awaited<ReturnType<typeof loadGarden>>;
 
 /**
- * The garden as this connection may see it. The journal plant waters itself
+ * Habits as this connection may see them. The journal habit marks itself done
  * from journal pages, so its streak says whether someone wrote in their diary:
- * a key without the journal doesn't see that plant at all.
+ * a key without the journal doesn't see that habit at all.
  */
 async function gardenFor(ctx: McpContext): Promise<Garden> {
   const garden = await loadGarden(ctx.userId, ctx.today);
@@ -59,9 +57,9 @@ function logsOf(garden: Garden, id: string): Map<string, LogLite> {
 }
 
 function shape(garden: Garden, h: HabitView, today: string) {
-  const lv = live({ schedule: h.schedule, startDate: h.startDate }, logsOf(garden, h.id), h.settled, today);
-  const stage = stageOf(h.growth);
-  const ripe = Math.max(0, fruitsEarned(h.growth) - h.harvested.fruit) + Math.max(0, goldenEarned(Math.max(lv.best, h.settled.best)) - h.harvested.golden);
+  const logs = logsOf(garden, h.id);
+  const lv = live({ schedule: h.schedule, startDate: h.startDate }, logs, h.settled, today);
+  const strength = strengthOf({ schedule: h.schedule, startDate: h.startDate }, logs, today);
   return {
     habitId: h.id,
     name: h.name,
@@ -72,17 +70,12 @@ function shape(garden: Garden, h: HabitView, today: string) {
     ...(lv.week ? { thisWeek: `${lv.week.done} of ${lv.week.times}` } : {}),
     streak: lv.streak,
     bestStreak: lv.best,
-    dewDrops: lv.drops,
-    plant: `${speciesOf(h.species).label}, ${stage.label.toLowerCase()}`,
-    ...(ripe > 0 ? { ripeFruit: ripe } : {}),
+    streakSavers: lv.drops,
+    strength: `${strength}%`,
+    level: strengthLevel(strength).label,
     // a plain fact for when the user says they did it yesterday; not a prompt to act
     ...(lv.rescue && !lv.rescue.covered && lv.rescue.keeps > 0 ? { yesterday: `not checked in (${addDays(today, -1)})` } : {}),
   };
-}
-
-function stagePhrase(label: string): string {
-  if (label === "In bloom" || label === "Bearing fruit") return label.toLowerCase();
-  return /^[aeiou]/i.test(label) ? `an ${label.toLowerCase()}` : `a ${label.toLowerCase()}`;
 }
 
 function resolveHabit(garden: Garden, args: Args): HabitView {
@@ -90,15 +83,15 @@ function resolveHabit(garden: Garden, args: Args): HabitView {
   if (id) {
     const found = garden.habits.find((h) => h.id === id);
     if (found) return found;
-    if (garden.archived.some((h) => h.id === id)) throw new ToolFail("That habit is in the compost. The user can replant it in Kairo.");
-    throw new ToolFail(`No habit with id ${id}. Use habits_today to see the garden.`);
+    if (garden.archived.some((h) => h.id === id)) throw new ToolFail("That habit is archived. The user can restore it in Kairo.");
+    throw new ToolFail(`No habit with id ${id}. Use habits_today to see their habits.`);
   }
   const name = optString(args, "name", 60)?.trim().toLowerCase();
   if (!name) throw new ToolFail("Give habitId or name.");
   const exact = garden.habits.filter((h) => h.name.toLowerCase() === name);
   const found = exact.length ? exact : garden.habits.filter((h) => h.name.toLowerCase().includes(name));
   if (found.length === 1) return found[0];
-  if (found.length === 0) throw new ToolFail(`No habit is called "${name}". Use habits_today to see the garden.`);
+  if (found.length === 0) throw new ToolFail(`No habit is called "${name}". Use habits_today to see their habits.`);
   throw new ToolFail(`Several habits match "${name}": ${found.map((h) => `${h.name} (id ${h.id})`).join("; ")}. Ask which one, then pass its habitId.`);
 }
 
@@ -109,7 +102,7 @@ const habitsToday: Tool = {
   write: false,
   annotations: { readOnlyHint: true },
   description:
-    "The user's habit garden in Kairo: every habit with whether it's due and done today, its streak, dew drops (which cover a missed day), and how its plant is growing. Call this when the user asks about their habits or streaks, or before checking one in.",
+    "The user's habits in Kairo: every habit with whether it's due and done today, its streak, streak savers (each covers one missed day), and its strength (0-100%: how rooted the habit is, rising with each kept day). Call this when the user asks about their habits or streaks, or before checking one in.",
   inputSchema: obj({}),
   run: async (ctx) => {
     const garden = await gardenFor(ctx);
@@ -119,9 +112,9 @@ const habitsToday: Tool = {
       today: ctx.today,
       summary: habits.length
         ? `${due.filter((h) => h.doneToday).length} of ${due.length} due habits done today.`
-        : "No habits planted yet. The user can plant one, or you can with habit_create if they ask.",
+        : "No habits yet. The user can start one, or you can with habit_create if they ask.",
       habits,
-      url: `${SITE_URL}/garden`,
+      url: `${SITE_URL}/habits`,
     });
   },
 };
@@ -132,7 +125,7 @@ const habitCheckIn: Tool = {
   habits: true,
   write: true,
   description:
-    "Mark a habit as done (waters its plant) for today, or for yesterday if the user says they did it yesterday — only when the user tells you they did it. For a habit with a daily target (like 8 glasses), pass amount to add that many, or count to set the day's total. undo: true takes the check-in back.",
+    "Mark a habit as done for today, or for yesterday if the user says they did it yesterday — only when the user tells you they did it. For a habit with a daily target (like 8 glasses), pass amount to add that many, or count to set the day's total. undo: true takes the check-in back.",
   inputSchema: obj({
     ...habitRef,
     day: { type: "string", enum: ["today", "yesterday"], description: "Default today." },
@@ -147,7 +140,7 @@ const habitCheckIn: Tool = {
     const dayArg = optString(args, "day", 10) ?? "today";
     if (dayArg !== "today" && dayArg !== "yesterday") throw new ToolFail("day must be today or yesterday.");
     const date = dayArg === "today" ? ctx.today : addDays(ctx.today, -1);
-    if (!isDateKey(date) || date < habit.startDate) throw new ToolFail(`${habit.name} was planted on ${habit.startDate}, after that day.`);
+    if (!isDateKey(date) || date < habit.startDate) throw new ToolFail(`${habit.name} was started on ${habit.startDate}, after that day.`);
     const amount = optInt(args, "amount", 1, 50);
     const count = optInt(args, "count", 0, 99);
     const undo = optBool(args, "undo") ?? false;
@@ -156,17 +149,15 @@ const habitCheckIn: Tool = {
     const change = undo ? { count: 0 } : count !== undefined ? { count } : habit.target > 1 && amount !== undefined ? { delta: amount } : { count: habit.target };
     try {
       const result = await waterHabit(ctx.userId, habit.id, { date, ...change }, ctx.today);
-      if (!result) throw new ToolFail("That habit isn't in the garden any more.");
+      if (!result) throw new ToolFail("That habit isn't on the user's list any more.");
       const after = { ...garden, habits: garden.habits.map((h) => (h.id === habit.id ? result.habit : h)), logs: [...garden.logs.filter((l) => l.habitId !== habit.id), ...result.logs] };
+      const before = shape(garden, habit, ctx.today);
       const view = shape(after, result.habit, ctx.today);
-      const events = result.events;
       return json({
         checkedIn: undo ? false : true,
         day: date,
         habit: view,
-        ...(events.grew ? { grew: `The plant grew: it's ${stagePhrase(stageOf(result.habit.growth).label)} now.` } : {}),
-        ...(events.ripened ? { ripened: "A fruit ripened. The user can pick it in the garden." } : {}),
-        ...(events.golden ? { golden: "A golden fruit ripened from their streak." } : {}),
+        ...(!undo && view.level !== before.level ? { levelUp: `${habit.name} is ${view.level.toLowerCase()} now.` } : {}),
       });
     } catch (err) {
       if (err instanceof HabitInputError) throw new ToolFail(err.message);
@@ -177,12 +168,12 @@ const habitCheckIn: Tool = {
 
 const habitCreate: Tool = {
   name: "habit_create",
-  title: "Plant a habit",
+  title: "Start a habit",
   habits: true,
   write: true,
-  description: `Plant a new habit in the user's Kairo garden — only when they ask for one. Popular seeds share leaderboards; pass seedId to use one (${SEEDS.map((s) => `${s.id}: ${s.name}`).join("; ")}), or give a name for a custom habit. schedule: {"kind":"daily"}, {"kind":"days","days":[1,3,5]} (0 is Sunday), or {"kind":"weekly","times":3}.`,
+  description: `Start a new habit in the user's Kairo — only when they ask for one. Ready-made ideas share leaderboards; pass seedId to use one (${SEEDS.map((s) => `${s.id}: ${s.name}`).join("; ")}), or give a name for a custom habit. schedule: {"kind":"daily"}, {"kind":"days","days":[1,3,5]} (0 is Sunday), or {"kind":"weekly","times":3}.`,
   inputSchema: obj({
-    seedId: { type: "string", enum: SEEDS.map((s) => s.id), description: "A seed from the catalogue." },
+    seedId: { type: "string", enum: SEEDS.map((s) => s.id), description: "A ready-made idea from Kairo's list." },
     name: { type: "string", maxLength: 60, description: "The habit, short: 'Read 10 pages'. Required without seedId." },
     schedule: {
       type: "object",
@@ -200,9 +191,9 @@ const habitCreate: Tool = {
     why: { type: "string", maxLength: 140, description: "Why it matters to them, in their words." },
   }),
   run: async (ctx, _scope, args) => {
-    if (!canWrite(ctx)) throw new ToolFail("This connection is read-only, so it can't plant habits.");
+    if (!canWrite(ctx)) throw new ToolFail("This connection is read-only, so it can't start habits.");
     const seedId = optString(args, "seedId", 40);
-    if (seedId !== undefined && !seedOf(seedId)) throw new ToolFail(`No seed called ${seedId}.`);
+    if (seedId !== undefined && !seedOf(seedId)) throw new ToolFail(`No idea called ${seedId}.`);
     if (!seedId) reqString(args, "name", 60);
     try {
       const habit = await plantHabit(
@@ -220,11 +211,10 @@ const habitCreate: Tool = {
         ctx.timezone
       );
       return json({
-        planted: habit.name,
+        created: habit.name,
         habitId: habit.id,
         schedule: scheduleLabel(habit.schedule),
-        plant: speciesOf(habit.species).label,
-        url: `${SITE_URL}/garden/${habit.id}`,
+        url: `${SITE_URL}/habits/${habit.id}`,
       });
     } catch (err) {
       if (err instanceof HabitInputError) throw new ToolFail(err.message);

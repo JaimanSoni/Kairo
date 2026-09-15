@@ -199,7 +199,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                     {item.href === "/lists" && inboxCount > 0 && (
                       <span className="ml-auto rounded-full bg-paper-deep px-2 py-0.5 text-xs text-ink-soft">{inboxCount}</span>
                     )}
-                    {item.href === "/garden" && <GardenDot inline />}
+                    {item.href === "/habits" && <GardenDot inline />}
                   </SideLink>
                 ))}
               </div>
@@ -767,7 +767,7 @@ function DataSettings({ onClose }: { onClose: () => void }) {
 
 /**
  * Your Kairo: the optional places, each with a switch. Planning stays; the
- * garden, journal and notes can be put away. Hiding one keeps everything in
+ * habits, journal and notes can be put away. Hiding one keeps everything in
  * it, and turning it back on brings it back as it was.
  */
 function SpacesSettings() {
@@ -1037,23 +1037,23 @@ function SpaceSwitch({ pathname, spaces }: { pathname: string; spaces: typeof SP
 }
 
 /**
- * A drop on the garden's icon while a plant is still thirsty today. It shows
- * only once the garden has loaded (Today's strip or a visit does that), so the
+ * A dot on the Habits icon while a habit is still to do today. It shows
+ * only once habits have loaded (Today's strip or a visit does that), so the
  * shell never fetches anything for it.
  */
 function GardenDot({ inline = false }: { inline?: boolean }) {
   useSyncExternalStore(gardenStore.subscribe, gardenStore.snapshot, () => 0);
   const { state } = useApp();
   if (state.user.guest || gardenStore.status() !== "ready") return null;
-  const thirsty = gardenStore.habits().some((h) => {
+  const waiting = gardenStore.habits().some((h) => {
     const lv = gardenStore.live(h, state.today);
     return lv.dueToday && !lv.todayDone;
   });
-  if (!thirsty) return null;
+  if (!waiting) return null;
   return inline ? (
-    <span className="ml-auto size-2 rounded-full bg-sky" aria-label="plants need water" />
+    <span className="ml-auto size-2 rounded-full bg-sun" aria-label="habits still to do today" />
   ) : (
-    <span className="absolute -right-1 -top-0.5 size-2 rounded-full bg-sky ring-2 ring-card" aria-hidden />
+    <span className="absolute -right-1 -top-0.5 size-2 rounded-full bg-sun ring-2 ring-card" aria-hidden />
   );
 }
 

@@ -38,12 +38,12 @@ export const SPACES: Space[] = [
     id: "grow",
     label: "Grow",
     icon: IconSprout,
-    items: [{ href: "/garden", label: "Garden", icon: IconSprout }],
+    items: [{ href: "/habits", label: "Habits", icon: IconSprout }],
   },
 ];
 
 /** The pages each optional place owns. */
-const OPTIONAL: Record<string, keyof SpacePrefs> = { "/journal": "journal", "/notes": "notes", "/garden": "garden" };
+const OPTIONAL: Record<string, keyof SpacePrefs> = { "/journal": "journal", "/notes": "notes", "/habits": "garden" };
 
 /** The places this account keeps: hidden pages leave their place, and an empty place leaves altogether. */
 export function visibleSpaces(prefs: SpacePrefs): Space[] {

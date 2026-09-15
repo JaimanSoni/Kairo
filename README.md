@@ -75,8 +75,8 @@ lib/doc-model.ts      the document model both editors share: sanitiser, plain te
 lib/notes*.ts         notes: page tree, versioned bodies, trash, search, client store
 components/notes/     notes: page tree, block editor, block handle, templates, trash
 components/editor/    editor pieces shared by the journal and notes
-lib/habits*.ts        the garden: streak rules (pure, shared), server, reminders, client store
-components/garden/    the garden: SVG plants, the living scene, seeds, boards, basket
+lib/habits*.ts        habits: streak and strength rules (pure, shared), server, reminders, client store
+components/garden/    habits: the list, SVG plants, the garden scene, ideas, leaderboards
 proxy.ts              optimistic session redirects (Next 16's middleware)
 ```
 
@@ -124,12 +124,12 @@ Design notes worth knowing before changing it:
   editors; each brings its own whitelist of blocks.
 - Reachable over MCP only by keys created with *Include notes*, and there is no delete tool.
 
-## Garden (habits)
+## Habits
 
-Habits as plants at `/garden` (shortcut `7`; on a phone, the sprout in the top bar, and a strip on
-Today). Plant a seed from the catalogue or your own, water it on the days you keep it, and it grows
-from seed to fruit. Streaks with dew drops, golden fruit on long streaks, a basket, reminders with
-an evening save, and per-seed leaderboards.
+Habits at `/habits` (shortcut `6`; on a phone, the last tab, and a strip on Today). Start one from
+Ideas or your own, mark it done on the days you do it, and Kairo keeps its streak and its strength.
+Each habit has a plant that grows with its strength. Streak savers, reminders with an evening
+reminder, and per-idea leaderboards. Old `/garden` links redirect.
 
 Design notes worth knowing before changing it:
 
@@ -137,12 +137,15 @@ Design notes worth knowing before changing it:
   streaks with it, so the screen can't disagree with what's stored.
 - **Settled vs live.** A habit stores its streak only up to the last day that can no longer change
   (two days back; a week once it's a day past its Sunday). Everything newer is projected on read,
-  which is why yesterday can still be watered.
-- **Dew drops are spent once.** The frozen day is written first, then the settled state with a
-  `rev` check, so two tabs settling at once can't both spend the same drop.
-- **Plants wilt but never die.** Growth is a count of watered days and never goes down.
-- **Leaderboards are opt-in** and show a gardener name and animal only. A streak snapshot taken at
-  the last watering is aged by `effectiveStreak`, so an abandoned streak doesn't sit at the top.
+  which is why yesterday can still be marked done.
+- **Streak savers are spent once.** (Stored as `drops` and `frozen` days.) The frozen day is written
+  first, then the settled state with a `rev` check, so two tabs settling at once can't both spend one.
+- **Strength, not growth, is what shows.** `strengthOf` is an exponentially weighted average of kept
+  scheduled days (weekly habits: met weeks) over the last 120 days, so a miss dents it and steady
+  keeping for about two months roots it. The app is sent that much history. `growth` is still the
+  count of done days, shown as Times done.
+- **Leaderboards are opt-in** and show a chosen name and animal only. A streak snapshot taken at
+  the last check-in is aged by `effectiveStreak`, so an abandoned streak doesn't sit at the top.
 - Over MCP, for keys created with *Include habits*: `habits_today`, `habit_check_in`, `habit_create`. No delete.
 
 ## Connect an assistant (MCP)

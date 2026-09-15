@@ -373,8 +373,8 @@ function ConnectionsModal({ onClose }: { onClose: () => void }) {
                 <span>
                   Include habits
                   <span className="block text-ink-faint">
-                    Off by default. Lets this assistant see your garden, check a habit in when you tell it
-                    you did it, and plant new ones. It can&apos;t delete or compost anything.
+                    Off by default. Lets this assistant see your habits, mark one done when you tell it
+                    you did it, and start new ones. It can&apos;t archive or delete anything.
                   </span>
                 </span>
               </label>

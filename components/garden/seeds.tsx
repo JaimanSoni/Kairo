@@ -13,11 +13,11 @@ import { useGarden } from "./use-garden";
 import { BackLink, HABIT_TINT, SectionTitle } from "./bits";
 import { IconUsers } from "./icons";
 
-/** The seed shop: popular habits, how many gardeners grow each, and your own custom seed. */
+/** Ideas: habits worth starting, how many people keep each, and a way to start your own. */
 export function SeedsPage() {
   const { habits } = useGarden();
   const params = useSearchParams();
-  const asked = params.get("plant");
+  const asked = params.get("start") ?? params.get("plant");
   const [stats, setStats] = useState<Map<string, SeedStat>>(new Map());
   const [open, setOpen] = useState<{ seed: Seed | null } | null>(null);
   const growing = new Set(habits.filter((h) => h.seedId).map((h) => h.seedId as string));
@@ -32,33 +32,33 @@ export function SeedsPage() {
     };
   }, []);
 
-  // a deep link (from the garden's suggestions) opens the sheet straight away
+  // a deep link (from the habits page or search) opens the sheet straight away
   const linked = asked === "custom" ? { seed: null } : asked && seedOf(asked) && !growing.has(asked) ? { seed: seedOf(asked) } : null;
   const sheet = open ?? linked;
   const close = () => {
     setOpen(null);
-    if (asked) window.history.replaceState(null, "", "/garden/seeds");
+    if (asked) window.history.replaceState(null, "", "/habits/ideas");
   };
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-32 pt-6 sm:px-6">
-      <BackLink href="/garden" label="Garden" />
+      <BackLink href="/habits" label="Habits" />
       <header className="anim-rise mb-7 mt-3 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-4xl">Seeds</h1>
-          <p className="mt-1 text-sm text-ink-soft">Pick a habit to grow. Everyone growing the same seed shares a leaderboard.</p>
+          <h1 className="font-display text-4xl">Ideas</h1>
+          <p className="mt-1 text-sm text-ink-soft">Habits to start from. Tap one to make it yours. People doing the same habit share a leaderboard.</p>
         </div>
         <button
           type="button"
           onClick={() => setOpen({ seed: null })}
           className="flex h-9 items-center gap-1.5 rounded-full bg-ink px-4 text-xs font-semibold text-paper transition-colors hover:bg-ink/90"
         >
-          <IconPlus size={14} /> Your own seed
+          <IconPlus size={14} /> Your own habit
         </button>
       </header>
 
       {SEED_CATEGORIES.map((c) => {
-        // the journal's own seed waits for the journal to be shown again
+        // the journal's own idea waits for the journal to be shown again
         const seeds = SEEDS.filter((s) => s.category === c.id && (s.id !== "journal" || JOURNAL_SHOWN));
         if (seeds.length === 0) return null;
         return (
@@ -83,13 +83,13 @@ function SeedCard({ seed, stat, growing, onPlant }: { seed: Seed; stat?: SeedSta
   return (
     <button
       type="button"
-      onClick={() => (growing ? navigateApp("/garden") : onPlant())}
+      onClick={() => (growing ? navigateApp("/habits") : onPlant())}
       data-seed={seed.id}
       className="group flex flex-col overflow-hidden rounded-2xl border border-line bg-card text-left transition-all hover:-translate-y-0.5 hover:border-ink-faint/40 hover:shadow-md"
     >
       <span className="relative flex h-28 items-end justify-center" style={{ background: `linear-gradient(180deg, color-mix(in srgb, ${tint} 5%, transparent), color-mix(in srgb, ${tint} 16%, transparent))` }}>
         {growing && (
-          <span className="absolute left-2.5 top-2.5 rounded-full bg-card/90 px-2 py-0.5 text-[10px] font-semibold text-moss shadow-sm">Growing</span>
+          <span className="absolute left-2.5 top-2.5 rounded-full bg-card/90 px-2 py-0.5 text-[10px] font-semibold text-moss shadow-sm">On your list</span>
         )}
         <span className="transition-transform duration-300 group-hover:scale-105">
           <Plant species={seed.species} stage={5} size={76} sway={false} ground="none" />

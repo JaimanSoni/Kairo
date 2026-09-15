@@ -112,12 +112,12 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
       { id: "write-today", label: "Write today's journal page", run: () => navigateApp(`/journal/${state.today}`) },
       { id: "go-notes", label: "Go to Notes", hint: keys.get("/notes"), run: () => navigateApp("/notes") },
       ...(guest ? [] : [{ id: "new-note", label: "New note", run: () => void noteActions.create() }]),
-      { id: "go-garden", label: "Go to Garden", hint: keys.get("/garden"), run: () => navigateApp("/garden") },
+      { id: "go-garden", label: "Go to Habits", hint: keys.get("/habits"), run: () => navigateApp("/habits") },
       ...(guest
         ? []
         : [
-            { id: "plant-habit", label: "Plant a habit", run: () => navigateApp("/garden/seeds") },
-            { id: "garden-community", label: "Habit leaderboards", run: () => navigateApp("/garden/community") },
+            { id: "plant-habit", label: "New habit", run: () => navigateApp("/habits/ideas?start=custom") },
+            { id: "garden-community", label: "Habit leaderboards", run: () => navigateApp("/habits/community") },
           ]),
       ...(state.user.appLockEnabled ? [{ id: "lock", label: "Lock Kairo now", run: lockApp }] : []),
     ];
@@ -216,7 +216,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
     else if (item.kind === "task") setEditing(item.id);
     else if (item.kind === "note") navigateApp(`/notes/${item.id}`);
     else if (item.kind === "journal") navigateApp(`/journal/${item.id}`);
-    else if (item.kind === "habit") navigateApp(`/garden/${item.id}`);
+    else if (item.kind === "habit") navigateApp(`/habits/${item.id}`);
     else {
       // the list itself, not just the page: Lists scrolls to it and opens it
       navigateApp(`/lists#list-${item.id}`);

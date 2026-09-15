@@ -6,7 +6,7 @@ import { epochIn, safeTimeZone, todayIn } from "./tz";
 import type { HabitRecord } from "./habits";
 
 /**
- * The garden's nudges, riding on Kairo's scheduled pushes.
+ * Habit reminders, riding on Kairo's scheduled pushes.
  *
  * Two kinds. A habit with a reminder time gets one push at that time on the
  * days it's asked for, and none on a day it's already been watered. And once
@@ -45,9 +45,9 @@ export async function scheduleHabitReminders(habit: Pick<HabitRecord, "_id" | "u
         kind: "habit",
         fireAt: next.fireAt,
         title: habit.name,
-        body: "Time to water it.",
+        body: "Time for it today.",
         tag: `habit-${habit._id.toHexString()}`,
-        url: `/garden/${habit._id.toHexString()}`,
+        url: `/habits/${habit._id.toHexString()}`,
       });
       armPrecise(next.fireAt);
     }
@@ -68,7 +68,7 @@ export async function scheduleEveningSave(userId: ObjectId, timezone: string): P
   const tz = safeTimeZone(timezone);
   const next = nextFire(EVENING, tz, () => true);
   if (!next) return;
-  await scheduled.insertOne({ userId, kind: "garden-evening", timezone: tz, fireAt: next.fireAt, title: "Kairo", tag: "garden-evening", url: "/garden" });
+  await scheduled.insertOne({ userId, kind: "garden-evening", timezone: tz, fireAt: next.fireAt, title: "Kairo", tag: "garden-evening", url: "/habits" });
   armPrecise(next.fireAt);
 }
 
@@ -100,12 +100,12 @@ export async function fireGardenPush(doc: Record<string, unknown>): Promise<void
     const view = live({ schedule: habit.schedule, startDate: habit.startDate }, logs, habit.settled, today);
     if (view.dueToday && !view.todayDone) {
       const count = view.todayCount && habit.target > 1 ? ` ${view.todayCount} of ${habit.target} so far.` : "";
-      const streak = view.streak >= 2 ? ` Your ${view.streak}-day streak is growing.` : "";
+      const streak = view.streak >= 2 ? ` You're on a ${view.streak}-${habit.schedule.kind === "weekly" ? "week" : "day"} streak.` : "";
       await sendToUser(userId, {
         title: habit.name,
-        body: `Time to water it.${count}${streak}`,
+        body: `Time for it today.${count}${streak}`,
         tag: `habit-${habit._id.toHexString()}`,
-        url: `/garden/${habit._id.toHexString()}`,
+        url: `/habits/${habit._id.toHexString()}`,
       });
     }
     await scheduleHabitReminders(habit);
@@ -128,12 +128,11 @@ export async function fireGardenPush(doc: Record<string, unknown>): Promise<void
       if (atRisk && view.streak >= 3 && (!worst || view.streak > worst.streak)) worst = { habit, streak: view.streak };
     }
     if (worst) {
-      const others = habits.length > 1 ? " Your garden's waiting." : "";
-      await sendToUser(userId, {
-        title: `${worst.habit.name} still needs water`,
-        body: `Water it before bed to keep your ${worst.streak}-day streak.${others}`,
+            await sendToUser(userId, {
+        title: `${worst.habit.name} isn't done yet`,
+        body: `Do it before bed to keep your ${worst.streak}-${worst.habit.schedule.kind === "weekly" ? "week" : "day"} streak going.`,
         tag: "garden-evening",
-        url: `/garden/${worst.habit._id.toHexString()}`,
+        url: `/habits/${worst.habit._id.toHexString()}`,
       });
     }
     await scheduleEveningSave(userId, tz);

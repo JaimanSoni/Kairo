@@ -332,6 +332,101 @@ export function live(h: Habitish, logs: Map<string, LogLite>, settled: Settled, 
   };
 }
 
+/* ------------------------------------------------------------- strength */
+
+/**
+ * How far one kept (or missed) day moves a habit's strength. Tuned to the
+ * research on habits: about two months of steady days reaches the high 80s,
+ * a single miss dents it by a few points, and nothing ever takes it to zero.
+ */
+const DAY_WEIGHT = 0.03;
+/** The same, for a habit counted by the week: about nine weeks to the high 80s. */
+const WEEK_WEIGHT = 0.19;
+/** Strength reads this far back; older days hardly move it. The app is sent this much history. */
+export const STRENGTH_WINDOW_DAYS = 120;
+
+export const STRENGTH_LEVELS = [
+  { min: 0, id: "new", label: "Just started" },
+  { min: 10, id: "rooting", label: "Taking root" },
+  { min: 40, id: "growing", label: "Growing strong" },
+  { min: 70, id: "almost", label: "Almost automatic" },
+  { min: 85, id: "rooted", label: "Rooted" },
+] as const;
+
+export type StrengthLevel = (typeof STRENGTH_LEVELS)[number];
+
+export function strengthLevel(strength: number): StrengthLevel {
+  let level: StrengthLevel = STRENGTH_LEVELS[0];
+  for (const l of STRENGTH_LEVELS) if (strength >= l.min) level = l;
+  return level;
+}
+
+/**
+ * A habit's strength, 0 to 100: how steadily it's kept on the days it asks
+ * for, with recent days counting most. Each kept day adds a little and each
+ * missed one takes a little away. Today (or this week) only counts once it's
+ * kept, and yesterday only once it can no longer be marked, so an unfinished
+ * day never dents it early. A day covered by the old dew drops counts for
+ * neither side.
+ */
+export function strengthOf(h: Habitish, logs: Map<string, LogLite>, today: string): number {
+  const weekly = h.schedule.kind === "weekly";
+  const weight = weekly ? WEEK_WEIGHT : DAY_WEIGHT;
+  const windowStart = addDays(today, -STRENGTH_WINDOW_DAYS);
+  const from = h.startDate > windowStart ? h.startDate : windowStart;
+  let s = 0;
+  if (weekly) {
+    const times = (h.schedule as { kind: "weekly"; times: number }).times;
+    const thisWeek = mondayOf(today);
+    for (let m = mondayOf(from), guard = 0; m <= thisWeek && guard < 30; m = addDays(m, 7), guard++) {
+      let done = 0;
+      let frozen = false;
+      for (let i = 0; i < 7; i++) {
+        const log = logs.get(addDays(m, i));
+        if (log?.done) done++;
+        if (log?.frozen) frozen = true;
+      }
+      const kept = Math.min(1, done / times);
+      // the week under way, and last week while it can still be finished, only count once met
+      const open = m === thisWeek || (m === mondayOf(addDays(today, -7)) && today === addDays(m, 7));
+      if ((open || frozen) && kept < 1) continue;
+      s += weight * (kept - s);
+    }
+  } else {
+    for (let d = from, guard = 0; d <= today && guard < 400; d = addDays(d, 1), guard++) {
+      if (!isScheduledDay(h.schedule, d)) continue;
+      const log = logs.get(d);
+      const kept = log?.done ? 1 : 0;
+      const open = d === today || d === addDays(today, -1);
+      if (!kept && (open || log?.frozen)) continue;
+      s += weight * (kept - s);
+    }
+  }
+  return Math.round(s * 100);
+}
+
+/**
+ * The next level up, and about how many kept days (or met weeks, for a weekly
+ * habit) in a row it takes to reach it. Null once a habit is rooted.
+ */
+export function nextLevel(strength: number, weekly: boolean): { level: StrengthLevel; left: number } | null {
+  const level = STRENGTH_LEVELS.find((l) => l.min > strength);
+  if (!level) return null;
+  const w = weekly ? WEEK_WEIGHT : DAY_WEIGHT;
+  const left = Math.ceil(Math.log((100 - level.min) / (100 - strength)) / Math.log(1 - w));
+  return { level, left: Math.max(1, left) };
+}
+
+/**
+ * The plant a habit shows, from its strength: a seed until it's first kept,
+ * then growing as the habit roots. It never bears fruit; bloom is as far as
+ * it goes, and a rooted habit stays in bloom.
+ */
+export function plantStageFor(strength: number, everKept: boolean): number {
+  if (!everKept) return 0;
+  return strength < 10 ? 1 : strength < 25 ? 2 : strength < 45 ? 3 : strength < 70 ? 4 : 5;
+}
+
 /** How a plant looks: the last week of scheduled days (the last two weeks, for a weekly habit). */
 export function healthOf(h: Habitish, logs: Map<string, LogLite>, today: string): Health {
   let asked = 0;

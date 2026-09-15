@@ -21,6 +21,7 @@ import {
   seedOf,
   settle,
   stageOf,
+  STRENGTH_WINDOW_DAYS,
   utcToday,
   type Board,
   type BoardRow,
@@ -249,7 +250,8 @@ async function settleHabit(record: WithId<HabitRecord>, today: string, logsIn?: 
   return { record: current, logs: await logs.find({ habitId: current._id }).limit(500).toArray() };
 }
 
-const RECENT_DAYS = 70;
+/** Days of history sent to the app: enough for every day a habit's strength reads. */
+const RECENT_DAYS = STRENGTH_WINDOW_DAYS;
 
 /** Every habit, settled to today, with the recent days the garden draws from. */
 export async function loadGarden(userId: ObjectId, today: string) {
@@ -300,7 +302,7 @@ export async function plantHabit(userId: ObjectId, input: HabitInput, today: str
   await ensureHabitIndexes();
   const habits = await habitsCollection();
   const seed = typeof input.seedId === "string" ? seedOf(input.seedId) : null;
-  if (input.seedId !== undefined && input.seedId !== null && !seed) bad("That seed doesn't exist.");
+  if (input.seedId !== undefined && input.seedId !== null && !seed) bad("That idea doesn't exist.");
 
   const name = cleanHabitName(input.name ?? seed?.name);
   if (!name) bad("Give the habit a name.");
@@ -309,14 +311,14 @@ export async function plantHabit(userId: ObjectId, input: HabitInput, today: str
   const target = input.target === undefined ? seed?.target ?? 1 : input.target;
   if (!Number.isInteger(target) || (target as number) < 1 || (target as number) > 50) bad("A daily target is a whole number from 1 to 50.");
   if (input.reminder !== undefined && input.reminder !== null && !cleanReminder(input.reminder)) bad("A reminder is a time like 07:30.");
-  if (input.species !== undefined && !isSpecies(input.species)) bad("That plant doesn't grow here.");
+  if (input.species !== undefined && !isSpecies(input.species)) bad("That plant isn't one of the choices.");
   if (input.color !== undefined && !isHabitColor(input.color)) bad("That colour isn't in the palette.");
 
   const count = await habits.countDocuments({ userId, archivedAt: null });
-  if (count >= MAX_HABITS) bad(`A garden holds ${MAX_HABITS} plants. Retire one to make room.`);
+  if (count >= MAX_HABITS) bad(`You can keep up to ${MAX_HABITS} habits. Archive one to make room.`);
   if (seed) {
     const twin = await habits.findOne({ userId, seedId: seed.id, archivedAt: null }, { projection: { _id: 1 } });
-    if (twin) bad(`“${seed.name}” is already growing in your garden.`);
+    if (twin) bad(`“${seed.name}” is already on your list.`);
   }
 
   const last = await habits.find({ userId, archivedAt: null }).sort({ order: -1 }).limit(1).toArray();
@@ -352,7 +354,7 @@ export async function plantHabit(userId: ObjectId, input: HabitInput, today: str
     const first = await habits.find({ userId, seedId: seed.id, archivedAt: null }).sort({ _id: 1 }).limit(1).next();
     if (first && !first._id.equals(record._id)) {
       await habits.deleteOne({ _id: record._id, userId });
-      bad(`“${seed.name}” is already growing in your garden.`);
+      bad(`“${seed.name}” is already on your list.`);
     }
   }
   const { scheduleHabitReminders } = await import("./habit-reminders");
@@ -374,7 +376,7 @@ export async function updateHabit(userId: ObjectId, id: string, input: HabitInpu
   }
   if (input.emoji !== undefined) set.emoji = cleanEmoji(input.emoji) ?? existing.emoji;
   if (input.species !== undefined) {
-    if (!isSpecies(input.species)) bad("That plant doesn't grow here.");
+    if (!isSpecies(input.species)) bad("That plant isn't one of the choices.");
     set.species = input.species as SpeciesId;
   }
   if (input.color !== undefined) {
@@ -426,10 +428,10 @@ export async function archiveHabit(userId: ObjectId, id: string, archived: boole
   const habits = await habitsCollection();
   if (!archived) {
     const count = await habits.countDocuments({ userId, archivedAt: null });
-    if (count >= MAX_HABITS) bad(`A garden holds ${MAX_HABITS} plants. Retire one to make room.`);
+    if (count >= MAX_HABITS) bad(`You can keep up to ${MAX_HABITS} habits. Archive one to make room.`);
     const doc = await habits.findOne({ _id: new ObjectId(id), userId });
     if (doc?.seedId && (await habits.findOne({ userId, seedId: doc.seedId, archivedAt: null, _id: { $ne: doc._id } }))) {
-      bad("That seed is already growing in your garden.");
+      bad("That idea is already on your list.");
     }
   }
   const updated = await habits.findOneAndUpdate(
@@ -482,7 +484,7 @@ export async function waterHabit(
 ): Promise<WaterResult | null> {
   if (!ObjectId.isValid(id)) return null;
   if (!isDateKey(input.date) || (input.date !== today && input.date !== addDays(today, -1))) {
-    bad("Only today, or yesterday, can be watered.");
+    bad("Only today, or yesterday, can be marked.");
   }
   const date = input.date as string;
   const hasDelta = input.delta !== undefined;
@@ -494,8 +496,8 @@ export async function waterHabit(
   const logs = await logsCollection();
   const habit = await habits.findOne({ _id: new ObjectId(id), userId });
   if (!habit) return null;
-  if (habit.archivedAt) bad("That plant is in the compost. Bring it back to water it.");
-  if (date < habit.startDate) bad("That day is before it was planted.");
+  if (habit.archivedAt) bad("That habit is archived. Restore it to mark it done.");
+  if (date < habit.startDate) bad("That day is before the habit started.");
 
   const cap = Math.max(99, habit.target);
   const change = hasDelta ? { $add: [{ $ifNull: ["$count", 0] }, input.delta as number] } : (input.count as number);
@@ -614,8 +616,8 @@ export async function getGardener(userId: ObjectId): Promise<Gardener | null> {
 
 export async function setGardener(userId: ObjectId, input: { name?: unknown; animal?: unknown; public?: unknown }): Promise<Gardener> {
   const name = cleanGardenerName(input.name);
-  if (!name) bad("A gardener name is 2 to 24 letters, numbers or spaces.");
-  if (!isAnimal(input.animal)) bad("Pick one of the garden animals.");
+  if (!name) bad("A name is 2 to 24 letters, numbers or spaces.");
+  if (!isAnimal(input.animal)) bad("Pick one of the animals.");
   if (typeof input.public !== "boolean") bad("public must be true or false");
   const gardener: GardenerRecord = { name: name!, animal: input.animal as string, public: input.public as boolean };
   await (await getDb()).collection("users").updateOne({ _id: userId }, { $set: { gardener } });
@@ -715,7 +717,7 @@ const byStanding = (a: BoardEntry, b: BoardEntry) => b.streak - a.streak || b.be
  * shown to you, marked, with the rank you'd have if you joined.
  */
 export async function leaderboard(userId: ObjectId, seedId: string, scope: "global" | "friends", today: string): Promise<Board> {
-  if (!seedOf(seedId)) bad("That seed doesn't exist.");
+  if (!seedOf(seedId)) bad("That idea doesn't exist.");
   const me = userId.toHexString();
   const habits = await habitsCollection();
   const key = scope === "global" ? `${seedId}:${today}` : `${seedId}:${today}:${me}`;

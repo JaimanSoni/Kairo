@@ -4,11 +4,12 @@ import { navigateApp } from "../app-views";
 import { useApp } from "../store";
 import { HabitMark } from "../garden/bits";
 import { IconTick } from "../garden/icons";
+import { plotOf } from "../garden/use-garden";
 import { habitsOn, useGardenDays } from "./day-data";
 
 /**
- * The plants of one day, as small chips: the ones watered, then the ones the
- * day still asks for. Loaded on demand, because it brings the garden's art.
+ * The habits of one day, as small chips: the ones done, then the ones the
+ * day still asks for. Loaded on demand, because it brings the habits' art.
  */
 export default function DayHabits({
   date,
@@ -18,7 +19,7 @@ export default function DayHabits({
 }: {
   date: string;
   today: string;
-  /** Only what was watered: for places that show what you did, never what you missed. */
+  /** Only what was done: for places that show what you did, never what you missed. */
   wateredOnly?: boolean;
   className?: string;
 }) {
@@ -35,16 +36,16 @@ export default function DayHabits({
   return (
     <section className={className} aria-label="Habits">
       <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
-        {future ? `Habits · ${total} due` : wateredOnly ? `Watered · ${watered.length}` : `Habits · ${watered.length} of ${total} watered`}
+        {future ? `Habits · ${total} due` : wateredOnly ? `Habits done · ${watered.length}` : `Habits · ${watered.length} of ${total} done`}
       </div>
       <ul className="flex flex-wrap gap-1.5">
         {[...watered, ...waiting].map(({ habit, done }) => (
           <li key={habit.id}>
             <a
-              href={`/garden/${habit.id}`}
+              href={`/habits/${habit.id}`}
               onClick={(e) => {
                 e.preventDefault();
-                navigateApp(`/garden/${habit.id}`);
+                navigateApp(`/habits/${habit.id}`);
               }}
               data-day-habit={habit.id}
               data-done={done}
@@ -52,7 +53,7 @@ export default function DayHabits({
                 done ? "border-moss/30 bg-moss-soft/50 text-ink" : "border-line bg-card text-ink-faint hover:text-ink-soft"
               }`}
             >
-              <HabitMark habit={habit} size={20} className="rounded-full" />
+              <HabitMark habit={habit} stage={plotOf(habit, today).stage} size={20} className="rounded-full" />
               <span className="max-w-[9rem] truncate">{habit.name}</span>
               {done && <IconTick size={10} className="text-moss" />}
             </a>

@@ -45,7 +45,7 @@ const ALL_CATEGORIES: Category[] = [
   {
     id: "habits",
     name: "Habits",
-    description: "Your garden: planting habits, streaks and dew drops, fruit, and leaderboards.",
+    description: "Starting habits, marking them done, streaks, strength, and leaderboards.",
   },
   {
     id: "account",
@@ -195,7 +195,7 @@ const ALL_ARTICLES: Article[] = [
               ["**Today**", "The day you're in: what to do, the habits due, and what you've finished."],
               ["**Plan**", "**Calendar** for when things happen, **Lists** for what they belong to, and the **Log** of what you finished."],
               ["**Notes**", "Pages inside pages, for plans, ideas and everything else."],
-              ["**Garden**", "Your habits, growing as plants."],
+              ["**Habits**", "The habits you're building, one day at a time."],
             ],
           },
           {
@@ -210,7 +210,7 @@ const ALL_ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Planning is always there. The **Garden** and **Notes** are yours to keep or put away. The first time you open Kairo it asks which you'd like; after that, open your profile, then **Settings**, and use the switches under **Your Kairo**.",
+            text: "Planning is always there. **Habits** and **Notes** are yours to keep or put away. The first time you open Kairo it asks which you'd like; after that, open your profile, then **Settings**, and use the switches under **Your Kairo**.",
           },
           {
             t: "ul",
@@ -260,7 +260,7 @@ const ALL_ARTICLES: Article[] = [
               { k: "3", d: "Go to Lists" },
               { k: "4", d: "Go to Log" },
               { k: "5", d: "Go to Notes" },
-              { k: "6", d: "Go to your Garden" },
+              { k: "6", d: "Go to Habits" },
             ],
           },
           {
@@ -1006,7 +1006,7 @@ const ALL_ARTICLES: Article[] = [
             items: [
               "**Desktop:** each day shows up to three task chips, plus `+2 more` when there are extras.",
               "**Mobile:** each day shows coloured dots instead, so the grid stays readable.",
-              "**Click any day** to open its detail panel, the full task list, planned steps, what's done, and an add row for that date. It also shows the day's plants from your Garden: watered, or due on days to come.",
+              "**Click any day** to open its detail panel, the full task list, planned steps, what's done, and an add row for that date. It also shows the day's habits: the ones done, or due on days to come.",
               "**Drag chips** between days to reschedule.",
             ],
           },
@@ -1465,7 +1465,7 @@ const ALL_ARTICLES: Article[] = [
           },
           {
             t: "p",
-            text: "Each day also shows the plants you watered in your Garden, and a day where you only watered a plant still counts. Plants you didn't water never show here.",
+            text: "Each day also shows the habits you marked done, and a day where you only did a habit still counts. Habits you didn't do never show here.",
           },
           {
             t: "p",
@@ -2082,7 +2082,7 @@ const ALL_ARTICLES: Article[] = [
               "Task titles **and** notes.",
               "List names. Picking one opens Lists right at that list.",
               "Note titles.",
-              "Habit names, which open that plant in your Garden.",
+              "Habit names, which open that habit.",
               "Actions: capture a task or a note, jump to any page, and lock Kairo.",
             ],
           },
@@ -2268,7 +2268,7 @@ const ALL_ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Under each page, **This day in Kairo** lists the tasks and steps you completed that day and the plants you watered in your [Garden](/support/habits). Tap **Add to page** to bring them in as a checklist, or type `/` then **What I finished** anywhere on the page.",
+            text: "Under each page, **This day in Kairo** lists the tasks and steps you completed that day and the [habits](/support/habits) you marked done. Tap **Add to page** to bring them in as a checklist, or type `/` then **What I finished** anywhere on the page.",
           },
           { t: "note", text: "Tasks in [PIN-locked lists](/support/locks) never appear here." },
         ],
@@ -2487,62 +2487,78 @@ const ALL_ARTICLES: Article[] = [
   /* ---------------------------------------------------------------- habits */
   {
     slug: "habits",
-    title: "Grow habits in your garden",
+    title: "Build habits",
     summary:
-      "Every habit is a seed. Water it on the days you keep it and it sprouts, blooms and bears fruit. Streaks, dew drops and leaderboards included.",
+      "Mark a habit done on the days you do it. Kairo counts your streak, shows how strong the habit is getting, and grows a plant for it as it takes root.",
     categoryId: "habits",
-    keywords: ["habits", "habit tracker", "streak", "garden", "plant", "seed", "leaderboard", "dew drop", "fruit", "routine"],
+    keywords: ["habits", "habit tracker", "streak", "strength", "garden", "plant", "idea", "leaderboard", "streak saver", "routine"],
     sections: [
       {
-        id: "plant",
-        heading: "Plant a seed",
+        id: "start",
+        heading: "Start a habit",
         blocks: [
           {
             t: "p",
-            text: "**Garden** is where habits live. On a computer it's in the sidebar, or press `6`. On a phone it's the last tab in the bottom bar, with a blue dot while a plant still needs water today — and the plants due today also sit at the top of **Today**, one tap each.",
+            text: "**Habits** is in the sidebar on a computer, or press `6`. On a phone it's the last tab in the bottom bar, with a dot while a habit is still to do today. The habits due today also sit at the top of **Today**, one tap each.",
           },
           {
             t: "ul",
             items: [
-              "**Seeds** are popular habits ready to plant: drink water, read, meditate, work out and more. Seeds everyone plants share a leaderboard.",
-              "**Your own seed** is any habit you like. Choose its plant, how often it happens (every day, certain days, or a number of times a week), a daily target like 8 glasses, and a reminder time.",
-              "A garden holds up to 40 plants. Most people do best with three or four.",
+              "**New habit** starts one from scratch. Give it a name, how often (every day, certain days, or a number of times a week), and, if you like, a daily target such as 8 glasses, a reminder time and why it matters to you.",
+              "**Ideas** has ready-made habits: drink water, read, meditate, work out and more. People doing the same idea share a leaderboard.",
+              "Keep it small enough to do on a busy day. Two minutes of reading still counts, and small habits are the ones that last.",
+              "You can keep up to 40 habits. Most people do best with three or four.",
             ],
           },
         ],
       },
       {
-        id: "water",
-        heading: "Water it, watch it grow",
+        id: "done",
+        heading: "Mark it done",
         blocks: [
           {
             t: "p",
-            text: "Tap a plant to water it on a day you kept the habit. Counted habits fill up one tap at a time. Every watering helps the plant grow: a sprout after the first, a young plant after a week, in bloom at 21, and bearing fruit at 30. Growth is never lost.",
+            text: "Tap the circle next to a habit on a day you did it. A habit with a target, like 8 glasses, fills up one tap at a time. Tapped by mistake? Tap again to take it back, or use **Undo**.",
           },
           {
             t: "ul",
             items: [
-              "**Fruit** ripens as waterings add up, starting at 7. Pick it and it goes in your **Basket**.",
-              "**Golden fruit** ripens on your best streaks: 21, 66, 100, 200 and 365 in a row.",
-              "Forgot to tap yesterday? You can still water **yesterday** today, and your streak is kept.",
+              "Forgot to mark it yesterday? Habits shows **Did you do these yesterday?** until the end of today. Tap **Mark yesterday done** and your streak carries on.",
+              "Days a habit doesn't ask for never count against it.",
             ],
           },
         ],
       },
       {
         id: "streaks",
-        heading: "Streaks and dew drops",
+        heading: "Streaks and streak savers",
         blocks: [
           {
             t: "p",
-            text: "A streak counts the days in a row you kept a habit — or, for a habit that's a number of times a week, the weeks in a row you hit it. Days a habit doesn't ask for don't break anything.",
+            text: "A streak counts the days in a row you kept a habit. For a habit that's a number of times a week, it counts the weeks in a row you hit it.",
           },
           {
             t: "ul",
             items: [
-              "Every 7 in a row earns a **dew drop** 💧, up to three. A drop covers a missed day by itself, so one bad day doesn't erase a month.",
-              "A plant that goes without water **wilts**, but it never dies. Water it again and it perks right back up.",
-              "Changing a habit's schedule or target re-counts its current streak under the new rules. Growth, fruit and your best streak stay.",
+              "Every 7 in a row earns a **streak saver**, up to three. If you miss a day, one is used by itself and your streak carries on, so one bad day doesn't erase a month.",
+              "Changing a habit's schedule or target re-counts its current streak under the new rules. Your history and best streak stay.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "strength",
+        heading: "Strength, and the plant",
+        blocks: [
+          {
+            t: "p",
+            text: "**Strength** shows how rooted a habit is, from 0 to 100%. Every day you keep it adds a little, and every miss takes a little away, with recent days counting most. A single miss barely dents it; missing often brings it down. Most habits take around two months of steady keeping to feel automatic.",
+          },
+          {
+            t: "ul",
+            items: [
+              "**Just started** below 10%, **Taking root** from 10%, **Growing strong** from 40%, **Almost automatic** from 70%, and **Rooted** from 85%. A habit's page shows about how many more days it takes to reach the next.",
+              "Each habit has a plant, and it grows with strength: a sprout while the habit is new, in bloom once it's rooted. **Your garden**, under the list, shows them all together. Pick a different plant or colour under **Plant and colour** when you edit a habit.",
             ],
           },
         ],
@@ -2553,11 +2569,11 @@ const ALL_ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Every seed has a leaderboard of current streaks: **Everyone**, or **Friends** — the people you share lists or tasks with. You only appear once you join from **Community** with a gardener name and an animal. Nobody sees your email, your photo, or any habit you made yourself.",
+            text: "Every idea has a leaderboard of current streaks: **Everyone**, or **Friends** (the people you share lists or tasks with). You only appear once you join from **Leaderboards**, at the bottom of Habits, with a name and an animal. Nobody sees your email, your photo, or any habit you made yourself.",
           },
           {
             t: "p",
-            text: "Until you join, Kairo still shows *you* where you'd rank, and how many days it would take to pass the next gardener up. **Hide me** takes you off every board at once.",
+            text: "Until you join, Kairo still shows *you* where you'd rank, and how many days it would take to pass the next person up. **Hide me** takes you off every leaderboard at once.",
           },
         ],
       },
@@ -2567,21 +2583,21 @@ const ALL_ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Give a habit a reminder time and Kairo nudges you then, only on days it's due and only if you haven't watered it yet. In the evening, if a streak of three or more is still thirsty, you'll get one last gentle nudge. Reminders use the same notifications as tasks, so turn those on in Settings.",
+            text: "Give a habit a reminder time and Kairo reminds you then, only on days it's due and only if it isn't done yet. At 8:30pm, if a streak of three or more still isn't marked done, you'll get one last reminder; switch that off under **Evening reminder** at the bottom of Habits. Reminders use the same notifications as tasks, so turn those on in Settings.",
           },
         ],
       },
       {
-        id: "compost",
-        heading: "Compost, and your data",
+        id: "archive",
+        heading: "Archive, and your data",
         blocks: [
           {
             t: "ul",
             items: [
-              "**Move to compost** takes a plant off the ground and stops its reminders, but keeps its growth and fruit. Replant it any time.",
-              "A composted plant can be **deleted forever**, with its whole history.",
-              "Assistants you connect to Kairo only reach your garden if you tick **Include habits** on their [connection key](/support/connect-ai). Then they can see your habits, check one in when you tell them you did it, and plant new ones. They can't delete or compost anything.",
-              "Deleting your account deletes your garden, every watering and your basket.",
+              "**Archive habit**, at the bottom of a habit's page, takes it off your list and stops its reminders. Its history is kept. Archived habits are listed at the bottom of Habits, where you can **Restore** them.",
+              "An archived habit can be **deleted forever**, with its whole history.",
+              "Assistants you connect to Kairo only reach your habits if you tick **Include habits** on their [connection key](/support/connect-ai). Then they can see your habits, mark one done when you tell them you did it, and start new ones. They can't archive or delete anything.",
+              "Deleting your account deletes your habits and every day you marked.",
             ],
           },
         ],
@@ -2723,7 +2739,7 @@ const ALL_ARTICLES: Article[] = [
             items: [
               "A **read only** key can never add, change or delete anything, and the tools to do so are not even offered to the assistant.",
               "Your [notes](/support/notes) are out of reach unless you tick **Include notes** when creating the key: an assistant can search and read them, make new pages and add to existing ones, but never delete or rewrite a page.",
-              "Your [garden](/support/habits) works the same way, with **Include habits**: an assistant can see your habits and streaks, check a habit in when you say you did it, and plant a new one. It can't delete, compost or edit a habit, and it never sees who's on a leaderboard.",
+              "Your [habits](/support/habits) work the same way, with **Include habits**: an assistant can see your habits and streaks, mark a habit done when you say you did it, and start a new one. It can't archive, delete or edit a habit, and it never sees who's on a leaderboard.",
               "Giving a key locked lists takes a browser where they're unlocked.",
               "A connection can only reach what you can reach: your own work, plus lists and tasks shared with you.",
               "Nothing about your billing, your PIN or your sign-in is exposed.",

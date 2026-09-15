@@ -1,6 +1,6 @@
 "use client";
 
-import { stageOf, type HabitColor, type HabitView } from "@/lib/habits-shared";
+import { type HabitColor, type HabitView } from "@/lib/habits-shared";
 import { navigateApp } from "../app-views";
 import { IconArrowLeft } from "./icons";
 import { Plant } from "./plants";
@@ -15,28 +15,28 @@ export const HABIT_TINT: Record<HabitColor, string> = {
   moss: "#4ca75b",
 };
 
-/** What watering yesterday would save. A weekly habit's last week may need more than one day. */
+/** What marking yesterday would save. A weekly habit's last week may need more than one day. */
 export function rescueText(habit: HabitView, keeps: number): string {
   if (habit.schedule.kind === "weekly") {
-    return `Last week isn't kept yet. Water Sunday to help save your ${keeps}-week streak.`;
+    return `Last week isn't met yet. Mark Sunday done if you did it, and your ${keeps}-week streak carries on.`;
   }
-  return `Missed yesterday. Water it now and your ${keeps}-day streak carries on.`;
+  return `Not marked yesterday. If you did it, mark it now and your ${keeps}-day streak carries on.`;
 }
 
 /**
- * A habit's mark: its own plant, on a tile tinted with its colour. The garden's
- * answer to an emoji — every habit already has a face, and it's the one growing.
+ * A habit's mark: its own plant, on a tile tinted with its colour, grown as
+ * far as the habit is rooted. Every habit already has a face, and it's the
+ * one growing.
  */
-export function HabitMark({ habit, size = 40, className = "" }: { habit: Pick<HabitView, "species" | "growth" | "color">; size?: number; className?: string }) {
+export function HabitMark({ habit, stage = 4, size = 40, className = "" }: { habit: Pick<HabitView, "species" | "color">; stage?: number; size?: number; className?: string }) {
   const tint = HABIT_TINT[habit.color] ?? HABIT_TINT.sun;
-  const stage = Math.max(1, stageOf(habit.growth).index);
   return (
     <span
       className={`relative grid shrink-0 place-items-center overflow-hidden rounded-xl ${className}`}
       style={{ width: size, height: size, background: `color-mix(in srgb, ${tint} 13%, transparent)` }}
       aria-hidden
     >
-      <Plant species={habit.species} stage={stage} size={size * 0.78} sway={false} ground="none" fit="tight" />
+      <Plant species={habit.species} stage={Math.max(1, Math.min(5, stage))} size={size * 0.78} sway={false} ground="none" fit="tight" />
     </span>
   );
 }

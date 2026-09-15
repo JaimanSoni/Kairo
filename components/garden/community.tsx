@@ -12,8 +12,9 @@ import { IconFlame, IconTrophy, IconUsers } from "./icons";
 import { useGarden } from "./use-garden";
 
 /**
- * Other gardeners growing the same seeds. Nobody appears here until they
- * choose a name and an animal and say yes; nothing else about them is shown.
+ * Leaderboards: other people keeping the same habits. Nobody appears here
+ * until they choose a name and an animal and say yes; nothing else about them
+ * is shown.
  */
 export function CommunityPage() {
   const { habits, gardener } = useGarden();
@@ -42,16 +43,16 @@ export function CommunityPage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-32 pt-6 sm:px-6">
-      <BackLink href="/garden" label="Garden" />
+      <BackLink href="/habits" label="Habits" />
       <header className="anim-rise mb-6 mt-3">
-        <h1 className="font-display text-4xl">Community</h1>
-        <p className="mt-1 text-sm text-ink-soft">Streak leaderboards for every seed. Grow alongside people keeping the same habit.</p>
+        <h1 className="font-display text-4xl">Leaderboards</h1>
+        <p className="mt-1 text-sm text-ink-soft">A streak leaderboard for every habit idea. Only habits started from Ideas take part.</p>
       </header>
 
       <GardenerCard key={gardener ? `${gardener.name}:${gardener.animal}:${gardener.public}` : "none"} gardener={gardener} />
 
       <section className="mt-8">
-        <SectionTitle>Boards</SectionTitle>
+        <SectionTitle>Habits</SectionTitle>
         <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4 pb-2 sm:mx-0 sm:flex-wrap sm:px-0">
           {order.map((s) => (
             <button
@@ -60,13 +61,13 @@ export function CommunityPage() {
               aria-pressed={seed === s.id}
               onClick={() => {
                 setSeed(s.id);
-                window.history.replaceState(null, "", `/garden/community?seed=${s.id}`);
+                window.history.replaceState(null, "", `/habits/community?seed=${s.id}`);
               }}
               className={`flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-xs font-medium transition-colors ${
                 seed === s.id ? "border-ink bg-ink text-paper" : "border-line bg-card text-ink-soft hover:border-ink-faint hover:text-ink"
               }`}
             >
-              {mine.has(s.id) && <span className="size-1.5 rounded-full" style={{ background: HABIT_TINT[s.color] }} aria-label="(growing)" />}
+              {mine.has(s.id) && <span className="size-1.5 rounded-full" style={{ background: HABIT_TINT[s.color] }} aria-label="(on your list)" />}
               {s.name}
             </button>
           ))}
@@ -94,6 +95,7 @@ function BoardList({
   const [board, setBoard] = useState<Board | null>(null);
   const [failed, setFailed] = useState(false);
   const seed = seedOf(seedId)!;
+  const unit = (n: number) => (seed.schedule.kind === "weekly" ? (n === 1 ? "week" : "weeks") : n === 1 ? "day" : "days");
 
   useEffect(() => {
     let alive = true;
@@ -124,7 +126,7 @@ function BoardList({
           <div className="truncate text-sm font-semibold">{seed.name}</div>
           <div className="flex items-center gap-1 text-xs text-ink-faint">
             <IconUsers size={12} />
-            {board ? `${board.gardeners} public ${board.gardeners === 1 ? "gardener" : "gardeners"}` : "…"}
+            {board ? `${board.gardeners} ${board.gardeners === 1 ? "person" : "people"} on this leaderboard` : "…"}
           </div>
         </div>
         <div className="inline-flex rounded-full border border-line bg-paper p-0.5">
@@ -141,14 +143,14 @@ function BoardList({
           ))}
         </div>
         {!growing && (
-          <button type="button" onClick={() => navigateApp(`/garden/seeds?plant=${seedId}`)} className="h-8 shrink-0 rounded-full bg-ink px-3.5 text-xs font-semibold text-paper">
-            Plant it
+          <button type="button" onClick={() => navigateApp(`/habits/ideas?start=${seedId}`)} className="h-8 shrink-0 rounded-full bg-ink px-3.5 text-xs font-semibold text-paper">
+            Start it
           </button>
         )}
       </div>
 
       {failed ? (
-        <p className="px-4 py-6 text-sm text-ink-soft">The board didn&apos;t load. Try again in a moment.</p>
+        <p className="px-4 py-6 text-sm text-ink-soft">The leaderboard didn&apos;t load. Try again in a moment.</p>
       ) : !board ? (
         <div className="space-y-2 p-4">
           {[0, 1, 2].map((i) => (
@@ -163,26 +165,26 @@ function BoardList({
                 <IconTrophy size={15} />
               </span>
               <p className="text-sm text-ink">
-                <b className="font-semibold">{gardener?.public ? `You're #${me.rank}` : `You'd be #${me.rank}`}</b> with a {me.streak}-day streak.{" "}
+                <b className="font-semibold">{gardener?.public ? `You're #${me.rank}` : `You'd be #${me.rank}`}</b> with a {me.streak}-{unit(1)} streak.{" "}
                 <span className="text-ink-soft">
                   {above ? (
                     <>
-                      {above.streak - me.streak + 1} more {above.streak - me.streak + 1 === 1 ? "day" : "days"} to pass {above.name}.
+                      {above.streak - me.streak + 1} more {unit(above.streak - me.streak + 1)} to pass {above.name}.
                     </>
                   ) : me.streak > 0 ? (
                     "Nobody's ahead of you."
                   ) : (
-                    "Water today to get on the board."
+                    "Mark it done today to get on the leaderboard."
                   )}
                 </span>
-                {!gardener?.public && <span className="mt-0.5 block text-xs text-ink-faint">Only you can see this until you join the boards.</span>}
+                {!gardener?.public && <span className="mt-0.5 block text-xs text-ink-faint">Only you can see this until you join the leaderboards.</span>}
               </p>
             </div>
           )}
 
           {board.rows.length === 0 && !showMeBelow ? (
             <p className="px-4 py-8 text-center text-sm text-ink-soft">
-              {scope === "friends" ? "None of the people you share lists with grow this publicly yet." : "No public gardeners here yet. The top spot is open."}
+              {scope === "friends" ? "None of the people you share lists with are on this leaderboard yet." : "Nobody public here yet. The top spot is open."}
             </p>
           ) : (
             <ol className="divide-y divide-line">
@@ -247,7 +249,7 @@ function GardenerCard({ gardener }: { gardener: Gardener | null }) {
     }
     gardenStore.setGardener(r.data.gardener);
     setEditing(false);
-    showToast({ message: r.data.gardener.public ? `You're on the boards as ${r.data.gardener.name}.` : "You're hidden from the boards." });
+    showToast({ message: r.data.gardener.public ? `You're on the leaderboards as ${r.data.gardener.name}.` : "You're hidden from the leaderboards." });
   };
 
   if (gardener && !editing) {
@@ -284,10 +286,10 @@ function GardenerCard({ gardener }: { gardener: Gardener | null }) {
       }}
       className="rounded-2xl border border-line bg-card p-5"
     >
-      <h2 className="font-display text-2xl">{gardener ? "Your gardener" : "Join the leaderboards"}</h2>
+      <h2 className="font-display text-2xl">{gardener ? "Your leaderboard name" : "Join the leaderboards"}</h2>
       <p className="mt-1 text-sm text-ink-soft">Pick a name and an animal. That&apos;s all anyone sees: never your email or your photo.</p>
       <label className="mt-4 block">
-        <span className="text-xs font-semibold text-ink-soft">Gardener name</span>
+        <span className="text-xs font-semibold text-ink-soft">Name</span>
         <input
           value={name}
           maxLength={24}

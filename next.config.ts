@@ -37,6 +37,13 @@ const nextConfig: NextConfig = {
       // PWAs still know that address.
       { source: "/upcoming", destination: "/calendar", permanent: true },
       { source: "/support/upcoming", destination: "/support/calendar", permanent: true },
+      // The Garden became Habits. Pushes already on their way, bookmarks and
+      // shared links still point at the old addresses.
+      { source: "/garden/seeds", destination: "/habits/ideas", permanent: true },
+      { source: "/garden/basket", destination: "/habits", permanent: true },
+      { source: "/garden/community", destination: "/habits/community", permanent: true },
+      { source: "/garden/:id", destination: "/habits/:id", permanent: true },
+      { source: "/garden", destination: "/habits", permanent: true },
     ];
   },
   async rewrites() {

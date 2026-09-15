@@ -2,20 +2,12 @@
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { gardenApi, gardenStore } from "@/lib/habits-client";
-import {
-  DROP_EVERY,
-  fruitsEarned,
-  goldenEarned,
-  speciesOf,
-  stageOf,
-  type HabitView,
-  type LiveHabit,
-} from "@/lib/habits-shared";
+import { plantStageFor, strengthLevel, strengthOf, type HabitView, type LiveHabit, type StrengthLevel } from "@/lib/habits-shared";
 import { track } from "@/lib/analytics-client";
 import { useApp } from "../store";
 import { buzz, plink } from "./fx";
 
-/** The garden store, loaded once and kept fresh across midnight. */
+/** The habits store, loaded once and kept fresh across midnight. */
 export function useGarden() {
   useSyncExternalStore(gardenStore.subscribe, gardenStore.snapshot, () => 0);
   const { state } = useApp();
@@ -42,56 +34,60 @@ export function useGarden() {
 export type PlotInfo = {
   habit: HabitView;
   live: LiveHabit;
-  stage: ReturnType<typeof stageOf>;
-  ripe: number;
-  golden: number;
-  thirsty: boolean;
+  /** 0–100: how rooted the habit is. */
+  strength: number;
+  level: StrengthLevel;
+  /** The plant drawn for it, from its strength. */
+  stage: number;
+  /** Due today (or this week) and not done yet. */
+  due: boolean;
+  /** The streak to show: while yesterday can still be marked, the streak it would keep. */
+  streak: number;
 };
 
 export function plotOf(habit: HabitView, today: string): PlotInfo {
   const lv = gardenStore.live(habit, today);
+  const logs = gardenStore.logs(habit.id);
+  const strength = strengthOf({ schedule: habit.schedule, startDate: habit.startDate }, logs, today);
+  const rescuable = lv.rescue && !lv.rescue.covered;
   return {
     habit,
     live: lv,
-    stage: stageOf(habit.growth),
-    ripe: Math.max(0, fruitsEarned(habit.growth) - habit.harvested.fruit),
-    golden: Math.max(0, goldenEarned(Math.max(lv.best, habit.settled.best)) - habit.harvested.golden),
-    thirsty: lv.dueToday && !lv.todayDone,
+    strength,
+    level: strengthLevel(strength),
+    stage: plantStageFor(strength, habit.growth > 0 || lv.todayDone),
+    due: lv.dueToday && !lv.todayDone,
+    streak: rescuable ? Math.max(lv.streak, lv.rescue!.keeps) : lv.streak,
   };
 }
 
-export type Moments = Record<string, { water: number; burst: number; golden: boolean }>;
+export type Moments = Record<string, { water: number; burst: number }>;
 
 /**
- * Watering, with everything that comes after it: the pour, the sound, the
- * buzz, and a sentence when something grew, ripened or a streak reached a
- * dew drop. Moments are counters a plot watches to replay its animation.
+ * Marking a habit done, with what comes after it: a small moment on the
+ * plant, a sound, a buzz. Marking one undone always offers Undo, so a stray
+ * tap is never a lost day. Moments are counters a plot watches to replay.
  */
 export function useGardenActions() {
   const { state, showToast } = useApp();
-  // the same "today" every garden screen draws with, even in the minute after midnight
+  // the same "today" every habit screen draws with, even in the minute after midnight
   const today = state.today;
   const [moments, setMoments] = useState<Moments>({});
 
-  const bump = useCallback((id: string, kind: "water" | "burst", golden = false) => {
+  const bump = useCallback((id: string, kind: "water" | "burst") => {
     setMoments((m) => {
-      const cur = m[id] ?? { water: 0, burst: 0, golden: false };
-      return { ...m, [id]: { ...cur, [kind]: cur[kind] + 1, golden: kind === "burst" ? golden : cur.golden } };
+      const cur = m[id] ?? { water: 0, burst: 0 };
+      return { ...m, [id]: { ...cur, [kind]: cur[kind] + 1 } };
     });
   }, []);
 
   const water = useCallback(
-    async (habit: HabitView, opts: { date?: string; step?: 1 | -1; fill?: boolean } = {}) => {
+    async (habit: HabitView, opts: { date?: string; step?: 1 | -1; fill?: boolean } = {}): Promise<void> => {
       const date = opts.date ?? today;
       const log = gardenStore.logs(habit.id).get(date);
-      // the journal plant is watered by writing; a stray tap shouldn't undo a page that was written
-      if (habit.seedId === "journal" && habit.target === 1 && log?.done && !opts.step && !opts.fill) {
-        showToast({ message: "This one waters itself when you write in your journal." });
-        return;
-      }
       let change: { delta?: number; count?: number };
       if (opts.fill) {
-        // a rescued day is a whole day: all eight glasses, not one
+        // a day marked after the fact is a whole day: all eight glasses, not one
         change = { count: Math.max(habit.target, log?.count ?? 0) };
       } else if (habit.target === 1) {
         change = { count: log?.done && opts.step !== 1 ? 0 : 1 };
@@ -108,57 +104,26 @@ export function useGardenActions() {
       }
       const r = await gardenStore.water(habit.id, date, change);
       if (!r.ok) {
-        showToast({ message: r.kind === "offline" ? "You're offline, so that didn't water. Try again when you're back." : r.kind === "invalid" ? r.message : "Couldn't water that just now." });
+        showToast({ message: r.kind === "offline" ? "You're offline, so that didn't save. Try again when you're back." : r.kind === "invalid" ? r.message : "Couldn't save that just now." });
         return;
       }
-      const after = gardenStore.logs(habit.id).get(date);
-      const nowDone = Boolean(after?.done);
-      const { events } = r.data;
-      const species = speciesOf(habit.species);
+      const nowDone = Boolean(gardenStore.logs(habit.id).get(date)?.done);
       if (!wasDone && nowDone) {
         track("habit-water");
-        if (events.golden) {
-          bump(habit.id, "burst", true);
-          plink(true);
-          buzz([30, 40, 30, 40, 60]);
-          showToast({ message: `A golden fruit ripened on ${habit.name}. Tap it to pick.` });
-        } else if (events.grew) {
-          bump(habit.id, "burst");
-          plink(true);
-          buzz([20, 30, 40]);
-          const grown = stageOf(gardenStore.get(habit.id)?.growth ?? habit.growth + 1);
-          showToast({ message: `${habit.name} grew: it's ${stagePhrase(grown.label)} now.` });
-        } else if (events.ripened) {
-          bump(habit.id, "burst");
-          plink(true);
-          showToast({ message: `${withArticle(species.fruit, true)} is ripe on ${habit.name}. Tap it to pick.` });
-        } else if (events.streak > 0 && events.streak % DROP_EVERY === 0) {
-          bump(habit.id, "burst");
-          showToast({ message: `${events.streak} days in a row. You earned a dew drop: it covers a day you miss.` });
-        } else if (date !== today) {
-          showToast({ message: `Yesterday's watered. Your ${events.streak}-day streak is safe.` });
+        bump(habit.id, "burst");
+        if (date !== today) {
+          showToast({ message: `Yesterday's marked done. Your ${r.data.events.streak}-day streak carries on.` });
         }
+      } else if (wasDone && !nowDone) {
+        // taking a day back is allowed, and never silent: Undo puts back exactly what was there
+        const before = log?.count ?? habit.target;
+        showToast({
+          message: `${habit.name} unmarked for ${date === today ? "today" : "yesterday"}.`,
+          action: { label: "Undo", run: () => void gardenStore.water(habit.id, date, { count: before }) },
+        });
       }
     },
     [bump, showToast, today]
-  );
-
-  const pick = useCallback(
-    async (habit: HabitView, kind: "fruit" | "golden") => {
-      const r = await gardenApi.harvest(habit.id, kind);
-      if (!r.ok) {
-        showToast({ message: r.kind === "invalid" ? r.message : "Couldn't pick that just now." });
-        return;
-      }
-      gardenStore.put(r.data.habit);
-      bump(habit.id, "burst", kind === "golden");
-      plink(true);
-      buzz([15, 25, 15]);
-      track("habit-harvest", { kind });
-      const species = speciesOf(habit.species);
-      showToast({ message: kind === "golden" ? "A golden fruit, into the basket." : `Picked ${withArticle(species.fruit)}. It's in your basket.` });
-    },
-    [bump, showToast]
   );
 
   const compost = useCallback(
@@ -171,31 +136,18 @@ export function useGardenActions() {
       gardenStore.put(r.data.habit);
       showToast(
         archived
-          ? { message: `${habit.name} went to the compost.`, action: { label: "Undo", run: () => void compostBack(habit.id) } }
-          : { message: `${habit.name} is growing again.` }
+          ? { message: `${habit.name} is archived.`, action: { label: "Undo", run: () => void restore(habit.id) } }
+          : { message: `${habit.name} is back on your list.` }
       );
       return true;
     },
     [showToast]
   );
 
-  return { moments, water, pick, compost, bump };
+  return { moments, water, compost, bump };
 }
 
-async function compostBack(id: string) {
+async function restore(id: string) {
   const r = await gardenApi.archive(id, false);
   if (r.ok) gardenStore.put(r.data.habit);
-}
-
-/** "an apple", "a lemon", "sunflower seeds": a fruit as a sentence says it. */
-function withArticle(fruit: string, capital = false): string {
-  const word = fruit.toLowerCase();
-  const phrase = /s$/.test(word) ? word : `${/^[aeiou]/.test(word) ? "an" : "a"} ${word}`;
-  return capital ? phrase[0].toUpperCase() + phrase.slice(1) : phrase;
-}
-
-function stagePhrase(label: string): string {
-  if (label === "In bloom") return "in bloom";
-  if (label === "Bearing fruit") return "bearing fruit";
-  return /^[aeiou]/i.test(label) ? `an ${label.toLowerCase()}` : `a ${label.toLowerCase()}`;
 }

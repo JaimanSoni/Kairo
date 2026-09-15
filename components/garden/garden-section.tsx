@@ -2,42 +2,54 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { gardenStore } from "@/lib/habits-client";
 import { useApp } from "../store";
 import { GoogleBadge } from "../guest-mode";
 import { navigateApp } from "../app-views";
-import { BasketPage } from "./basket";
 import { CommunityPage } from "./community";
 import { GardenHome } from "./home";
 import { PlantPage } from "./plant-page";
 import { Plant } from "./plants";
-import { GardenScene } from "./scene";
 import { SeedsPage } from "./seeds";
 import { useGarden } from "./use-garden";
 
-/** The garden's routes: /garden, /garden/seeds, /garden/community, /garden/basket, /garden/:id. */
+/** Where an old garden address lives now. */
+export function habitsPathFor(pathname: string, search = ""): string {
+  const slug = /^\/garden\/([^/]+)\/?$/.exec(pathname)?.[1] ?? null;
+  if (slug === "seeds") return `/habits/ideas${search.replace(/([?&])plant=/, "$1start=")}`;
+  if (slug === "community") return `/habits/community${search}`;
+  if (slug && /^[a-f0-9]{24}$/.test(slug)) return `/habits/${slug}`;
+  return "/habits";
+}
+
+/** The habits routes: /habits, /habits/ideas, /habits/community, /habits/:id. */
 export default function GardenSection() {
   const pathname = usePathname();
   const { state } = useApp();
   const { status } = useGarden();
   const guest = Boolean(state.user.guest);
 
-  const slug = /^\/garden\/([^/]+)\/?$/.exec(pathname)?.[1] ?? null;
-  const known = slug === null || slug === "seeds" || slug === "community" || slug === "basket" || /^[a-f0-9]{24}$/.test(slug);
-  const stray = !known || (slug === null && pathname !== "/garden" && pathname !== "/garden/");
+  const old = pathname === "/garden" || pathname.startsWith("/garden/");
+  const slug = /^\/habits\/([^/]+)\/?$/.exec(pathname)?.[1] ?? null;
+  const known = slug === null || slug === "ideas" || slug === "community" || /^[a-f0-9]{24}$/.test(slug);
+  const stray = !old && (!known || (slug === null && pathname !== "/habits" && pathname !== "/habits/"));
 
   useEffect(() => {
-    if (stray) window.history.replaceState(null, "", "/garden");
-  }, [stray]);
+    // an old garden link, followed inside the app, lands on the same page under its new name
+    if (old) window.history.replaceState(null, "", habitsPathFor(pathname, window.location.search));
+    else if (stray) window.history.replaceState(null, "", "/habits");
+  }, [old, stray, pathname]);
 
+  const habitName = slug && status === "ready" ? (gardenStore.get(slug)?.name ?? null) : null;
   useEffect(() => {
-    const titles: Record<string, string> = { seeds: "Seeds", community: "Community", basket: "Basket" };
-    if (slug && /^[a-f0-9]{24}$/.test(slug)) return;
-    document.title = `${slug ? `${titles[slug] ?? "Garden"} · ` : ""}Garden · Kairo`;
-  }, [slug]);
+    const titles: Record<string, string> = { ideas: "Ideas", community: "Leaderboards" };
+    const page = habitName ?? (slug ? titles[slug] : null);
+    document.title = `${page ? `${page} · ` : ""}Habits · Kairo`;
+  }, [slug, habitName]);
 
-  if (guest) return <GuestGarden />;
-  if (slug === "seeds") return <SeedsPage />;
-  if (slug === "basket") return <BasketPage />;
+  if (old) return null;
+  if (guest) return <GuestHabits />;
+  if (slug === "ideas") return <SeedsPage />;
   if (slug === "community") {
     return status === "ready" ? (
       <CommunityPage />
@@ -51,36 +63,38 @@ export default function GardenSection() {
   return <GardenHome />;
 }
 
-function GuestGarden() {
+function GuestHabits() {
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-32 pt-8 sm:px-6">
       <header className="anim-rise mb-6">
-        <h1 className="font-display text-4xl">Garden</h1>
-        <p className="mt-1 text-sm text-ink-soft">Every habit is a seed. Keep it, and it grows.</p>
+        <h1 className="font-display text-4xl">Habits</h1>
+        <p className="mt-1 text-sm text-ink-soft">Small things, done most days, until they happen on their own.</p>
       </header>
-      <GardenScene weather="clear" thriving={3}>
-        <div className="relative flex flex-col items-center px-6 pb-8 pt-2 text-center">
-          <div className="flex items-end">
-            <Plant species="tulip" stage={3} size={78} phase={0} />
-            <Plant species="apple" stage={6} size={110} ripe={2} phase={1} />
-            <Plant species="sunflower" stage={5} size={90} phase={2} />
-          </div>
-          <h2 className="font-display mt-1 text-2xl text-white [text-shadow:0_2px_6px_rgba(0,0,0,0.25)]">Grow habits you can see</h2>
-          <p className="mt-1 max-w-sm text-sm text-white/90 [text-shadow:0_1px_3px_rgba(0,0,0,0.3)]">
-            Plant a seed for each habit, water it on the days you keep it, and watch it bloom and bear fruit. Streaks, dew drops and leaderboards included.
-          </p>
-          <a
-            href="/api/auth/google"
-            data-track="guest-signin"
-            className="mt-4 flex items-center gap-2 rounded-full bg-white py-1.5 pl-1.5 pr-4 text-sm font-semibold text-[#1c2624] shadow-lg transition-all hover:-translate-y-0.5"
-          >
-            <GoogleBadge size={24} /> Sign in to plant your garden
-          </a>
-          <button type="button" onClick={() => navigateApp("/today")} className="mt-2 text-xs font-semibold text-white/85 underline-offset-2 hover:underline">
-            Back to Today
-          </button>
+      <section className="overflow-hidden rounded-2xl border border-line bg-card">
+        <div className="flex items-end justify-center gap-1 bg-moss-soft/60 pt-5">
+          <Plant species="tulip" stage={3} size={64} phase={0} ground="none" fit="snug" />
+          <Plant species="apple" stage={5} size={90} phase={1} ground="none" fit="snug" />
+          <Plant species="sunflower" stage={4} size={72} phase={2} ground="none" fit="snug" />
         </div>
-      </GardenScene>
+        <div className="p-5">
+          <h2 className="font-display text-2xl">Build habits you can see</h2>
+          <p className="mt-1 max-w-md text-sm text-ink-soft">
+            Mark a habit done on the days you do it. Kairo counts your streak, shows how strong the habit is getting, and grows a plant for it as it takes root.
+          </p>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <a
+              href="/api/auth/google"
+              data-track="guest-signin"
+              className="flex items-center gap-2 rounded-full bg-ink py-1.5 pl-1.5 pr-4 text-sm font-semibold text-paper transition-colors hover:bg-ink/90"
+            >
+              <GoogleBadge size={24} /> Sign in to start a habit
+            </a>
+            <button type="button" onClick={() => navigateApp("/today")} className="text-xs font-semibold text-ink-soft underline-offset-2 hover:underline">
+              Back to Today
+            </button>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
