@@ -206,10 +206,13 @@ export function Modal({
   children,
   wide,
   anchor = "sheet",
+  above = false,
 }: {
   onClose: () => void;
   children: React.ReactNode;
   wide?: boolean;
+  /** Over a full-screen view (the garden, the city), which sits above ordinary sheets. */
+  above?: boolean;
   /**
    * Where the panel lives on a phone. "sheet" is the default bottom sheet;
    * "top" drops the panel in from above instead — for anything built around
@@ -461,7 +464,7 @@ export function Modal({
     // sheets. Top-anchored panels hug the top on a phone, keyboard territory
     // stays clear below.
     <div
-      className={`fixed inset-0 z-50 flex justify-center sm:items-center sm:p-4 ${
+      className={`fixed inset-0 ${above ? "z-[80]" : "z-50"} flex justify-center sm:items-center sm:p-4 ${
         top ? "items-start p-3 pt-[max(0.75rem,env(safe-area-inset-top))]" : "items-end"
       }`}
     >

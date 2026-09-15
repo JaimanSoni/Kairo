@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { addDays, SEEDS, type Seed } from "@/lib/habits-shared";
+import { addDays, gardenLevelOf, gardenScore, SEEDS, type Seed } from "@/lib/habits-shared";
 import { JOURNAL_SHOWN } from "@/lib/types";
 import { gardenStore } from "@/lib/habits-client";
 import { navigateApp } from "../app-views";
@@ -16,6 +16,8 @@ import { GardenBed, GardenHud, PlantRow } from "./plot";
 import { GardenScene, type Weather } from "./scene";
 import { plotOf, useGarden, useGardenActions } from "./use-garden";
 import { ImmersiveGarden, useGardenView } from "./immersive";
+import { KairoCity, useCityView } from "./city/city";
+import { CityCard } from "./city/city-card";
 
 type Sheet = { seed?: Seed; name?: string };
 
@@ -31,6 +33,7 @@ export function GardenHome() {
   const params = useSearchParams();
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const view = useGardenView();
+  const city = useCityView();
   // search's "New habit" arrives as ?new=1
   const askedNew = params.get("new") === "1";
   const open = sheet ?? (askedNew ? {} : null);
@@ -51,6 +54,7 @@ export function GardenHome() {
   const atRisk = minute >= 18 * 60 ? plots.filter((p) => p.due && p.streak >= 3).length : 0;
   const longest = plots.reduce((n, p) => Math.max(n, p.streak), 0);
   const taken = new Set(habits.map((h) => h.seedId).filter(Boolean));
+  const score = gardenScore(plots.map((p) => p.strength));
   const ideas = SEEDS.filter((s) => !taken.has(s.id) && (s.id !== "journal" || JOURNAL_SHOWN)).slice(0, 3);
 
   if (status === "loading" || status === "idle") {
@@ -121,7 +125,7 @@ export function GardenHome() {
       ) : (
         <>
           <section className="relative" aria-label="Your garden">
-            <GardenScene weather={weather} thriving={thriving} allDone={allDone} celebrate={celebrate} hud={<GardenHud done={doneToday} total={due.length} />}>
+            <GardenScene weather={weather} thriving={thriving} allDone={allDone} celebrate={celebrate} decorLevel={gardenLevelOf(score).level} hud={<GardenHud done={doneToday} total={due.length} />}>
               <GardenBed plots={plots} moments={moments} onWater={(h) => void water(h)} />
             </GardenScene>
             <button
@@ -137,6 +141,10 @@ export function GardenHome() {
             </button>
             <p className="mt-2 px-1 text-xs text-ink-faint">Tap a plant to mark it done. Each one grows as its habit gets stronger.</p>
           </section>
+
+          <div className="mt-5">
+            <CityCard score={score} onOpen={city.show} />
+          </div>
 
           {rescues.length > 0 && (
             <section className="anim-rise mt-6 overflow-hidden rounded-2xl border border-line bg-card" aria-label="Yesterday">
@@ -273,6 +281,7 @@ export function GardenHome() {
       )}
 
       {view.open && <ImmersiveGarden onClose={view.hide} />}
+      {city.open && <KairoCity onClose={city.hide} />}
       {open && <PlantSheet key={open.seed?.id ?? open.name ?? "new"} seed={open.seed ?? null} name={open.name} onClose={closeSheet} />}
     </div>
   );

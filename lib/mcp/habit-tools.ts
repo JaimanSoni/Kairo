@@ -12,6 +12,7 @@ import {
 } from "../habits-shared";
 import { HabitInputError, loadGarden, plantHabit, waterHabit } from "../habits";
 import { SITE_URL } from "../site";
+import { refreshGardenLater } from "../city";
 import { canWrite, type McpContext } from "./context";
 import { ToolFail } from "./fail";
 import { json, type JsonSchema } from "./protocol";
@@ -149,6 +150,7 @@ const habitCheckIn: Tool = {
     const change = undo ? { count: 0 } : count !== undefined ? { count } : habit.target > 1 && amount !== undefined ? { delta: amount } : { count: habit.target };
     try {
       const result = await waterHabit(ctx.userId, habit.id, { date, ...change }, ctx.today);
+      refreshGardenLater(ctx.userId, ctx.today);
       if (!result) throw new ToolFail("That habit isn't on the user's list any more.");
       const after = { ...garden, habits: garden.habits.map((h) => (h.id === habit.id ? result.habit : h)), logs: [...garden.logs.filter((l) => l.habitId !== habit.id), ...result.logs] };
       const before = shape(garden, habit, ctx.today);
@@ -210,6 +212,7 @@ const habitCreate: Tool = {
         ctx.today,
         ctx.timezone
       );
+      refreshGardenLater(ctx.userId, ctx.today);
       return json({
         created: habit.name,
         habitId: habit.id,

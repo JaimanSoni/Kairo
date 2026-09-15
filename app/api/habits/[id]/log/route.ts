@@ -3,6 +3,7 @@ import { ObjectId } from "mongodb";
 import { requireSession, unauthorized, badRequest, notFound } from "@/lib/api-auth";
 import { waterHabit } from "@/lib/habits";
 import { habitFailure, jsonBody, needToday, todayFrom } from "@/lib/habit-api";
+import { refreshGardenLater } from "@/lib/city";
 
 /** Waters a plant for today or yesterday: `delta` to add, or `count` to set. */
 export async function POST(request: Request, ctx: RouteContext<"/api/habits/[id]/log">) {
@@ -15,6 +16,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/habits/[id]
   if (!today) return needToday();
   try {
     const result = await waterHabit(new ObjectId(session.userId), id, { date: body.date, delta: body.delta, count: body.count }, today);
+    if (result) refreshGardenLater(new ObjectId(session.userId), today);
     return result ? NextResponse.json(result) : notFound();
   } catch (err) {
     return habitFailure(err);

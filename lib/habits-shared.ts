@@ -427,6 +427,66 @@ export function plantStageFor(strength: number, everKept: boolean): number {
   return strength < 10 ? 1 : strength < 25 ? 2 : strength < 45 ? 3 : strength < 70 ? 4 : 5;
 }
 
+/* ---------------------------------------------------------- the city */
+
+/** How many of a garden's strongest habits count towards its score. More habits don't make a better garden; stronger ones do. */
+export const SCORE_HABITS = 5;
+
+/** A garden's score, 0 to 500: the strength of its five strongest habits, added up. */
+export function gardenScore(strengths: number[]): number {
+  return [...strengths].sort((a, b) => b - a).slice(0, SCORE_HABITS).reduce((n, s) => n + s, 0);
+}
+
+/** The garden levels of Kairo City, and what each adds to a plot. */
+export const GARDEN_LEVELS = [
+  { level: 1, min: 0, name: "New plot", adds: "A fence and a gate with your name on it" },
+  { level: 2, min: 50, name: "Sprouting garden", adds: "Flower beds along the fence" },
+  { level: 3, min: 120, name: "Growing garden", adds: "A stone path" },
+  { level: 4, min: 200, name: "Blooming garden", adds: "A pond with lily pads" },
+  { level: 5, min: 290, name: "Lush garden", adds: "A rose arch" },
+  { level: 6, min: 380, name: "Grand garden", adds: "A fountain" },
+  { level: 7, min: 450, name: "Legendary garden", adds: "Golden lanterns and a golden gate" },
+] as const;
+
+export type GardenLevel = (typeof GARDEN_LEVELS)[number];
+
+export function gardenLevelOf(score: number): GardenLevel {
+  let level: GardenLevel = GARDEN_LEVELS[0];
+  for (const l of GARDEN_LEVELS) if (score >= l.min) level = l;
+  return level;
+}
+
+export function nextGardenLevel(score: number): GardenLevel | null {
+  return GARDEN_LEVELS.find((l) => l.min > score) ?? null;
+}
+
+/** One plant as the city sees it. A habit someone wrote themselves stays unnamed. */
+export type CityPlant = { species: SpeciesId; color: HabitColor; stage: number; strength: number; streak: number; doneToday: boolean; name: string | null };
+
+export type CityGarden = {
+  /** The garden's address in the city, never the account's id. */
+  id: string;
+  name: string;
+  animal: string;
+  me: boolean;
+  /** On the city's streets: joined, and not hidden. */
+  joined: boolean;
+  /** A garden the city keeps to show what a high level looks like. Not a person. */
+  showcase?: boolean;
+  score: number;
+  level: number;
+  rank: number | null;
+  plants: CityPlant[];
+  habits: number;
+  doneToday: number;
+  dueToday: number;
+  cheers: { today: number; total: number; mine: boolean; from: string[] };
+};
+
+export type CityScope = "neighbours" | "friends" | "top";
+
+export type City = { scope: CityScope; total: number; me: CityGarden | null; gardens: CityGarden[] };
+
 /** How a plant looks: the last week of scheduled days (the last two weeks, for a weekly habit). */
 export function healthOf(h: Habitish, logs: Map<string, LogLite>, today: string): Health {
   let asked = 0;

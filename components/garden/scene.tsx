@@ -1,6 +1,7 @@
 "use client";
 
 import { Burst, Moment, useClock } from "./fx";
+import { LevelDecor } from "./city/decor";
 
 /**
  * The garden's world: a sky that follows the clock, a sun or moon on its arc,
@@ -70,6 +71,7 @@ export function GardenScene({
   variant: asked,
   allDone = false,
   celebrate = 0,
+  decorLevel = 1,
   hud,
 }: {
   weather: Weather;
@@ -83,6 +85,8 @@ export function GardenScene({
   allDone?: boolean;
   /** Counts up the moment the last habit of the day is done, for a burst of colour. */
   celebrate?: number;
+  /** The garden's level in Kairo City: what it has built shows on the ground. */
+  decorLevel?: number;
   /** A small overlay on the sky: today's progress. */
   hud?: React.ReactNode;
 }) {
@@ -245,6 +249,12 @@ export function GardenScene({
               aria-hidden
             />
           ))}
+
+        {decorLevel > 1 && !small && (
+          <div className="pointer-events-none absolute inset-0 overflow-hidden" data-decor-level={decorLevel} aria-hidden>
+            <LevelDecor level={decorLevel} phase={phase} edges={!immersive} />
+          </div>
+        )}
 
         {immersive ? <div className="no-scrollbar relative flex min-h-0 flex-1 flex-col justify-center overflow-y-auto">{children}</div> : children}
 

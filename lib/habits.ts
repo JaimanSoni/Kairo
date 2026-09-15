@@ -103,7 +103,7 @@ type HarvestRecord = {
   at: Date;
 };
 
-type GardenerRecord = { name: string; animal: string; public: boolean };
+type GardenerRecord = { name: string; animal: string; public: boolean; slug?: string };
 
 export async function habitsCollection() {
   return (await getDb()).collection<HabitRecord>("habits");
@@ -620,7 +620,8 @@ export async function setGardener(userId: ObjectId, input: { name?: unknown; ani
   if (!isAnimal(input.animal)) bad("Pick one of the animals.");
   if (typeof input.public !== "boolean") bad("public must be true or false");
   const gardener: GardenerRecord = { name: name!, animal: input.animal as string, public: input.public as boolean };
-  await (await getDb()).collection("users").updateOne({ _id: userId }, { $set: { gardener } });
+  // field by field, so the garden's address in the city survives a change of name
+  await (await getDb()).collection("users").updateOne({ _id: userId }, { $set: { "gardener.name": gardener.name, "gardener.animal": gardener.animal, "gardener.public": gardener.public } });
   return gardener as Gardener;
 }
 
@@ -644,7 +645,7 @@ export async function setGardenNudges(userId: ObjectId, on: boolean, timezone: u
  * single task shared once is too thin a tie to put someone's streaks in front
  * of you, and a board of two is a board where a pseudonym stops hiding anyone.
  */
-async function friendIds(userId: ObjectId): Promise<ObjectId[]> {
+export async function friendIds(userId: ObjectId): Promise<ObjectId[]> {
   const db = await getDb();
   const filter = { $or: [{ userId }, { memberIds: userId }], "memberIds.0": { $exists: true } };
   const lists = await db.collection("lists").find(filter, { projection: { userId: 1, memberIds: 1 } }).limit(500).toArray();

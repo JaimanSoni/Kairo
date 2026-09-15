@@ -1706,6 +1706,130 @@ button {
     opacity: 0;
   }
 }
+/* Kairo City */
+.city-root {
+  --road: clamp(84px, 15vh, 140px);
+  --lot-h: clamp(250px, 44vh, 430px);
+  --lot-w: min(82vw, 380px);
+}
+@media (max-width: 639px) {
+  .city-root {
+    --road: clamp(76px, 12vh, 110px);
+    --lot-h: clamp(280px, 52vh, 460px);
+    --lot-w: 86vw;
+  }
+}
+.city-lot {
+  width: var(--lot-w);
+  height: var(--lot-h);
+}
+.city-lot-me {
+  filter: drop-shadow(0 0 18px rgba(255, 236, 150, 0.55));
+}
+.city-sign {
+  background: linear-gradient(180deg, #e9c89a 0%, #d4a86f 100%);
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.12), 0 8px 18px rgba(0, 0, 0, 0.18);
+}
+.city-sign-gold {
+  background: linear-gradient(180deg, #ffe9a3 0%, #f1c35a 100%);
+}
+.city-you {
+  animation: city-you 2.4s ease-in-out infinite;
+}
+@keyframes city-you {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -5px;
+  }
+}
+.city-car {
+  left: -120px;
+  animation: city-car 22s linear infinite;
+  animation-delay: 4s;
+}
+@keyframes city-car {
+  from {
+    left: -120px;
+  }
+  to {
+    left: 110%;
+  }
+}
+.gd-balloon {
+  animation: gd-balloon 18s ease-in-out infinite;
+}
+@keyframes gd-balloon {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(-2deg);
+  }
+  50% {
+    transform: translate(40px, -14px) rotate(2deg);
+  }
+}
+.gd-lantern {
+  animation: gd-lantern 3s ease-in-out infinite;
+}
+@keyframes gd-lantern {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+.gd-spray {
+  animation: gd-spray 1.4s ease-in-out infinite;
+}
+@keyframes gd-spray {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.gd-drip {
+  animation: gd-drip 1.4s ease-in infinite;
+}
+@keyframes gd-drip {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+.gd-shimmer {
+  animation: gd-shimmer 3.5s ease-in-out infinite;
+}
+@keyframes gd-shimmer {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: translateX(0);
+  }
+  50% {
+    opacity: 0.7;
+    transform: translateX(8px);
+  }
+}
+.gd-spin {
+  animation: gd-spin 6s linear infinite;
+}
+@keyframes gd-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .gd-hud {
   background: rgba(16, 44, 56, 0.26);
   -webkit-backdrop-filter: blur(10px) saturate(1.3);
@@ -1736,6 +1860,14 @@ button {
   .gd-petal,
   .gd-glow,
   .gd-immersive,
+  .city-you,
+  .city-car,
+  .gd-balloon,
+  .gd-lantern,
+  .gd-spray,
+  .gd-drip,
+  .gd-shimmer,
+  .gd-spin,
   .gd-shine::after {
     animation: none;
   }

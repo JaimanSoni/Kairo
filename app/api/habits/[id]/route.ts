@@ -3,6 +3,7 @@ import { ObjectId } from "mongodb";
 import { requireSession, unauthorized, badRequest, notFound } from "@/lib/api-auth";
 import { archiveHabit, deleteHabitForever, updateHabit } from "@/lib/habits";
 import { habitFailure, jsonBody, needToday, todayFrom } from "@/lib/habit-api";
+import { refreshGardenLater } from "@/lib/city";
 
 type Ctx = RouteContext<"/api/habits/[id]">;
 
@@ -18,11 +19,13 @@ export async function PATCH(request: Request, ctx: Ctx) {
     if ("archived" in body) {
       if (typeof body.archived !== "boolean") return badRequest("archived must be true or false");
       const habit = await archiveHabit(userId, id, body.archived);
+      if (habit) refreshGardenLater(userId);
       return habit ? NextResponse.json({ habit }) : notFound();
     }
     const today = todayFrom(body.today);
     if (!today) return needToday();
     const habit = await updateHabit(userId, id, body, today, body.timezone);
+    if (habit) refreshGardenLater(userId, today);
     return habit ? NextResponse.json({ habit }) : notFound();
   } catch (err) {
     return habitFailure(err);
@@ -37,5 +40,6 @@ export async function DELETE(_request: Request, ctx: Ctx) {
   const result = await deleteHabitForever(new ObjectId(session.userId), id);
   if (result === "missing") return notFound();
   if (result === "active") return NextResponse.json({ error: "Archive the habit before deleting it." }, { status: 409 });
+  refreshGardenLater(new ObjectId(session.userId));
   return NextResponse.json({ ok: true });
 }

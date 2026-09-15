@@ -2491,7 +2491,7 @@ const ALL_ARTICLES: Article[] = [
     summary:
       "Mark a habit done on the days you do it. Kairo counts your streak, shows how strong the habit is getting, and grows a plant for it as it takes root.",
     categoryId: "habits",
-    keywords: ["habits", "habit tracker", "streak", "strength", "garden", "plant", "idea", "leaderboard", "streak saver", "routine"],
+    keywords: ["habits", "habit tracker", "streak", "strength", "garden", "plant", "idea", "leaderboard", "streak saver", "routine", "kairo city", "cheer", "garden level"],
     sections: [
       {
         id: "start",
@@ -2563,6 +2563,30 @@ const ALL_ARTICLES: Article[] = [
               "The garden follows your day. The sky follows the clock, clouds gather while habits are still to do, and when everything due today is done the sky clears for a rainbow.",
               "**Open garden** on Today, or **Full screen** on Habits, fills the screen with it. Tap plants there to mark habits done; close it with the cross, Escape or your back button.",
             ],
+          },
+        ],
+      },
+      {
+        id: "city",
+        heading: "Kairo City",
+        blocks: [
+          {
+            t: "p",
+            text: "**Kairo City** is a street of real gardens, one plot beside the next, each grown by someone's habits. Open it from **Kairo City** on Habits, or the button on Today's garden card. Swipe or drag along the street, and tap any garden to walk into it.",
+          },
+          {
+            t: "ul",
+            items: [
+              "**Your garden's score** is the strength of your 5 strongest habits added up, from 0 to 500. Adding more habits doesn't raise it; keeping them does. A garden whose owner stops coming by slowly fades.",
+              "**Levels** turn the score into your plot: a Sprouting garden gets flower beds, then come a stone path, a pond, a rose arch, a fountain, and for a Legendary garden, golden lanterns and a golden gate. They show in your own garden too.",
+              "**Neighbours** is the stretch of street around your garden, with the garden just ahead of you and how many points it's ahead. **Friends** is the people you share lists with, and **Top gardens** the best in the city.",
+              "**Cheers**: walk into someone's garden and leave a cheer, once a day. There are no messages. You see who cheered your own garden; nobody else does.",
+              "**Share** gives your garden a link of its own that anyone can open, with a picture of your level for when it's posted.",
+            ],
+          },
+          {
+            t: "p",
+            text: "Your garden only appears once you **claim your plot** with a name and an animal. Until then it stands on your street where only you can see it. Visitors see your plants, your level and the names of habits started from Ideas, never your email, your photo or habits you wrote yourself. Hide it again from **Leaderboards** with **Hide me**.",
           },
         ],
       },

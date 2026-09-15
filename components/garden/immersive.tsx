@@ -8,6 +8,7 @@ import { useClock, useReducedMotion } from "./fx";
 import { Plant } from "./plants";
 import { GardenBed, GardenHud } from "./plot";
 import { GardenScene, type Weather } from "./scene";
+import { gardenLevelOf, gardenScore } from "@/lib/habits-shared";
 import { plotOf, useGarden, useGardenActions } from "./use-garden";
 
 /**
@@ -115,7 +116,7 @@ export function ImmersiveGarden({ onClose }: { onClose: () => void }) {
 
   return createPortal(
     <div ref={root} className="gd-immersive fixed inset-0 z-[60] bg-[#0b1a2c]" role="dialog" aria-modal aria-label="Your garden" onPointerMove={onPointerMove} data-immersive>
-      <GardenScene variant="immersive" weather={weather} thriving={thriving} allDone={allDone} celebrate={celebrate}>
+      <GardenScene variant="immersive" weather={weather} thriving={thriving} allDone={allDone} celebrate={celebrate} decorLevel={gardenLevelOf(gardenScore(plots.map((p) => p.strength))).level}>
         {status !== "ready" ? null : plots.length === 0 ? (
           <div className="flex flex-col items-center px-6 text-center">
             <div className="flex items-end gap-4">

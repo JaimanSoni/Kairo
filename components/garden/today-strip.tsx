@@ -4,9 +4,12 @@ import { useState, useSyncExternalStore } from "react";
 import { navigateApp } from "../app-views";
 import { IconX } from "../ui";
 import { ImmersiveGarden, useGardenView } from "./immersive";
+import { KairoCity, useCityView } from "./city/city";
+import { GuestCityCard } from "./city/city-card";
 import { IconTick } from "./icons";
 import { Plant } from "./plants";
 import { GardenHud } from "./plot";
+import { gardenLevelOf, gardenScore } from "@/lib/habits-shared";
 import { GardenScene, type Weather } from "./scene";
 import { plotOf, useGarden, type PlotInfo } from "./use-garden";
 import { useClock } from "./fx";
@@ -36,6 +39,7 @@ function IconExpand({ size = 13 }: { size?: number }) {
 export default function TodayGardenStrip() {
   const { status, habits, today, guest } = useGarden();
   const view = useGardenView();
+  const city = useCityView();
   const minute = useClock();
   const [inviteHidden, setInviteHidden] = useState(() => {
     try {
@@ -45,10 +49,21 @@ export default function TodayGardenStrip() {
     }
   });
 
-  if (guest || status !== "ready") return null;
+  const cityLayer = city.open ? <KairoCity onClose={city.hide} /> : null;
+
+  // signed out: the city is open to walk around, the way in to everything else
+  if (guest) {
+    return (
+      <>
+        <GuestCityCard onOpen={city.show} />
+        {cityLayer}
+      </>
+    );
+  }
+  if (status !== "ready") return cityLayer;
 
   if (habits.length === 0) {
-    if (inviteHidden) return null;
+    if (inviteHidden) return cityLayer;
     return (
       <section className="anim-rise relative mb-5" aria-label="Your garden">
         <div
@@ -90,6 +105,7 @@ export default function TodayGardenStrip() {
         >
           <IconX size={13} />
         </button>
+        {cityLayer}
       </section>
     );
   }
@@ -100,6 +116,7 @@ export default function TodayGardenStrip() {
   const allDone = due.length > 0 && doneToday === due.length;
   const thriving = plots.filter((p) => p.live.health === "thriving").length;
   const weather: Weather = due.length === 0 || allDone ? "clear" : doneToday > 0 || minute < 17 * 60 ? "partly" : "cloudy";
+  const level = gardenLevelOf(gardenScore(plots.map((p) => p.strength))).level;
 
   return (
     <section className="anim-rise mb-5" aria-label="Your garden">
@@ -117,14 +134,26 @@ export default function TodayGardenStrip() {
         className="gd-card group relative block cursor-pointer rounded-2xl outline-none transition-transform duration-300 hover:-translate-y-0.5 focus-visible:ring-4 focus-visible:ring-sun/40"
         data-garden-card
       >
-        <GardenScene variant="mini" weather={weather} thriving={thriving} allDone={allDone} hud={<GardenHud done={doneToday} total={due.length} />}>
+        <GardenScene variant="mini" weather={weather} thriving={thriving} allDone={allDone} decorLevel={level} hud={<GardenHud done={doneToday} total={due.length} />}>
           <MiniBed plots={plots} />
         </GardenScene>
         <span className="gd-hud gd-card-cta absolute right-2.5 top-2.5 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-white transition-transform">
           <IconExpand /> Open garden
         </span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            city.show();
+          }}
+          className="gd-hud absolute bottom-2.5 right-2.5 z-10 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-white transition-transform hover:-translate-y-0.5"
+          data-open-city
+        >
+          Kairo City · Level {level}
+        </button>
       </div>
       {view.open && <ImmersiveGarden onClose={view.hide} />}
+      {cityLayer}
     </section>
   );
 }
