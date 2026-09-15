@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { JOURNAL_SHOWN } from "@/lib/types";
 import { track } from "@/lib/analytics-client";
 import Link from "next/link";
 import { Modal } from "./ui";
@@ -326,6 +327,8 @@ function ConnectionsModal({ onClose }: { onClose: () => void }) {
                 </span>
               </label>
 
+              {/* the journal is hidden across the app, so a new key isn't offered it */}
+              {JOURNAL_SHOWN && (
               <label className="mt-2 flex items-start gap-2 text-xs text-ink-soft">
                 <input
                   type="checkbox"
@@ -342,6 +345,7 @@ function ConnectionsModal({ onClose }: { onClose: () => void }) {
                   </span>
                 </span>
               </label>
+              )}
 
               <label className="mt-2 flex items-start gap-2 text-xs text-ink-soft">
                 <input

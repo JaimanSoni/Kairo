@@ -96,7 +96,15 @@ export type AccountInfo = {
 /** Which of Kairo's optional places an account keeps. Planning (Today, Calendar, Lists, Log) is always on. */
 export type SpacePrefs = { journal: boolean; notes: boolean; garden: boolean };
 
-export const ALL_SPACES: SpacePrefs = { journal: true, notes: true, garden: true };
+/**
+ * The journal is hidden across the app for now: navigation, Today, Capture,
+ * search, the Calendar and Log, Settings and help. Pages already written stay
+ * stored and can be downloaded from Settings, and the code stays, so turning
+ * this back on brings it all back.
+ */
+export const JOURNAL_SHOWN = false;
+
+export const ALL_SPACES: SpacePrefs = { journal: JOURNAL_SHOWN, notes: true, garden: true };
 
 export type UserProfile = {
   id: string;

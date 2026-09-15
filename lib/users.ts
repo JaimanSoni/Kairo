@@ -4,7 +4,7 @@ import type { GoogleProfile } from "./google";
 import { TRIAL_DAYS } from "./access";
 import { sendEmail } from "./email";
 import { welcomeEmail } from "./email-templates";
-import type { SpacePrefs } from "./types";
+import { JOURNAL_SHOWN, type SpacePrefs } from "./types";
 
 export type DbUser = {
   _id: ObjectId;
@@ -53,7 +53,7 @@ export function shouldWelcome(doc: Pick<DbUser, "createdAt" | "welcomedAt">, thi
 /** The places an account shows: everything, unless it chose to hide something. */
 export function spacesOf(doc: { spaces?: Partial<SpacePrefs> } | null | undefined): SpacePrefs {
   const s = doc?.spaces ?? {};
-  return { journal: s.journal !== false, notes: s.notes !== false, garden: s.garden !== false };
+  return { journal: JOURNAL_SHOWN && s.journal !== false, notes: s.notes !== false, garden: s.garden !== false };
 }
 
 export type AdminUserRow = {

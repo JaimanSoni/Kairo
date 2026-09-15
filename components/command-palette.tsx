@@ -18,6 +18,7 @@ import { ListMark } from "./img3d";
 import { PageIcon } from "./notes/pickers";
 import { openCaptureAs } from "./omnibar";
 import { WeatherIcon } from "./day/weather";
+import { numberedPages } from "./places";
 
 type PaletteItem =
   | { kind: "action"; id: string; label: string; hint?: string; run: () => void }
@@ -93,6 +94,8 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
   }, [query, guest, show.journal]);
 
   const actions = useMemo<PaletteItem[]>(() => {
+    // the same number keys as the sidebar
+    const keys = new Map(numberedPages(show).map((p) => [p.href, p.key]));
     const base: { id: string; label: string; hint?: string; run: () => void }[] = [
       { id: "capture", label: "Capture a task", hint: "N", run: () => openCaptureAs("task", setOmnibar) },
       ...(guest
@@ -101,15 +104,15 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
             { id: "capture-note", label: "Capture a note", run: () => openCaptureAs("note", setOmnibar) },
             { id: "capture-journal", label: "Add a line to today's journal", run: () => openCaptureAs("journal", setOmnibar) },
           ]),
-      { id: "go-today", label: "Go to Today", hint: "1", run: () => navigateApp("/today") },
-      { id: "go-calendar", label: "Go to Calendar", hint: "2", run: () => navigateApp("/calendar") },
-      { id: "go-lists", label: "Go to Lists", hint: "3", run: () => navigateApp("/lists") },
-      { id: "go-log", label: "Go to Log", hint: "4", run: () => navigateApp("/log") },
-      { id: "go-journal", label: "Go to Journal", hint: "5", run: () => navigateApp("/journal") },
+      { id: "go-today", label: "Go to Today", hint: keys.get("/today"), run: () => navigateApp("/today") },
+      { id: "go-calendar", label: "Go to Calendar", hint: keys.get("/calendar"), run: () => navigateApp("/calendar") },
+      { id: "go-lists", label: "Go to Lists", hint: keys.get("/lists"), run: () => navigateApp("/lists") },
+      { id: "go-log", label: "Go to Log", hint: keys.get("/log"), run: () => navigateApp("/log") },
+      { id: "go-journal", label: "Go to Journal", hint: keys.get("/journal"), run: () => navigateApp("/journal") },
       { id: "write-today", label: "Write today's journal page", run: () => navigateApp(`/journal/${state.today}`) },
-      { id: "go-notes", label: "Go to Notes", hint: "6", run: () => navigateApp("/notes") },
+      { id: "go-notes", label: "Go to Notes", hint: keys.get("/notes"), run: () => navigateApp("/notes") },
       ...(guest ? [] : [{ id: "new-note", label: "New note", run: () => void noteActions.create() }]),
-      { id: "go-garden", label: "Go to Garden", hint: "7", run: () => navigateApp("/garden") },
+      { id: "go-garden", label: "Go to Garden", hint: keys.get("/garden"), run: () => navigateApp("/garden") },
       ...(guest
         ? []
         : [

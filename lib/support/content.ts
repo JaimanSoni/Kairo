@@ -1,6 +1,7 @@
 import type { Article, Category } from "./types";
+import { JOURNAL_SHOWN } from "../types";
 
-export const CATEGORIES: Category[] = [
+const ALL_CATEGORIES: Category[] = [
   {
     id: "basics",
     name: "Start here",
@@ -63,9 +64,9 @@ export const QUICK_START = ["philosophy", "capture", "today", "notifications"];
  * sitemap is only worth sending if it's true, and a date that moves on every
  * deploy teaches crawlers to ignore it.
  */
-export const DOCS_UPDATED = "2026-09-14";
+export const DOCS_UPDATED = "2026-09-15";
 
-export const ARTICLES: Article[] = [
+const ALL_ARTICLES: Article[] = [
   /* ---------------------------------------------------------------- basics */
   {
     slug: "philosophy",
@@ -193,13 +194,13 @@ export const ARTICLES: Article[] = [
             rows: [
               ["**Today**", "The day you're in: what to do, the habits due, and what you've finished."],
               ["**Plan**", "**Calendar** for when things happen, **Lists** for what they belong to, and the **Log** of what you finished."],
-              ["**Write**", "Your **Journal**, a page a day, and **Notes**, pages for everything else."],
+              ["**Notes**", "Pages inside pages, for plans, ideas and everything else."],
               ["**Garden**", "Your habits, growing as plants."],
             ],
           },
           {
             t: "p",
-            text: "On a computer the sidebar lists every page under its place. On a phone the bottom bar has one tab for each place, with **Capture** in the middle; inside Plan and Write, a switch at the top moves between their pages, and each tab remembers the page you were last on.",
+            text: "On a computer the sidebar lists every page under its place. On a phone the bottom bar has one tab for each place, with **Capture** in the middle; inside Plan, a switch at the top moves between Calendar, Lists and the Log, and the tab remembers the one you were last on.",
           },
         ],
       },
@@ -209,14 +210,13 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Planning is always there. The **Garden**, the **Journal** and **Notes** are yours to keep or put away. The first time you open Kairo it asks which you'd like; after that, open your profile, then **Settings**, and use the switches under **Your Kairo**.",
+            text: "Planning is always there. The **Garden** and **Notes** are yours to keep or put away. The first time you open Kairo it asks which you'd like; after that, open your profile, then **Settings**, and use the switches under **Your Kairo**.",
           },
           {
             t: "ul",
             items: [
-              "A place you put away leaves the sidebar, the bottom bar, search, Capture and the day views, and its number key stops working.",
+              "A place you put away leaves the sidebar, the bottom bar, search, Capture and the day views, and the number keys close up behind it.",
               "Nothing in it is deleted, and a link to one of its pages still opens. Turn it back on and it's all there as you left it.",
-              "If you put away both the Journal and Notes, **Write** leaves the bar; keep just one and its tab is named after it.",
             ],
           },
         ],
@@ -259,10 +259,13 @@ export const ARTICLES: Article[] = [
               { k: "2", d: "Go to Calendar" },
               { k: "3", d: "Go to Lists" },
               { k: "4", d: "Go to Log" },
-              { k: "5", d: "Go to Journal. `J` opens today's page." },
-              { k: "6", d: "Go to Notes" },
-              { k: "7", d: "Go to your Garden" },
+              { k: "5", d: "Go to Notes" },
+              { k: "6", d: "Go to your Garden" },
             ],
+          },
+          {
+            t: "p",
+            text: "The numbers follow the sidebar from the top, so if you put a place away, the ones below it move up a number.",
           },
           {
             t: "note",
@@ -364,11 +367,11 @@ export const ARTICLES: Article[] = [
       },
       {
         id: "notes-and-journal",
-        heading: "Capture a note or a journal line",
+        heading: "Capture a note",
         blocks: [
           {
             t: "p",
-            text: "Capture isn't only for tasks. Across its top are **Task**, **Note** and **Journal**; pick one before you type.",
+            text: "Capture isn't only for tasks. Across its top are **Task** and **Note**; pick one before you type.",
           },
           {
             t: "table",
@@ -376,16 +379,11 @@ export const ARTICLES: Article[] = [
             rows: [
               ["**Task**", "The usual: AI reads it and fills in the day, time, list and steps."],
               ["**Note**", "A new page in [Notes](/support/notes). A short thought is its title; a longer one takes its first sentence as the title and keeps the rest as the page."],
-              ["**Journal**", "A line on today's [journal](/support/journal) page. Each new line goes under the time you wrote it."],
             ],
           },
           {
             t: "p",
-            text: "Notes and journal lines are saved exactly as typed, with no AI. A small message says where it went, with **Open** to go straight there. `Shift Enter` saves and keeps the box open for the next one.",
-          },
-          {
-            t: "note",
-            text: "If your journal is locked, nothing is added until you unlock it. If today's page has writing on this device that hasn't saved yet, Capture sends you to the page rather than risk it.",
+            text: "A note is saved exactly as typed, with no AI. A small message says it went to Notes, with **Open** to go straight there. `Shift Enter` saves and keeps the box open for the next one.",
           },
         ],
       },
@@ -714,7 +712,6 @@ export const ARTICLES: Article[] = [
               "**Spotlight** at the top: up to three must-wins.",
               "**Steps today**, if you scheduled individual [steps](/support/steps) of bigger tasks.",
               "**Done today**, so the day's wins stay visible.",
-              "In the evening, **Tonight**: how the day felt, what you finished and watered, and a way into today's journal page.",
             ],
           },
           {
@@ -776,28 +773,6 @@ export const ARTICLES: Article[] = [
           {
             t: "p",
             text: "When nothing is left on today, no steps are due, and you finished at least one thing, Today turns into a small celebration panel: **Day won.** It's the only scoreboard Kairo keeps.",
-          },
-        ],
-      },
-      {
-        id: "close-the-day",
-        heading: "Close the day",
-        blocks: [
-          {
-            t: "p",
-            text: "From five in the evening, once the day is won, or as soon as today has a journal page, a card at the bottom of Today closes the day. It asks how the day felt, as the same five kinds of [weather](/support/journal) your journal uses, and sums up what you finished, watered and wrote.",
-          },
-          {
-            t: "ul",
-            items: [
-              "The weather you pick is saved to today's journal page, so the page and Today always agree.",
-              "**Write about today** opens today's page; **Keep writing** once you've started.",
-              "**Share your day** makes the day's card for a friend, once you've finished something.",
-            ],
-          },
-          {
-            t: "note",
-            text: "If your journal has its own PIN and is locked, the card leaves the weather alone and takes you to the journal to unlock it.",
           },
         ],
       },
@@ -1031,8 +1006,7 @@ export const ARTICLES: Article[] = [
             items: [
               "**Desktop:** each day shows up to three task chips, plus `+2 more` when there are extras.",
               "**Mobile:** each day shows coloured dots instead, so the grid stays readable.",
-              "**Click any day** to open its detail panel, the full task list, planned steps, what's done, and an add row for that date. It also shows the day's plants from your Garden (watered, or due on days to come) and its journal page.",
-              "**A small weather icon** marks each day you wrote in your journal, in that day's weather; a grey dot means a page with no weather picked.",
+              "**Click any day** to open its detail panel, the full task list, planned steps, what's done, and an add row for that date. It also shows the day's plants from your Garden: watered, or due on days to come.",
               "**Drag chips** between days to reschedule.",
             ],
           },
@@ -1491,7 +1465,7 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "p",
-            text: "Each day also shows the plants you watered and the journal page you wrote, with the day's weather. A day where you only watered a plant or wrote a page still counts. Plants you didn't water never show here.",
+            text: "Each day also shows the plants you watered in your Garden, and a day where you only watered a plant still counts. Plants you didn't water never show here.",
           },
           {
             t: "p",
@@ -1991,7 +1965,7 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "p",
-            text: "Guessing is limited: after five wrong PINs, each further try waits longer, up to fifteen minutes, no matter how many tries are sent at once. Connection keys can only be given locked lists or the journal from a browser that has already opened them.",
+            text: "Guessing is limited: after five wrong PINs, each further try waits longer, up to fifteen minutes, no matter how many tries are sent at once. Connection keys can only be given locked lists from a browser that has already opened them.",
           },
           {
             t: "warn",
@@ -2084,7 +2058,7 @@ export const ARTICLES: Article[] = [
   {
     slug: "search",
     title: "Find anything with search",
-    summary: "One shortcut opens a palette that searches your tasks, lists, notes, journal and habits, and runs common actions.",
+    summary: "One shortcut opens a palette that searches your tasks, lists, notes and habits, and runs common actions.",
     categoryId: "account",
     keywords: ["search", "find", "command palette", "cmd k", "filter", "lookup"],
     sections: [
@@ -2108,9 +2082,8 @@ export const ARTICLES: Article[] = [
               "Task titles **and** notes.",
               "List names. Picking one opens Lists right at that list.",
               "Note titles.",
-              "The words in your journal pages, a moment after you stop typing. A locked journal is never searched.",
               "Habit names, which open that plant in your Garden.",
-              "Actions: capture a task, a note or a journal line, jump to any page, and lock Kairo.",
+              "Actions: capture a task or a note, jump to any page, and lock Kairo.",
             ],
           },
           {
@@ -2395,7 +2368,7 @@ export const ARTICLES: Article[] = [
           },
           {
             t: "p",
-            text: "On a computer it's in the sidebar under **Write**, or press `6`. The panel beside your pages shows the whole tree, and `Ctrl+\\` hides it. On a phone, tap **Write** in the bottom bar, then **Notes** at the top; **New page** is at the top of Notes.",
+            text: "On a computer it's in the sidebar, or press `5`. The panel beside your pages shows the whole tree, and `Ctrl+\\` hides it. On a phone, tap **Notes** in the bottom bar; **New page** is at the top of Notes.",
           },
           {
             t: "ul",
@@ -2526,7 +2499,7 @@ export const ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "**Garden** is where habits live. On a computer it's in the sidebar, or press `7`. On a phone it's the last tab in the bottom bar, with a blue dot while a plant still needs water today — and the plants due today also sit at the top of **Today**, one tap each.",
+            text: "**Garden** is where habits live. On a computer it's in the sidebar, or press `6`. On a phone it's the last tab in the bottom bar, with a blue dot while a plant still needs water today — and the plants due today also sit at the top of **Today**, one tap each.",
           },
           {
             t: "ul",
@@ -2571,10 +2544,6 @@ export const ARTICLES: Article[] = [
               "A plant that goes without water **wilts**, but it never dies. Water it again and it perks right back up.",
               "Changing a habit's schedule or target re-counts its current streak under the new rules. Growth, fruit and your best streak stay.",
             ],
-          },
-          {
-            t: "tip",
-            text: "Plant **Write in the journal** and it waters itself whenever you write a journal page that day.",
           },
         ],
       },
@@ -2753,10 +2722,9 @@ export const ARTICLES: Article[] = [
             t: "ul",
             items: [
               "A **read only** key can never add, change or delete anything, and the tools to do so are not even offered to the assistant.",
-              "Your [journal](/support/journal) is out of reach unless you tick **Include journal** when creating the key. With it ticked, an assistant can read your pages and add to them when you ask.",
-              "Your [notes](/support/notes) work the same way, with **Include notes**: an assistant can search and read them, make new pages and add to existing ones, but never delete or rewrite a page.",
+              "Your [notes](/support/notes) are out of reach unless you tick **Include notes** when creating the key: an assistant can search and read them, make new pages and add to existing ones, but never delete or rewrite a page.",
               "Your [garden](/support/habits) works the same way, with **Include habits**: an assistant can see your habits and streaks, check a habit in when you say you did it, and plant a new one. It can't delete, compost or edit a habit, and it never sees who's on a leaderboard.",
-              "Giving a key the journal takes a browser where the journal is open, and giving it locked lists takes a browser where they're unlocked. If you set or change your journal PIN later, the key's journal access pauses until you give it again.",
+              "Giving a key locked lists takes a browser where they're unlocked.",
               "A connection can only reach what you can reach: your own work, plus lists and tasks shared with you.",
               "Nothing about your billing, your PIN or your sign-in is exposed.",
             ],
@@ -2905,3 +2873,7 @@ export const ARTICLES: Article[] = [
     ],
   },
 ];
+
+/** The help centre as shown: the journal's guide comes back when the journal does. */
+export const CATEGORIES: Category[] = ALL_CATEGORIES.filter((c) => c.id !== "journal" || JOURNAL_SHOWN);
+export const ARTICLES: Article[] = ALL_ARTICLES.filter((a) => a.categoryId !== "journal" || JOURNAL_SHOWN);

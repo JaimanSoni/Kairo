@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { scheduleLabel, SEED_CATEGORIES, seedOf, SEEDS, type Seed, type SeedStat } from "@/lib/habits-shared";
+import { JOURNAL_SHOWN } from "@/lib/types";
 import { gardenApi } from "@/lib/habits-client";
 import { navigateApp } from "../app-views";
 import { IconPlus } from "../ui";
@@ -57,7 +58,8 @@ export function SeedsPage() {
       </header>
 
       {SEED_CATEGORIES.map((c) => {
-        const seeds = SEEDS.filter((s) => s.category === c.id);
+        // the journal's own seed waits for the journal to be shown again
+        const seeds = SEEDS.filter((s) => s.category === c.id && (s.id !== "journal" || JOURNAL_SHOWN));
         if (seeds.length === 0) return null;
         return (
           <section key={c.id} className="mb-8">

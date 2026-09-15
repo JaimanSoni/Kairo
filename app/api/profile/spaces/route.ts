@@ -3,6 +3,7 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/db";
 import { requireSession, unauthorized, badRequest } from "@/lib/api-auth";
 import { bustUserGate } from "@/lib/users";
+import { JOURNAL_SHOWN } from "@/lib/types";
 
 /**
  * Which of the optional places this account keeps: the journal, notes and the
@@ -23,7 +24,8 @@ export async function PUT(request: Request) {
   if (!keys.every((k) => typeof body[k] === "boolean")) return badRequest("journal, notes and garden must each be true or false");
   if (body.welcomed !== undefined && typeof body.welcomed !== "boolean") return badRequest("welcomed must be true or false");
 
-  const spaces = { journal: body.journal as boolean, notes: body.notes as boolean, garden: body.garden as boolean };
+  // while the journal is hidden across the app, no choice turns it back on
+  const spaces = { journal: JOURNAL_SHOWN && (body.journal as boolean), notes: body.notes as boolean, garden: body.garden as boolean };
   const db = await getDb();
   await db.collection("users").updateOne(
     { _id: new ObjectId(session.userId) },

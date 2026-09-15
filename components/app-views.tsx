@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useApp } from "./store";
+import { JOURNAL_SHOWN } from "@/lib/types";
 import { TodayView } from "./today-view";
 import { CalendarSection } from "./calendar-section";
 import { ListsView } from "./lists-view";
@@ -101,11 +102,16 @@ export function AppViews() {
     if (title) document.title = title;
   }, [pathname, locked]);
 
+  // with the journal hidden, an old link to it lands in Notes instead
+  useEffect(() => {
+    if (!JOURNAL_SHOWN && pathname.startsWith("/journal")) window.history.replaceState(null, "", "/notes");
+  }, [pathname]);
+
   if (locked) return null;
   if (pathname.startsWith("/calendar")) return <CalendarSection />;
   if (pathname.startsWith("/lists")) return <ListsView />;
   if (pathname.startsWith("/log")) return <LogView />;
-  if (pathname.startsWith("/journal")) return <JournalSection />;
+  if (pathname.startsWith("/journal")) return JOURNAL_SHOWN ? <JournalSection /> : null;
   if (pathname.startsWith("/notes")) return <NotesSection />;
   if (pathname === "/garden" || pathname.startsWith("/garden/")) return <GardenSection />;
   return <TodayView />;

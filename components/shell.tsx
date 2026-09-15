@@ -21,57 +21,11 @@ import { SubscriptionSettings } from "./subscription-settings";
 import { ConnectionsSettings } from "./mcp-settings";
 import { ShareKairoRow } from "./share-kairo";
 import { Mark } from "./mark";
-import { IconBook, IconCalendar, IconInbox, IconJournal, IconNotes, IconPlus, IconSprout, IconSun, IconX, Kbd, Modal } from "./ui";
+import { IconPlus, IconX, Kbd, Modal } from "./ui";
 import { gardenStore } from "@/lib/habits-client";
-import type { SpacePrefs } from "@/lib/types";
+import { numberedPages, SPACES, TODAY, visibleSpaces, type NavItem } from "./places";
 import { PlaceToggle, SPACE_CHOICES, Welcome } from "./welcome";
 import { JournalDownload } from "./paywall";
-
-type NavItem = { href: string; label: string; icon: (p: { size?: number; className?: string }) => React.ReactNode; key: string };
-
-const TODAY: NavItem = { href: "/today", label: "Today", icon: IconSun, key: "1" };
-
-/**
- * Kairo in four places, the same on every screen: Today, the day you're in;
- * Plan, where tasks wait for their day; Write, the journal and notes; and the
- * garden. A desktop lists every page under its space; a phone has one tab per
- * space, and a switch at the top of a space moves between its pages.
- */
-export const SPACES: { id: string; label: string; icon: NavItem["icon"]; items: NavItem[] }[] = [
-  {
-    id: "plan",
-    label: "Plan",
-    icon: IconCalendar,
-    items: [
-      { href: "/calendar", label: "Calendar", icon: IconCalendar, key: "2" },
-      { href: "/lists", label: "Lists", icon: IconInbox, key: "3" },
-      { href: "/log", label: "Log", icon: IconBook, key: "4" },
-    ],
-  },
-  {
-    id: "write",
-    label: "Write",
-    icon: IconJournal,
-    items: [
-      { href: "/journal", label: "Journal", icon: IconJournal, key: "5" },
-      { href: "/notes", label: "Notes", icon: IconNotes, key: "6" },
-    ],
-  },
-  {
-    id: "grow",
-    label: "Grow",
-    icon: IconSprout,
-    items: [{ href: "/garden", label: "Garden", icon: IconSprout, key: "7" }],
-  },
-];
-
-/** The pages each optional place owns. */
-const OPTIONAL: Record<string, keyof SpacePrefs> = { "/journal": "journal", "/notes": "notes", "/garden": "garden" };
-
-/** The places this account keeps: hidden pages leave their space, and an empty space leaves altogether. */
-export function visibleSpaces(prefs: SpacePrefs): typeof SPACES {
-  return SPACES.map((s) => ({ ...s, items: s.items.filter((i) => !OPTIONAL[i.href] || prefs[OPTIONAL[i.href]]) })).filter((s) => s.items.length > 0);
-}
 
 const inItem = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);
 const spaceOf = (pathname: string) => SPACES.find((s) => s.items.some((i) => inItem(pathname, i.href))) ?? null;
@@ -174,13 +128,13 @@ export function Shell({ children }: { children: React.ReactNode }) {
         navigateApp(`/journal/${today}`);
         return;
       }
-      // a hidden place's number does nothing, rather than open what was put away
-      const nav = [TODAY, ...spaces.flatMap((s) => s.items)].find((n) => n.key === e.key);
+      // numbers follow the sidebar, so a hidden place leaves no gap
+      const nav = numberedPages(prefs).find((n) => n.key === e.key);
       if (nav) navigateApp(nav.href);
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [router, setOmnibar, appLocked, today, spaces, prefs.journal]);
+  }, [router, setOmnibar, appLocked, today, prefs]);
 
   const editingTask = state.editingId ? state.tasks[state.editingId] : null;
 
@@ -232,10 +186,13 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <nav className="mt-6" aria-label="Kairo">
           <SideLink item={TODAY} pathname={pathname} />
           {spaces.map((space) => (
-            <div key={space.id} className="mt-4" role="group" aria-labelledby={`space-${space.id}`}>
-              <div id={`space-${space.id}`} className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
-                {space.label}
-              </div>
+            <div key={space.id} className="mt-4" role="group" aria-labelledby={space.items.length > 1 ? `space-${space.id}` : undefined} aria-label={space.items.length > 1 ? undefined : space.items[0].label}>
+              {/* a place with one page is just that page; only a place with several gets a heading */}
+              {space.items.length > 1 && (
+                <div id={`space-${space.id}`} className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
+                  {space.label}
+                </div>
+              )}
               <div className="space-y-0.5">
                 {space.items.map((item) => (
                   <SideLink key={item.href} item={item} pathname={pathname}>

@@ -1,6 +1,7 @@
 "use client";
 
 import { addDays, SEEDS } from "@/lib/habits-shared";
+import { JOURNAL_SHOWN } from "@/lib/types";
 import { gardenStore } from "@/lib/habits-client";
 import { navigateApp } from "../app-views";
 import { HabitMark, PillLink, rescueText, SectionTitle, Switch } from "./bits";
@@ -34,7 +35,7 @@ export function GardenHome() {
   const ripe = plots.reduce((n, p) => n + p.ripe + p.golden, 0);
   const longest = plots.reduce((n, p) => Math.max(n, p.live.streak), 0);
   const planted = new Set(habits.map((h) => h.seedId).filter(Boolean));
-  const suggestions = SEEDS.filter((s) => !planted.has(s.id)).slice(0, 6);
+  const suggestions = SEEDS.filter((s) => !planted.has(s.id) && (s.id !== "journal" || JOURNAL_SHOWN)).slice(0, 6);
   const growing = plots.filter((p) => p.stage.next).sort((a, b) => a.stage.next!.left - b.stage.next!.left).slice(0, 4);
 
   if (status === "loading" || status === "idle") {
