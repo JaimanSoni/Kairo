@@ -1733,6 +1733,18 @@ button {
 .city-sign-gold {
   background: linear-gradient(180deg, #ffe9a3 0%, #f1c35a 100%);
 }
+.city-invite {
+  animation: city-invite 2.6s ease-in-out infinite;
+}
+@keyframes city-invite {
+  0%,
+  100% {
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18), 0 0 0 0 rgba(255, 209, 102, 0.55);
+  }
+  50% {
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18), 0 0 0 10px rgba(255, 209, 102, 0);
+  }
+}
 .city-you {
   animation: city-you 2.4s ease-in-out infinite;
 }
@@ -1861,6 +1873,7 @@ button {
   .gd-glow,
   .gd-immersive,
   .city-you,
+  .city-invite,
   .city-car,
   .gd-balloon,
   .gd-lantern,

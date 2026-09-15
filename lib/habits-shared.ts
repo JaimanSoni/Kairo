@@ -481,11 +481,20 @@ export type CityGarden = {
   doneToday: number;
   dueToday: number;
   cheers: { today: number; total: number; mine: boolean; from: string[] };
+  /** Friends brought into the city, or brought in by: each one is a bench on the plot. */
+  friends?: number;
 };
 
 export type CityScope = "neighbours" | "friends" | "top";
 
-export type City = { scope: CityScope; total: number; me: CityGarden | null; gardens: CityGarden[] };
+export type City = {
+  scope: CityScope;
+  total: number;
+  me: CityGarden | null;
+  gardens: CityGarden[];
+  /** Signed in: the plots you've saved for friends (their codes), and friends who claimed one since you last looked. */
+  invites?: { open: string[]; arrived: string[] };
+};
 
 /** How a plant looks: the last week of scheduled days (the last two weeks, for a weekly habit). */
 export function healthOf(h: Habitish, logs: Map<string, LogLite>, today: string): Health {

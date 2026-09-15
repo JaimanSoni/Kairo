@@ -11,6 +11,7 @@ import { IconArrowLeft, IconFlame, IconTick } from "../icons";
 import { Plant } from "../plants";
 import { GardenScene } from "../scene";
 import { IconSun } from "./lot";
+import { FriendBench } from "./decor";
 
 function subscribeWide(cb: () => void) {
   const mq = window.matchMedia("(min-width: 640px)");
@@ -96,6 +97,11 @@ export function GardenVisit({
             })
           )}
         </div>
+        {(garden.friends ?? 0) > 0 && (
+          <span className="pointer-events-none absolute bottom-[14%] right-[6%] w-[min(22vw,160px)]" aria-hidden data-bench>
+            <FriendBench className="h-auto w-full" />
+          </span>
+        )}
         <div className="pointer-events-none absolute inset-x-0 top-1/3 z-30" aria-hidden>
           <Moment id={sunshine} ms={1800}>
             <Burst golden count={48} />

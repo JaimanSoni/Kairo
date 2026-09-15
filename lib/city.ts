@@ -20,7 +20,7 @@ import {
   type CityScope,
   type LogLite,
 } from "./habits-shared";
-import { friendIds, habitsCollection, HabitInputError, logsCollection } from "./habits";
+import { friendIds, habitsCollection, HabitInputError, logsCollection, setGardener } from "./habits";
 import { safeTimeZone, todayIn } from "./tz";
 
 /**
@@ -60,6 +60,12 @@ const FADE = 0.97;
 
 type CheerRecord = { _id: ObjectId; toUserId: ObjectId; fromUserId: ObjectId; day: string; at: Date };
 
+/** A free plot saved for a friend: a link, until someone claims it. */
+type InviteRecord = { _id: ObjectId; code: string; fromUserId: ObjectId; createdAt: Date; claimedBy: ObjectId | null; claimedAt: Date | null; seenByInviter: boolean };
+
+/** How many plots one gardener can hold for friends at once. */
+export const MAX_OPEN_INVITES = 10;
+
 let indexReady: Promise<void> | null = null;
 async function ensureCityIndexes(): Promise<void> {
   indexReady ??= (async () => {
@@ -69,6 +75,9 @@ async function ensureCityIndexes(): Promise<void> {
       db.collection("users").createIndex({ "gardener.slug": 1 }, { name: "city_by_slug", unique: true, partialFilterExpression: { "gardener.slug": { $type: "string" } } }),
       db.collection<CheerRecord>("garden_cheers").createIndex({ toUserId: 1, fromUserId: 1, day: 1 }, { name: "cheer_once_a_day", unique: true }),
       db.collection<CheerRecord>("garden_cheers").createIndex({ fromUserId: 1 }, { name: "cheers_by_sender" }),
+      db.collection<InviteRecord>("city_invites").createIndex({ code: 1 }, { name: "invite_by_code", unique: true }),
+      db.collection<InviteRecord>("city_invites").createIndex({ fromUserId: 1, claimedBy: 1 }, { name: "invites_by_sender" }),
+      db.collection<InviteRecord>("city_invites").createIndex({ claimedBy: 1 }, { name: "invites_by_claimer" }),
     ]);
   })().catch((err: unknown) => {
     indexReady = null;
@@ -79,6 +88,7 @@ async function ensureCityIndexes(): Promise<void> {
 
 const users = async () => (await getDb()).collection<CityUser>("users");
 const cheers = async () => (await getDb()).collection<CheerRecord>("garden_cheers");
+const invites = async () => (await getDb()).collection<InviteRecord>("city_invites");
 
 /* ------------------------------------------------------------- snapshots */
 
@@ -233,7 +243,22 @@ async function tallyCheers(ids: ObjectId[], viewer: ObjectId | null, today: stri
 
 const EMPTY_TALLY: CheerTally = { today: 0, total: 0, mine: false, from: [] };
 
-async function toCityGarden(user: CityUser, viewer: ObjectId | null, today: string, tally: Map<string, CheerTally>, rank: number | null): Promise<CityGarden> {
+/** How many friends each gardener has brought into the city, or been brought in by: each one is a bench. */
+async function tallyFriends(ids: ObjectId[]): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  if (ids.length === 0) return out;
+  const rows = await (await invites()).find({ claimedBy: { $ne: null }, $or: [{ fromUserId: { $in: ids } }, { claimedBy: { $in: ids } }] }, { projection: { fromUserId: 1, claimedBy: 1 } }).toArray();
+  const wanted = new Set(ids.map((i) => i.toHexString()));
+  for (const r of rows) {
+    for (const who of [r.fromUserId, r.claimedBy!]) {
+      const hex = who.toHexString();
+      if (wanted.has(hex)) out.set(hex, (out.get(hex) ?? 0) + 1);
+    }
+  }
+  return out;
+}
+
+async function toCityGarden(user: CityUser, viewer: ObjectId | null, today: string, tally: Map<string, CheerTally>, rank: number | null, friends = new Map<string, number>()): Promise<CityGarden> {
   const me = Boolean(viewer && user._id.equals(viewer));
   const snap = agedSnapshot(user.garden, today);
   const g = user.gardener;
@@ -252,6 +277,7 @@ async function toCityGarden(user: CityUser, viewer: ObjectId | null, today: stri
     doneToday: snap?.doneToday ?? 0,
     dueToday: snap?.dueToday ?? 0,
     cheers: tally.get(user._id.toHexString()) ?? EMPTY_TALLY,
+    friends: friends.get(user._id.toHexString()) ?? 0,
   };
 }
 
@@ -328,12 +354,13 @@ async function buildCity(viewer: ObjectId | null, asked: CityScope, today: strin
   const myRank = viewer ? (await col.countDocuments({ ...others, "garden.score": { $gt: myScore } })) + 1 : null;
   const firstRank = scope === "neighbours" && street.length ? (await col.countDocuments({ ...others, "garden.score": { $gt: scoreOf(street[0]) } })) + 1 : 1;
   const ranks = ranksFrom(firstRank, street.map(scoreOf));
-  const tally = await tallyCheers(meDoc ? [...new Set([...street, meDoc])].map((u) => u._id) : street.map((u) => u._id), viewer, today, viewer);
+  const ids = meDoc ? [...new Set([...street, meDoc])].map((u) => u._id) : street.map((u) => u._id);
+  const [tally, friends] = await Promise.all([tallyCheers(ids, viewer, today, viewer), tallyFriends(ids)]);
 
   settleStale(docs, today);
-  const gardens = await Promise.all(street.map((u, i) => toCityGarden(u, viewer, today, tally, ranks[i])));
-  const meGarden = meDoc ? { ...(gardens.find((g) => g.me) ?? (await toCityGarden(meDoc, viewer, today, tally, myRank))), rank: myRank } : null;
-  return { scope, total, me: meGarden, gardens };
+  const gardens = await Promise.all(street.map((u, i) => toCityGarden(u, viewer, today, tally, ranks[i], friends)));
+  const meGarden = meDoc ? { ...(gardens.find((g) => g.me) ?? (await toCityGarden(meDoc, viewer, today, tally, myRank, friends))), rank: myRank } : null;
+  return { scope, total, me: meGarden, gardens, invites: viewer ? await invitesOf(viewer) : undefined };
 }
 
 /** One garden, to walk into. Only a joined garden, or your own. */
@@ -349,8 +376,8 @@ export async function visitGarden(viewer: ObjectId | null, id: string, today: st
   if (mine) doc.garden = await refreshGardenSnapshot(doc._id, today);
   const score = agedSnapshot(doc.garden, today)?.score ?? 0;
   const rank = doc.gardener?.public ? (await col.countDocuments({ ...PUBLIC, _id: { $ne: doc._id }, "garden.score": { $gt: score } })) + 1 : null;
-  const tally = await tallyCheers([doc._id], viewer, today, mine ? doc._id : null);
-  return toCityGarden(doc, viewer, today, tally, rank);
+  const [tally, friends] = await Promise.all([tallyCheers([doc._id], viewer, today, mine ? doc._id : null), tallyFriends([doc._id])]);
+  return toCityGarden(doc, viewer, today, tally, rank, friends);
 }
 
 export class CheerRefused extends Error {}
@@ -381,4 +408,108 @@ export async function cheersToday(userId: ObjectId, today: string): Promise<{ to
 export async function forgetCityOf(userId: ObjectId): Promise<number> {
   const r = await (await cheers()).deleteMany({ $or: [{ toUserId: userId }, { fromUserId: userId }] });
   return r.deletedCount;
+}
+
+/* ----------------------------------------------------------------- invites */
+
+export class InviteRefused extends Error {}
+
+/** Your saved plots, and the friends who've claimed one since you last looked (told once). */
+async function invitesOf(userId: ObjectId): Promise<NonNullable<City["invites"]>> {
+  const col = await invites();
+  const [open, news] = await Promise.all([
+    col.find({ fromUserId: userId, claimedBy: null }).sort({ createdAt: 1 }).limit(MAX_OPEN_INVITES).toArray(),
+    col.find({ fromUserId: userId, claimedBy: { $ne: null }, seenByInviter: false }).limit(10).toArray(),
+  ]);
+  let arrived: string[] = [];
+  if (news.length) {
+    const who = await (await users()).find({ _id: { $in: news.map((n) => n.claimedBy!) } }, { projection: { gardener: 1 } }).toArray();
+    arrived = who.map((u) => u.gardener?.name).filter((n): n is string => Boolean(n));
+    await col.updateMany({ _id: { $in: news.map((n) => n._id) } }, { $set: { seenByInviter: true } });
+  }
+  return { open: open.map((i) => i.code), arrived };
+}
+
+/** Saves a free plot for a friend. Only someone on the street can save the plot beside theirs. */
+export async function createInvite(userId: ObjectId): Promise<{ code: string }> {
+  await ensureCityIndexes();
+  const me = await (await users()).findOne({ _id: userId }, PROJECTION);
+  if (!me?.gardener?.public) throw new InviteRefused("Claim your own plot first, then save the one beside it for a friend.");
+  const col = await invites();
+  if ((await col.countDocuments({ fromUserId: userId, claimedBy: null })) >= MAX_OPEN_INVITES) {
+    throw new HabitInputError(`You're holding ${MAX_OPEN_INVITES} plots for friends already. Share one of those, or let one go.`);
+  }
+  const code = randomBytes(5).toString("hex");
+  await col.insertOne({ _id: new ObjectId(), code, fromUserId: userId, createdAt: new Date(), claimedBy: null, claimedAt: null, seenByInviter: false });
+  return { code };
+}
+
+/** Lets a saved plot go again. Only the one who saved it, and only while it's unclaimed. */
+export async function cancelInvite(userId: ObjectId, code: string): Promise<boolean> {
+  if (!/^[a-f0-9]{10}$/.test(code)) return false;
+  const r = await (await invites()).deleteOne({ code, fromUserId: userId, claimedBy: null });
+  return r.deletedCount === 1;
+}
+
+export type InviteInfo = {
+  status: "open" | "claimed" | "mine";
+  /** The garden beside the saved plot, when its owner is on the street. */
+  inviter: CityGarden | null;
+  inviterName: string | null;
+};
+
+/** What a saved plot's link shows: whose garden it's beside, and whether it's still free. */
+export async function inviteInfo(viewer: ObjectId | null, code: string, today: string): Promise<InviteInfo | null> {
+  if (!/^[a-f0-9]{10}$/.test(code)) return null;
+  await ensureCityIndexes();
+  const invite = await (await invites()).findOne({ code });
+  if (!invite) return null;
+  const owner = await (await users()).findOne({ _id: invite.fromUserId, disabled: { $ne: true } }, PROJECTION);
+  if (!owner) return null;
+  const inviter = owner.gardener?.public && owner.gardener.slug ? await visitGarden(null, owner.gardener.slug, today) : null;
+  const status = viewer && invite.fromUserId.equals(viewer) ? "mine" : invite.claimedBy ? "claimed" : "open";
+  return { status, inviter, inviterName: owner.gardener?.public ? owner.gardener.name : null };
+}
+
+/**
+ * Claims a saved plot: the claimer joins the city (with the name and animal
+ * they chose, or the ones they have), the two become friends on each other's
+ * Friends street, and the one who saved it hears about it.
+ */
+export async function claimInvite(userId: ObjectId, code: string, input: { name?: unknown; animal?: unknown }, today: string): Promise<{ inviter: { name: string; id: string } | null }> {
+  if (!/^[a-f0-9]{10}$/.test(code)) throw new HabitInputError("That invite link isn't right.");
+  await ensureCityIndexes();
+  const col = await invites();
+  const invite = await col.findOne({ code });
+  if (!invite) throw new HabitInputError("That invite link isn't right.");
+  if (invite.fromUserId.equals(userId)) throw new HabitInputError("This is a plot you saved for a friend. Send them the link.");
+  if (invite.claimedBy) throw new InviteRefused(invite.claimedBy.equals(userId) ? "You've already claimed this plot." : "Someone has already claimed this plot.");
+  if (await col.findOne({ fromUserId: invite.fromUserId, claimedBy: userId })) throw new InviteRefused("You already live next door to them.");
+
+  const people = await users();
+  const me = await people.findOne({ _id: userId }, PROJECTION);
+  if (me?.gardener?.name) {
+    // already has a name: claiming puts them (back) on the street under it
+    if (!me.gardener.public) await setGardener(userId, { name: me.gardener.name, animal: me.gardener.animal, public: true });
+  } else {
+    await setGardener(userId, { name: input.name, animal: input.animal, public: true });
+  }
+
+  const claimed = await col.updateOne({ _id: invite._id, claimedBy: null }, { $set: { claimedBy: userId, claimedAt: new Date(), seenByInviter: false } });
+  if (claimed.modifiedCount === 0) throw new InviteRefused("Someone has just claimed this plot.");
+  await refreshGardenSnapshot(userId, today);
+
+  const owner = await people.findOne({ _id: invite.fromUserId }, PROJECTION);
+  const fresh = await people.findOne({ _id: userId }, PROJECTION);
+  const name = fresh?.gardener?.name ?? "A friend";
+  const notify = async () => {
+    const { sendToUser } = await import("./push");
+    await sendToUser(invite.fromUserId, { title: `${name} claimed your plot`, body: "They've moved in next to your garden in Kairo City. Leave them a cheer.", tag: "city-claim", url: "/today?city=open&street=friends" });
+  };
+  try {
+    after(() => notify().catch((err: unknown) => console.error("[city] claim push", err)));
+  } catch {
+    void notify().catch(() => undefined);
+  }
+  return { inviter: owner?.gardener?.public && owner.gardener.slug ? { name: owner.gardener.name, id: owner.gardener.slug } : null };
 }

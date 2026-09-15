@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { exchangeCode, originFromRequest } from "@/lib/google";
+import { exchangeCode, isSafeNext, originFromRequest } from "@/lib/google";
 import { upsertGoogleUser } from "@/lib/users";
 import { addAccountSession, getSessionData } from "@/lib/session";
 import { hasFeature } from "@/lib/entitlements";
@@ -15,6 +15,8 @@ export async function GET(request: Request) {
   const cookieStore = await cookies();
   const expectedState = cookieStore.get("kairo_oauth_state")?.value;
   cookieStore.delete("kairo_oauth_state");
+  const next = cookieStore.get("kairo_oauth_next")?.value;
+  cookieStore.delete("kairo_oauth_next");
 
   if (!code || !state || !expectedState || state !== expectedState) {
     return NextResponse.redirect(`${origin}/?auth_error=state_mismatch`);
@@ -49,7 +51,7 @@ export async function GET(request: Request) {
       name: user.name,
       picture: user.picture,
     });
-    return NextResponse.redirect(`${origin}/today`);
+    return NextResponse.redirect(`${origin}${next && isSafeNext(next) ? next : "/today"}`);
   } catch (err) {
     console.error("Google auth callback failed:", err);
     return NextResponse.redirect(`${origin}/?auth_error=auth_failed`);

@@ -84,6 +84,11 @@ export const gardenApi = {
   city: (scope: CityScope) => call<City>(`/api/garden/city?scope=${scope}&today=${todayStr()}`),
   visit: (id: string) => call<{ garden: CityGarden }>(`/api/garden/city/${id}?today=${todayStr()}`),
   cheer: (id: string) => call<{ cheers: CityGarden["cheers"] }>(`/api/garden/city/${id}/cheer`, { method: "POST", body: JSON.stringify({ today: todayStr() }) }),
+  invite: () => call<{ code: string }>("/api/garden/invites", { method: "POST" }),
+  cancelInvite: (code: string) => call<{ ok: true }>(`/api/garden/invites/${code}`, { method: "DELETE" }),
+  inviteInfo: (code: string) => call<{ status: "open" | "claimed" | "mine"; inviter: CityGarden | null; inviterName: string | null }>(`/api/garden/invites/${code}?today=${todayStr()}`),
+  claim: (code: string, profile: { name?: string; animal?: string }) =>
+    call<{ inviter: { name: string; id: string } | null }>(`/api/garden/invites/${code}/claim`, { method: "POST", body: JSON.stringify({ ...profile, today: todayStr() }) }),
 };
 
 /* ----------------------------------------------------------------- store */

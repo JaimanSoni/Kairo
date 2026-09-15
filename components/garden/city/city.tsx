@@ -14,6 +14,7 @@ import { Balloon, hillsTile, LampPost, skylineTile, StreetTree, type CityPhase }
 import { CityLot, IconSun, SHOWCASE, type StreetItem } from "./lot";
 import { GardenVisit } from "./visit";
 import { JoinCity } from "./join";
+import { InviteSheet } from "./invite";
 
 /**
  * Kairo City, full screen: a street of real gardens under a skyline, one
@@ -59,7 +60,9 @@ export function useCityView() {
   const params = useSearchParams();
   const open = params.get("city") === "open";
   const visit = open ? params.get("visit") : null;
-  return { open, visit, show: showCity, hide: hideCity, openVisit, closeVisit };
+  const asked = params.get("street");
+  const street: CityScope | null = asked === "friends" || asked === "neighbours" || asked === "top" ? asked : null;
+  return { open, visit, street, show: showCity, hide: hideCity, openVisit, closeVisit };
 }
 
 const noop = () => () => {};
@@ -82,12 +85,12 @@ export function KairoCity({ onClose }: { onClose: () => void }) {
   const mounted = useSyncExternalStore(noop, () => true, () => false);
   const { state, showToast } = useApp();
   const guest = Boolean(state.user.guest);
-  const { visit } = useCityView();
+  const { visit, street: askedStreet } = useCityView();
   const minute = useClock();
   const phase = phaseOf(minute) as CityPhase;
   const dark = phase === "night" || phase === "dusk";
   const still = useReducedMotion();
-  const [scope, setScope] = useState<CityScope>(guest ? "top" : "neighbours");
+  const [scope, setScope] = useState<CityScope>(guest ? "top" : (askedStreet ?? "neighbours"));
   // what the server said for a street, kept with the street it was for
   const [loaded, setLoaded] = useState<{ scope: CityScope; key: number; city: City | null } | null>(null);
   const [reload, setReload] = useState(0);
@@ -95,6 +98,11 @@ export function KairoCity({ onClose }: { onClose: () => void }) {
   const [fetched, setFetched] = useState<CityGarden | null>(null);
   // cheers left during this walk, over whatever the street loaded with
   const [cheered, setCheered] = useState<Record<string, CityGarden["cheers"]>>({});
+  // a plot saved for a friend, open in its sheet
+  const [inviting, setInviting] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  // friends who claimed a saved plot since last time: told once, kept for this walk
+  const [arrivals, setArrivals] = useState<string[]>([]);
   const root = useRef<HTMLDivElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const frame = useRef(0);
@@ -104,7 +112,10 @@ export function KairoCity({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     let alive = true;
     void gardenApi.city(scope).then((r) => {
-      if (alive) setLoaded({ scope, key: reload, city: r.ok ? r.data : null });
+      // news of a friend moving in is told only once, so it's kept even from an answer that came too late for the street
+      if (r.ok && r.data.invites?.arrived.length) setArrivals((known) => [...new Set([...known, ...r.data.invites!.arrived])]);
+      if (!alive) return;
+      setLoaded({ scope, key: reload, city: r.ok ? r.data : null });
     });
     return () => {
       alive = false;
@@ -120,7 +131,7 @@ export function KairoCity({ onClose }: { onClose: () => void }) {
   // Escape walks out: out of a garden first, then out of the city
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || joining) return;
+      if (e.key !== "Escape" || joining || inviting) return;
       e.stopImmediatePropagation();
       if (visit) closeVisit();
       else onClose();
@@ -133,20 +144,29 @@ export function KairoCity({ onClose }: { onClose: () => void }) {
       document.body.style.overflow = prev;
       cancelAnimationFrame(frame.current);
     };
-  }, [onClose, visit, joining]);
+  }, [onClose, visit, joining, inviting]);
 
   const street: StreetItem[] = [];
   if (city) {
     if (city.scope === "top") street.push({ kind: "garden", garden: SHOWCASE });
     const me = city.gardens.find((g) => g.me);
+    const joined = Boolean(city.me?.joined);
+    // beside your garden: the plots you've saved for friends, then one more to save
+    const nextDoor: StreetItem[] = joined ? [...(city.invites?.open ?? []).map((code) => ({ kind: "free" as const, claim: "reserved" as const, code })), { kind: "free", claim: "invite" }] : [];
+    let placed = false;
     city.gardens.forEach((g, i) => {
       // the garden just ahead of yours says by how much
       const next = city.gardens[i + 1];
       const ahead = me && next?.me && g.score > me.score ? g.score - me.score : undefined;
       street.push({ kind: "garden", garden: g, ahead });
+      if (g.me && city.scope !== "top") {
+        street.push(...nextDoor);
+        placed = true;
+      }
     });
-    const claim = guest ? "signin" : city.me && !city.me.joined ? "join" : null;
-    if (claim && city.scope === "top") street.push({ kind: "free", claim });
+    if (!placed) street.push(...nextDoor);
+    const claim = guest ? "signin" : joined ? "invite" : city.me ? "join" : null;
+    if (!joined && claim && city.scope === "top") street.push({ kind: "free", claim });
     while (street.length < 5) street.push({ kind: "free", claim });
   }
 
@@ -225,6 +245,20 @@ export function KairoCity({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const saveForFriend = async () => {
+    if (saving) return;
+    setSaving(true);
+    const r = await gardenApi.invite();
+    setSaving(false);
+    if (!r.ok) {
+      showToast({ message: r.kind === "invalid" ? r.message : "That plot couldn't be saved just now." });
+      return;
+    }
+    track("city-invite-create");
+    setInviting(r.data.code);
+    setReload((n) => n + 1);
+  };
+
   const openItem = (item: StreetItem) => {
     if (drag.current?.moved) return;
     if (item.kind === "garden") {
@@ -233,6 +267,8 @@ export function KairoCity({ onClose }: { onClose: () => void }) {
     } else if (item.claim === "signin") {
       window.location.assign("/api/auth/google");
     } else if (item.claim === "join") setJoining(true);
+    else if (item.claim === "invite") void saveForFriend();
+    else if (item.claim === "reserved") setInviting(item.code);
   };
 
   return createPortal(
@@ -427,6 +463,17 @@ export function KairoCity({ onClose }: { onClose: () => void }) {
             <span className="grid size-7 place-items-center rounded-full bg-sun text-on-accent">+</span>
             Claim your plot: only you can see your garden until you do
           </button>
+        ) : arrivals.length ? (
+          <p className="city-invite flex items-center gap-2 rounded-full bg-white py-2 pl-2 pr-2 text-sm font-semibold text-[#1c2624] shadow-xl" data-arrived>
+            <span className="grid size-7 place-items-center rounded-full bg-[#ffd166]">
+              <IconSun size={16} />
+            </span>
+            {arrivals.slice(0, 2).join(" and ")}
+            {arrivals.length > 2 ? ` and ${arrivals.length - 2} more` : ""} moved into the {arrivals.length === 1 ? "plot" : "plots"} you saved. Leave them a cheer.
+            <button type="button" onClick={() => setArrivals([])} aria-label="Dismiss" className="ml-1 grid size-7 place-items-center rounded-full text-ink-faint hover:bg-paper-deep">
+              <IconX size={13} />
+            </button>
+          </p>
         ) : lead ? (
           <p className="gd-hud rounded-full px-4 py-2 text-center text-sm font-semibold text-white" data-rival>
             {lead}
@@ -455,6 +502,16 @@ export function KairoCity({ onClose }: { onClose: () => void }) {
           onJoin={() => setJoining(true)}
           onShare={() => void share()}
           onCheered={(cheers) => setCheered((c) => ({ ...c, [visited.id]: cheers }))}
+        />
+      )}
+      {inviting && (
+        <InviteSheet
+          code={inviting}
+          onClose={() => setInviting(null)}
+          onCancelled={() => {
+            setInviting(null);
+            setReload((n) => n + 1);
+          }}
         />
       )}
       {joining && (

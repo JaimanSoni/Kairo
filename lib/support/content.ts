@@ -2582,6 +2582,7 @@ const ALL_ARTICLES: Article[] = [
               "**Neighbours** is the stretch of street around your garden, with the garden just ahead of you and how many points it's ahead. **Friends** is the people you share lists with, and **Top gardens** the best in the city.",
               "**Cheers**: walk into someone's garden and leave a cheer, once a day. There are no messages. You see who cheered your own garden; nobody else does.",
               "**Share** gives your garden a link of its own that anyone can open, with a picture of your level for when it's posted.",
+              "**Invite a friend**: tap the free plot beside your garden to save it for someone. Send them the link; when they claim it (signing in on the way if they need to), they move in next door, you each appear on the other's Friends street, and both gardens get a bench for two. A saved plot shows on your street until it's claimed, and tapping it lets you send the link again or let the plot go. You can hold 10 at a time.",
             ],
           },
           {

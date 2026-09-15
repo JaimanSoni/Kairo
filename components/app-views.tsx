@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useApp } from "./store";
 import { JOURNAL_SHOWN } from "@/lib/types";
 import { TodayView } from "./today-view";
@@ -51,6 +51,9 @@ const GardenSection = dynamic(() => import("./garden/garden-section"), {
   ),
 });
 
+/** Kairo City, over any page, when the address asks for it: brought in only then. */
+const CityLayer = dynamic(() => import("./garden/city/city-layer"), { ssr: false });
+
 /**
  * The app views behind one client switch.
  *
@@ -83,6 +86,8 @@ export function navigateApp(href: string) {
 
 export function AppViews() {
   const pathname = usePathname();
+  const params = useSearchParams();
+  const wantsCity = params.get("city") === "open" || params.has("claim");
   const { state } = useApp();
   const locked = state.appLocked;
 
@@ -108,6 +113,15 @@ export function AppViews() {
   }, [pathname]);
 
   if (locked) return null;
+  return (
+    <>
+      <View pathname={pathname} />
+      {wantsCity && <CityLayer />}
+    </>
+  );
+}
+
+function View({ pathname }: { pathname: string }) {
   if (pathname.startsWith("/calendar")) return <CalendarSection />;
   if (pathname.startsWith("/lists")) return <ListsView />;
   if (pathname.startsWith("/log")) return <LogView />;

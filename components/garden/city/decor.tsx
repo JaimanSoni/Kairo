@@ -276,3 +276,20 @@ export function hillsTile(phase: CityPhase): string {
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='600' height='80' viewBox='0 0 600 80' preserveAspectRatio='none'><path d='M0 40 C 80 10, 160 14, 240 34 C 320 54, 420 12, 520 28 C 560 34, 580 36, 600 40 L600 80 L0 80 Z' fill='${c[0]}'/><path d='M0 60 C 100 44, 200 50, 300 58 C 400 66, 500 46, 600 60 L600 80 L0 80 Z' fill='${c[1]}'/></svg>`;
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 }
+
+/** A bench for two, on a plot whose gardener brought a friend into the city (or was brought). */
+export function FriendBench({ className = "" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 80 44" aria-hidden>
+      <ellipse cx="40" cy="42" rx="34" ry="3" fill="#000" opacity="0.15" />
+      <rect x="10" y="10" width="60" height="6" rx="2" fill="#b5793f" />
+      <rect x="10" y="18" width="60" height="5" rx="2" fill="#c98a4b" />
+      <rect x="6" y="25" width="68" height="6" rx="2" fill="#a86b35" />
+      <rect x="12" y="31" width="4" height="11" rx="1" fill="#3b3f45" />
+      <rect x="64" y="31" width="4" height="11" rx="1" fill="#3b3f45" />
+      <rect x="12" y="8" width="4" height="18" rx="1" fill="#3b3f45" />
+      <rect x="64" y="8" width="4" height="18" rx="1" fill="#3b3f45" />
+      <path d="M36 2 C 36 -1, 40 -1, 40 2 C 40 -1, 44 -1, 44 2 C 44 5, 40 7, 40 8 C 40 7, 36 5, 36 2 Z" fill="#ff6b8b" />
+    </svg>
+  );
+}

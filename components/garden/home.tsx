@@ -16,7 +16,7 @@ import { GardenBed, GardenHud, PlantRow } from "./plot";
 import { GardenScene, type Weather } from "./scene";
 import { plotOf, useGarden, useGardenActions } from "./use-garden";
 import { ImmersiveGarden, useGardenView } from "./immersive";
-import { KairoCity, useCityView } from "./city/city";
+import { useCityView } from "./city/city";
 import { CityCard } from "./city/city-card";
 
 type Sheet = { seed?: Seed; name?: string };
@@ -281,7 +281,6 @@ export function GardenHome() {
       )}
 
       {view.open && <ImmersiveGarden onClose={view.hide} />}
-      {city.open && <KairoCity onClose={city.hide} />}
       {open && <PlantSheet key={open.seed?.id ?? open.name ?? "new"} seed={open.seed ?? null} name={open.name} onClose={closeSheet} />}
     </div>
   );

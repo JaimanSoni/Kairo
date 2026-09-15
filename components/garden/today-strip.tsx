@@ -4,7 +4,7 @@ import { useState, useSyncExternalStore } from "react";
 import { navigateApp } from "../app-views";
 import { IconX } from "../ui";
 import { ImmersiveGarden, useGardenView } from "./immersive";
-import { KairoCity, useCityView } from "./city/city";
+import { useCityView } from "./city/city";
 import { GuestCityCard } from "./city/city-card";
 import { IconTick } from "./icons";
 import { Plant } from "./plants";
@@ -49,21 +49,14 @@ export default function TodayGardenStrip() {
     }
   });
 
-  const cityLayer = city.open ? <KairoCity onClose={city.hide} /> : null;
-
   // signed out: the city is open to walk around, the way in to everything else
   if (guest) {
-    return (
-      <>
-        <GuestCityCard onOpen={city.show} />
-        {cityLayer}
-      </>
-    );
+    return <GuestCityCard onOpen={city.show} />;
   }
-  if (status !== "ready") return cityLayer;
+  if (status !== "ready") return null;
 
   if (habits.length === 0) {
-    if (inviteHidden) return cityLayer;
+    if (inviteHidden) return null;
     return (
       <section className="anim-rise relative mb-5" aria-label="Your garden">
         <div
@@ -105,7 +98,6 @@ export default function TodayGardenStrip() {
         >
           <IconX size={13} />
         </button>
-        {cityLayer}
       </section>
     );
   }
@@ -153,7 +145,6 @@ export default function TodayGardenStrip() {
         </button>
       </div>
       {view.open && <ImmersiveGarden onClose={view.hide} />}
-      {cityLayer}
     </section>
   );
 }

@@ -423,8 +423,9 @@ export async function deleteUserCompletely(idHex: string): Promise<DeletionRepor
     await db.collection("emails").deleteMany({ to: String(user.email ?? "") });
     await db.collection("pin_attempts").deleteMany({ _id: { $regex: `^(app|journal):${idHex}$|^list:[a-f0-9]{24}:${idHex}$` } as never });
     await db.collection("scheduled_pushes").deleteMany({ userId: _id });
-    // cheers given and cheers received in Kairo City
+    // cheers given and cheers received in Kairo City, and plots saved or claimed
     await db.collection("garden_cheers").deleteMany({ $or: [{ toUserId: _id }, { fromUserId: _id }] });
+    await db.collection("city_invites").deleteMany({ $or: [{ fromUserId: _id }, { claimedBy: _id }] });
     await db.collection("users").deleteOne({ _id });
 
     // the disabled-check cache would otherwise answer for a ghost
