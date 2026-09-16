@@ -2008,8 +2008,7 @@ const ALL_ARTICLES: Article[] = [
           {
             t: "ol",
             items: [
-              "Open **Settings** and go to **Accounts**.",
-              "Click **Add another account**.",
+              "Tap your picture and choose **Add another account** (or open **Settings** and go to **Accounts**).",
               "Sign in with the other Google account.",
             ],
           },

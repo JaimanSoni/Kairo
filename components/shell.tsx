@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { hiddenListIds, useApp } from "./store";
 import { navigateApp } from "./app-views";
+import { upgradeHref, useCan } from "./entitlements";
 import { animalAvatar } from "@/lib/avatars";
 import { track } from "@/lib/analytics-client";
 import { registerServiceWorker } from "@/lib/push-client";
@@ -384,6 +385,8 @@ function HelpLink({ className }: { className: string }) {
  */
 function AccountMenu({ placement, onClose }: { placement: "top" | "side"; onClose: () => void }) {
   const { state, lockApp } = useApp();
+  const can = useCan();
+  const canMultiAccount = can("multi-account");
   const [busy, setBusy] = useState<string | null>(null);
   const others = state.accounts.filter((a) => a.id !== state.user.id);
 
@@ -471,20 +474,30 @@ function AccountMenu({ placement, onClose }: { placement: "top" | "side"; onClos
             </button>
           )}
         </div>
-        {others.length > 0 && (
-          <div className="mt-1.5 border-t border-line pt-1.5">
-            <p className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">Switch account</p>
-            {others.map((a) => (
-              <button key={a.id} type="button" role="menuitem" disabled={busy !== null} onClick={() => void switchTo(a.id)} className={`${item} disabled:opacity-60`}>
-                <Avatar name={a.name} picture={a.picture} size={8} />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate">{a.name}</span>
-                  <span className="block truncate text-xs font-normal text-ink-faint">{busy === a.id ? "Switching…" : a.email}</span>
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
+{/* every account you are signed into, and the way to add one: switching was two
+            screens deep in Settings, which is a long walk for something done daily */}
+        <div className="mt-1.5 border-t border-line pt-1.5" data-menu-accounts>
+          <p className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">{others.length > 0 ? "Switch account" : "Accounts"}</p>
+          {others.map((a) => (
+            <button key={a.id} type="button" role="menuitem" disabled={busy !== null} onClick={() => void switchTo(a.id)} className={`${item} disabled:opacity-60`} data-menu-switch={a.id}>
+              <Avatar name={a.name} picture={a.picture} size={8} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate">{a.name}</span>
+                <span className="block truncate text-xs font-normal text-ink-faint">{busy === a.id ? "Switching…" : a.email}</span>
+              </span>
+            </button>
+          ))}
+          <a href={canMultiAccount ? "/api/auth/google" : upgradeHref("multi-account")} role="menuitem" className={item} data-menu-add-account>
+            <span className="grid size-8 shrink-0 place-items-center rounded-full border border-dashed border-ink-faint/60 text-base leading-none text-ink-faint" aria-hidden>
+              +
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate">Add another account</span>
+              <span className="block truncate text-xs font-normal text-ink-faint">{others.length > 0 ? "Work, personal, anything" : "Keep work and personal apart"}</span>
+            </span>
+            {!canMultiAccount && <span className="shrink-0 rounded-full bg-sun-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sun-deep">Upgrade</span>}
+          </a>
+        </div>
         <form action="/api/auth/signout" method="POST" className="mt-1.5 border-t border-line pt-1.5">
           <button type="submit" role="menuitem" className={`${item} text-clay hover:bg-clay-soft`}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
