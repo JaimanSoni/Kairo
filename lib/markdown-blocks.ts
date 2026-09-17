@@ -106,6 +106,12 @@ export function markdownToBlocks(md: string, options: MarkdownOptions = {}): JNo
     const line = lines[i].trimEnd();
     let m: RegExpExecArray | null;
 
+    if ((m = /^\s*!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)\s*$/.exec(line))) {
+      endPara();
+      endList();
+      blocks.push({ type: "image", attrs: { src: m[2], alt: m[1] || null, width: 100 } });
+      continue;
+    }
     if ((m = /^\s*```\s*([a-z0-9+#.-]{0,24})\s*$/i.exec(line))) {
       endPara();
       endList();

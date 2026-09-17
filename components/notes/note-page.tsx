@@ -39,6 +39,7 @@ import { pageIconKey } from "@/lib/icons";
 import { Callout } from "../editor/callout";
 import { NoteCodeBlock } from "./code-block";
 import { LinkPreview } from "./link-preview";
+import { NoteImage } from "./image";
 import { createSlashStore, filterSlash, SlashCommand, type SlashItem } from "../editor/slash";
 import { SlashMenu } from "../editor/slash-menu";
 import { Divider, SelectionBubble, Tool } from "../editor/bubble";
@@ -541,6 +542,7 @@ function NoteSurface({
       }),
       NoteCodeBlock,
       LinkPreview,
+      NoteImage.configure({ onRefuse: (reason: string) => showToast({ message: reason }) }),
       Callout.configure({ icons: true }),
       PageLink,
       TaskRef,

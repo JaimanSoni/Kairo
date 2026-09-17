@@ -174,6 +174,8 @@ export const normalizeNoteDoc = createNormalizer({
     pageLink: (a) => ({ id: isNoteId(a.id) ? a.id : null }),
     // a Kairo task, live: the title is kept so the page still reads if the task goes
     taskRef: (a) => ({ id: isNoteId(a.id) ? a.id : null, title: label(a.title, 500) }),
+    // a picture: Kairo keeps the address, never the bytes
+    image: (a) => ({ src: safeHref(a.src), alt: label(a.alt, 300) || null, width: int(a.width, 20, 100, 100) }),
     // a pasted link, as a card or in a frame: what the page said about itself, kept with the block
     linkPreview: (a) => ({
       url: safeHref(a.url),

@@ -389,6 +389,11 @@ function mdBlock(n: JNode, indent: string, ctx: MdContext): string {
       const lang = typeof n.attrs?.language === "string" ? n.attrs.language : "";
       return `${indent}\`\`\`${lang}\n${inlineText(n.content)}\n${indent}\`\`\``;
     }
+    case "image": {
+      const src = typeof n.attrs?.src === "string" ? n.attrs.src : "";
+      const alt = typeof n.attrs?.alt === "string" ? n.attrs.alt : "";
+      return src ? `${indent}![${escapeMd(alt)}](${src})` : "";
+    }
     case "linkPreview": {
       const url = typeof n.attrs?.url === "string" ? n.attrs.url : "";
       const title = typeof n.attrs?.title === "string" && n.attrs.title ? n.attrs.title : url;

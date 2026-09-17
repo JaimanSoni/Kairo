@@ -1090,6 +1090,106 @@ button {
   font-size: 0.82rem;
 }
 
+/* ---------- pictures in a page ---------- */
+
+.nt-prose .nt-image {
+  margin-top: 0.9em;
+  display: flex;
+  justify-content: flex-start;
+}
+.nt-image-frame {
+  position: relative;
+  display: block;
+  border-radius: 0.9rem;
+  overflow: hidden;
+}
+.nt-image-frame > a {
+  display: block;
+}
+/* a picture is never blown up past its own size: the width chosen is a ceiling, not a stretch */
+.nt-image-frame img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.9rem;
+  background: var(--color-paper-deep);
+}
+.nt-prose .nt-image.is-selected .nt-image-frame {
+  box-shadow: 0 0 0 2px var(--color-sun);
+}
+.nt-image-gone {
+  display: block;
+  border: 1px dashed var(--color-line);
+  border-radius: 0.9rem;
+  padding: 1rem;
+  font-size: 0.85rem;
+  color: var(--color-ink-soft);
+}
+.nt-image-tools {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  gap: 0.25rem;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.nt-image:hover .nt-image-tools,
+.nt-image-tools:focus-within {
+  opacity: 1;
+}
+.nt-image-tools button {
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background: var(--color-card);
+  padding: 0.2rem 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-ink-soft);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.08);
+}
+.nt-image-tools button:hover {
+  border-color: var(--color-ink-faint);
+  color: var(--color-ink);
+}
+.nt-image-tools button[aria-pressed="true"] {
+  border-color: var(--color-sun);
+  background: var(--color-sun-soft);
+  color: var(--color-sun-deep);
+}
+
+/* one on its way up: the file from this machine, with how far it has got */
+.nt-image-uploading {
+  position: relative;
+  display: block;
+  margin: 0.9em 0;
+  border-radius: 0.9rem;
+  overflow: hidden;
+  background: var(--color-paper-deep);
+}
+.nt-image-uploading img {
+  display: block;
+  width: 100%;
+  max-height: 22rem;
+  object-fit: contain;
+  opacity: 0.55;
+  filter: saturate(0.6);
+}
+.nt-image-bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--color-sun);
+  transition: width 0.2s ease;
+}
+@media (max-width: 640px) {
+  .nt-image-tools {
+    opacity: 1;
+  }
+}
+
 /* ---------- a pasted link: a card, or the thing itself in a frame ---------- */
 
 .nt-prose .nt-link {

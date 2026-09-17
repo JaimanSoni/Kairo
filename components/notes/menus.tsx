@@ -24,6 +24,7 @@ import {
   GlyphPage,
   GlyphQuote,
   GlyphRedo,
+  GlyphImage,
   GlyphTable,
   GlyphTask,
   GlyphText,
@@ -75,6 +76,8 @@ export function buildNoteSlashItems(opts: {
       run: (e, r) => clear(e, r).setHorizontalRule().run() },
     { id: "code", group: BASIC, icon: <GlyphCode />, title: "Code block", hint: "Code, coloured by language", keywords: ["code", "codeblock", "pre", "```", "snippet", "javascript", "python", "sql", "syntax"],
       run: (e, r) => clear(e, r).toggleCodeBlock().run() },
+    { id: "image", group: BASIC, icon: <GlyphImage />, title: "Picture", hint: "Upload, paste or drop one in", keywords: ["image", "picture", "photo", "upload", "screenshot", "img"],
+      run: (e, r) => clear(e, r).pickImage().run() },
     { id: "table", group: BASIC, icon: <GlyphTable />, title: "Table", hint: "Rows and columns", keywords: ["table", "grid", "spreadsheet", "columns"],
       run: (e, r) => clear(e, r).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
 

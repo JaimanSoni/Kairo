@@ -2413,6 +2413,10 @@ const ALL_ARTICLES: Article[] = [
             text: "**Paste a link on a line of its own** and it becomes a card: the page's title, a line about it, its picture. A video, a track or a post from a site that offers one plays right there instead. Hover the block for **Show as card**, **Play here**, **Show as link** or **Remove**. A link pasted into a sentence stays an ordinary link.",
           },
           {
+            t: "p",
+            text: "**Pictures**: paste a screenshot, drag an image in from your desktop, or pick **Picture** from the slash menu. It uploads as you watch, then sits in the page at **Small**, **Medium** or **Full** width. Kairo keeps the address, never the file itself, so pages stay small; a picture is never stretched past its own size.",
+          },
+          {
             t: "tip",
             text: "Paste Markdown straight in, from a chat with an assistant or a README, and it arrives as real headings, lists, checkboxes and tables.",
           },
