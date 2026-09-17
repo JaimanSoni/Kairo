@@ -12,6 +12,7 @@ import {
   BASE_NODES,
   blocksToMarkdown,
   createNormalizer,
+  safeHref,
   escapeMd,
   int,
   isObj,
@@ -173,6 +174,16 @@ export const normalizeNoteDoc = createNormalizer({
     pageLink: (a) => ({ id: isNoteId(a.id) ? a.id : null }),
     // a Kairo task, live: the title is kept so the page still reads if the task goes
     taskRef: (a) => ({ id: isNoteId(a.id) ? a.id : null, title: label(a.title, 500) }),
+    // a pasted link, as a card or in a frame: what the page said about itself, kept with the block
+    linkPreview: (a) => ({
+      url: safeHref(a.url),
+      title: label(a.title, 200) || null,
+      description: label(a.description, 300) || null,
+      image: safeHref(a.image),
+      site: label(a.site, 60) || null,
+      favicon: safeHref(a.favicon),
+      layout: a.layout === "embed" ? "embed" : "card",
+    }),
   },
   marks: {
     ...BASE_MARKS,

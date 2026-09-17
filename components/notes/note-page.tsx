@@ -38,6 +38,7 @@ import { Icon3d } from "../img3d";
 import { pageIconKey } from "@/lib/icons";
 import { Callout } from "../editor/callout";
 import { NoteCodeBlock } from "./code-block";
+import { LinkPreview } from "./link-preview";
 import { createSlashStore, filterSlash, SlashCommand, type SlashItem } from "../editor/slash";
 import { SlashMenu } from "../editor/slash-menu";
 import { Divider, SelectionBubble, Tool } from "../editor/bubble";
@@ -528,6 +529,8 @@ function NoteSurface({
         showOnlyCurrent: true,
         placeholder: ({ node, editor: ed, pos }) => {
           if (node.type.name === "heading") return `Heading ${node.attrs.level}`;
+          // a code block has a header of its own; a hint here would sit on top of it
+          if (node.type.name === "codeBlock") return "";
           if (node.type.name === "detailsSummary") return "Toggle";
           const parent = pos > 0 && pos <= ed.state.doc.content.size ? ed.state.doc.resolve(pos).parent.type.name : "doc";
           if (parent === "detailsContent") return "Empty toggle. Write inside it, or drop blocks in.";
@@ -537,6 +540,7 @@ function NoteSurface({
         },
       }),
       NoteCodeBlock,
+      LinkPreview,
       Callout.configure({ icons: true }),
       PageLink,
       TaskRef,

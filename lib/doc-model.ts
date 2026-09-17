@@ -231,6 +231,13 @@ export function docToText(doc: JNode): string {
       lines.push(inlineText(n.content));
       return;
     }
+    // a pasted link has no text of its own, but a page is findable by what the card says
+    if (n.type === "linkPreview") {
+      const title = typeof n.attrs?.title === "string" ? n.attrs.title : "";
+      const url = typeof n.attrs?.url === "string" ? n.attrs.url : "";
+      lines.push([title, url].filter(Boolean).join(" "));
+      return;
+    }
     for (const c of n.content ?? []) visit(c);
   };
   visit(doc);
@@ -381,6 +388,11 @@ function mdBlock(n: JNode, indent: string, ctx: MdContext): string {
     case "codeBlock": {
       const lang = typeof n.attrs?.language === "string" ? n.attrs.language : "";
       return `${indent}\`\`\`${lang}\n${inlineText(n.content)}\n${indent}\`\`\``;
+    }
+    case "linkPreview": {
+      const url = typeof n.attrs?.url === "string" ? n.attrs.url : "";
+      const title = typeof n.attrs?.title === "string" && n.attrs.title ? n.attrs.title : url;
+      return url ? `${indent}[${escapeMd(title)}](${url})` : "";
     }
     case "horizontalRule":
       return `${indent}---`;

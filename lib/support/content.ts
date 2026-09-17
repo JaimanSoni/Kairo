@@ -2409,6 +2409,10 @@ const ALL_ARTICLES: Article[] = [
             text: "**Code blocks** carry their language: pick it in the corner of the block, or write the language right after the three backticks (python, sql, ts) to open one in it. The code is coloured to match, **Copy** takes the whole block, and Tab indents inside it rather than leaving the page. A language Kairo does not colour is still kept exactly as written, fence and all, when the page is downloaded as Markdown.",
           },
           {
+            t: "p",
+            text: "**Paste a link on a line of its own** and it becomes a card: the page's title, a line about it, its picture. A video, a track or a post from a site that offers one plays right there instead. Hover the block for **Show as card**, **Play here**, **Show as link** or **Remove**. A link pasted into a sentence stays an ordinary link.",
+          },
+          {
             t: "tip",
             text: "Paste Markdown straight in, from a chat with an assistant or a README, and it arrives as real headings, lists, checkboxes and tables.",
           },
