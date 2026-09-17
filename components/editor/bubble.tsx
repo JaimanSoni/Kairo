@@ -158,7 +158,7 @@ export function SelectionBubble({
       shouldShow={({ editor: e, state, from, to }) =>
         e.isEditable && from !== to && !e.isActive("codeBlock") && !(state.selection instanceof NodeSelection)
       }
-      className="z-[75]"
+      className="nt-float z-[75]"
       options={bubbleOptions}
     >
       <div className="anim-pop no-scrollbar flex max-w-[calc(100vw-1.5rem)] items-center gap-0.5 overflow-x-auto rounded-xl border border-line bg-card/95 p-1 shadow-xl shadow-ink/10 backdrop-blur">

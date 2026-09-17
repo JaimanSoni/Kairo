@@ -1378,6 +1378,12 @@ span.nt-link-favicon {
   }
 }
 
+/* While a sheet is open, the editor's floating furniture stands down: it sits
+   above the page so it can hover a paragraph, and a sheet is above all of it. */
+body[data-modal] .nt-float {
+  display: none !important;
+}
+
 /* ---------- code blocks in a page: a language, colour, and a copy button ---------- */
 
 :root {

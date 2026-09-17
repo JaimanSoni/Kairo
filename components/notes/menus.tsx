@@ -208,7 +208,7 @@ export function TaskPrompt({ editor, pos, onClose }: { editor: Editor; pos: numb
 
   return createPortal(
     <>
-      <button type="button" aria-hidden tabIndex={-1} className="fixed inset-0 z-[78] cursor-default" onClick={onClose} />
+      <button type="button" aria-hidden tabIndex={-1} className="nt-float fixed inset-0 z-[78] cursor-default" onClick={onClose} />
       <form
         ref={ref}
         onSubmit={(e) => {
@@ -216,7 +216,7 @@ export function TaskPrompt({ editor, pos, onClose }: { editor: Editor; pos: numb
           void submit();
         }}
         style={{ position: "fixed", top: 0, left: 0, visibility: "hidden" }}
-        className="anim-pop z-[79] flex w-[min(24rem,calc(100vw-1rem))] items-center gap-2 rounded-2xl border border-line bg-card p-1.5 pl-3 shadow-2xl shadow-ink/10"
+        className="nt-float anim-pop z-[79] flex w-[min(24rem,calc(100vw-1rem))] items-center gap-2 rounded-2xl border border-line bg-card p-1.5 pl-3 shadow-2xl shadow-ink/10"
       >
         <span className="grid size-5 shrink-0 place-items-center rounded-full border-2 border-sun text-[10px] text-sun" aria-hidden />
         <input
@@ -284,7 +284,7 @@ export function TableBar({ editor }: { editor: Editor }) {
       aria-label="Table"
       style={{ position: "fixed", top: 0, left: 0, visibility: "hidden" }}
       onMouseDown={(e) => e.preventDefault()}
-      className="anim-pop no-scrollbar z-[74] flex max-w-[calc(100vw-1rem)] items-center gap-0.5 overflow-x-auto rounded-xl border border-line bg-card/95 p-1 text-xs shadow-xl shadow-ink/10 backdrop-blur"
+      className="nt-float anim-pop no-scrollbar z-[74] flex max-w-[calc(100vw-1rem)] items-center gap-0.5 overflow-x-auto rounded-xl border border-line bg-card/95 p-1 text-xs shadow-xl shadow-ink/10 backdrop-blur"
     >
       <Tool label="Add a row below" onClick={() => editor.chain().focus().addRowAfter().run()}>
         <span className="px-1 text-xs font-semibold">+ Row</span>
@@ -346,7 +346,7 @@ export function NotesDock({ editor }: { editor: Editor }) {
 
   return (
     <div
-      className="fixed inset-x-0 z-[60] flex justify-center px-3"
+      className="nt-float fixed inset-x-0 z-[60] flex justify-center px-3"
       style={{ bottom: inset > 0 ? inset + 8 : "calc(4.75rem + env(safe-area-inset-bottom))" }}
     >
       <div

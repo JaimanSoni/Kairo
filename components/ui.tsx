@@ -201,6 +201,9 @@ export function Chip({
   );
 }
 
+/** How many sheets are open: the last one out clears the flag. */
+let openModals = 0;
+
 export function Modal({
   onClose,
   children,
@@ -315,6 +318,24 @@ export function Modal({
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prev;
+    };
+  }, []);
+
+  /**
+   * While any modal is open, the page says so, and the editor's floating
+   * furniture — the block handle, the slash and bubble menus, the table bar —
+   * takes itself out of the way. They live above the page so they can sit over
+   * a paragraph; a sheet is above all of it. Counted, because sheets stack.
+   */
+  useEffect(() => {
+    openModals += 1;
+    document.body.dataset.modal = "open";
+    return () => {
+      openModals -= 1;
+      if (openModals <= 0) {
+        openModals = 0;
+        delete document.body.dataset.modal;
+      }
     };
   }, []);
 

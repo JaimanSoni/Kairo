@@ -1167,7 +1167,7 @@ function FloatingAt({ anchor, children }: { anchor: Anchor; children: React.Reac
     el.style.visibility = "visible";
   }, [anchor]);
   return (
-    <div ref={ref} style={{ position: "fixed", top: 0, left: 0, visibility: "hidden" }} className="z-[72]">
+    <div ref={ref} style={{ position: "fixed", top: 0, left: 0, visibility: "hidden" }} className="nt-float z-[72]">
       <div className="relative">{children}</div>
     </div>
   );

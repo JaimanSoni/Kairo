@@ -994,7 +994,7 @@ function PageSurface({
       </main>
 
       {listening && (
-        <div className="fixed inset-x-0 top-4 z-[70] flex justify-center px-4">
+        <div className="nt-float fixed inset-x-0 top-4 z-[70] flex justify-center px-4">
           <div className="anim-pop flex max-w-lg items-center gap-3 rounded-full border border-line bg-card/95 py-2 pl-3 pr-2 shadow-xl backdrop-blur">
             <span className="flex h-4 items-end gap-0.5" aria-hidden>
               {[0, 1, 2, 3].map((i) => (

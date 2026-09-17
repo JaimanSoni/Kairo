@@ -46,11 +46,11 @@ function Popover({
 
   return (
     <>
-      <button type="button" aria-hidden tabIndex={-1} className="fixed inset-0 z-[70] cursor-default" onClick={onClose} />
+      <button type="button" aria-hidden tabIndex={-1} className="nt-float fixed inset-0 z-[70] cursor-default" onClick={onClose} />
       <div
         role="dialog"
         aria-label={label}
-        className={`anim-pop absolute z-[71] w-[min(21rem,calc(100vw-2rem))] rounded-2xl border border-line bg-card p-2 shadow-2xl shadow-ink/10 ${className}`}
+        className={`nt-float anim-pop absolute z-[71] w-[min(21rem,calc(100vw-2rem))] rounded-2xl border border-line bg-card p-2 shadow-2xl shadow-ink/10 ${className}`}
       >
         {children}
       </div>

@@ -120,7 +120,7 @@ export function BlockHandle({ editor, area }: { editor: Editor; area: React.RefO
     <>
       <div
         style={{ position: "fixed", top: spot.top, left: spot.left }}
-        className="z-[62] flex items-center"
+        className="nt-float z-[62] flex items-center"
         onMouseDown={(e) => e.preventDefault()}
       >
         <button
@@ -236,13 +236,13 @@ function BlockMenu({ editor, spot, onClose }: { editor: Editor; spot: Spot; onCl
 
   return (
     <>
-      <button type="button" aria-hidden tabIndex={-1} className="fixed inset-0 z-[63] cursor-default" onClick={onClose} />
+      <button type="button" aria-hidden tabIndex={-1} className="nt-float fixed inset-0 z-[63] cursor-default" onClick={onClose} />
       <div
         role="menu"
         aria-label="Block options"
         onKeyDown={(e) => e.key === "Escape" && onClose()}
         style={{ position: "fixed", top: Math.min(spot.top + 28, window.innerHeight - 360), left: spot.left }}
-        className="anim-pop z-[64] w-60 rounded-xl border border-line bg-card p-1 shadow-2xl shadow-ink/10"
+        className="nt-float anim-pop z-[64] w-60 rounded-xl border border-line bg-card p-1 shadow-2xl shadow-ink/10"
       >
         {turning ? (
           <>

@@ -46,7 +46,7 @@ export function SlashMenu({ store, label = "Insert a block" }: { store: SlashSto
       role="listbox"
       aria-label={label}
       style={{ position: "fixed", top: 0, left: 0, visibility: "hidden" }}
-      className="anim-pop no-scrollbar z-[80] max-h-[min(22rem,60vh)] w-72 overflow-y-auto rounded-2xl border border-line bg-card/95 p-1.5 shadow-2xl shadow-ink/10 backdrop-blur"
+      className="nt-float anim-pop no-scrollbar z-[80] max-h-[min(22rem,60vh)] w-72 overflow-y-auto rounded-2xl border border-line bg-card/95 p-1.5 shadow-2xl shadow-ink/10 backdrop-blur"
       onMouseDown={(e) => e.preventDefault() /* keep the caret in the page */}
     >
       {s.items.length === 0 ? (
