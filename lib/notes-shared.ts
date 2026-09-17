@@ -63,6 +63,10 @@ export type NoteMeta = {
   font: NoteFont;
   /** Locked pages can be read but not edited until unlocked. */
   locked: boolean;
+  /** Published to the web: anyone with the link can read it. */
+  shared: boolean;
+  /** The address it is published at, once it has been published even briefly. */
+  shareSlug: string | null;
   words: number;
   createdAt: string;
   updatedAt: string;

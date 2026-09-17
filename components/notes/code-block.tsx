@@ -3,90 +3,18 @@
 import { useState } from "react";
 import { NodeViewContent, NodeViewWrapper, ReactNodeViewRenderer, type ReactNodeViewProps } from "@tiptap/react";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
-import { createLowlight } from "lowlight";
-import bash from "highlight.js/lib/languages/bash";
-import c from "highlight.js/lib/languages/c";
-import cpp from "highlight.js/lib/languages/cpp";
-import csharp from "highlight.js/lib/languages/csharp";
-import css from "highlight.js/lib/languages/css";
-import diff from "highlight.js/lib/languages/diff";
-import dockerfile from "highlight.js/lib/languages/dockerfile";
-import go from "highlight.js/lib/languages/go";
-import java from "highlight.js/lib/languages/java";
-import javascript from "highlight.js/lib/languages/javascript";
-import json from "highlight.js/lib/languages/json";
-import kotlin from "highlight.js/lib/languages/kotlin";
-import markdown from "highlight.js/lib/languages/markdown";
-import php from "highlight.js/lib/languages/php";
-import python from "highlight.js/lib/languages/python";
-import ruby from "highlight.js/lib/languages/ruby";
-import rust from "highlight.js/lib/languages/rust";
-import sql from "highlight.js/lib/languages/sql";
-import swift from "highlight.js/lib/languages/swift";
-import typescript from "highlight.js/lib/languages/typescript";
-import xml from "highlight.js/lib/languages/xml";
-import yaml from "highlight.js/lib/languages/yaml";
+import { canonicalLanguage, CODE_LANGUAGES, isKnownLanguage, languageLabel, lowlight } from "@/lib/code-highlight";
 
 /**
  * Code blocks in a page: the language on the block itself, colouring that
- * follows it, and one button to copy the lot.
- *
- * Only these languages are carried, each named the way people type it in a
- * fence. Anything else still works as a block of monospaced text: the
- * language is kept as written, the colouring simply stays off, so a page
- * written elsewhere and pasted in never loses its fences.
+ * follows it, and one button to copy the lot. The languages themselves, and
+ * the colouring, are shared with the read-only page a note is published at.
  */
-
-export const CODE_LANGUAGES: { id: string; label: string; aliases?: string[] }[] = [
-  { id: "plaintext", label: "Plain text", aliases: ["text", "txt", "none"] },
-  { id: "bash", label: "Bash", aliases: ["sh", "shell", "zsh", "console"] },
-  { id: "c", label: "C" },
-  { id: "cpp", label: "C++", aliases: ["c++", "cc", "hpp"] },
-  { id: "csharp", label: "C#", aliases: ["cs", "c#"] },
-  { id: "css", label: "CSS", aliases: ["scss", "less"] },
-  { id: "diff", label: "Diff", aliases: ["patch"] },
-  { id: "dockerfile", label: "Dockerfile", aliases: ["docker"] },
-  { id: "go", label: "Go", aliases: ["golang"] },
-  { id: "java", label: "Java" },
-  { id: "javascript", label: "JavaScript", aliases: ["js", "jsx", "mjs", "cjs", "node"] },
-  { id: "json", label: "JSON", aliases: ["jsonc"] },
-  { id: "kotlin", label: "Kotlin", aliases: ["kt"] },
-  { id: "markdown", label: "Markdown", aliases: ["md"] },
-  { id: "php", label: "PHP" },
-  { id: "python", label: "Python", aliases: ["py"] },
-  { id: "ruby", label: "Ruby", aliases: ["rb"] },
-  { id: "rust", label: "Rust", aliases: ["rs"] },
-  { id: "sql", label: "SQL" },
-  { id: "swift", label: "Swift" },
-  { id: "typescript", label: "TypeScript", aliases: ["ts", "tsx"] },
-  { id: "xml", label: "HTML & XML", aliases: ["html", "htm", "svg", "vue"] },
-  { id: "yaml", label: "YAML", aliases: ["yml"] },
-];
-
-const GRAMMARS = { bash, c, cpp, csharp, css, diff, dockerfile, go, java, javascript, json, kotlin, markdown, php, python, ruby, rust, sql, swift, typescript, xml, yaml };
-
-const lowlight = createLowlight();
-for (const [id, grammar] of Object.entries(GRAMMARS)) lowlight.register(id, grammar);
-for (const lang of CODE_LANGUAGES) {
-  if (lang.aliases?.length && lang.id !== "plaintext") lowlight.registerAlias(lang.id, lang.aliases);
-}
-
-/** What a written language means: `ts` and `tsx` are both TypeScript. Unknown ones keep their own name. */
-export function canonicalLanguage(raw: unknown): string {
-  const value = typeof raw === "string" ? raw.trim().toLowerCase() : "";
-  if (!value) return "plaintext";
-  const found = CODE_LANGUAGES.find((l) => l.id === value || l.aliases?.includes(value));
-  return found ? found.id : value;
-}
-
-function labelFor(id: string): string {
-  return CODE_LANGUAGES.find((l) => l.id === id)?.label ?? id;
-}
 
 function CodeBlockView({ node, updateAttributes, editor }: ReactNodeViewProps) {
   const [copied, setCopied] = useState(false);
   const language = canonicalLanguage(node.attrs.language);
-  const known = CODE_LANGUAGES.some((l) => l.id === language);
+  const known = isKnownLanguage(language);
 
   const copy = async () => {
     try {
@@ -115,7 +43,7 @@ function CodeBlockView({ node, updateAttributes, editor }: ReactNodeViewProps) {
                 {l.label}
               </option>
             ))}
-            {!known && <option value="other">{labelFor(language)}</option>}
+            {!known && <option value="other">{languageLabel(language)}</option>}
           </select>
           <span aria-hidden className="nt-code-caret">
             <svg width="11" height="11" viewBox="0 0 16 16" fill="none">

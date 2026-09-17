@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { ObjectId, type AnyBulkWriteOperation, type WithId } from "mongodb";
 import { getDb, withDbRetry } from "./db";
 import { countWords, docToText, EMPTY_DOC, previewOf, type JNode } from "./doc-model";
@@ -63,6 +64,10 @@ export type NoteRecord = {
   smallText: boolean;
   font: NoteFont;
   locked: boolean;
+  /** Published to the web, and the address it lives at. */
+  shared?: boolean;
+  shareSlug?: string | null;
+  sharedAt?: Date | null;
   version: number;
   createdAt: Date;
   updatedAt: Date;
@@ -83,6 +88,7 @@ export async function ensureNoteIndexes(): Promise<void> {
     notes.createIndex({ userId: 1, parentId: 1, rank: 1 }, { name: "notes_tree" }),
     notes.createIndex({ userId: 1, trashedAt: 1 }, { name: "notes_trash" }),
     notes.createIndex({ userId: 1, links: 1 }, { name: "notes_links" }),
+    notes.createIndex({ shareSlug: 1 }, { name: "notes_share", unique: true, partialFilterExpression: { shareSlug: { $type: "string" } } }),
   ]).catch((err: unknown) => {
     indexReady = null;
     throw err;
@@ -101,6 +107,8 @@ const META_FIELDS = {
   smallText: 1,
   font: 1,
   locked: 1,
+  shared: 1,
+  shareSlug: 1,
   words: 1,
   createdAt: 1,
   updatedAt: 1,
@@ -121,6 +129,8 @@ export function toMeta(r: MetaRecord): NoteMeta {
     smallText: Boolean(r.smallText),
     font: NOTE_FONTS.includes(r.font) ? r.font : "sans",
     locked: Boolean(r.locked),
+    shared: Boolean(r.shared),
+    shareSlug: typeof r.shareSlug === "string" ? r.shareSlug : null,
     words: r.words ?? 0,
     createdAt: r.createdAt.toISOString(),
     updatedAt: r.updatedAt.toISOString(),
@@ -809,4 +819,62 @@ export async function allNotesInOrder(userId: ObjectId): Promise<{ page: NotePag
     walk(null, [], 0);
     return out;
   });
+}
+
+/* ------------------------------------------------------------ publishing */
+
+/**
+ * Publishing a page to the web.
+ *
+ * One page, read-only, at an address nobody can guess. The address is kept
+ * once made, so unpublishing and publishing again returns the same link
+ * rather than quietly breaking the one already sent. A locked page is never
+ * published: the PIN is the whole point of it.
+ */
+export async function setNoteShared(userId: ObjectId, id: string, shared: boolean): Promise<{ ok: true; page: NoteMeta } | Failure> {
+  if (!isNoteId(id)) return fail(404, "No such page.");
+  await ensureNoteIndexes();
+  const notes = await notesCollection();
+  const existing = await notes.findOne({ _id: oid(id), userId }, { projection: { ...META_FIELDS, trashedAt: 1 } });
+  if (!existing) return fail(404, "No such page.");
+  if (existing.trashedAt) return fail(409, "That page is in the trash. Restore it first.");
+  if (shared && existing.locked) return fail(423, "That page is locked. Unlock it before sharing it.");
+
+  const slug = existing.shareSlug ?? randomBytes(9).toString("hex");
+  await notes.updateOne({ _id: oid(id), userId }, { $set: { shared, shareSlug: slug, sharedAt: shared ? new Date() : null } });
+  const fresh = await notes.findOne({ _id: oid(id), userId }, { projection: META_FIELDS });
+  return fresh ? { ok: true, page: toMeta(fresh) } : fail(404, "No such page.");
+}
+
+export type PublicNote = {
+  title: string;
+  icon: string | null;
+  cover: string | null;
+  font: NoteFont;
+  fullWidth: boolean;
+  smallText: boolean;
+  doc: JNode;
+  words: number;
+  updatedAt: string;
+};
+
+/** A published page, for anyone with the link. Nothing about who wrote it, and nothing else of theirs. */
+export async function publicNote(slug: string): Promise<PublicNote | null> {
+  if (typeof slug !== "string" || !/^[a-f0-9]{18}$/.test(slug)) return null;
+  const notes = await notesCollection();
+  const page = await notes.findOne({ shareSlug: slug, shared: true, trashedAt: null, locked: { $ne: true } });
+  if (!page) return null;
+  const owner = await (await getDb()).collection("users").findOne({ _id: page.userId }, { projection: { disabled: 1 } });
+  if (!owner || owner.disabled) return null;
+  return {
+    title: page.title ?? "",
+    icon: page.icon ?? null,
+    cover: page.cover ?? null,
+    font: NOTE_FONTS.includes(page.font) ? page.font : "sans",
+    fullWidth: Boolean(page.fullWidth),
+    smallText: Boolean(page.smallText),
+    doc: page.doc ?? EMPTY_DOC,
+    words: page.words ?? 0,
+    updatedAt: page.updatedAt.toISOString(),
+  };
 }

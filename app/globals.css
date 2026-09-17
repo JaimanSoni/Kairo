@@ -1440,6 +1440,12 @@ span.nt-link-favicon {
 .nt-code-lang select:disabled {
   cursor: default;
 }
+.nt-code-name {
+  padding: 0.2rem 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-ink-soft);
+}
 .nt-code-caret {
   position: absolute;
   right: 0.35rem;

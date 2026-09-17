@@ -78,6 +78,9 @@ export const notesApi = {
   patch: (id: string, patch: NoteMetaPatch) =>
     call<{ page: NoteMeta }>(`/api/notes/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
 
+  /** Publishes one page to the web, or takes it back down. */
+  setShared: (id: string, shared: boolean) => call<{ page: NoteMeta }>(`/api/notes/${id}`, { method: "PATCH", body: JSON.stringify({ shared }) }),
+
   trash: (id: string) => call<{ trashed: string[] }>(`/api/notes/${id}`, { method: "DELETE" }),
 
   deleteForever: (id: string) => call<{ deleted: number }>(`/api/notes/${id}?forever=1`, { method: "DELETE" }),

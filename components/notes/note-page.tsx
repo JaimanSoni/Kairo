@@ -40,6 +40,7 @@ import { Callout } from "../editor/callout";
 import { NoteCodeBlock } from "./code-block";
 import { LinkPreview } from "./link-preview";
 import { NoteImage } from "./image";
+import { PublishSheet } from "./publish";
 import { createSlashStore, filterSlash, SlashCommand, type SlashItem } from "../editor/slash";
 import { SlashMenu } from "../editor/slash-menu";
 import { Divider, SelectionBubble, Tool } from "../editor/bubble";
@@ -320,6 +321,7 @@ function NoteSurface({
   const [blank, setBlank] = useState(() => isBlankDoc(loaded.doc));
   const [linked, setLinked] = useState(() => new Set(linksIn(loaded.doc)));
   const [menuOpen, setMenuOpen] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [picker, setPicker] = useState<"icon" | "cover" | null>(null);
   const [calloutPick, setCalloutPick] = useState<({ pos: number } & Anchor) | null>(null);
   const [askTaskAt, setAskTaskAt] = useState<number | null>(null);
@@ -840,6 +842,10 @@ function NoteSurface({
                 words={words}
                 onClose={() => setMenuOpen(false)}
                 onSet={(patch) => setMeta(patch)}
+                onShare={() => {
+                  setMenuOpen(false);
+                  setPublishing(true);
+                }}
                 onDownload={downloadPage}
                 onMove={() => {
                   setMenuOpen(false);
@@ -1126,6 +1132,13 @@ function NoteSurface({
       )}
 
       {moving && <MoveDialog id={id} onClose={() => setMoving(false)} />}
+      {publishing && (
+        <PublishSheet
+          page={page}
+          onClose={() => setPublishing(false)}
+          onChanged={(next) => notesStore.patchLocal(id, { shared: next.shared, shareSlug: next.shareSlug })}
+        />
+      )}
     </div>
   );
 }
@@ -1170,6 +1183,7 @@ function PageMenu({
   onSet,
   onDownload,
   onMove,
+  onShare,
 }: {
   page: NoteMeta;
   trashed: boolean;
@@ -1178,6 +1192,7 @@ function PageMenu({
   onSet: (patch: NoteMetaPatch) => void;
   onDownload: () => void;
   onMove: () => void;
+  onShare: () => void;
 }) {
   const actions = useNoteActions();
   const item = (label: string, run: () => void, opts: { hint?: string; danger?: boolean; on?: boolean } = {}) => (
@@ -1239,6 +1254,7 @@ function PageMenu({
               onClose();
               void actions.copyLink(page.id);
             })}
+            {item(page.shared ? "Sharing to web" : "Share to web…", onShare, { hint: page.shared ? "Live" : undefined })}
             {item("Duplicate", () => {
               onClose();
               void actions.duplicate(page.id);

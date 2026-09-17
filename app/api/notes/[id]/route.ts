@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { requireSession, unauthorized, badRequest, notFound } from "@/lib/api-auth";
-import { deleteNoteForever, getNote, hideLockedChips, saveNoteDoc, trashNote, updateNoteMeta } from "@/lib/notes";
+import { deleteNoteForever, getNote, hideLockedChips, saveNoteDoc, setNoteShared, trashNote, updateNoteMeta } from "@/lib/notes";
 import { lockedListIds } from "@/lib/tasks";
 import {
   NOTE_DOC_MAX_BYTES,
@@ -108,6 +108,13 @@ export async function PATCH(request: Request, ctx: Ctx) {
   if ("font" in body) {
     if (!NOTE_FONTS.includes(body.font as NoteFont)) return badRequest("Invalid font");
     patch.font = body.font as NoteFont;
+  }
+  // publishing is its own thing: it makes an address rather than changing the page
+  if ("shared" in body) {
+    if (typeof body.shared !== "boolean") return badRequest("Invalid shared");
+    const published = await setNoteShared(new ObjectId(session.userId), id, body.shared);
+    if (!published.ok) return NextResponse.json({ error: published.error }, { status: published.status });
+    if (Object.keys(patch).length === 0) return NextResponse.json({ page: published.page });
   }
   if (Object.keys(patch).length === 0) return badRequest("No valid fields");
 

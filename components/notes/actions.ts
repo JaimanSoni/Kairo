@@ -28,6 +28,8 @@ export const metaOf = (p: NotePage): NoteMeta => ({
   smallText: p.smallText,
   font: p.font,
   locked: p.locked,
+  shared: p.shared,
+  shareSlug: p.shareSlug,
   words: p.words,
   createdAt: p.createdAt,
   updatedAt: p.updatedAt,

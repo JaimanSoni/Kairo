@@ -2417,6 +2417,10 @@ const ALL_ARTICLES: Article[] = [
             text: "**Pictures**: paste a screenshot, drag an image in from your desktop, or pick **Picture** from the slash menu. It uploads as you watch, then sits in the page at **Small**, **Medium** or **Full** width. Kairo keeps the address, never the file itself, so pages stay small; a picture is never stretched past its own size.",
           },
           {
+            t: "p",
+            text: "**Share a page to the web**: open the page menu (the three dots) and choose **Share to web**. Kairo makes a link nobody can guess, and anyone who has it can read that page. They cannot change it, they cannot see anything else of yours, and pages inside it stay private until you share them too. Edits show up on the shared page as you make them, the switch takes it down again, and turning it back on gives you the same link. A locked page cannot be shared, and locking a shared one closes the link. Search engines are asked not to list it.",
+          },
+          {
             t: "tip",
             text: "Paste a page straight in from Notion, a README, or a chat with an assistant, and it arrives as real blocks: headings, bold and links, bullets nested the way they were written, numbered lists, checkboxes with the right ones ticked, quotes, dividers, code with its language, tables and pictures. Copying between two Kairo pages keeps everything exactly as it was.",
           },
