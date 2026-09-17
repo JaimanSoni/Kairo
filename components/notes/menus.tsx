@@ -73,7 +73,7 @@ export function buildNoteSlashItems(opts: {
       run: (e, r) => clear(e, r).setCallout("sparkle").run() },
     { id: "divider", group: BASIC, icon: <GlyphDivider />, title: "Divider", hint: "Split the page", keywords: ["hr", "line", "separator", "---"],
       run: (e, r) => clear(e, r).setHorizontalRule().run() },
-    { id: "code", group: BASIC, icon: <GlyphCode />, title: "Code", hint: "Monospaced, untouched", keywords: ["codeblock", "pre", "```", "snippet"],
+    { id: "code", group: BASIC, icon: <GlyphCode />, title: "Code block", hint: "Code, coloured by language", keywords: ["code", "codeblock", "pre", "```", "snippet", "javascript", "python", "sql", "syntax"],
       run: (e, r) => clear(e, r).toggleCodeBlock().run() },
     { id: "table", group: BASIC, icon: <GlyphTable />, title: "Table", hint: "Rows and columns", keywords: ["table", "grid", "spreadsheet", "columns"],
       run: (e, r) => clear(e, r).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },

@@ -37,6 +37,7 @@ import { IconPlus, IconStar } from "../ui";
 import { Icon3d } from "../img3d";
 import { pageIconKey } from "@/lib/icons";
 import { Callout } from "../editor/callout";
+import { NoteCodeBlock } from "./code-block";
 import { createSlashStore, filterSlash, SlashCommand, type SlashItem } from "../editor/slash";
 import { SlashMenu } from "../editor/slash-menu";
 import { Divider, SelectionBubble, Tool } from "../editor/bubble";
@@ -500,6 +501,8 @@ function NoteSurface({
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
+        // ours carries a language, colours itself, and copies
+        codeBlock: false,
         dropcursor: { color: "#0c9384", width: 3 },
         link: {
           openOnClick: false,
@@ -533,6 +536,7 @@ function NoteSurface({
           return "Type / for blocks, @ to link a page";
         },
       }),
+      NoteCodeBlock,
       Callout.configure({ icons: true }),
       PageLink,
       TaskRef,

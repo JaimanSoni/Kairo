@@ -1090,6 +1090,163 @@ button {
   font-size: 0.82rem;
 }
 
+/* ---------- code blocks in a page: a language, colour, and a copy button ---------- */
+
+:root {
+  --code-keyword: #8250df;
+  --code-string: #0a7d55;
+  --code-number: #b5561a;
+  --code-title: #0b5fa5;
+  --code-attr: #9a5b12;
+  --code-add: #e5f5ea;
+  --code-del: #fbe9e7;
+}
+:root[data-theme="dark"] {
+  --code-keyword: #cba6f7;
+  --code-string: #86dfae;
+  --code-number: #f0a26a;
+  --code-title: #7cb9e7;
+  --code-attr: #e6c07b;
+  --code-add: #1d3326;
+  --code-del: #3a2220;
+}
+
+.nt-prose .nt-code {
+  margin-top: 0.9em;
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  border-radius: 1rem;
+  background: var(--color-paper-deep);
+}
+.nt-code-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.3rem 0.5rem 0.3rem 0.6rem;
+  border-bottom: 1px solid var(--color-line);
+  background: color-mix(in srgb, var(--color-card) 55%, transparent);
+  user-select: none;
+}
+.nt-code-lang {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.nt-code-lang select {
+  appearance: none;
+  border: none;
+  border-radius: 0.5rem;
+  background: none;
+  padding: 0.2rem 1.3rem 0.2rem 0.45rem;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-ink-soft);
+  cursor: pointer;
+}
+.nt-code-lang select:hover:not(:disabled) {
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+.nt-code-lang select:disabled {
+  cursor: default;
+}
+.nt-code-caret {
+  position: absolute;
+  right: 0.35rem;
+  display: grid;
+  color: var(--color-ink-faint);
+  pointer-events: none;
+}
+.nt-code-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 999px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-ink-faint);
+  transition:
+    color 0.15s,
+    background 0.15s;
+}
+.nt-code-copy:hover {
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+.nt-prose .nt-code pre {
+  margin: 0;
+  border-radius: 0;
+  background: none;
+  padding: 0.85em 1.05em;
+  font-size: 0.86rem;
+  line-height: 1.65;
+  tab-size: 2;
+}
+.nt-prose .nt-code pre code {
+  display: block;
+  color: var(--color-ink);
+}
+
+/* highlight.js, in Kairo colours */
+.nt-code .hljs-comment,
+.nt-code .hljs-quote {
+  color: var(--color-ink-faint);
+  font-style: italic;
+}
+.nt-code .hljs-keyword,
+.nt-code .hljs-selector-tag,
+.nt-code .hljs-literal,
+.nt-code .hljs-type,
+.nt-code .hljs-name,
+.nt-code .hljs-tag {
+  color: var(--code-keyword);
+}
+.nt-code .hljs-string,
+.nt-code .hljs-regexp,
+.nt-code .hljs-symbol,
+.nt-code .hljs-bullet,
+.nt-code .hljs-selector-pseudo {
+  color: var(--code-string);
+}
+.nt-code .hljs-number,
+.nt-code .hljs-meta,
+.nt-code .hljs-link {
+  color: var(--code-number);
+}
+.nt-code .hljs-title,
+.nt-code .hljs-title_,
+.nt-code .hljs-section,
+.nt-code .hljs-built_in,
+.nt-code .hljs-class .hljs-title {
+  color: var(--code-title);
+}
+.nt-code .hljs-attr,
+.nt-code .hljs-attribute,
+.nt-code .hljs-variable,
+.nt-code .hljs-template-variable,
+.nt-code .hljs-property,
+.nt-code .hljs-selector-class,
+.nt-code .hljs-selector-id {
+  color: var(--code-attr);
+}
+.nt-code .hljs-addition {
+  background: var(--code-add);
+  color: var(--code-string);
+}
+.nt-code .hljs-deletion {
+  background: var(--code-del);
+  color: var(--color-clay);
+}
+.nt-code .hljs-emphasis {
+  font-style: italic;
+}
+.nt-code .hljs-strong {
+  font-weight: 700;
+}
+
 .nt-title {
   font-family: var(--font-display);
   font-size: 2.6rem;

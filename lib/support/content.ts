@@ -64,7 +64,7 @@ export const QUICK_START = ["philosophy", "capture", "today", "notifications"];
  * sitemap is only worth sending if it's true, and a date that moves on every
  * deploy teaches crawlers to ignore it.
  */
-export const DOCS_UPDATED = "2026-09-16";
+export const DOCS_UPDATED = "2026-09-17";
 
 const ALL_ARTICLES: Article[] = [
   /* ---------------------------------------------------------------- basics */
@@ -2393,7 +2393,7 @@ const ALL_ARTICLES: Article[] = [
               { k: "- ", d: "Bulleted list" },
               { k: "1. ", d: "Numbered list" },
               { k: "> ", d: "Quote" },
-              { k: "```", d: "Code block" },
+              { k: "```", d: "Code block, with the language written after it" },
               { k: "@ or [[", d: "Link to another page, or make a new one" },
               { k: "⌘⇧↑ / ⌘⇧↓", d: "Move the block you're in up or down" },
               { k: "⌘D", d: "Duplicate the block you're in" },
@@ -2403,6 +2403,10 @@ const ALL_ARTICLES: Article[] = [
           {
             t: "p",
             text: "Hover a block to see its handle: drag it to move the block, click it to turn the block into another kind, duplicate it or delete it, or **+** to add a block below. Select words to make them bold, colour them, highlight them, or link them.",
+          },
+          {
+            t: "p",
+            text: "**Code blocks** carry their language: pick it in the corner of the block, or write the language right after the three backticks (python, sql, ts) to open one in it. The code is coloured to match, **Copy** takes the whole block, and Tab indents inside it rather than leaving the page. A language Kairo does not colour is still kept exactly as written, fence and all, when the page is downloaded as Markdown.",
           },
           {
             t: "tip",
