@@ -526,10 +526,16 @@ export const MarkdownPaste = Extension.create({
         props: {
           handlePaste(view, event) {
             const data = event.clipboardData;
-            if (!data || data.types.includes("text/html")) return false;
+            if (!data) return false;
             const text = data.getData("text/plain");
             if (!text || !looksLikeMarkdown(text)) return false;
             if (view.state.selection.$from.parent.type.spec.code) return false;
+            // Notion, GitHub and the chat assistants put Markdown on the clipboard and
+            // HTML beside it. The Markdown is the better copy: it says heading, list and
+            // checkbox, where the HTML says font-size and margin. Another Kairo page is
+            // the exception — that HTML is already our own blocks, exactly.
+            const html = data.getData("text/html");
+            if (html && html.includes("data-pm-slice")) return false;
             const blocks = markdownToBlocks(text, { tables: true });
             if (blocks.length === 0) return false;
             editor.chain().focus().insertContent(blocks).run();

@@ -2418,7 +2418,7 @@ const ALL_ARTICLES: Article[] = [
           },
           {
             t: "tip",
-            text: "Paste Markdown straight in, from a chat with an assistant or a README, and it arrives as real headings, lists, checkboxes and tables.",
+            text: "Paste a page straight in from Notion, a README, or a chat with an assistant, and it arrives as real blocks: headings, bold and links, bullets nested the way they were written, numbered lists, checkboxes with the right ones ticked, quotes, dividers, code with its language, tables and pictures. Copying between two Kairo pages keeps everything exactly as it was.",
           },
         ],
       },

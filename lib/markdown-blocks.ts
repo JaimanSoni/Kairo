@@ -2,12 +2,15 @@ import { safeHref, type JMark, type JNode } from "./doc-model";
 
 /**
  * The small, forgiving Markdown people and assistants naturally write, turned
- * into editor blocks: paragraphs, headings, quotes, lists, checkboxes, code
- * fences, dividers and — where the page allows them — tables. Anything else
- * arrives as plain text, which is never wrong, just unformatted.
+ * into editor blocks: paragraphs, headings, quotes, lists (nested as written),
+ * checkboxes, code fences, dividers, pictures and — where the page allows them
+ * — tables. Anything else arrives as plain text, which is never wrong, just
+ * unformatted.
  *
  * Used by the assistant tools that write pages, and by the notes editor when
- * Markdown is pasted in.
+ * Markdown is pasted in: copying a page out of Notion, a README off GitHub or
+ * an answer out of a chat all put Markdown on the clipboard, and this is what
+ * turns it back into real blocks.
  */
 
 export type MarkdownOptions = {
@@ -15,14 +18,19 @@ export type MarkdownOptions = {
   tables?: boolean;
 };
 
-const INLINE_RE = /(`[^`\n]+`|\*\*[^*]+\*\*|__[^_]+__|~~[^~]+~~|\[[^\]\n]+\]\([^)\s]+\)|\*[^*\s][^*]*\*|_[^_\s][^_]*_)/g;
+type ListKind = "bulletList" | "orderedList" | "taskList";
+
+const INLINE_RE =
+  /(`[^`\n]+`|\*\*\*[^*]+\*\*\*|___[^_]+___|\*\*[^*]+\*\*|__[^_]+__|~~[^~]+~~|!?\[[^\]\n]*\]\([^)\s]+\)|<https?:\/\/[^>\s]+>|\*[^*\s][^*]*\*|_[^_\s][^_]*_)/g;
 
 function inline(s: string): JNode[] {
   const out: JNode[] = [];
   let last = 0;
   let m: RegExpExecArray | null;
   const push = (text: string, marks?: JMark[]) => {
-    if (text) out.push(marks ? { type: "text", text, marks } : { type: "text", text });
+    // a backslash before a marker meant "print this", so it goes away here
+    const clean = text.replace(/\\([\\`*_~[\]()#>!-])/g, "$1");
+    if (clean) out.push(marks ? { type: "text", text: clean, marks } : { type: "text", text: clean });
   };
   INLINE_RE.lastIndex = 0;
   while ((m = INLINE_RE.exec(s))) {
@@ -30,14 +38,21 @@ function inline(s: string): JNode[] {
     const token = m[0];
     if (token.startsWith("`")) {
       push(token.slice(1, -1), [{ type: "code" }]);
+    } else if (token.startsWith("***") || token.startsWith("___")) {
+      push(token.slice(3, -3), [{ type: "bold" }, { type: "italic" }]);
     } else if (token.startsWith("**") || token.startsWith("__")) {
       push(token.slice(2, -2), [{ type: "bold" }]);
     } else if (token.startsWith("~~")) {
       push(token.slice(2, -2), [{ type: "strike" }]);
-    } else if (token.startsWith("[")) {
-      const link = /^\[([^\]]+)\]\(([^)\s]+)\)$/.exec(token);
+    } else if (token.startsWith("<")) {
+      const href = safeHref(token.slice(1, -1));
+      if (href) push(token.slice(1, -1), [{ type: "link", attrs: { href } }]);
+      else push(token);
+    } else if (token.startsWith("[") || token.startsWith("![")) {
+      // a picture inside a line of text has no block of its own to sit in: its words stay, linked
+      const link = /^!?\[([^\]]*)\]\(([^)\s]+)\)$/.exec(token);
       const href = link ? safeHref(link[2]) : null;
-      if (link && href) push(link[1], [{ type: "link", attrs: { href } }]);
+      if (link && href) push(link[1] || href, [{ type: "link", attrs: { href } }]);
       else push(token);
     } else {
       push(token.slice(1, -1), [{ type: "italic" }]);
@@ -60,6 +75,19 @@ function paragraph(lines: string[]): JNode {
 
 const TABLE_ROW = /^\s*\|.*\|\s*$/;
 const TABLE_RULE = /^\s*\|(\s*:?-{3,}:?\s*\|)+\s*$/;
+const IMAGE_LINE = /^\s*!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)\s*$/;
+const FENCE = /^\s*(`{3,}|~{3,})\s*([a-z0-9+#.-]{0,24})\s*$/i;
+const HEADING = /^(#{1,6})\s+(.+?)\s*#*$/;
+const QUOTE = /^\s{0,3}>\s?(.*)$/;
+const RULE = /^\s*([-*_])(\s*\1){2,}\s*$/;
+/** A bullet: Markdown dashes and stars, and the bullet characters a rich editor pastes. */
+const BULLET = /^(\s*)(?:[-*+]|[•‣▪◦])\s+(.*)$/;
+const TODO = /^(\s*)(?:[-*+]|[•‣▪◦])?\s*\[( |x|X)\]\s+(.*)$/;
+const NUMBER = /^(\s*)(\d{1,9})[.)]\s+(.*)$/;
+
+const indentOf = (raw: string) => raw.replace(/\t/g, "    ").match(/^ */)![0].length;
+
+type Line = { raw: string; text: string };
 
 function tableCells(line: string): string[] {
   return line
@@ -69,77 +97,114 @@ function tableCells(line: string): string[] {
     .map((c) => c.replace(/\\\|/g, "|").trim());
 }
 
+/**
+ * One list, and everything nested under it. Deeper lines become a list inside
+ * the item above them, exactly as they were written; a plain line that is
+ * indented under an item joins that item.
+ */
+function readList(lines: Line[], start: number, options: MarkdownOptions): { node: JNode; next: number } {
+  const first = lines[start];
+  const baseIndent = indentOf(first.raw);
+  const kindOf = (line: string): { kind: ListKind; body: string; checked?: boolean; start?: number } | null => {
+    let m: RegExpExecArray | null;
+    if ((m = TODO.exec(line))) return { kind: "taskList", body: m[3], checked: m[2].toLowerCase() === "x" };
+    if ((m = BULLET.exec(line))) return { kind: "bulletList", body: m[2] };
+    if ((m = NUMBER.exec(line))) return { kind: "orderedList", body: m[3], start: Number(m[2]) };
+    return null;
+  };
+
+  const head = kindOf(first.raw)!;
+  const kind = head.kind;
+  const items: JNode[] = [];
+  let i = start;
+
+  while (i < lines.length) {
+    const line = lines[i];
+    if (!line.text.trim()) {
+      // a blank line ends the list unless the next line carries on inside it
+      const next = lines[i + 1];
+      if (!next || !next.text.trim() || (indentOf(next.raw) <= baseIndent && !kindOf(next.raw))) break;
+      i++;
+      continue;
+    }
+    const indent = indentOf(line.raw);
+    if (indent < baseIndent) break;
+    const parsed = kindOf(line.raw);
+    if (!parsed || indent > baseIndent + 1) {
+      if (items.length === 0) break;
+      // deeper: a list of its own, tucked inside the item above
+      if (parsed) {
+        const inner = readList(lines, i, options);
+        (items[items.length - 1].content ??= []).push(inner.node);
+        i = inner.next;
+        continue;
+      }
+      // a wrapped line: part of the item above
+      const item = items[items.length - 1];
+      const para = item.content?.[0];
+      if (para?.type === "paragraph") {
+        para.content = [...(para.content ?? []), { type: "hardBreak" }, ...inline(line.text.trim())];
+      }
+      i++;
+      continue;
+    }
+    if (parsed.kind !== kind) break;
+    items.push({
+      type: kind === "taskList" ? "taskItem" : "listItem",
+      ...(kind === "taskList" ? { attrs: { checked: parsed.checked === true } } : {}),
+      content: [paragraph([parsed.body])],
+    });
+    i++;
+  }
+
+  const node: JNode =
+    kind === "orderedList" ? { type: "orderedList", attrs: { start: head.start ?? 1 }, content: items } : { type: kind, content: items };
+  return { node, next: i };
+}
+
 export function markdownToBlocks(md: string, options: MarkdownOptions = {}): JNode[] {
   const blocks: JNode[] = [];
+  const lines: Line[] = md.replace(/\r\n?/g, "\n").split("\n").map((raw) => ({ raw, text: raw.trimEnd() }));
   let para: string[] = [];
-  let list: { kind: "bulletList" | "orderedList" | "taskList"; items: JNode[] } | null = null;
 
   const endPara = () => {
     if (para.length) blocks.push(paragraph(para));
     para = [];
   };
-  const endList = () => {
-    if (list) {
-      blocks.push(
-        list.kind === "orderedList"
-          ? { type: "orderedList", attrs: { start: 1 }, content: list.items }
-          : { type: list.kind, content: list.items }
-      );
-    }
-    list = null;
-  };
-  const item = (kind: "bulletList" | "orderedList" | "taskList", body: string, checked?: boolean) => {
-    endPara();
-    if (!list || list.kind !== kind) {
-      endList();
-      list = { kind, items: [] };
-    }
-    const node: JNode =
-      kind === "taskList"
-        ? { type: "taskItem", attrs: { checked: Boolean(checked) }, content: [paragraph([body])] }
-        : { type: "listItem", content: [paragraph([body])] };
-    list.items.push(node);
-  };
 
-  const lines = md.replace(/\r\n?/g, "\n").split("\n");
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trimEnd();
+    const { raw, text } = lines[i];
     let m: RegExpExecArray | null;
 
-    if ((m = /^\s*!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)\s*$/.exec(line))) {
+    if ((m = FENCE.exec(text))) {
       endPara();
-      endList();
+      const marker = m[1][0];
+      const code: string[] = [];
+      i++;
+      while (i < lines.length && !new RegExp(`^\\s*${marker}{3,}\\s*$`).test(lines[i].text)) code.push(lines[i++].raw);
+      const body = code.join("\n");
+      blocks.push({ type: "codeBlock", attrs: { language: m[2] || null }, ...(body ? { content: [{ type: "text", text: body }] } : {}) });
+      continue;
+    }
+
+    if ((m = IMAGE_LINE.exec(text))) {
+      endPara();
       blocks.push({ type: "image", attrs: { src: m[2], alt: m[1] || null, width: 100 } });
       continue;
     }
-    if ((m = /^\s*```\s*([a-z0-9+#.-]{0,24})\s*$/i.exec(line))) {
-      endPara();
-      endList();
-      const code: string[] = [];
-      i++;
-      while (i < lines.length && !/^\s*```\s*$/.test(lines[i])) code.push(lines[i++]);
-      const text = code.join("\n");
-      blocks.push({
-        type: "codeBlock",
-        attrs: { language: m[1] || null },
-        ...(text ? { content: [{ type: "text", text }] } : {}),
-      });
-      continue;
-    }
 
-    if (options.tables && TABLE_ROW.test(line) && i + 1 < lines.length && TABLE_RULE.test(lines[i + 1])) {
+    if (options.tables && TABLE_ROW.test(text) && i + 1 < lines.length && TABLE_RULE.test(lines[i + 1].text)) {
       endPara();
-      endList();
-      const header = tableCells(line);
+      const header = tableCells(text);
       const rows: string[][] = [];
       i += 2;
-      while (i < lines.length && TABLE_ROW.test(lines[i])) rows.push(tableCells(lines[i++]));
+      while (i < lines.length && TABLE_ROW.test(lines[i].text)) rows.push(tableCells(lines[i++].text));
       i--;
       const width = Math.min(20, Math.max(header.length, ...rows.map((r) => r.length)));
-      const cell = (type: "tableHeader" | "tableCell", text: string): JNode => ({
+      const cell = (type: "tableHeader" | "tableCell", value: string): JNode => ({
         type,
         attrs: { colspan: 1, rowspan: 1, colwidth: null },
-        content: [paragraph([text])],
+        content: [paragraph([value])],
       });
       const row = (type: "tableHeader" | "tableCell", cells: string[]): JNode => ({
         type: "tableRow",
@@ -149,34 +214,45 @@ export function markdownToBlocks(md: string, options: MarkdownOptions = {}): JNo
       continue;
     }
 
-    if (!line.trim()) {
+    if (!text.trim()) {
       endPara();
-      endList();
-    } else if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) {
-      endPara();
-      endList();
-      blocks.push({ type: "horizontalRule" });
-    } else if ((m = /^(#{1,6})\s+(.+)$/.exec(line))) {
-      endPara();
-      endList();
-      blocks.push({ type: "heading", attrs: { level: Math.min(3, m[1].length) }, content: inline(m[2]) });
-    } else if ((m = /^>\s?(.*)$/.exec(line))) {
-      endPara();
-      endList();
-      blocks.push({ type: "blockquote", content: [paragraph([m[1]])] });
-    } else if ((m = /^\s*[-*+]\s+\[( |x|X)\]\s+(.*)$/.exec(line))) {
-      item("taskList", m[2], m[1].toLowerCase() === "x");
-    } else if ((m = /^\s*[-*+]\s+(.*)$/.exec(line))) {
-      item("bulletList", m[1]);
-    } else if ((m = /^\s*\d+[.)]\s+(.*)$/.exec(line))) {
-      item("orderedList", m[1]);
-    } else {
-      endList();
-      para.push(line.trim());
+      continue;
     }
+
+    if (RULE.test(text)) {
+      endPara();
+      blocks.push({ type: "horizontalRule" });
+      continue;
+    }
+
+    if ((m = HEADING.exec(text))) {
+      endPara();
+      blocks.push({ type: "heading", attrs: { level: Math.min(3, m[1].length) }, content: inline(m[2]) });
+      continue;
+    }
+
+    if (QUOTE.test(text)) {
+      endPara();
+      // every line of the quote, together, rather than one quote per line
+      const quoted: string[] = [];
+      while (i < lines.length && QUOTE.test(lines[i].text)) quoted.push(QUOTE.exec(lines[i++].text)![1]);
+      i--;
+      const inner = markdownToBlocks(quoted.join("\n"), options);
+      blocks.push({ type: "blockquote", content: inner.length ? inner : [paragraph([""])] });
+      continue;
+    }
+
+    if (TODO.test(raw) || BULLET.test(raw) || NUMBER.test(raw)) {
+      endPara();
+      const { node, next } = readList(lines, i, options);
+      blocks.push(node);
+      i = next - 1;
+      continue;
+    }
+
+    para.push(text.trim());
   }
   endPara();
-  endList();
   return blocks;
 }
 
@@ -186,8 +262,8 @@ export function looksLikeMarkdown(text: string): boolean {
   if (lines.length < 2 && !/^(#{1,3}\s|```)/.test(text)) return false;
   let signals = 0;
   for (const line of lines) {
-    if (/^(#{1,6}\s|\s*[-*+]\s\[[ xX]\]\s|\s*[-*+]\s|\s*\d+[.)]\s|>\s|```|\s*\|.*\|\s*$)/.test(line)) signals++;
-    if (/\*\*[^*]+\*\*|\[[^\]]+\]\([^)]+\)/.test(line)) signals++;
+    if (/^(#{1,6}\s|\s*[-*+•‣▪◦]\s\[[ xX]\]\s|\s*[-*+•‣▪◦]\s|\s*\d+[.)]\s|>\s|```|\s*\|.*\|\s*$)/.test(line)) signals++;
+    if (/\*\*[^*]+\*\*|\[[^\]]+\]\([^)]+\)|!\[[^\]]*\]\([^)]+\)/.test(line)) signals++;
   }
   return signals >= 2;
 }
