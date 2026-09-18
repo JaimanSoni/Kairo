@@ -14,6 +14,7 @@ import { Plant } from "./plants";
 import { IdeaPicker, ideaLine, PlantSheet } from "./plant-sheet";
 import { GardenBed, GardenHud, PlantRow } from "./plot";
 import { GardenScene, type Weather } from "./scene";
+import { SkyChip } from "./sky";
 import { plotOf, useGarden, useGardenActions } from "./use-garden";
 import { ImmersiveGarden, useGardenView } from "./immersive";
 import { useCityView } from "./city/city";
@@ -112,7 +113,7 @@ export function GardenHome() {
 
       {habits.length === 0 ? (
         <>
-          <GardenScene weather="clear" thriving={2}>
+          <GardenScene weather="clear" thriving={2} live>
             <EmptyBed />
           </GardenScene>
           <section className="anim-rise mt-5 rounded-2xl border border-line bg-card p-5" data-first-habit>
@@ -129,7 +130,20 @@ export function GardenHome() {
       ) : (
         <>
           <section className="relative" aria-label="Your garden">
-            <GardenScene weather={weather} thriving={thriving} allDone={allDone} celebrate={celebrate} decorLevel={gardenLevelOf(score).level} hud={<GardenHud done={doneToday} total={due.length} />}>
+            <GardenScene
+              weather={weather}
+              thriving={thriving}
+              allDone={allDone}
+              celebrate={celebrate}
+              decorLevel={gardenLevelOf(score).level}
+              live
+              hud={
+                <span className="flex flex-col items-start gap-1.5 sm:flex-row sm:items-center sm:gap-2">
+                  <GardenHud done={doneToday} total={due.length} />
+                  <SkyChip />
+                </span>
+              }
+            >
               <GardenBed plots={plots} moments={moments} onWater={(h) => void water(h)} />
             </GardenScene>
             <button

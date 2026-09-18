@@ -2401,6 +2401,192 @@ body[data-modal] .nt-float {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28), 0 6px 20px rgba(0, 0, 0, 0.1);
 }
 
+/* ---------- the real weather over a garden: rain, snow, fog and lightning.
+   Each drop or flake is a column the height of the scene, with the drop drawn
+   at its top, so one translate carries it the whole way down at any size. */
+.gd-rain,
+.gd-snow {
+  position: absolute;
+  inset: -14% -28%;
+  pointer-events: none;
+  transform: rotate(var(--slant, 8deg));
+}
+.gd-rain i {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 1.6px;
+  background: linear-gradient(to bottom, rgba(226, 238, 250, 0) 0, rgba(226, 238, 250, 0.78) var(--len, 18px), rgba(226, 238, 250, 0) calc(var(--len, 18px) + 1px)) no-repeat;
+  animation: gd-fall 0.7s linear infinite;
+  will-change: transform;
+}
+.gd-rain i.gd-far {
+  width: 1px;
+  opacity: 0.55;
+  --len: 11px;
+}
+@keyframes gd-fall {
+  from {
+    transform: translateY(-24px);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+.gd-snow i {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: var(--s, 4px);
+  animation: gd-fall 10s linear infinite;
+  will-change: transform;
+}
+.gd-snow i::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--s, 4px);
+  height: var(--s, 4px);
+  border-radius: 9999px;
+  background: #fff;
+  box-shadow: 0 0 3px rgba(255, 255, 255, 0.8);
+  animation: gd-flake 2.8s ease-in-out infinite alternate;
+}
+@keyframes gd-flake {
+  from {
+    transform: translateX(-9px);
+  }
+  to {
+    transform: translateX(9px);
+  }
+}
+/* rain meeting the ground */
+.gd-plip {
+  position: absolute;
+  width: 16px;
+  height: 5px;
+  margin-left: -8px;
+  border-radius: 50%;
+  border: 1.2px solid rgba(232, 242, 252, 0.75);
+  opacity: 0;
+  animation: gd-plip 1.2s ease-out infinite;
+}
+@keyframes gd-plip {
+  0% {
+    transform: scale(0.2);
+    opacity: 0.95;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+.gd-puddle {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 45% 40%, rgba(196, 220, 236, 0.55), rgba(120, 150, 172, 0.35) 60%, rgba(120, 150, 172, 0) 72%);
+}
+/* fog: soft banks drifting across the land */
+.gd-fog span {
+  position: absolute;
+  left: -30%;
+  width: 160%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(236, 240, 243, 0.78), rgba(236, 240, 243, 0) 68%);
+  filter: blur(4px);
+  animation: gd-fog 38s ease-in-out infinite alternate;
+}
+@keyframes gd-fog {
+  from {
+    transform: translateX(-9%);
+  }
+  to {
+    transform: translateX(9%);
+  }
+}
+/* lightning: a bolt and the sky lighting up behind it, twice, then quiet for a while */
+.gd-flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: #eef3ff;
+  opacity: 0;
+  animation: gd-flash 11s linear infinite;
+}
+.gd-bolt {
+  opacity: 0;
+  animation: gd-bolt 11s linear infinite;
+  filter: drop-shadow(0 0 6px rgba(230, 238, 255, 0.95));
+}
+@keyframes gd-flash {
+  0%,
+  60%,
+  100% {
+    opacity: 0;
+  }
+  60.6% {
+    opacity: 0.5;
+  }
+  61.6% {
+    opacity: 0.06;
+  }
+  62.4% {
+    opacity: 0.34;
+  }
+  64.5% {
+    opacity: 0;
+  }
+}
+@keyframes gd-bolt {
+  0%,
+  60%,
+  100% {
+    opacity: 0;
+  }
+  60.6% {
+    opacity: 1;
+  }
+  61.6% {
+    opacity: 0.15;
+  }
+  62.4% {
+    opacity: 1;
+  }
+  64.5% {
+    opacity: 0;
+  }
+}
+/* the wind: clouds hurry and the grass leans */
+[data-windy] .gd-tuft {
+  animation-duration: 1.6s;
+}
+/* the weather, in a word, over the sky */
+.gd-sky-chip {
+  transition: transform 0.2s;
+}
+.gd-sky-chip:hover {
+  transform: translateY(-1px);
+}
+@media (prefers-reduced-motion: reduce) {
+  /* still weather: the rain and snow hang where they are, nothing flashes */
+  .gd-rain i,
+  .gd-snow i,
+  .gd-snow i::before,
+  .gd-fog span {
+    animation: none;
+  }
+  .gd-rain i,
+  .gd-snow i {
+    transform: translateY(var(--rest, 40%));
+  }
+  .gd-plip,
+  .gd-flash,
+  .gd-bolt {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .gd-sway,
   .gd-peek,

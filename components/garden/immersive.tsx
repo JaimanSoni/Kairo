@@ -8,6 +8,7 @@ import { useClock, useReducedMotion } from "./fx";
 import { Plant } from "./plants";
 import { GardenBed, GardenHud } from "./plot";
 import { GardenScene, type Weather } from "./scene";
+import { SkyLine } from "./sky";
 import { gardenLevelOf, gardenScore } from "@/lib/habits-shared";
 import { plotOf, useGarden, useGardenActions } from "./use-garden";
 
@@ -73,6 +74,8 @@ export function ImmersiveGarden({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      // a sheet opened over the garden closes first
+      if (document.body.dataset.modal) return;
       e.stopImmediatePropagation();
       onClose();
     };
@@ -116,7 +119,7 @@ export function ImmersiveGarden({ onClose }: { onClose: () => void }) {
 
   return createPortal(
     <div ref={root} className="gd-immersive fixed inset-0 z-[60] bg-[#0b1a2c]" role="dialog" aria-modal aria-label="Your garden" onPointerMove={onPointerMove} data-immersive>
-      <GardenScene variant="immersive" weather={weather} thriving={thriving} allDone={allDone} celebrate={celebrate} decorLevel={gardenLevelOf(gardenScore(plots.map((p) => p.strength))).level}>
+      <GardenScene variant="immersive" weather={weather} thriving={thriving} allDone={allDone} celebrate={celebrate} decorLevel={gardenLevelOf(gardenScore(plots.map((p) => p.strength))).level} live>
         {status !== "ready" ? null : plots.length === 0 ? (
           <div className="flex flex-col items-center px-6 text-center">
             <div className="flex items-end gap-4">
@@ -147,11 +150,14 @@ export function ImmersiveGarden({ onClose }: { onClose: () => void }) {
       <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-3 px-4 pt-[max(1rem,env(safe-area-inset-top))] sm:px-8 sm:pt-7">
         <div className="pointer-events-auto min-w-0">
           <h2 className="font-display text-3xl leading-none text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.28)] sm:text-4xl">Your garden</h2>
-          <p className="mt-1.5 text-sm font-medium text-white/90 [text-shadow:0_1px_4px_rgba(0,0,0,0.35)]">
-            {weekday} {DAY_PART(minute)}
+          <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium text-white/90 [text-shadow:0_1px_4px_rgba(0,0,0,0.35)]">
+            <span>
+              {weekday} {DAY_PART(minute)}
+            </span>
+            <SkyLine />
           </p>
           {plots.length > 0 && (
-            <div className="mt-3">
+            <div className="mt-3 flex">
               <GardenHud done={doneToday} total={due.length} />
             </div>
           )}

@@ -20,6 +20,7 @@ import { coffeeEnabled } from "@/lib/coffee";
 import { JOURNAL_SHOWN } from "@/lib/types";
 import { useGarden } from "../garden/use-garden";
 import { LeaveCity } from "../garden/city/leave";
+import { SkyOptions } from "../garden/sky";
 
 /**
  * Settings, as a page of its own.
@@ -403,6 +404,14 @@ function AppearanceSection() {
               </button>
             );
           })}
+        </div>
+      </Row>
+      <Row
+        title="Garden weather"
+        description="Your garden has the sky you have: rain when it rains, and the sun setting when yours does. Weather from MET Norway; where you are is rounded to about 10 km and not kept."
+      >
+        <div data-settings-sky>
+          <SkyOptions />
         </div>
       </Row>
     </Section>

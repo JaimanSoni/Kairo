@@ -122,7 +122,7 @@ function PlantDetail({ habit, today }: { habit: HabitView; today: string }) {
       </div>
 
       <div className="mt-3">
-        <GardenScene weather={info.due ? "partly" : "clear"} thriving={live.health === "thriving" ? 3 : live.health === "healthy" ? 1 : 0} compact>
+        <GardenScene weather={info.due ? "partly" : "clear"} thriving={live.health === "thriving" ? 3 : live.health === "healthy" ? 1 : 0} compact live>
           <div className="relative flex flex-col items-center pb-5">
             <button
               type="button"

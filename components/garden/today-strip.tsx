@@ -76,7 +76,7 @@ export default function TodayGardenStrip() {
           className="gd-card group block cursor-pointer rounded-2xl outline-none transition-transform duration-300 hover:-translate-y-0.5 focus-visible:ring-4 focus-visible:ring-sun/40"
           data-garden-invite
         >
-          <GardenScene variant="mini" weather="clear" thriving={1}>
+          <GardenScene variant="mini" weather="clear" thriving={1} live>
             <div className="flex items-end justify-center gap-6 px-4 pb-3 pt-1">
               {(["tulip", "sunflower", "lavender"] as const).map((s, i) => (
                 <Plant key={s} species={s} stage={i === 1 ? 2 : 0} size={i === 1 ? 58 : 48} phase={i} sway={i === 1} fit="snug" />
@@ -133,7 +133,7 @@ export default function TodayGardenStrip() {
         className="gd-card group relative block cursor-pointer rounded-2xl outline-none transition-transform duration-300 hover:-translate-y-0.5 focus-visible:ring-4 focus-visible:ring-sun/40"
         data-garden-card
       >
-        <GardenScene variant="mini" weather={weather} thriving={thriving} allDone={allDone} decorLevel={level} hud={<GardenHud done={doneToday} total={due.length} />}>
+        <GardenScene variant="mini" weather={weather} thriving={thriving} allDone={allDone} decorLevel={level} live hud={<GardenHud done={doneToday} total={due.length} />}>
           <MiniBed plots={plots} />
         </GardenScene>
         <span className="gd-hud gd-card-cta absolute right-2.5 top-2.5 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-white transition-transform">

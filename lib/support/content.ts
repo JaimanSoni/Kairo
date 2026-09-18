@@ -64,7 +64,7 @@ export const QUICK_START = ["philosophy", "capture", "today", "notifications"];
  * sitemap is only worth sending if it's true, and a date that moves on every
  * deploy teaches crawlers to ignore it.
  */
-export const DOCS_UPDATED = "2026-09-17";
+export const DOCS_UPDATED = "2026-09-18";
 
 const ALL_ARTICLES: Article[] = [
   /* ---------------------------------------------------------------- basics */
@@ -2576,7 +2576,9 @@ const ALL_ARTICLES: Article[] = [
             items: [
               "**Just started** below 10%, **Taking root** from 10%, **Growing strong** from 40%, **Almost automatic** from 70%, and **Rooted** from 85%. A habit's page shows about how many more days it takes to reach the next.",
               "Each habit has a plant, and it grows with strength: a sprout while the habit is new, in bloom once it's rooted. The garden at the top of Habits shows them all together, and a plant can be tapped to mark its habit done.",
-              "The garden follows your day. The sky follows the clock, clouds gather while habits are still to do, and when everything due today is done the sky clears for a rainbow.",
+              "**The garden has your weather.** Its sky is the real sky where you are, this hour: rain when it's raining, a storm with its lightning, fog, snow, and the sun rising and setting when yours does. Tap the weather on the garden to see it, or to change where it comes from.",
+              "Where you are is the town your internet connection comes from, which needs no setup. If that's wrong, choose **This device's location** and your browser asks once. Either way it's rounded to about 10 km and Kairo doesn't keep it. The forecast comes from MET Norway. To turn it off, choose **Off** there or in **Settings > Appearance > Garden weather**; it's kept on each device.",
+              "With the weather off, or when Kairo can't tell where you are, the garden has weather of its own: clouds gather while habits are still to do. Either way, when everything due today is done a rainbow comes out, through the rain if it's raining.",
               "**Open garden** on Today, or **Full screen** on Habits, fills the screen with it. Tap plants there to mark habits done; close it with the cross, Escape or your back button.",
             ],
           },
