@@ -88,7 +88,6 @@ export default function TodayGardenStrip() {
             {joined ? "Plant a first habit in your plot" : "Build a habit alongside your tasks"}
           </span>
         </div>
-        {CITY_SHOWN && <CityButton requests={requests} onOpen={city.show} />}
         {!joined && (
         <button
           type="button"
@@ -137,35 +136,13 @@ export default function TodayGardenStrip() {
         <GardenScene variant="mini" weather={weather} thriving={thriving} allDone={allDone} decorLevel={level} live hud={<GardenHud done={doneToday} total={due.length} />}>
           <MiniBed plots={plots} />
         </GardenScene>
-        <span className="gd-hud gd-card-cta absolute right-2.5 top-2.5 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-white transition-transform">
-          <IconExpand /> Open garden
+        {/* the whole card opens the garden; the corner just says so */}
+        <span className="gd-hud gd-card-cta absolute right-2.5 top-2.5 grid size-8 place-items-center rounded-full text-white transition-transform" aria-hidden>
+          <IconExpand size={14} />
         </span>
-        {CITY_SHOWN && <CityButton level={level} requests={requests} onOpen={city.show} />}
       </div>
       {view.open && <ImmersiveGarden onClose={view.hide} />}
     </section>
-  );
-}
-
-/** The way into Kairo City from Today, with friend requests waiting counted on it. */
-function CityButton({ level, requests, onOpen }: { level?: number; requests: number; onOpen: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.stopPropagation();
-        onOpen();
-      }}
-      className="gd-hud absolute bottom-2.5 right-2.5 z-10 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-white transition-transform hover:-translate-y-0.5"
-      data-open-city
-    >
-      Kairo City{level ? ` · Level ${level}` : ""}
-      {requests > 0 && (
-        <span className="grid h-4 min-w-4 place-items-center rounded-full bg-[#ff6b6b] px-1 text-[10px] font-bold tabular-nums text-white" aria-label={`${requests} friend ${requests === 1 ? "request" : "requests"}`}>
-          {requests}
-        </span>
-      )}
-    </button>
   );
 }
 
