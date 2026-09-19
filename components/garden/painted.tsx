@@ -22,15 +22,22 @@ import type { Phase } from "./scene";
  * plants growing in it stay the first thing you see.
  */
 
+/**
+ * The art is cached hard (a day in the browser, a week at the edge), so each
+ * new set goes in its own folder: new addresses, fetched fresh everywhere.
+ * Changing a picture means a new folder, never the same name.
+ */
+export const ART_DIR = "/art/garden/v4";
+
 export const ART = {
-  mountains: "/art/garden/mountains.webp",
-  hills: "/art/garden/hills.webp",
-  lot: "/art/garden/lot.webp",
-  townDay: "/art/garden/town-day.webp",
-  townNight: "/art/garden/town-night.webp",
-  meadow: "/art/garden/meadow.webp",
-  balloon: "/art/garden/balloon.webp",
-  clouds: ["/art/garden/cloud-1.webp", "/art/garden/cloud-2.webp", "/art/garden/cloud-3.webp"],
+  mountains: `${ART_DIR}/mountains.webp`,
+  hills: `${ART_DIR}/hills.webp`,
+  lot: `${ART_DIR}/lot.webp`,
+  townDay: `${ART_DIR}/town-day.webp`,
+  townNight: `${ART_DIR}/town-night.webp`,
+  meadow: `${ART_DIR}/meadow.webp`,
+  balloon: `${ART_DIR}/balloon.webp`,
+  clouds: [`${ART_DIR}/cloud-1.webp`, `${ART_DIR}/cloud-2.webp`, `${ART_DIR}/cloud-3.webp`],
 } as const;
 
 /** Width over height of each piece, so it can be sized by height alone. */
@@ -101,16 +108,17 @@ export function PaintedLand({
   const night = phase === "night";
   const town = night ? { src: ART.townNight, ratio: RATIO.townNight, grade: NIGHT_VILLAGE } : { src: ART.townDay, ratio: RATIO.townDay, grade };
   return (
-    <div className={`gd-par pointer-events-none absolute -left-[3%] bottom-0 w-[106%] ${className}`} style={style} aria-hidden data-landscape="painted">
+    <div className={`gd-par pointer-events-none absolute -left-[3%] bottom-0 w-[106%] ${className}`} style={{ ...style, containerType: "size" }} aria-hidden data-landscape="painted">
       <Paint src={ART.mountains} fit={STRIP} grade={grade} frost={frost} className="inset-x-0 bottom-[26%] h-[64%]" />
-      {detail && <Paint src={ART.lot} fit={COVER} grade={grade} frost={frost} className="bottom-[10%] left-[3%] h-[64%]" style={{ aspectRatio: RATIO.lot }} />}
+      {/* sized by the land's height, but never wider than their share of the width: big on a wide screen, still in proportion on a phone */}
+      {detail && <Paint src={ART.lot} fit={COVER} grade={grade} frost={frost} className="bottom-[8%] left-[1%]" style={{ aspectRatio: RATIO.lot, width: `min(42cqw, ${(0.92 * RATIO.lot * 100).toFixed(1)}cqh)` }} />}
       <Paint
         src={town.src}
         fit={COVER}
         grade={town.grade}
         frost={frost}
-        className={detail ? "bottom-[14%] right-[3%] h-[86%]" : "bottom-[10%] right-[12%] h-[80%]"}
-        style={{ aspectRatio: town.ratio }}
+        className={detail ? "bottom-[10%] right-[1%]" : "bottom-[10%] right-[10%]"}
+        style={{ aspectRatio: town.ratio, width: detail ? `min(56cqw, ${(1.12 * town.ratio * 100).toFixed(1)}cqh)` : `${(0.8 * town.ratio * 100).toFixed(1)}cqh` }}
       />
       {/* the hills fade out at their foot, into the meadow drawn behind them, instead of stopping on a line */}
       <Paint

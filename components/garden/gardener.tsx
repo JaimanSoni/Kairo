@@ -1,20 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { COVER, GRADE, Paint } from "./painted";
+import { ART_DIR, COVER, GRADE, Paint } from "./painted";
 import type { Phase } from "./scene";
 
 /**
  * The gardener: a kid in a green cap, waving from the back of the garden by
  * the fence, watering can in hand. He says hi for the hour and the weather,
- * cheers when the day's habits are all done, and goes home for the night.
+ * says well done when the day's habits are all done, and goes home for the night.
  *
  * He stands behind the plants, never over them. What he says shows for a
  * few seconds and fades; he says it again when there's something new to
  * say, and whenever he's tapped.
  */
 
-const SRC = "/art/garden/gardener.webp";
+const SRC = `${ART_DIR}/gardener.webp`;
 const RATIO = 320 / 560;
 
 export type GardenerWeather = "clear" | "rain" | "storm" | "snow" | "fog";
@@ -35,7 +35,7 @@ export function Gardener({ phase, minute, weather, allDone, className }: { phase
   const line = greetingFor(minute, weather, allDone);
   return (
     <div className={`absolute z-[3] ${className}`} style={{ aspectRatio: RATIO }} data-gardener>
-      <button type="button" onClick={() => setTaps((n) => n + 1)} aria-label={line} className={`absolute inset-0 cursor-pointer outline-none ${allDone ? "gd-kid-cheer" : "gd-kid"}`}>
+      <button type="button" onClick={() => setTaps((n) => n + 1)} aria-label={line} className="gd-kid absolute inset-0 cursor-pointer outline-none">
         <Paint src={SRC} fit={COVER} grade={GRADE[phase]} frost={0} className="inset-0" />
       </button>
       {/* keyed by what he says and how often he's been tapped, so each new line pops in and fades again */}

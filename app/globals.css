@@ -2677,7 +2677,7 @@ body[data-modal] .nt-float {
   }
 }
 
-/* the gardener: a gentle sway while he waves, a hop when the day is done, and what he says */
+/* the gardener: a gentle sway while he waves, and what he says */
 .gd-kid {
   transform-origin: 50% 100%;
   animation: gd-kid 2.4s ease-in-out infinite alternate;
@@ -2688,19 +2688,6 @@ body[data-modal] .nt-float {
   }
   to {
     transform: rotate(1.6deg) translateY(-1px);
-  }
-}
-.gd-kid-cheer {
-  transform-origin: 50% 100%;
-  animation: gd-kid-cheer 0.9s ease-in-out infinite;
-}
-@keyframes gd-kid-cheer {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  40% {
-    transform: translateY(-9%);
   }
 }
 .gd-bubble {
@@ -2732,8 +2719,7 @@ body[data-modal] .nt-float {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .gd-kid,
-  .gd-kid-cheer {
+  .gd-kid {
     animation: none;
   }
   .gd-bubble {
