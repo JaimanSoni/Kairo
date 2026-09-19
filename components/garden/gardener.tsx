@@ -30,9 +30,33 @@ export function greetingFor(minute: number, weather: GardenerWeather, allDone: b
   return "Hi! Good evening!";
 }
 
-export function Gardener({ phase, minute, weather, allDone, className }: { phase: Phase; minute: number; weather: GardenerWeather; allDone: boolean; className: string }) {
+export function Gardener({
+  phase,
+  minute,
+  weather,
+  allDone,
+  className,
+  quiet = false,
+}: {
+  phase: Phase;
+  minute: number;
+  weather: GardenerWeather;
+  allDone: boolean;
+  className: string;
+  /** On the small card: he only waves. No words over the card, and a tap on him opens the garden like the rest of it. */
+  quiet?: boolean;
+}) {
   const [taps, setTaps] = useState(0);
   const line = greetingFor(minute, weather, allDone);
+  if (quiet) {
+    return (
+      <div className={`pointer-events-none absolute z-[3] ${className}`} style={{ aspectRatio: RATIO }} aria-hidden data-gardener="quiet">
+        <div className="gd-kid absolute inset-0">
+          <Paint src={SRC} fit={COVER} grade={GRADE[phase]} frost={0} className="inset-0" />
+        </div>
+      </div>
+    );
+  }
   return (
     <div className={`absolute z-[3] ${className}`} style={{ aspectRatio: RATIO }} data-gardener>
       <button type="button" onClick={() => setTaps((n) => n + 1)} aria-label={line} className="gd-kid absolute inset-0 cursor-pointer outline-none">

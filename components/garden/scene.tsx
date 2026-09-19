@@ -266,10 +266,10 @@ export function GardenScene({
   );
   const meadowTile = mini ? 220 : immersive ? 520 : 380;
   /** How tall the meadow under the foot of the hills is: the fade needs grass behind it. */
-  const footHeight = { mini: "h-2.5", compact: "h-7", hero: "h-8 sm:h-10", immersive: "h-10 sm:h-12" }[variant];
+  const footHeight = { mini: "h-3", compact: "h-7", hero: "h-8 sm:h-10", immersive: "h-10 sm:h-12" }[variant];
 
-  const skyHeight = { mini: "h-[4.5rem]", compact: "h-32", hero: "h-48 sm:h-60", immersive: "h-[36%] min-h-44 shrink-0" }[variant];
-  const landHeight = { mini: "h-11", compact: "h-28 sm:h-32", hero: "h-32 sm:h-40", immersive: "h-44 sm:h-52" }[variant];
+  const skyHeight = { mini: "h-24 sm:h-28", compact: "h-32", hero: "h-48 sm:h-60", immersive: "h-[36%] min-h-44 shrink-0" }[variant];
+  const landHeight = { mini: "h-16 sm:h-20", compact: "h-28 sm:h-32", hero: "h-32 sm:h-40", immersive: "h-44 sm:h-52" }[variant];
 
   return (
     <div
@@ -393,13 +393,14 @@ export function GardenScene({
         <PaintedLand phase={phase} className={landHeight} style={{ ...drift(-10, -3), filter: landFilter }} frost={look.frost} detail={!mini} />
 
         {/* the gardener, waving from the back of the garden by the fence; home for the night */}
-        {!small && !night && (
+        {variant !== "compact" && !night && (
           <Gardener
             phase={phase}
             minute={min}
             weather={look.thunder ? "storm" : look.rain ? "rain" : look.snow ? "snow" : look.fog ? "fog" : "clear"}
             allDone={allDone}
-            className={immersive ? "bottom-[1%] left-[31%] h-[40%]" : "bottom-[1%] left-[30%] h-[46%]"}
+            className={mini ? "bottom-[2%] left-[43%] h-[52%]" : immersive ? "bottom-[1%] left-[31%] h-[40%]" : "bottom-[1%] left-[30%] h-[46%]"}
+            quiet={mini}
           />
         )}
 
