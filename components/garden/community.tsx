@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { ANIMALS, cleanGardenerName, seedOf, SEEDS, type Board, type Gardener, type SeedStat } from "@/lib/habits-shared";
 import { gardenApi, gardenStore } from "@/lib/habits-client";
 import { useApp } from "../store";
+import { CITY_SHOWN } from "@/lib/types";
 import { navigateApp } from "../app-views";
 import { Plant } from "./plants";
 import { Avatar, BackLink, HABIT_TINT, RankBadge, SectionTitle } from "./bits";
@@ -249,7 +250,7 @@ function GardenerCard({ gardener }: { gardener: Gardener | null }) {
     }
     gardenStore.setGardener(r.data.gardener);
     setEditing(false);
-    showToast({ message: r.data.gardener.public ? `You're in Kairo City and on the leaderboards as ${r.data.gardener.name}.` : "You're hidden from Kairo City and the leaderboards." });
+    showToast({ message: r.data.gardener.public ? `You're ${CITY_SHOWN ? "in Kairo City and " : ""}on the leaderboards as ${r.data.gardener.name}.` : `You're hidden from ${CITY_SHOWN ? "Kairo City and " : ""}the leaderboards.` });
   };
 
   if (gardener && !editing) {
@@ -258,7 +259,7 @@ function GardenerCard({ gardener }: { gardener: Gardener | null }) {
         <Avatar animal={gardener.animal} size={44} />
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-semibold">{gardener.name}</div>
-          <div className="text-xs text-ink-faint">{gardener.public ? "In Kairo City and on leaderboards" : "Hidden from Kairo City and leaderboards"}</div>
+          <div className="text-xs text-ink-faint">{gardener.public ? (CITY_SHOWN ? "In Kairo City and on leaderboards" : "On the leaderboards") : CITY_SHOWN ? "Hidden from Kairo City and leaderboards" : "Hidden from the leaderboards"}</div>
         </div>
         <button
           type="button"

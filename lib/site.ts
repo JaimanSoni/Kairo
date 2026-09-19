@@ -1,3 +1,5 @@
+import { CITY_SHOWN } from "./types";
+
 /**
  * The canonical origin, in one place.
  *
@@ -16,7 +18,9 @@ export const SITE_TAGLINE = "Where good days grow.";
 export const SITE_TITLE = "Kairo, where good days grow";
 
 export const SITE_DESCRIPTION =
-  "Plan a day you'll actually finish, keep habits that grow into a garden you can see, and move in next door to your friends in Kairo City.";
+  CITY_SHOWN
+    ? "Plan a day you'll actually finish, keep habits that grow into a garden you can see, and move in next door to your friends in Kairo City."
+    : "Plan a day you'll actually finish, keep habits that grow into a garden you can see, and write down everything else.";
 
 /** Where a human should write to — matches the legal pages and /support/contact. */
 export const SUPPORT_EMAIL = "kairo.support@jaimansoni.com";

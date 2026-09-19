@@ -17,7 +17,7 @@ import { PersonAvatar } from "../person-avatar";
 import { SPACE_CHOICES } from "../welcome";
 import { gardenApi, gardenStore } from "@/lib/habits-client";
 import { coffeeEnabled } from "@/lib/coffee";
-import { JOURNAL_SHOWN } from "@/lib/types";
+import { CITY_SHOWN, JOURNAL_SHOWN } from "@/lib/types";
 import { useGarden } from "../garden/use-garden";
 import { LeaveCity } from "../garden/city/leave";
 import { SkyOptions } from "../garden/sky";
@@ -557,7 +557,7 @@ function PrivacySection() {
           onClick={() => navigateApp("/journal#settings")}
         />
       )}
-      {state.user.spaces.garden && <CityRow />}
+      {CITY_SHOWN && state.user.spaces.garden && <CityRow />}
     </Section>
   );
 }

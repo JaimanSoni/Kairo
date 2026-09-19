@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ObjectId } from "mongodb";
 import { inviteInfo } from "@/lib/city";
 import { getSession } from "@/lib/session";
+import { CITY_SHOWN } from "@/lib/types";
 import { utcToday } from "@/lib/habits-shared";
 import { InviteLanding } from "@/components/garden/city/invite-landing";
 
@@ -16,6 +17,7 @@ type Props = { params: Promise<{ code: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { code } = await params;
+  if (!CITY_SHOWN) return { robots: { index: false } };
   const info = await inviteInfo(null, code, utcToday());
   if (!info) return { title: "Kairo City", robots: { index: false } };
   const who = info.inviterName ?? "A friend";

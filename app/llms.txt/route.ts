@@ -2,6 +2,7 @@ import { ARTICLES, CATEGORIES } from "@/lib/support/content";
 import { KINDS, postsOf } from "@/lib/blog/content";
 import { TRIAL_DAYS } from "@/lib/access";
 import { PRICE_LABEL } from "@/lib/razorpay";
+import { CITY_SHOWN } from "@/lib/types";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL, SUPPORT_EMAIL } from "@/lib/site";
 
 /**
@@ -32,8 +33,9 @@ export function GET() {
     "and each morning offers one decision per leftover task rather than a wall of",
     "red. Habits are plants in a garden that grows as they're kept and wilts, but",
     "never dies, when they're missed. Notes and a journal hold everything else.",
-    "Kairo City is an opt-in street of gardens where people visit and cheer each",
-    "other's gardens and invite friends to the plot next door.",
+    ...(CITY_SHOWN
+      ? ["Kairo City is an opt-in street of gardens where people visit and cheer each", "other's gardens and invite friends to the plot next door."]
+      : []),
     "",
     `Pricing: a ${TRIAL_DAYS}-day free trial, then ${PRICE_LABEL} for a month. Payment is one-off, `,
     "there is no recurring subscription and nothing to cancel. Sign-in is Google only.",

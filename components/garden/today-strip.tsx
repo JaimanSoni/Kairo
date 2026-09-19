@@ -14,6 +14,7 @@ import { GardenScene, type Weather } from "./scene";
 import { plotOf, useGarden, type PlotInfo } from "./use-garden";
 import { gardenStore } from "@/lib/habits-client";
 import { useClock } from "./fx";
+import { CITY_SHOWN } from "@/lib/types";
 
 const HIDE_KEY = "kairo:garden-invite-hidden";
 
@@ -39,7 +40,7 @@ function IconExpand({ size = 13 }: { size?: number }) {
  */
 export default function TodayGardenStrip() {
   const { status, habits, today, guest, gardener } = useGarden();
-  const requests = gardenStore.friendRequests();
+  const requests = CITY_SHOWN ? gardenStore.friendRequests() : 0;
   const view = useGardenView();
   const city = useCityView();
   const minute = useClock();
@@ -53,13 +54,13 @@ export default function TodayGardenStrip() {
 
   // signed out: the city is open to walk around, the way in to everything else
   if (guest) {
-    return <GuestCityCard onOpen={city.show} />;
+    return CITY_SHOWN ? <GuestCityCard onOpen={city.show} /> : null;
   }
   if (status !== "ready") return null;
 
   if (habits.length === 0) {
     // someone on the street keeps a way into the city, habits or not
-    const joined = Boolean(gardener?.public);
+    const joined = CITY_SHOWN && Boolean(gardener?.public);
     if (inviteHidden && !joined && requests === 0) return null;
     return (
       <section className="anim-rise relative mb-5" aria-label="Your garden">
@@ -87,7 +88,7 @@ export default function TodayGardenStrip() {
             {joined ? "Plant a first habit in your plot" : "Build a habit alongside your tasks"}
           </span>
         </div>
-        <CityButton requests={requests} onOpen={city.show} />
+        {CITY_SHOWN && <CityButton requests={requests} onOpen={city.show} />}
         {!joined && (
         <button
           type="button"
@@ -139,7 +140,7 @@ export default function TodayGardenStrip() {
         <span className="gd-hud gd-card-cta absolute right-2.5 top-2.5 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-white transition-transform">
           <IconExpand /> Open garden
         </span>
-        <CityButton level={level} requests={requests} onOpen={city.show} />
+        {CITY_SHOWN && <CityButton level={level} requests={requests} onOpen={city.show} />}
       </div>
       {view.open && <ImmersiveGarden onClose={view.hide} />}
     </section>

@@ -13,13 +13,16 @@ import { GARDEN_LEVELS } from "@/lib/habits-shared";
 import { getSession } from "@/lib/session";
 import { PRICE_CURRENCY, PRICE_MINOR } from "@/lib/razorpay";
 import { SITE_NAME, SITE_TITLE, SITE_URL, SUPPORT_EMAIL } from "@/lib/site";
+import { CITY_SHOWN } from "@/lib/types";
 
 export const metadata: Metadata = {
   // "/" now opens straight into the product for visitors, so this page is
   // the marketing story's own canonical home.
   alternates: { canonical: "/home" },
   description:
-    "Kairo is where good days grow. Plan a day you'll actually finish, keep habits that grow into a living garden, write notes and a journal, and move in next door to your friends in Kairo City. No red badges, no overdue guilt.",
+    CITY_SHOWN
+      ? "Kairo is where good days grow. Plan a day you'll actually finish, keep habits that grow into a living garden, write notes and a journal, and move in next door to your friends in Kairo City. No red badges, no overdue guilt."
+      : "Kairo is where good days grow. Plan a day you'll actually finish, keep habits that grow into a living garden, and write notes for everything else. No red badges, no overdue guilt.",
   keywords: [
     "daily planner",
     "habit tracker",
@@ -34,7 +37,9 @@ export const metadata: Metadata = {
   openGraph: {
     title: SITE_TITLE,
     description:
-      "Plan a day you'll actually finish, grow your habits into a garden you can see, and move in next door to your friends in Kairo City.",
+      CITY_SHOWN
+        ? "Plan a day you'll actually finish, grow your habits into a garden you can see, and move in next door to your friends in Kairo City."
+        : "Plan a day you'll actually finish, grow your habits into a garden you can see, and keep notes for everything else.",
     type: "website",
     siteName: "Kairo",
     url: "/",
@@ -43,7 +48,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: SITE_TITLE,
-    description: "Plan the day. Grow your habits into a garden. Visit your friends' gardens in Kairo City.",
+    description: CITY_SHOWN ? "Plan the day. Grow your habits into a garden. Visit your friends' gardens in Kairo City." : "Plan the day. Grow your habits into a garden. Write down everything else.",
     images: ["/og.png"],
   },
 };
@@ -61,7 +66,9 @@ const JSON_LD = {
   applicationCategory: "ProductivityApplication",
   operatingSystem: "Web, iOS, Android",
   description:
-    "Where good days grow: a daily planner with guilt-free fresh starts and AI capture, habits that grow into a living garden, notes and a journal, and Kairo City, a street of gardens you share with friends.",
+    CITY_SHOWN
+    ? "Where good days grow: a daily planner with guilt-free fresh starts and AI capture, habits that grow into a living garden, notes and a journal, and Kairo City, a street of gardens you share with friends."
+    : "Where good days grow: a daily planner with guilt-free fresh starts and AI capture, habits that grow into a living garden, and notes.",
   offers: {
     "@type": "Offer",
     price: (PRICE_MINOR / 100).toFixed(2),
@@ -131,7 +138,7 @@ const PILLARS = [
   { id: "grow", icon: <GrowIcon />, tint: "bg-moss/12 text-moss", title: "Grow", body: "Habits that get stronger each time, and a garden that shows it." },
   { id: "write", icon: <WriteIcon />, tint: "bg-lilac/12 text-lilac", title: "Write", body: "Notes for everything else, and a journal for the day itself." },
   { id: "city", icon: <CityIcon />, tint: "bg-sky/12 text-sky", title: "Kairo City", body: "Your garden on a street of real ones. Friends move in next door." },
-];
+].filter((p) => p.id !== "city" || CITY_SHOWN);
 
 /** A numbered chapter heading: the page tells the story in four parts. */
 function Chapter({ id, n, kicker, title, body }: { id: string; n: string; kicker: string; title: React.ReactNode; body: string }) {
@@ -335,6 +342,7 @@ export default async function Landing({
       {/* hero */}
       <section aria-label="Intro" className="mx-auto max-w-5xl px-5 pb-8 pt-14 sm:pt-20">
         <div className="mx-auto max-w-3xl text-center">
+          {CITY_SHOWN && (
           <a
             href="#city"
             className="glass mx-auto mb-6 flex w-max max-w-full items-center gap-2 rounded-full py-1.5 pl-1.5 pr-4 text-xs font-medium text-ink-soft transition-colors hover:text-ink"
@@ -342,17 +350,19 @@ export default async function Landing({
             <span className="rounded-full bg-sky px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">New</span>
             Kairo City is open. Come see the gardens
           </a>
+          )}
           <h1 className="font-display mx-auto text-6xl leading-[0.98] tracking-tight sm:text-8xl">
             Where good days{" "}
             <em className="bg-gradient-to-r from-sun via-moss to-sky bg-clip-text pr-[0.12em] -mr-[0.08em] text-transparent">grow</em>.
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-ink-soft">
             Plan a day you&apos;ll actually finish. Keep habits that grow into a garden you can see.
-            Then move in next door to your friends in Kairo City.
+            {CITY_SHOWN ? "Then move in next door to your friends in Kairo City." : "And write down everything else."}
           </p>
 
           <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
             {primary}
+            {CITY_SHOWN && (
             <a
               href={cityHref}
               className="glass flex items-center gap-2 rounded-full px-6 py-4 text-base font-semibold transition-all hover:-translate-y-0.5 hover:shadow-lg"
@@ -362,6 +372,7 @@ export default async function Landing({
               </span>
               Walk around Kairo City
             </a>
+            )}
           </div>
           <p className="mt-3 text-xs text-ink-faint">
             {signedIn ? "You're signed in." : "Free to start. No card, and your days stay yours."}
@@ -375,7 +386,7 @@ export default async function Landing({
 
       {/* the four parts */}
       <section aria-label="What's inside" className="mx-auto max-w-5xl px-5 pt-10">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className={`grid gap-3 sm:grid-cols-2 ${PILLARS.length === 4 ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
           {PILLARS.map((p) => (
             <a
               key={p.id}
@@ -529,6 +540,8 @@ export default async function Landing({
       />
 
       {/* 04 city */}
+      {CITY_SHOWN && (
+      <>
       <Chapter
         id="city"
         n="04"
@@ -563,6 +576,8 @@ export default async function Landing({
           </p>
         </div>
       </section>
+      </>
+      )}
 
       <Feature
         eyebrow="Shared lists"

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
+import { CITY_SHOWN } from "@/lib/types";
 import { GuestExperience } from "@/components/guest-mode";
 
 /**
@@ -17,10 +18,12 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
   title: "Kairo, where good days grow",
   description:
-    "Start right now, no account needed. Plan a day you'll actually finish, grow habits into a garden you can see, and walk around Kairo City. Sign in later and everything follows you.",
+    CITY_SHOWN
+      ? "Start right now, no account needed. Plan a day you'll actually finish, grow habits into a garden you can see, and walk around Kairo City. Sign in later and everything follows you."
+      : "Start right now, no account needed. Plan a day you'll actually finish, grow habits into a garden you can see, and keep notes for everything else. Sign in later and everything follows you.",
   openGraph: {
     title: "Kairo, where good days grow",
-    description: "Plan the day, grow your habits into a garden, and walk Kairo City. Try it instantly, no sign-up.",
+    description: CITY_SHOWN ? "Plan the day, grow your habits into a garden, and walk Kairo City. Try it instantly, no sign-up." : "Plan the day, grow your habits into a garden, and keep notes. Try it instantly, no sign-up.",
     type: "website",
     siteName: "Kairo",
     url: "/",

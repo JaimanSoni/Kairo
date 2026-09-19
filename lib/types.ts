@@ -106,6 +106,16 @@ export const JOURNAL_SHOWN = false;
 
 export const ALL_SPACES: SpacePrefs = { journal: JOURNAL_SHOWN, notes: true, garden: true };
 
+/**
+ * Kairo City is hidden for now: the city itself, friends, visits, invites,
+ * the shared-garden (/g) and invite (/i) pages, and every way in, from Today,
+ * Habits, Settings, the landing page and help. The garden and habits don't
+ * need it and stay as they are. Its code, API and data all stay, and gardens
+ * keep their city picture up to date, so turning this back on brings the
+ * whole city back as it was.
+ */
+export const CITY_SHOWN = false;
+
 export type UserProfile = {
   id: string;
   email: string;

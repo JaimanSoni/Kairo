@@ -10,6 +10,7 @@ import { ListsView } from "./lists-view";
 import { LogView } from "./log-view";
 import SettingsView from "./settings/settings-view";
 import dynamic from "next/dynamic";
+import { CITY_SHOWN } from "@/lib/types";
 
 /**
  * The journal loads on first visit, not with the app. Its editor is the
@@ -89,7 +90,7 @@ export function navigateApp(href: string) {
 export function AppViews() {
   const pathname = usePathname();
   const params = useSearchParams();
-  const wantsCity = params.get("city") === "open" || params.has("claim");
+  const wantsCity = CITY_SHOWN && (params.get("city") === "open" || params.has("claim"));
   const { state } = useApp();
   const locked = state.appLocked;
 

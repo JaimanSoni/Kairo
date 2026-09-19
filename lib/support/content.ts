@@ -1,5 +1,5 @@
 import type { Article, Category } from "./types";
-import { JOURNAL_SHOWN } from "../types";
+import { CITY_SHOWN, JOURNAL_SHOWN } from "../types";
 
 const ALL_CATEGORIES: Category[] = [
   {
@@ -2945,4 +2945,7 @@ const ALL_ARTICLES: Article[] = [
 
 /** The help centre as shown: the journal's guide comes back when the journal does. */
 export const CATEGORIES: Category[] = ALL_CATEGORIES.filter((c) => c.id !== "journal" || JOURNAL_SHOWN);
-export const ARTICLES: Article[] = ALL_ARTICLES.filter((a) => a.categoryId !== "journal" || JOURNAL_SHOWN);
+export const ARTICLES: Article[] = ALL_ARTICLES.filter((a) => a.categoryId !== "journal" || JOURNAL_SHOWN).map((a) =>
+  // Kairo City's section of the habits guide comes back with the city
+  CITY_SHOWN ? a : { ...a, sections: a.sections.filter((s) => s.id !== "city"), keywords: a.keywords?.filter((k) => !/city|cheer/.test(k)) }
+);

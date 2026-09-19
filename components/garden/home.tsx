@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { addDays, gardenLevelOf, gardenScore, SEEDS, type Seed } from "@/lib/habits-shared";
-import { JOURNAL_SHOWN } from "@/lib/types";
+import { CITY_SHOWN, JOURNAL_SHOWN } from "@/lib/types";
 import { gardenStore } from "@/lib/habits-client";
 import { navigateApp } from "../app-views";
 import { IconPlus } from "../ui";
@@ -122,9 +122,11 @@ export function GardenHome() {
             <IdeaPicker className="mt-4" onPick={(seed) => setSheet({ seed })} onCustom={(name) => setSheet({ name })} />
           </section>
           {/* the city is open before the first plant: friends who moved in next door are there to visit */}
-          <div className="mt-5">
-            <CityCard score={0} requests={gardenStore.friendRequests()} onOpen={city.show} />
-          </div>
+          {CITY_SHOWN && (
+            <div className="mt-5">
+              <CityCard score={0} requests={gardenStore.friendRequests()} onOpen={city.show} />
+            </div>
+          )}
           <FirstSteps />
         </>
       ) : (
@@ -160,9 +162,11 @@ export function GardenHome() {
             <p className="mt-2 px-1 text-xs text-ink-faint">Tap a plant to mark it done. Each one grows as its habit gets stronger.</p>
           </section>
 
-          <div className="mt-5">
-            <CityCard score={score} requests={gardenStore.friendRequests()} onOpen={city.show} />
-          </div>
+          {CITY_SHOWN && (
+            <div className="mt-5">
+              <CityCard score={score} requests={gardenStore.friendRequests()} onOpen={city.show} />
+            </div>
+          )}
 
           {rescues.length > 0 && (
             <section className="anim-rise mt-6 overflow-hidden rounded-2xl border border-line bg-card" aria-label="Yesterday">
