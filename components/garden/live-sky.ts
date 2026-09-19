@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import type { LiveSky } from "@/lib/weather-shared";
+import { useClock } from "./fx";
 
 /**
  * The real sky, for every garden on screen: asked once, shared by all of
@@ -199,7 +200,16 @@ const none = () => null;
 /** The sky over this garden, or null when it's off or not known (the garden keeps its own weather then). */
 export function useLiveSky(enabled = true): LiveSky | null {
   const s = useSyncExternalStore(enabled ? subscribe : idle, enabled ? read : none, none);
+  const p = useSkyPreview();
+  if (enabled && p.weather) return previewSky(p.weather);
   return s && s.mode !== "off" ? s.sky : null;
+}
+
+/** Minutes past local midnight for your own garden: the clock, or the hour a preview asks for. */
+export function useGardenMinute(enabled = true): number {
+  const clock = useClock();
+  const p = useSkyPreview();
+  return enabled && p.minute !== null ? p.minute : clock;
 }
 
 /** The whole picture, for the places that let you change where the weather comes from. */
@@ -231,4 +241,108 @@ export function sunMinutes(sky: LiveSky | null): { rise: number; set: number } |
   // a device clock set somewhere else entirely: the fixed day is the better guess
   if (!(set - rise >= 4 * 60)) return null;
   return { rise, set };
+}
+
+/* ------------------------------------------------------------- preview */
+
+/**
+ * The garden in any weather and at any hour, for the people who make Kairo
+ * to see how it looks without waiting for a storm or staying up for the
+ * night. Kept on this device, and only ever over your own garden.
+ */
+
+export const PREVIEW_WEATHERS = [
+  { id: "clear", label: "Sunny" },
+  { id: "partly", label: "Partly cloudy" },
+  { id: "cloudy", label: "Cloudy" },
+  { id: "fog", label: "Fog" },
+  { id: "drizzle", label: "Light rain" },
+  { id: "rain", label: "Rain" },
+  { id: "downpour", label: "Heavy rain" },
+  { id: "showers", label: "Showers" },
+  { id: "storm", label: "Storm" },
+  { id: "snow", label: "Snow" },
+  { id: "sleet", label: "Sleet" },
+  { id: "windy", label: "Windy" },
+] as const;
+export type PreviewWeather = (typeof PREVIEW_WEATHERS)[number]["id"];
+
+/** Minutes past midnight, around a sun that rises at 6:20 and sets at 6:35. */
+export const PREVIEW_TIMES = [
+  { minute: 6 * 60 + 30, label: "Sunrise" },
+  { minute: 9 * 60, label: "Morning" },
+  { minute: 12 * 60 + 30, label: "Noon" },
+  { minute: 17 * 60 + 30, label: "Golden hour" },
+  { minute: 19 * 60, label: "Dusk" },
+  { minute: 22 * 60, label: "Night" },
+] as const;
+
+export type SkyPreview = { weather: PreviewWeather | null; minute: number | null };
+
+const PREVIEW_KEY = "kairo:sky-preview";
+const NO_PREVIEW: SkyPreview = { weather: null, minute: null };
+let preview: SkyPreview | null = null;
+const previewListeners = new Set<() => void>();
+
+function readPreview(): SkyPreview {
+  if (preview) return preview;
+  try {
+    const saved = JSON.parse(localStorage.getItem(PREVIEW_KEY) ?? "null") as SkyPreview | null;
+    preview = saved && (saved.weather || typeof saved.minute === "number") ? { weather: saved.weather ?? null, minute: typeof saved.minute === "number" ? saved.minute : null } : NO_PREVIEW;
+  } catch {
+    preview = NO_PREVIEW;
+  }
+  return preview;
+}
+
+export function setSkyPreview(next: Partial<SkyPreview>) {
+  preview = { ...readPreview(), ...next };
+  try {
+    if (!preview.weather && preview.minute === null) localStorage.removeItem(PREVIEW_KEY);
+    else localStorage.setItem(PREVIEW_KEY, JSON.stringify(preview));
+  } catch {
+    /* private mode: this visit only */
+  }
+  for (const l of previewListeners) l();
+}
+
+function subscribePreview(cb: () => void) {
+  previewListeners.add(cb);
+  return () => {
+    previewListeners.delete(cb);
+  };
+}
+
+export function useSkyPreview(): SkyPreview {
+  return useSyncExternalStore(subscribePreview, readPreview, () => NO_PREVIEW);
+}
+
+/** Today at a local hour, as an instant. */
+function todayAt(minute: number): string {
+  const d = new Date();
+  d.setHours(0, minute, 0, 0);
+  return d.toISOString();
+}
+
+/** The sky a preview asks for, around the same sunrise and sunset as its times. */
+function previewSky(weather: PreviewWeather): LiveSky {
+  const base: LiveSky = { kind: "clear", intensity: 2, thunder: false, showers: false, tempC: 24, windMs: 2, place: null, fahrenheit: false, sunrise: todayAt(6 * 60 + 20), sunset: todayAt(18 * 60 + 35), at: new Date().toISOString() };
+  switch (weather) {
+    case "drizzle":
+      return { ...base, kind: "rain", intensity: 1 };
+    case "downpour":
+      return { ...base, kind: "rain", intensity: 3 };
+    case "showers":
+      return { ...base, kind: "rain", showers: true };
+    case "storm":
+      return { ...base, kind: "rain", intensity: 3, thunder: true, windMs: 11 };
+    case "snow":
+      return { ...base, kind: "snow", tempC: -2 };
+    case "sleet":
+      return { ...base, kind: "sleet", tempC: 1 };
+    case "windy":
+      return { ...base, kind: "partly", windMs: 12 };
+    default:
+      return { ...base, kind: weather };
+  }
 }

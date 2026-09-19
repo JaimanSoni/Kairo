@@ -20,7 +20,7 @@ import { coffeeEnabled } from "@/lib/coffee";
 import { CITY_SHOWN, JOURNAL_SHOWN } from "@/lib/types";
 import { useGarden } from "../garden/use-garden";
 import { LeaveCity } from "../garden/city/leave";
-import { SkyOptions } from "../garden/sky";
+import { SkyOptions, SkyPreviewPanel } from "../garden/sky";
 
 /**
  * Settings, as a page of its own.
@@ -412,6 +412,7 @@ function AppearanceSection() {
       >
         <div data-settings-sky>
           <SkyOptions />
+          <SkyPreviewPanel className="mt-3" />
         </div>
       </Row>
     </Section>

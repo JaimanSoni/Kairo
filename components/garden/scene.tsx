@@ -1,9 +1,9 @@
 "use client";
 
-import { Burst, Moment, useClock } from "./fx";
+import { Burst, Moment } from "./fx";
 import { LevelDecor } from "./city/decor";
-import { PaintedLand, PaintedMeadow } from "./painted";
-import { sunMinutes, useLiveSky } from "./live-sky";
+import { PaintedBalloon, PaintedLand, PaintedMeadow } from "./painted";
+import { sunMinutes, useGardenMinute, useLiveSky } from "./live-sky";
 import type { LiveSky } from "@/lib/weather-shared";
 
 /**
@@ -234,7 +234,7 @@ export function GardenScene({
   const mini = variant === "mini";
   const immersive = variant === "immersive";
   const small = mini || variant === "compact";
-  const min = useClock();
+  const min = useGardenMinute(live);
   const sky = useLiveSky(live);
   const sun = sunMinutes(sky);
   const phase = phaseOf(min, sun);
@@ -318,6 +318,11 @@ export function GardenScene({
 
         {/* the weather dims the light */}
         {look.gloom > 0 && <div className="pointer-events-none absolute inset-0 transition-[background] duration-700" style={{ background: gloomOf(look, dark) }} aria-hidden />}
+
+        {/* a hot air balloon, on a calm day (or a clear night, burner glowing) */}
+        {look.tone === "white" && !look.fog && !look.windy && !falling && (
+          <PaintedBalloon phase={phase} className={{ mini: "h-7", compact: "h-10", hero: "h-12 sm:h-14", immersive: "h-16 sm:h-20" }[variant]} />
+        )}
 
         {/* the rainbow, once the day's habits are all done */}
         {!dark && (

@@ -2640,3 +2640,39 @@ body[data-modal] .nt-float {
     left: 30%;
   }
 }
+
+/* the hot air balloon: across the sky in a few minutes, bobbing on the way */
+.gd-balloon-flight {
+  top: 14%;
+  left: -12%;
+  /* already on its way across when the garden opens, not waiting off the edge */
+  animation: gd-balloon-flight 150s linear -52s infinite;
+}
+@keyframes gd-balloon-flight {
+  from {
+    left: -12%;
+  }
+  to {
+    left: 108%;
+  }
+}
+.gd-balloon-bob {
+  animation: gd-balloon-bob 7s ease-in-out infinite alternate;
+}
+@keyframes gd-balloon-bob {
+  from {
+    transform: translateY(-5px);
+  }
+  to {
+    transform: translateY(6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gd-balloon-flight,
+  .gd-balloon-bob {
+    animation: none;
+  }
+  .gd-balloon-flight {
+    left: 64%;
+  }
+}

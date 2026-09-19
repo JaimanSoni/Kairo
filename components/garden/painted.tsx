@@ -27,10 +27,12 @@ export const ART = {
   villageDay: "/art/garden/village-day.webp",
   villageNight: "/art/garden/village-night.webp",
   meadow: "/art/garden/meadow.webp",
+  balloonDay: "/art/garden/balloon-day.webp",
+  balloonNight: "/art/garden/balloon-night.webp",
 } as const;
 
 /** Width over height of each piece, so it can be sized by height alone. */
-const RATIO = { falls: 900 / 750, villageDay: 900 / 594, villageNight: 900 / 604 };
+const RATIO = { falls: 900 / 605, villageDay: 900 / 483, villageNight: 900 / 514, balloon: 295 / 420 };
 
 type Grade = { filter?: string; tint?: string; amount?: number };
 
@@ -124,6 +126,22 @@ export function PaintedMeadow({ phase, tile }: { phase: Phase; tile: number }) {
       {/* a soft wash, so the grass sits back and the plants come forward */}
       <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(168, 200, 120, 0.34) 0%, rgba(132, 178, 96, 0.3) 100%)" }} />
       {grade.tint && <div className="absolute inset-0" style={{ background: grade.tint, opacity: grade.amount, mixBlendMode: "multiply" }} />}
+    </div>
+  );
+}
+
+/**
+ * A hot air balloon drifting across the sky on a calm day, bobbing as it
+ * goes; after dark, its burner glowing. It flies behind the clouds and in
+ * front of the far mountains, and stays grounded in wind, rain, fog or snow.
+ */
+export function PaintedBalloon({ phase, className }: { phase: Phase; className: string }) {
+  const lit = phase === "night" || phase === "dusk";
+  return (
+    <div className="gd-balloon-flight pointer-events-none absolute" aria-hidden data-balloon>
+      <div className="gd-balloon-bob">
+        <Paint src={lit ? ART.balloonNight : ART.balloonDay} fit={COVER} grade={lit ? NIGHT_VILLAGE : GRADE[phase]} frost={0} className={`relative ${className}`} style={{ aspectRatio: RATIO.balloon }} />
+      </div>
     </div>
   );
 }

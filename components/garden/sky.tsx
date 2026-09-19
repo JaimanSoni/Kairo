@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { Modal } from "../ui";
-import { useClock } from "./fx";
-import { sunMinutes, useLiveSky, useSkySettings, type SkyMode } from "./live-sky";
+import { PREVIEW_TIMES, PREVIEW_WEATHERS, setSkyPreview, sunMinutes, useGardenMinute, useLiveSky, useSkyPreview, useSkySettings, type SkyMode } from "./live-sky";
+import { useApp } from "../store";
 import { phaseOf } from "./scene";
 import { skyLabel, skyTemp, type LiveSky } from "@/lib/weather-shared";
 
@@ -16,7 +16,7 @@ const WEATHER_CREDIT = "MET Norway";
 
 /** Night, by the real sun when we know it. */
 function useNight(sky: LiveSky | null): boolean {
-  const phase = phaseOf(useClock(), sunMinutes(sky));
+  const phase = phaseOf(useGardenMinute(), sunMinutes(sky));
   return phase === "night" || phase === "dusk";
 }
 
@@ -151,6 +151,7 @@ function SkySheet({ onClose }: { onClose: () => void }) {
           Your garden has the sky you have: rain when it rains, fog, snow, a storm, and the sun setting when yours does. Finish the day&apos;s habits and the rainbow still comes out.
         </p>
         <SkyOptions className="mt-4" />
+        <SkyPreviewPanel className="mt-4" />
         <p className="mt-4 text-xs leading-5 text-ink-faint">Weather from {WEATHER_CREDIT}. Where you are is rounded to about 10 km, and Kairo doesn&apos;t keep it.</p>
         <div className="mt-3 flex justify-end">
           <button type="button" onClick={onClose} className="h-9 rounded-full px-4 text-sm font-semibold text-ink-soft hover:bg-paper-deep">
@@ -217,6 +218,52 @@ export function SkyOptions({ className = "" }: { className?: string }) {
         <p className="mt-2 text-xs leading-5 text-ink-faint">This device couldn&apos;t find where it is just now, so this hour&apos;s weather is for your connection&apos;s town.</p>
       )}
       {mode !== "off" && state?.status === "unknown" && <p className="mt-2 text-xs leading-5 text-ink-faint">We can&apos;t tell where you are from this connection. Try this device&apos;s location instead.</p>}
+    </div>
+  );
+}
+
+/**
+ * For Kairo's admins only: the garden in any weather, at any hour, on this
+ * device. Everyone else never sees it.
+ */
+export function SkyPreviewPanel({ className = "" }: { className?: string }) {
+  const { state } = useApp();
+  const p = useSkyPreview();
+  if (!state.user.isAdmin) return null;
+  const chip = (on: boolean) =>
+    `h-8 rounded-full border px-3 text-xs font-semibold transition-colors ${on ? "border-sun bg-sun text-on-accent" : "border-line bg-card text-ink-soft hover:border-ink-faint hover:text-ink"}`;
+  return (
+    <div className={`rounded-2xl border border-dashed border-line p-3 ${className}`} data-sky-preview>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Preview, only you see this</span>
+        {(p.weather || p.minute !== null) && (
+          <button type="button" onClick={() => setSkyPreview({ weather: null, minute: null })} className="text-xs font-semibold text-sun-deep hover:underline" data-preview-reset>
+            Back to real
+          </button>
+        )}
+      </div>
+      <div className="mt-2.5 text-xs font-medium text-ink-soft">Weather</div>
+      <div className="mt-1.5 flex flex-wrap gap-1.5">
+        <button type="button" className={chip(!p.weather)} onClick={() => setSkyPreview({ weather: null })} data-preview-weather="real">
+          Real
+        </button>
+        {PREVIEW_WEATHERS.map((w) => (
+          <button key={w.id} type="button" className={chip(p.weather === w.id)} onClick={() => setSkyPreview({ weather: w.id })} data-preview-weather={w.id}>
+            {w.label}
+          </button>
+        ))}
+      </div>
+      <div className="mt-3 text-xs font-medium text-ink-soft">Time of day</div>
+      <div className="mt-1.5 flex flex-wrap gap-1.5">
+        <button type="button" className={chip(p.minute === null)} onClick={() => setSkyPreview({ minute: null })} data-preview-time="real">
+          Now
+        </button>
+        {PREVIEW_TIMES.map((t) => (
+          <button key={t.minute} type="button" className={chip(p.minute === t.minute)} onClick={() => setSkyPreview({ minute: t.minute })} data-preview-time={t.minute}>
+            {t.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
