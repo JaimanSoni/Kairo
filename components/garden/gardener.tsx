@@ -43,25 +43,22 @@ export function Gardener({
   weather: GardenerWeather;
   allDone: boolean;
   className: string;
-  /** On the small card: he only waves. No words over the card, and a tap on him opens the garden like the rest of it. */
+  /** On the small card: a tap on him opens the garden like the rest of it, rather than making him speak again. */
   quiet?: boolean;
 }) {
   const [taps, setTaps] = useState(0);
   const line = greetingFor(minute, weather, allDone);
-  if (quiet) {
-    return (
-      <div className={`pointer-events-none absolute z-[3] ${className}`} style={{ aspectRatio: RATIO }} aria-hidden data-gardener="quiet">
-        <div className="gd-kid absolute inset-0">
+  return (
+    <div className={`absolute z-[4] ${quiet ? "pointer-events-none" : ""} ${className}`} style={{ aspectRatio: RATIO }} data-gardener={quiet ? "quiet" : ""}>
+      {quiet ? (
+        <div className="gd-kid absolute inset-0" aria-hidden>
           <Paint src={SRC} fit={COVER} grade={GRADE[phase]} frost={0} className="inset-0" />
         </div>
-      </div>
-    );
-  }
-  return (
-    <div className={`absolute z-[3] ${className}`} style={{ aspectRatio: RATIO }} data-gardener>
-      <button type="button" onClick={() => setTaps((n) => n + 1)} aria-label={line} className="gd-kid absolute inset-0 cursor-pointer outline-none">
-        <Paint src={SRC} fit={COVER} grade={GRADE[phase]} frost={0} className="inset-0" />
-      </button>
+      ) : (
+        <button type="button" onClick={() => setTaps((n) => n + 1)} aria-label={line} className="gd-kid absolute inset-0 cursor-pointer outline-none">
+          <Paint src={SRC} fit={COVER} grade={GRADE[phase]} frost={0} className="inset-0" />
+        </button>
+      )}
       {/* keyed by what he says and how often he's been tapped, so each new line pops in and fades again */}
       <span
         key={`${line}:${taps}`}

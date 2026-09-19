@@ -160,11 +160,12 @@ export default function TodayGardenStrip() {
 /** The plants in a row, small: a glimpse, not a place to tap. */
 function MiniBed({ plots }: { plots: PlotInfo[] }) {
   const wide = useSyncExternalStore(subscribeWide, () => window.matchMedia("(min-width: 640px)").matches, () => true);
-  const room = wide ? 9 : 5;
+  // the gardener stands in the bottom-left corner, so the plants keep to the right of him
+  const room = wide ? 8 : 4;
   const shown = plots.length > room ? plots.slice(0, room - 1) : plots;
   const more = plots.length - shown.length;
   return (
-    <div className="relative flex items-end justify-center gap-1.5 px-3 pb-2.5 pt-1 sm:gap-4" aria-hidden>
+    <div className="relative flex items-end justify-center gap-1.5 pb-2.5 pl-[24%] pr-3 pt-1 sm:gap-4 sm:pl-[14%]" aria-hidden>
       {shown.map((p, i) => (
         <span key={p.habit.id} className="relative flex flex-col items-center" data-mini-habit={p.habit.id} data-done={p.live.todayDone}>
           {p.live.todayDone && <span className="gd-glow absolute -inset-x-1 top-0 aspect-square rounded-full" />}

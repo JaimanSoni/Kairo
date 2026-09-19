@@ -393,15 +393,8 @@ export function GardenScene({
         <PaintedLand phase={phase} className={landHeight} style={{ ...drift(-10, -3), filter: landFilter }} frost={look.frost} detail={!mini} />
 
         {/* the gardener, waving from the back of the garden by the fence; home for the night */}
-        {variant !== "compact" && !night && (
-          <Gardener
-            phase={phase}
-            minute={min}
-            weather={look.thunder ? "storm" : look.rain ? "rain" : look.snow ? "snow" : look.fog ? "fog" : "clear"}
-            allDone={allDone}
-            className={mini ? "bottom-[2%] left-[43%] h-[52%]" : immersive ? "bottom-[1%] left-[31%] h-[40%]" : "bottom-[1%] left-[30%] h-[46%]"}
-            quiet={mini}
-          />
+        {!small && !night && (
+          <Gardener phase={phase} minute={min} weather={look.thunder ? "storm" : look.rain ? "rain" : look.snow ? "snow" : look.fog ? "fog" : "clear"} allDone={allDone} className={immersive ? "bottom-[1%] left-[31%] h-[40%]" : "bottom-[1%] left-[30%] h-[46%]"} />
         )}
 
         {hud && <div className={`absolute z-10 ${mini ? "left-2.5 top-2.5" : "left-3 top-3 sm:left-4 sm:top-4"}`}>{hud}</div>}
@@ -480,6 +473,9 @@ export function GardenScene({
           </div>
         )}
       </div>
+
+      {/* on the small card on Today, the gardener stands in its bottom-left corner, in front of the grass */}
+      {mini && !night && <Gardener phase={phase} minute={min} weather={look.thunder ? "storm" : look.rain ? "rain" : look.snow ? "snow" : look.fog ? "fog" : "clear"} allDone={allDone} className="bottom-[4%] left-[2.5%] h-[66%]" quiet />}
 
       {/* fog banks, then whatever is falling, over everything but the words on the sky */}
       {look.fog && (
