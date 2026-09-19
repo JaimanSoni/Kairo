@@ -2021,12 +2021,12 @@ body[data-modal] .nt-float {
   }
 }
 .gd-cloud {
-  left: -180px;
+  left: -360px;
   animation: gd-cloud 90s linear infinite;
 }
 @keyframes gd-cloud {
   from {
-    left: -180px;
+    left: -360px;
   }
   to {
     left: 105%;
@@ -2674,5 +2674,69 @@ body[data-modal] .nt-float {
   }
   .gd-balloon-flight {
     left: 64%;
+  }
+}
+
+/* the gardener: a gentle sway while he waves, a hop when the day is done, and what he says */
+.gd-kid {
+  transform-origin: 50% 100%;
+  animation: gd-kid 2.4s ease-in-out infinite alternate;
+}
+@keyframes gd-kid {
+  from {
+    transform: rotate(-1.6deg);
+  }
+  to {
+    transform: rotate(1.6deg) translateY(-1px);
+  }
+}
+.gd-kid-cheer {
+  transform-origin: 50% 100%;
+  animation: gd-kid-cheer 0.9s ease-in-out infinite;
+}
+@keyframes gd-kid-cheer {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-9%);
+  }
+}
+.gd-bubble {
+  transform-origin: 0% 100%;
+  animation: gd-bubble 7s ease-out both;
+}
+@keyframes gd-bubble {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  6%,
+  82% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+@keyframes gd-bubble-still {
+  0%,
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gd-kid,
+  .gd-kid-cheer {
+    animation: none;
+  }
+  .gd-bubble {
+    animation: gd-bubble-still 7s linear both;
   }
 }

@@ -4,7 +4,8 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import { IconPlus, IconX } from "../ui";
-import { useClock, useReducedMotion } from "./fx";
+import { useReducedMotion } from "./fx";
+import { useGardenMinute } from "./live-sky";
 import { Plant } from "./plants";
 import { GardenBed, GardenHud } from "./plot";
 import { GardenScene, type Weather } from "./scene";
@@ -65,7 +66,8 @@ export function ImmersiveGarden({ onClose }: { onClose: () => void }) {
   const tall = useSyncExternalStore(subscribeResize, () => window.innerHeight, () => 800);
   const { status, habits, today } = useGarden();
   const { moments, celebrate, water } = useGardenActions();
-  const minute = useClock();
+  // the hour your garden is showing: the clock, or the one a preview asks for
+  const minute = useGardenMinute();
   const still = useReducedMotion();
   const root = useRef<HTMLDivElement>(null);
   const frame = useRef(0);

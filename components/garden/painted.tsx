@@ -3,15 +3,17 @@
 import type { Phase } from "./scene";
 
 /**
- * The land behind the garden, painted: far mountains, the hills with their
- * fence, a waterfall off a mossy cliff, and a little village on a knoll with
- * a windmill. Hand-painted pieces, laid out back to front so the sky, the
- * weather and the light can pass between them.
+ * The land behind the garden, painted like the background of a gentle
+ * Japanese TV anime on a summer afternoon: soft blue mountains, a grassy bank
+ * with a fence and sunflowers, an empty lot with three concrete pipes in the
+ * long grass, and a hillside of tiled-roof houses with a utility pole and
+ * its wires. Big summer clouds drift over it all. Hand-painted pieces, laid
+ * out back to front so the sky, the weather and the light pass between them.
  *
  * The art is painted in daylight. Every other hour is a grade laid over it:
  * a colour multiplied into the paint (through a mask cut from the picture
  * itself, so only the paint takes it, never the sky around it), plus a touch
- * of brightness and saturation. At night the village swaps to its own
+ * of brightness and saturation. At night the houses swap to their own
  * painting, with the lamps lit.
  *
  * The mountains and hills are mirrored copies side by side, so they run to
@@ -23,16 +25,16 @@ import type { Phase } from "./scene";
 export const ART = {
   mountains: "/art/garden/mountains.webp",
   hills: "/art/garden/hills.webp",
-  falls: "/art/garden/falls.webp",
-  villageDay: "/art/garden/village-day.webp",
-  villageNight: "/art/garden/village-night.webp",
+  lot: "/art/garden/lot.webp",
+  townDay: "/art/garden/town-day.webp",
+  townNight: "/art/garden/town-night.webp",
   meadow: "/art/garden/meadow.webp",
-  balloonDay: "/art/garden/balloon-day.webp",
-  balloonNight: "/art/garden/balloon-night.webp",
+  balloon: "/art/garden/balloon.webp",
+  clouds: ["/art/garden/cloud-1.webp", "/art/garden/cloud-2.webp", "/art/garden/cloud-3.webp"],
 } as const;
 
 /** Width over height of each piece, so it can be sized by height alone. */
-const RATIO = { falls: 900 / 605, villageDay: 900 / 483, villageNight: 900 / 514, balloon: 295 / 420 };
+const RATIO = { lot: 900 / 463, townDay: 900 / 474, townNight: 900 / 537, balloon: 299 / 420, clouds: [600 / 401, 600 / 368, 600 / 181] };
 
 type Grade = { filter?: string; tint?: string; amount?: number };
 
@@ -44,11 +46,11 @@ export const GRADE: Record<Phase, Grade> = {
   dusk: { filter: "brightness(0.82) saturate(0.8)", tint: "#6a55a8", amount: 0.62 },
   night: { filter: "brightness(0.7) saturate(0.7)", tint: "#1f3470", amount: 0.88 },
 };
-/** The lamplit village is already painted for the night: it needs only a little of the blue. */
+/** The lamplit houses are already painted for the night: they need only a little of the blue. */
 const NIGHT_VILLAGE: Grade = { filter: "brightness(0.95)", tint: "#1f3470", amount: 0.3 };
 
 type Fit = { size: string; repeat: string; position: string };
-const COVER: Fit = { size: "100% 100%", repeat: "no-repeat", position: "center" };
+export const COVER: Fit = { size: "100% 100%", repeat: "no-repeat", position: "center" };
 const STRIP: Fit = { size: "auto 100%", repeat: "repeat-x", position: "center bottom" };
 
 /**
@@ -56,7 +58,7 @@ const STRIP: Fit = { size: "auto 100%", repeat: "repeat-x", position: "center bo
  * overlays wear the painting as their mask, so they colour the paint and
  * nothing else.
  */
-function Paint({ src, fit, grade, frost, className, style }: { src: string; fit: Fit; grade: Grade; frost: number; className?: string; style?: React.CSSProperties }) {
+export function Paint({ src, fit, grade, frost, className, style }: { src: string; fit: Fit; grade: Grade; frost: number; className?: string; style?: React.CSSProperties }) {
   const mask = (): React.CSSProperties => ({
     WebkitMaskImage: `url(${src})`,
     maskImage: `url(${src})`,
@@ -97,20 +99,18 @@ export function PaintedLand({
 }) {
   const grade = GRADE[phase];
   const night = phase === "night";
-  const village = night ? { src: ART.villageNight, ratio: RATIO.villageNight, grade: NIGHT_VILLAGE } : { src: ART.villageDay, ratio: RATIO.villageDay, grade };
+  const town = night ? { src: ART.townNight, ratio: RATIO.townNight, grade: NIGHT_VILLAGE } : { src: ART.townDay, ratio: RATIO.townDay, grade };
   return (
     <div className={`gd-par pointer-events-none absolute -left-[3%] bottom-0 w-[106%] ${className}`} style={style} aria-hidden data-landscape="painted">
       <Paint src={ART.mountains} fit={STRIP} grade={grade} frost={frost} className="inset-x-0 bottom-[26%] h-[64%]" />
-      {detail && (
-        <Paint src={ART.falls} fit={COVER} grade={grade} frost={frost} className="bottom-[14%] left-[2%] h-[86%]" style={{ aspectRatio: RATIO.falls }} />
-      )}
+      {detail && <Paint src={ART.lot} fit={COVER} grade={grade} frost={frost} className="bottom-[10%] left-[3%] h-[64%]" style={{ aspectRatio: RATIO.lot }} />}
       <Paint
-        src={village.src}
+        src={town.src}
         fit={COVER}
-        grade={village.grade}
+        grade={town.grade}
         frost={frost}
-        className={detail ? "bottom-[16%] right-[4%] h-[84%]" : "bottom-[10%] right-[14%] h-[80%]"}
-        style={{ aspectRatio: village.ratio }}
+        className={detail ? "bottom-[14%] right-[3%] h-[86%]" : "bottom-[10%] right-[12%] h-[80%]"}
+        style={{ aspectRatio: town.ratio }}
       />
       {/* the hills fade out at their foot, into the meadow drawn behind them, instead of stopping on a line */}
       <Paint
@@ -148,16 +148,35 @@ export function PaintedMeadow({ phase, tile, anchor = "top" }: { phase: Phase; t
 
 /**
  * A hot air balloon drifting across the sky on a calm day, bobbing as it
- * goes; after dark, its burner glowing. It flies behind the clouds and in
- * front of the far mountains, and stays grounded in wind, rain, fog or snow.
+ * goes. It flies behind the clouds and in front of the far mountains, comes
+ * down for the night, and stays grounded in wind, rain, fog or snow.
  */
 export function PaintedBalloon({ phase, className }: { phase: Phase; className: string }) {
-  const lit = phase === "night" || phase === "dusk";
   return (
     <div className="gd-balloon-flight pointer-events-none absolute" aria-hidden data-balloon>
       <div className="gd-balloon-bob">
-        <Paint src={lit ? ART.balloonNight : ART.balloonDay} fit={COVER} grade={lit ? NIGHT_VILLAGE : GRADE[phase]} frost={0} className={`relative ${className}`} style={{ aspectRatio: RATIO.balloon }} />
+        <Paint src={ART.balloon} fit={COVER} grade={GRADE[phase]} frost={0} className={`relative ${className}`} style={{ aspectRatio: RATIO.balloon }} />
       </div>
     </div>
+  );
+}
+
+/** How a painted cloud looks at each hour, and in each weather. */
+const CLOUD_LIGHT: Record<Phase, string> = {
+  day: "",
+  dawn: "sepia(0.25) saturate(1.3) hue-rotate(-18deg) brightness(0.98)",
+  golden: "sepia(0.45) saturate(1.5) hue-rotate(-12deg)",
+  dusk: "sepia(0.35) saturate(1.2) hue-rotate(-45deg) brightness(0.7)",
+  night: "brightness(0.38) saturate(0.6) hue-rotate(10deg)",
+};
+const CLOUD_WEATHER = { white: "", grey: "grayscale(0.5) brightness(0.92)", rain: "grayscale(0.7) brightness(0.74)", storm: "grayscale(0.8) brightness(0.52)", mist: "grayscale(0.35) brightness(1.04)" };
+
+/** One of the painted summer clouds, sized by width. */
+export function PaintedCloud({ index, width, phase, tone }: { index: number; width: number | string; phase: Phase; tone: keyof typeof CLOUD_WEATHER }) {
+  const i = index % ART.clouds.length;
+  const filter = `${CLOUD_LIGHT[phase]} ${CLOUD_WEATHER[tone]}`.trim();
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={ART.clouds[i]} alt="" draggable={false} className="block select-none" style={{ width, aspectRatio: RATIO.clouds[i], filter: filter || undefined }} />
   );
 }

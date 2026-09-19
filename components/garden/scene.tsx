@@ -2,7 +2,8 @@
 
 import { Burst, Moment } from "./fx";
 import { LevelDecor } from "./city/decor";
-import { PaintedBalloon, PaintedLand, PaintedMeadow } from "./painted";
+import { PaintedBalloon, PaintedCloud, PaintedLand, PaintedMeadow } from "./painted";
+import { Gardener } from "./gardener";
 import { sunMinutes, useGardenMinute, useLiveSky } from "./live-sky";
 import type { LiveSky } from "@/lib/weather-shared";
 
@@ -137,14 +138,6 @@ function lookOf(sky: LiveSky | null, own: Weather, variant: SceneVariant): Look 
   }
 }
 
-const CLOUD_FILL: Record<Look["tone"], string> = { white: "#ffffff", grey: "#c9d3da", rain: "#a4afba", storm: "#78848f", mist: "#e6ebee" };
-
-function cloudFill(tone: Look["tone"], night: boolean, dark: boolean): string {
-  // rain clouds darken as soon as the light goes; the others wait for the night
-  if (tone === "rain" || tone === "storm") return dark ? "#1f2a3b" : CLOUD_FILL[tone];
-  return night ? "#3b4f73" : CLOUD_FILL[tone];
-}
-
 function gloomOf(look: Look, dark: boolean): string {
   const g = look.gloom;
   if (look.gloomTone === "haze") return `rgba(138, 160, 176, ${g})`;
@@ -253,7 +246,6 @@ export function GardenScene({
   const falling = look.rain > 0 || look.snow > 0;
   const calm = look.tone === "white" && !look.fog;
   const clouds = look.clouds;
-  const fill = cloudFill(look.tone, night, dark);
   const birds = !dark && calm && !small;
   const bugs = falling || look.fog ? 0 : mini ? Math.min(2, thriving) : Math.min(immersive ? 8 : 5, Math.floor(thriving / 1.2) + (allDone ? 2 : 0) + (immersive ? 2 : 0));
   const stars = Math.round(STARS.length * look.stars);
@@ -331,8 +323,8 @@ export function GardenScene({
         {/* the weather dims the light */}
         {look.gloom > 0 && <div className="pointer-events-none absolute inset-0 transition-[background] duration-700" style={{ background: gloomOf(look, dark) }} aria-hidden />}
 
-        {/* a hot air balloon, on a calm day (or a clear night, burner glowing) */}
-        {look.tone === "white" && !look.fog && !look.windy && !falling && (
+        {/* a hot air balloon, on a calm day */}
+        {!dark && look.tone === "white" && !look.fog && !look.windy && !falling && (
           <PaintedBalloon phase={phase} className={{ mini: "h-7", compact: "h-10", hero: "h-12 sm:h-14", immersive: "h-16 sm:h-20" }[variant]} />
         )}
 
@@ -353,13 +345,14 @@ export function GardenScene({
 
         {/* overcast: a ceiling of cloud, and lightning out of it */}
         {look.deck && (
-          <svg className="gd-par pointer-events-none absolute inset-x-0 -top-1 h-[46%] w-full" style={drift(-20, -6)} viewBox="0 0 400 60" preserveAspectRatio="none" aria-hidden>
-            <path
-              d="M0 0 H400 V30 C 386 44, 362 42, 352 33 C 340 48, 312 48, 300 35 C 288 50, 256 48, 246 35 C 232 48, 204 46, 196 33 C 184 48, 152 48, 142 35 C 128 50, 100 46, 92 33 C 80 46, 52 46, 44 33 C 32 44, 12 42, 0 30 Z"
-              fill={fill}
-              opacity={dark ? 0.9 : 0.96}
-            />
-          </svg>
+          <div className="gd-par pointer-events-none absolute inset-x-0 top-0 h-[60%]" style={drift(-20, -6)} aria-hidden data-cloud-deck>
+            {/* a row of the painted clouds, packed edge to edge and greyed by the weather */}
+            {[-8, 12, 30, 48, 66, 84].map((left, i) => (
+              <div key={left} className="absolute" style={{ left: `${left}%`, top: `${i % 2 ? -34 : -48}%` }}>
+                <PaintedCloud index={i} width={mini ? "34vw" : "clamp(180px, 30vw, 520px)"} phase={phase} tone={look.tone} />
+              </div>
+            ))}
+          </div>
         )}
         {look.thunder && !mini && (
           <div className="pointer-events-none absolute inset-0" aria-hidden>
@@ -370,14 +363,8 @@ export function GardenScene({
 
         <div className="gd-par pointer-events-none absolute inset-0" style={drift(-26, -6)} aria-hidden>
           {Array.from({ length: clouds }, (_, i) => (
-            <div key={i} className="gd-cloud absolute" style={{ filter: "blur(1.2px)", top: `${6 + ((i * 23) % 44)}%`, animationDuration: `${(80 + i * 22) * (look.windy ? 0.4 : 1)}s`, animationDelay: `${-i * 19}s` }}>
-              <svg width={(mini ? 56 : immersive ? 130 : 100) + (i % 3) * (mini ? 16 : 36)} viewBox="0 0 120 44">
-                <path
-                  d="M20 40 C 4 40, 2 22, 18 20 C 18 6, 40 2, 48 14 C 56 2, 82 4, 84 20 C 102 16, 118 30, 104 40 Z"
-                  fill={fill}
-                  opacity={look.tone === "rain" || look.tone === "storm" ? (dark ? 0.85 : 0.95) : night ? 0.5 : look.tone === "white" ? 0.92 : 0.95}
-                />
-              </svg>
+            <div key={i} className="gd-cloud absolute" style={{ top: `${6 + ((i * 23) % 44)}%`, animationDuration: `${(80 + i * 22) * (look.windy ? 0.4 : 1)}s`, animationDelay: `${-i * 19}s` }}>
+              <PaintedCloud index={i} width={(mini ? 70 : immersive ? 220 : 150) + (i % 3) * (mini ? 18 : 50)} phase={phase} tone={look.tone} />
             </div>
           ))}
         </div>
@@ -404,6 +391,17 @@ export function GardenScene({
         </div>
         {/* the land: far ranges, a waterfall and its river, a village, and the hills the garden sits in */}
         <PaintedLand phase={phase} className={landHeight} style={{ ...drift(-10, -3), filter: landFilter }} frost={look.frost} detail={!mini} />
+
+        {/* the gardener, waving from the back of the garden by the fence; home for the night */}
+        {!small && !night && (
+          <Gardener
+            phase={phase}
+            minute={min}
+            weather={look.thunder ? "storm" : look.rain ? "rain" : look.snow ? "snow" : look.fog ? "fog" : "clear"}
+            allDone={allDone}
+            className={immersive ? "bottom-[1%] left-[31%] h-[40%]" : "bottom-[1%] left-[30%] h-[46%]"}
+          />
+        )}
 
         {hud && <div className={`absolute z-10 ${mini ? "left-2.5 top-2.5" : "left-3 top-3 sm:left-4 sm:top-4"}`}>{hud}</div>}
       </div>
