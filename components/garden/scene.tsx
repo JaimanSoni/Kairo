@@ -2,6 +2,7 @@
 
 import { Burst, Moment, useClock } from "./fx";
 import { LevelDecor } from "./city/decor";
+import { Landscape } from "./landscape";
 import { sunMinutes, useLiveSky } from "./live-sky";
 import type { LiveSky } from "@/lib/weather-shared";
 
@@ -28,7 +29,7 @@ import type { LiveSky } from "@/lib/weather-shared";
 export type Weather = "clear" | "partly" | "cloudy";
 export type SceneVariant = "mini" | "compact" | "hero" | "immersive";
 
-type Phase = "night" | "dawn" | "day" | "golden" | "dusk";
+export type Phase = "night" | "dawn" | "day" | "golden" | "dusk";
 
 /** Where in the day it is: by the real sunrise and sunset when we know them, otherwise by a sun that rises at 6 and sets at 7. */
 export function phaseOf(min: number, sun?: { rise: number; set: number } | null): Phase {
@@ -71,12 +72,6 @@ const GROUND: Record<Phase, string> = {
   golden: "linear-gradient(180deg, #86b25e 0%, #67984d 100%)",
   dusk: "linear-gradient(180deg, #46705a 0%, #365a48 100%)",
 };
-
-const HILLS = [
-  "M0 64 C 60 40, 120 44, 180 60 C 240 76, 300 40, 400 54 L400 110 L0 110 Z",
-  "M0 80 C 80 60, 150 66, 220 78 C 290 90, 340 64, 400 72 L400 110 L0 110 Z",
-  "M0 96 C 100 84, 200 90, 280 94 C 340 97, 370 88, 400 92 L400 110 L0 110 Z",
-];
 
 const STARS = Array.from({ length: 40 }, (_, i) => ({ x: (i * 53) % 100, y: (i * 29) % 70, r: i % 6 === 0 ? 1.7 : 1, d: (i % 7) * 0.4 }));
 /** Grass tufts and wildflowers, placed once, the same on every visit. */
@@ -283,7 +278,7 @@ export function GardenScene({
       : undefined;
 
   const skyHeight = { mini: "h-[4.5rem]", compact: "h-32", hero: "h-48 sm:h-60", immersive: "h-[36%] min-h-44 shrink-0" }[variant];
-  const landHeight = { mini: "h-10", compact: "h-28 sm:h-32", hero: "h-28 sm:h-32", immersive: "h-36 sm:h-52" }[variant];
+  const landHeight = { mini: "h-11", compact: "h-28 sm:h-32", hero: "h-32 sm:h-40", immersive: "h-44 sm:h-52" }[variant];
 
   return (
     <div
@@ -398,29 +393,8 @@ export function GardenScene({
             </svg>
           ))}
 
-        {/* the land: far mountains, a treeline, and the hills the garden sits in */}
-        <svg className={`gd-par absolute -left-[3%] bottom-0 w-[106%] ${landHeight}`} style={{ ...drift(-10, -3), filter: landFilter }} viewBox="0 0 400 110" preserveAspectRatio="none" aria-hidden>
-          <path d="M0 58 L38 30 L62 44 L96 16 L130 46 L160 34 L196 54 L232 22 L270 50 L300 36 L338 56 L372 28 L400 44 L400 110 L0 110 Z" fill={land.far} opacity="0.75" />
-          <path d="M88 22 L96 16 L104 23 L99 22 L96 25 Z M226 28 L232 22 L239 29 L233 27 L230 30 Z M366 33 L372 28 L378 34 L373 32 Z" fill={land.farSnow} opacity="0.9" />
-          {Array.from({ length: 34 }, (_, i) => (
-            <ellipse key={i} cx={i * 12 + 4} cy={62 + ((i * 7) % 5)} rx={6 + (i % 3)} ry={8 + (i % 4)} fill={land.trees} opacity="0.85" />
-          ))}
-          {HILLS.map((d, i) => (
-            <path key={i} d={d} fill={land.hills[i]} />
-          ))}
-          {/* snow lying on the hills */}
-          {look.frost > 0 && (
-            <g fill={night ? "#b9c6d6" : "#f4f8fb"} opacity={look.frost}>
-              {HILLS.map((d, i) => (
-                <path key={i} d={d} />
-              ))}
-            </g>
-          )}
-          {Array.from({ length: 22 }, (_, i) => (
-            <rect key={i} x={i * 19 + 4} y={84} width={2.2} height={12} fill={night ? "#50473b" : "#b98d5e"} opacity={0.75} />
-          ))}
-          <rect x={0} y={87} width={400} height={1.6} fill={night ? "#50473b" : "#b98d5e"} opacity={0.7} />
-        </svg>
+        {/* the land: far ranges, a waterfall and its river, a village, and the hills the garden sits in */}
+        <Landscape phase={phase} land={land} className={landHeight} style={{ ...drift(-10, -3), filter: landFilter }} frost={look.frost} windy={look.windy} detail={!mini} />
 
         {hud && <div className={`absolute z-10 ${mini ? "left-2.5 top-2.5" : "left-3 top-3 sm:left-4 sm:top-4"}`}>{hud}</div>}
       </div>
