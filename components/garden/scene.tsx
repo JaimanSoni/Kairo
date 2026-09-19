@@ -2,7 +2,7 @@
 
 import { Burst, Moment, useClock } from "./fx";
 import { LevelDecor } from "./city/decor";
-import { Landscape } from "./landscape";
+import { PaintedLand, PaintedMeadow } from "./painted";
 import { sunMinutes, useLiveSky } from "./live-sky";
 import type { LiveSky } from "@/lib/weather-shared";
 
@@ -56,15 +56,6 @@ const SKY: Record<Phase, string> = {
   dusk: "linear-gradient(180deg, #25286a 0%, #6e5199 52%, #ee8f70 100%)",
 };
 
-/** Far mountains, mid hills, near hills. */
-const LAND: Record<Phase, { far: string; farSnow: string; trees: string; hills: [string, string, string] }> = {
-  night: { far: "#243a5c", farSnow: "#3b5478", trees: "#16362f", hills: ["#1d3a3c", "#244a45", "#2d5a4c"] },
-  dawn: { far: "#9d8fc4", farSnow: "#f4d9e2", trees: "#5f9a68", hills: ["#8cbf8a", "#74b073", "#5e9f63"] },
-  day: { far: "#8fb3d6", farSnow: "#f4fbff", trees: "#4f9a5e", hills: ["#9fd48c", "#7fc475", "#62b163"] },
-  golden: { far: "#c48f7c", farSnow: "#ffe9cf", trees: "#6f8f4e", hills: ["#b8c77a", "#94b765", "#74a557"] },
-  dusk: { far: "#5b4f86", farSnow: "#b7a3cf", trees: "#35544a", hills: ["#4f6e6a", "#46655a", "#3d5c4f"] },
-};
-
 const GROUND: Record<Phase, string> = {
   night: "linear-gradient(180deg, #2f5a48 0%, #22443a 100%)",
   dawn: "linear-gradient(180deg, #6fae67 0%, #57955a 100%)",
@@ -74,9 +65,6 @@ const GROUND: Record<Phase, string> = {
 };
 
 const STARS = Array.from({ length: 40 }, (_, i) => ({ x: (i * 53) % 100, y: (i * 29) % 70, r: i % 6 === 0 ? 1.7 : 1, d: (i % 7) * 0.4 }));
-/** Grass tufts and wildflowers, placed once, the same on every visit. */
-const TUFTS = Array.from({ length: 26 }, (_, i) => ({ x: (i * 37 + 11) % 97, y: 8 + ((i * 53) % 86), s: 0.7 + ((i * 7) % 5) / 10, d: (i % 5) * 0.6 }));
-const FLOWERS = Array.from({ length: 18 }, (_, i) => ({ x: (i * 61 + 5) % 96, y: 12 + ((i * 41) % 80), c: ["#ffffff", "#ffd54f", "#f48fb1", "#b39ddb", "#ffab91"][i % 5] }));
 /** Raindrops and snowflakes: spread by the golden ratio, so any number of them looks scattered rather than lined up. */
 const DROPS = Array.from({ length: 220 }, (_, i) => ({ x: (i * 61.803) % 100, lag: (i * 0.381966) % 1, pace: 0.85 + ((i * 7) % 6) * 0.05, far: i % 3 === 1, rest: (i * 47) % 100, size: 2.8 + ((i * 5) % 4) * 1.2 }));
 /** Where the rain lands and rings out, across the ground. */
@@ -266,7 +254,6 @@ export function GardenScene({
   const calm = look.tone === "white" && !look.fog;
   const clouds = look.clouds;
   const fill = cloudFill(look.tone, night, dark);
-  const land = LAND[phase];
   const birds = !dark && calm && !small;
   const bugs = falling || look.fog ? 0 : mini ? Math.min(2, thriving) : Math.min(immersive ? 8 : 5, Math.floor(thriving / 1.2) + (allDone ? 2 : 0) + (immersive ? 2 : 0));
   const stars = Math.round(STARS.length * look.stars);
@@ -366,7 +353,7 @@ export function GardenScene({
 
         <div className="gd-par pointer-events-none absolute inset-0" style={drift(-26, -6)} aria-hidden>
           {Array.from({ length: clouds }, (_, i) => (
-            <div key={i} className="gd-cloud absolute" style={{ top: `${6 + ((i * 23) % 44)}%`, animationDuration: `${(80 + i * 22) * (look.windy ? 0.4 : 1)}s`, animationDelay: `${-i * 19}s` }}>
+            <div key={i} className="gd-cloud absolute" style={{ filter: "blur(1.2px)", top: `${6 + ((i * 23) % 44)}%`, animationDuration: `${(80 + i * 22) * (look.windy ? 0.4 : 1)}s`, animationDelay: `${-i * 19}s` }}>
               <svg width={(mini ? 56 : immersive ? 130 : 100) + (i % 3) * (mini ? 16 : 36)} viewBox="0 0 120 44">
                 <path
                   d="M20 40 C 4 40, 2 22, 18 20 C 18 6, 40 2, 48 14 C 56 2, 82 4, 84 20 C 102 16, 118 30, 104 40 Z"
@@ -394,18 +381,14 @@ export function GardenScene({
           ))}
 
         {/* the land: far ranges, a waterfall and its river, a village, and the hills the garden sits in */}
-        <Landscape phase={phase} land={land} className={landHeight} style={{ ...drift(-10, -3), filter: landFilter }} frost={look.frost} windy={look.windy} detail={!mini} />
+        <PaintedLand phase={phase} className={landHeight} style={{ ...drift(-10, -3), filter: landFilter }} frost={look.frost} detail={!mini} />
 
         {hud && <div className={`absolute z-10 ${mini ? "left-2.5 top-2.5" : "left-3 top-3 sm:left-4 sm:top-4"}`}>{hud}</div>}
       </div>
 
       {/* ground */}
       <div className={`relative ${immersive ? "flex min-h-0 flex-1 flex-col" : ""}`} style={{ background: GROUND[phase] }}>
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.14]"
-          style={{ backgroundImage: "radial-gradient(circle at 20% 30%, #fff 0 1px, transparent 1.5px), radial-gradient(circle at 70% 60%, #fff 0 1px, transparent 1.5px)", backgroundSize: "34px 30px, 46px 38px" }}
-          aria-hidden
-        />
+        <PaintedMeadow phase={phase} tile={mini ? 220 : immersive ? 520 : 380} />
         {/* an overcast day dims the ground; rain darkens it and gathers in puddles; snow lies on it */}
         {sky && look.gloom > 0 && !look.rain && !look.frost && !look.fog && <div className="pointer-events-none absolute inset-0" style={{ background: `rgba(16, 32, 48, ${(look.gloom * 0.25).toFixed(2)})` }} aria-hidden />}
         {look.rain > 0 && <div className="pointer-events-none absolute inset-0" style={{ background: `rgba(16, 32, 48, ${0.14 + look.rain * 0.08})` }} aria-hidden />}
@@ -417,29 +400,6 @@ export function GardenScene({
           />
         )}
         {look.rain >= 2 && !small && PUDDLES.map((p, i) => <span key={i} className="gd-puddle pointer-events-none" style={p} aria-hidden />)}
-        {!small && (
-          <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 400 300" preserveAspectRatio="none" aria-hidden>
-            {/* a winding path of stepping stones, from the gate to the front */}
-            <path d="M200 0 C 170 60, 250 110, 205 170 C 170 220, 230 260, 210 300" fill="none" stroke={night ? "#3d6a55" : "#cdb88e"} strokeWidth="26" strokeLinecap="round" opacity={night ? 0.35 : 0.28} />
-          </svg>
-        )}
-        {!small &&
-          TUFTS.map((g, i) => (
-            <svg key={i} className="gd-tuft pointer-events-none absolute" style={{ left: `${g.x}%`, top: `${g.y}%`, animationDelay: `${g.d}s` }} width={14 * g.s * (immersive ? 1.4 : 1)} height={10 * g.s * (immersive ? 1.4 : 1)} viewBox="0 0 14 10" aria-hidden>
-              <path d="M2 10 Q3 4 1 1 M6 10 Q6 3 7 0 M10 10 Q10 4 13 2" fill="none" stroke={night ? "#4f8a6a" : "#3f8f4a"} strokeWidth="1.4" strokeLinecap="round" />
-            </svg>
-          ))}
-        {!small &&
-          !night &&
-          look.frost < 0.5 &&
-          FLOWERS.map((f, i) => (
-            <span
-              key={i}
-              className={`pointer-events-none absolute block rounded-full ${immersive ? "size-2" : "size-1.5"}`}
-              style={{ left: `${f.x}%`, top: `${f.y}%`, background: f.c, boxShadow: "0 0 0 1.5px rgba(255,255,255,0.25)" }}
-              aria-hidden
-            />
-          ))}
         {look.rain > 0 &&
           !mini &&
           PLIPS.slice(0, [4, 8, 14][look.rain - 1]).map((p, i) => (

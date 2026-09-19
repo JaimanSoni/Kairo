@@ -53,3 +53,6 @@ out/
 # leads pipeline: local artifacts stay out of the public repo
 scripts/leads/node_modules/
 scripts/leads/leads-harvest*.json
+
+# the painted garden art as generated; the app ships trimmed WebP copies from public/art/garden
+garden-art/
