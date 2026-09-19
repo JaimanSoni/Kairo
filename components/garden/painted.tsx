@@ -112,19 +112,35 @@ export function PaintedLand({
         className={detail ? "bottom-[16%] right-[4%] h-[84%]" : "bottom-[10%] right-[14%] h-[80%]"}
         style={{ aspectRatio: village.ratio }}
       />
-      <Paint src={ART.hills} fit={STRIP} grade={grade} frost={frost} className="inset-x-0 -bottom-[2%] h-[46%]" />
+      {/* the hills fade out at their foot, into the meadow drawn behind them, instead of stopping on a line */}
+      <Paint
+        src={ART.hills}
+        fit={STRIP}
+        grade={grade}
+        frost={frost}
+        className="inset-x-0 bottom-0 h-[46%]"
+        style={{ WebkitMaskImage: "linear-gradient(to bottom, #000 62%, transparent 100%)", maskImage: "linear-gradient(to bottom, #000 62%, transparent 100%)" }}
+      />
     </div>
   );
 }
 
-/** The meadow the garden grows in, graded to the hour like the land behind it. */
-export function PaintedMeadow({ phase, tile }: { phase: Phase; tile: number }) {
+/**
+ * The meadow the garden grows in, graded to the hour like the land behind it.
+ * The same meadow runs under the foot of the hills, anchored to its bottom
+ * edge while the ground is anchored to its top, so the tiles meet exactly
+ * where the two do and the grass carries on without a line.
+ */
+export function PaintedMeadow({ phase, tile, anchor = "top" }: { phase: Phase; tile: number; anchor?: "top" | "bottom" }) {
   const grade = GRADE[phase];
   return (
-    <div className="pointer-events-none absolute inset-0" aria-hidden data-meadow>
-      <div className="absolute inset-0" style={{ backgroundImage: `url(${ART.meadow})`, backgroundSize: `${tile}px ${tile}px`, filter: grade.filter }} />
+    <div className="pointer-events-none absolute inset-0" aria-hidden data-meadow={anchor}>
+      <div
+        className="absolute inset-0"
+        style={{ backgroundImage: `url(${ART.meadow})`, backgroundSize: `${tile}px ${tile}px`, backgroundPosition: anchor === "top" ? "0 0" : "0 100%", filter: grade.filter }}
+      />
       {/* a soft wash, so the grass sits back and the plants come forward */}
-      <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(168, 200, 120, 0.34) 0%, rgba(132, 178, 96, 0.3) 100%)" }} />
+      <div className="absolute inset-0" style={{ background: "rgba(150, 189, 108, 0.32)" }} />
       {grade.tint && <div className="absolute inset-0" style={{ background: grade.tint, opacity: grade.amount, mixBlendMode: "multiply" }} />}
     </div>
   );

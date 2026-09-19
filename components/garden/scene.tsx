@@ -264,6 +264,18 @@ export function GardenScene({
       ? `saturate(${(1 - look.gloom * 0.45).toFixed(2)}) brightness(${(1 - look.gloom * 0.4).toFixed(2)})`
       : undefined;
 
+  // an overcast day dims the ground; rain darkens it; snow lies on it. Even all over, so the meadow under the hills matches.
+  const groundWeather = (
+    <>
+      {sky && look.gloom > 0 && !look.rain && !look.frost && !look.fog && <div className="pointer-events-none absolute inset-0" style={{ background: `rgba(16, 32, 48, ${(look.gloom * 0.25).toFixed(2)})` }} aria-hidden />}
+      {look.rain > 0 && <div className="pointer-events-none absolute inset-0" style={{ background: `rgba(16, 32, 48, ${0.14 + look.rain * 0.08})` }} aria-hidden />}
+      {look.frost > 0 && <div className="pointer-events-none absolute inset-0" style={{ background: `rgba(242, 246, 250, ${(look.frost * 0.92).toFixed(2)})` }} aria-hidden />}
+    </>
+  );
+  const meadowTile = mini ? 220 : immersive ? 520 : 380;
+  /** How tall the meadow under the foot of the hills is: the fade needs grass behind it. */
+  const footHeight = { mini: "h-2.5", compact: "h-7", hero: "h-8 sm:h-10", immersive: "h-10 sm:h-12" }[variant];
+
   const skyHeight = { mini: "h-[4.5rem]", compact: "h-32", hero: "h-48 sm:h-60", immersive: "h-[36%] min-h-44 shrink-0" }[variant];
   const landHeight = { mini: "h-11", compact: "h-28 sm:h-32", hero: "h-32 sm:h-40", immersive: "h-44 sm:h-52" }[variant];
 
@@ -385,6 +397,11 @@ export function GardenScene({
             </svg>
           ))}
 
+        {/* the meadow carries on under the foot of the hills, so land and garden meet without a line */}
+        <div className={`pointer-events-none absolute inset-x-0 bottom-0 ${footHeight}`} aria-hidden>
+          <PaintedMeadow phase={phase} tile={meadowTile} anchor="bottom" />
+          {groundWeather}
+        </div>
         {/* the land: far ranges, a waterfall and its river, a village, and the hills the garden sits in */}
         <PaintedLand phase={phase} className={landHeight} style={{ ...drift(-10, -3), filter: landFilter }} frost={look.frost} detail={!mini} />
 
@@ -393,17 +410,8 @@ export function GardenScene({
 
       {/* ground */}
       <div className={`relative ${immersive ? "flex min-h-0 flex-1 flex-col" : ""}`} style={{ background: GROUND[phase] }}>
-        <PaintedMeadow phase={phase} tile={mini ? 220 : immersive ? 520 : 380} />
-        {/* an overcast day dims the ground; rain darkens it and gathers in puddles; snow lies on it */}
-        {sky && look.gloom > 0 && !look.rain && !look.frost && !look.fog && <div className="pointer-events-none absolute inset-0" style={{ background: `rgba(16, 32, 48, ${(look.gloom * 0.25).toFixed(2)})` }} aria-hidden />}
-        {look.rain > 0 && <div className="pointer-events-none absolute inset-0" style={{ background: `rgba(16, 32, 48, ${0.14 + look.rain * 0.08})` }} aria-hidden />}
-        {look.frost > 0 && (
-          <div
-            className="pointer-events-none absolute inset-0"
-            style={{ background: `linear-gradient(180deg, rgba(246, 249, 252, ${look.frost}) 0%, rgba(236, 242, 247, ${look.frost * 0.85}) 100%)` }}
-            aria-hidden
-          />
-        )}
+        <PaintedMeadow phase={phase} tile={meadowTile} />
+        {groundWeather}
         {look.rain >= 2 && !small && PUDDLES.map((p, i) => <span key={i} className="gd-puddle pointer-events-none" style={p} aria-hidden />)}
         {look.rain > 0 &&
           !mini &&
