@@ -11,6 +11,7 @@ import { Plant } from "./plants";
 import { GardenHud } from "./plot";
 import { gardenLevelOf, gardenScore } from "@/lib/habits-shared";
 import { GardenScene, type Weather } from "./scene";
+import { SkyChip } from "./sky";
 import { plotOf, useGarden, type PlotInfo } from "./use-garden";
 import { gardenStore } from "@/lib/habits-client";
 import { useClock } from "./fx";
@@ -133,7 +134,17 @@ export default function TodayGardenStrip() {
         className="gd-card group relative block cursor-pointer rounded-2xl outline-none transition-transform duration-300 hover:-translate-y-0.5 focus-visible:ring-4 focus-visible:ring-sun/40"
         data-garden-card
       >
-        <GardenScene variant="mini" weather={weather} thriving={thriving} allDone={allDone} decorLevel={level} live hud={<GardenHud done={doneToday} total={due.length} />}>
+        <GardenScene variant="mini" weather={weather} thriving={thriving} allDone={allDone} decorLevel={level} live
+          hud={
+            <span className="flex items-center gap-1.5">
+              <GardenHud done={doneToday} total={due.length} />
+              {/* the card opens the garden; the weather, and its sheet, keep their taps to themselves */}
+              <span className="contents" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                <SkyChip />
+              </span>
+            </span>
+          }
+        >
           <MiniBed plots={plots} />
         </GardenScene>
         {/* the whole card opens the garden; the corner just says so */}
