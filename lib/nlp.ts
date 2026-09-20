@@ -14,8 +14,8 @@ export type ParsedInput = {
   repeat: Repeat | null;
 };
 
-/** Pulls a clock time ("6pm", "6:30 pm", "at 18:00") out of the text. */
-function extractTime(text: string): { time: string | null; rest: string } {
+/** Pulls a clock time ("6pm", "6:30 pm", "at 18:00") out of the text. Shared with the command parser. */
+export function extractTime(text: string): { time: string | null; rest: string } {
   // 12-hour: 6pm, 6:30pm, 6 pm, at 6pm
   const twelve = text.match(/\b(?:at\s+)?(\d{1,2})(?::([0-5]\d))?\s*(am|pm)\b/i);
   if (twelve) {
@@ -58,7 +58,7 @@ function parseDateToken(token: string): string | null {
   return null;
 }
 
-function parseEstimate(token: string): number | null {
+export function parseEstimate(token: string): number | null {
   // ~30m, ~1h, ~1h30m, 30m, 2h, 1h15
   const m = token.match(/^~?(?:(\d+)h)?(?:(\d+)m?)?$/i);
   if (!m) return null;

@@ -340,6 +340,34 @@ const ALL_ARTICLES: Article[] = [
         ],
       },
       {
+        id: "telling-it-what-to-change",
+        heading: "Changing something you already have",
+        blocks: [
+          {
+            t: "p",
+            text: "The same box takes instructions about tasks that already exist. Say **move the quotation to monday**, **put the invoice in work**, **the electricity bill is done**, **delete the dentist thing**, and Kairo does it, instead of writing down what you said.",
+          },
+          {
+            t: "p",
+            text: "The line under the box tells you what it understood before you commit to it — *Move “Send the quotation to Acme” to Monday* — and the button changes from **Add** to **Do it**. If two of your tasks could be the one you meant, it asks which rather than guessing. Everything it does comes back with **Undo**.",
+          },
+          {
+            t: "ul",
+            items: [
+              "**Move it**: `move`, `push`, `snooze`, `reschedule`, `postpone` — to a day (`monday`, `tomorrow`, `21 sep`, `in 3 days`, `next week`), with a time if you like (`monday 6pm`), or to `someday`.",
+              "**File it**: `put the invoice in work`, `file the book under reading`.",
+              "**Finish it**: `the bill is done`, `complete the deck`, `mark the invoice done`.",
+              "**Lose it**: `delete the dentist thing`, `remove the old draft`.",
+              "**The rest**: `rename X to Y`, `star the deck`, `start the quotation` (opens the focus timer), `the deck takes 45m`.",
+            ],
+          },
+          {
+            t: "note",
+            text: "An instruction has to open with a word Kairo knows and name a task it can find. Anything else is a new task, as always — so `buy milk tomorrow` is still a new task, never an order to move something. None of this needs the internet or the AI: it all happens on your device, and your task titles stay there.",
+          },
+        ],
+      },
+      {
         id: "shortcuts-in-text",
         heading: "Add details inline (optional)",
         blocks: [

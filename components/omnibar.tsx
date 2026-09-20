@@ -5,7 +5,8 @@ import type { Task } from "@/lib/types";
 import { parseQuickAdd, type ParsedInput } from "@/lib/nlp";
 import { friendlyDay, fmtMinutes, fmtTime12 } from "@/lib/dates";
 import { repeatLabel, type Repeat } from "@/lib/repeat";
-import { guestCapReached, useApp, visibleLists } from "./store";
+import { guestCapReached, hiddenListIds, useApp, visibleLists } from "./store";
+import { commandDone, commandSentence, matchTasks, parseCommand, pickOne, type Action } from "@/lib/commands";
 import { track } from "@/lib/analytics-client";
 import { getSpeechRecognition, type SpeechRec } from "@/lib/speech";
 import { IconX, Modal } from "./ui";
@@ -38,8 +39,18 @@ type AiParsed = {
 };
 
 /**
- * Capture: one box. Say or type a thought the way you'd say it, and it comes
- * back as tasks to look over before anything is added.
+ * Capture: one box for anything you want to say to Kairo. A thought comes
+ * back as tasks to look over before anything is added; an instruction about
+ * something you already have ("move the quotation to monday", "put the
+ * invoice in work", "the bill is done") is carried out.
+ *
+ * Which of the two it is, is decided here and not by the AI: an instruction
+ * has to open with a verb Kairo knows, and has to name a task it can find.
+ * Anything else is a new task, exactly as before, so "buy milk tomorrow"
+ * never becomes an order to move something. The line under the box says in
+ * words which one it read, and which task it found, before you commit to it;
+ * when two tasks could be meant it asks instead of guessing, and everything
+ * it does comes back with Undo.
  *
  * The panel shows one thing at a time: the box (with a single quiet line
  * under it, saying how to use it or what's been understood so far), then a
@@ -51,10 +62,10 @@ type AiParsed = {
  * run of thoughts down fast. Voice input via the Web Speech API where available.
  */
 /** What the expanding lower section is showing. */
-type Phase = "input" | "thinking" | "done";
+type Phase = "input" | "thinking" | "done" | "choose";
 
 export function Omnibar() {
-  const { state, addTask, getTask, updateTask, setOmnibar, showToast } = useApp();
+  const { state, addTask, getTask, updateTask, completeTask, uncompleteTask, deleteTask, startFocus, setOmnibar, showToast } = useApp();
   const [text, setText] = useState("");
   const guest = Boolean(state.user.guest);
   const modes: { id: CaptureMode; label: string }[] = [
@@ -90,6 +101,17 @@ export function Omnibar() {
 
   const lists = useMemo(() => visibleLists(state), [state]);
   const parsed = useMemo(() => parseQuickAdd(text, lists), [text, lists]);
+
+  /* an instruction about something that already exists, and the task it means */
+  const command = useMemo(() => (activeMode === "task" && text.trim() ? parseCommand(text, lists, state.today) : null), [activeMode, text, lists, state.today]);
+  const reachable = useMemo(() => {
+    // a task in a list that's locked right now isn't there to be named
+    const hidden = hiddenListIds(state);
+    return Object.values(state.tasks).filter((t) => !(t.listId && hidden.has(t.listId)));
+  }, [state]);
+  const matches = useMemo(() => (command ? matchTasks(command.target, reachable) : []), [command, reachable]);
+  const only = useMemo(() => pickOne(matches), [matches]);
+  const commanding = Boolean(command && matches.length);
 
   useEffect(() => () => recRef.current?.abort(), []);
 
@@ -160,6 +182,55 @@ export function Omnibar() {
     }
   };
 
+  /**
+   * Carry out an instruction, and hand back the way out. Delete says its own
+   * piece (it has always offered Undo); everything else is put back by
+   * restoring the handful of fields it touched.
+   */
+  const applyCommand = (action: Action, task: Task, keepOpen: boolean) => {
+    const before = { plannedFor: task.plannedFor, plannedTime: task.plannedTime, status: task.status, listId: task.listId, spotlight: task.spotlight, estimateMin: task.estimateMin, title: task.title };
+    const undo = { label: "Undo", run: () => updateTask(task.id, before) };
+    let toast: { message: string; action?: { label: string; run: () => void } } = { message: commandDone(action, task.title, state.today), action: undo };
+    switch (action.kind) {
+      case "move":
+        updateTask(task.id, { plannedFor: action.date, status: action.date ? (task.status === "someday" || task.status === "inbox" ? "planned" : task.status) : "someday", ...(action.time ? { plannedTime: action.time } : {}) });
+        break;
+      case "list":
+        updateTask(task.id, { listId: action.listId });
+        break;
+      case "done":
+        completeTask(task.id);
+        toast = { message: commandDone(action, task.title, state.today), action: { label: "Undo", run: () => uncompleteTask(task.id) } };
+        break;
+      case "delete":
+        deleteTask(task.id); // says its own piece, with its own Undo
+        toast = { message: "" };
+        break;
+      case "rename":
+        updateTask(task.id, { title: action.title });
+        break;
+      case "star":
+        updateTask(task.id, { spotlight: action.on });
+        break;
+      case "estimate":
+        updateTask(task.id, { estimateMin: action.minutes });
+        break;
+      case "focus":
+        startFocus(task.id, { minutes: task.estimateMin });
+        toast = { message: commandDone(action, task.title, state.today) };
+        break;
+    }
+    track("capture-command");
+    if (toast.message) showToast(toast);
+    setText("");
+    if (keepOpen) {
+      setPhase("input");
+      queueMicrotask(() => inputRef.current?.focus());
+    } else {
+      setOmnibar(false);
+    }
+  };
+
   /** A note or a journal line: saved as typed, no AI, and said plainly where it went. */
   const saveElsewhere = async (raw: string, keepOpen: boolean) => {
     if (saving) return;
@@ -193,6 +264,12 @@ export function Omnibar() {
     if (!raw) return;
     if (activeMode !== "task") {
       void saveElsewhere(raw, keepOpen);
+      return;
+    }
+    // an instruction about something that exists: do that, don't make a new one
+    if (command && matches.length) {
+      if (only) applyCommand(command.action, only, keepOpen);
+      else setPhase("choose");
       return;
     }
     // the guest slate is bounded; the cap modal makes the case for signing in
@@ -438,7 +515,7 @@ export function Omnibar() {
       ? "Saves as a new page in Notes. The first line becomes its title."
       : activeMode === "journal"
         ? "Adds to today's journal page."
-        : "Type it the way you'd say it, like “pay rent friday 6pm”.";
+        : "Say it the way you'd say it: “pay rent friday 6pm”, or “move the quotation to monday”.";
   const count = result?.length ?? 0;
 
   return (
@@ -495,12 +572,12 @@ export function Omnibar() {
               )}
               <button
                 onClick={() => submit(false)}
-                disabled={activeMode === "task" ? !parsed.title : !text.trim() || saving}
-                title="Enter adds it. Shift+Enter adds it and keeps this open for the next one."
+                disabled={commanding ? false : activeMode === "task" ? !parsed.title : !text.trim() || saving}
+                title={commanding ? "Enter does it. Shift+Enter does it and keeps this open." : "Enter adds it. Shift+Enter adds it and keeps this open for the next one."}
                 className="h-9 shrink-0 rounded-xl bg-ink px-4 text-sm font-semibold text-paper transition-opacity disabled:opacity-25"
                 data-capture-add
               >
-                {activeMode === "task" ? "Add" : "Save"}
+                {commanding ? "Do it" : activeMode === "task" ? "Add" : "Save"}
               </button>
             </div>
 
@@ -508,6 +585,10 @@ export function Omnibar() {
             <div className="mt-2.5 flex min-h-6 flex-wrap items-center gap-1.5 px-1 text-[13px] text-ink-faint" data-capture-line>
               {listening ? (
                 <span className="text-ink-soft">Listening. Say it the way you&apos;d say it to a friend.</span>
+              ) : command && matches.length ? (
+                <span className="text-ink-soft" data-capture-command>
+                  {only ? commandSentence(command.action, only.title, state.today) : matches.length + " of your tasks could be that one"}
+                </span>
               ) : activeMode !== "task" || !text.trim() ? (
                 <span>{hint}</span>
               ) : (
@@ -519,6 +600,30 @@ export function Omnibar() {
               )}
             </div>
           </>
+        )}
+
+        {phase === "choose" && command && (
+          <div className="anim-rise" data-capture-choose>
+            <h2 className="font-display text-xl leading-tight">Which one did you mean?</h2>
+            <ul className="mt-3 divide-y divide-line overflow-hidden rounded-2xl border border-line">
+              {matches.map(({ task: t }) => (
+                <li key={t.id}>
+                  <button onClick={() => applyCommand(command.action, t, false)} className="flex w-full items-center gap-3 bg-card px-4 py-3 text-left hover:bg-paper-deep" data-capture-choice>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[15px] font-medium leading-snug">{t.title}</span>
+                      <span className="mt-0.5 block text-[13px] text-ink-soft">{t.plannedFor ? friendlyDay(t.plannedFor, state.today) : "Inbox"}</span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-5 flex items-center justify-between gap-1">
+              <button onClick={() => setPhase("input")} className="-ml-2 rounded-full px-2.5 py-2 text-sm font-semibold text-ink-soft hover:bg-paper-deep" data-capture-choose-back>
+                Back
+              </button>
+              <span className="text-[13px] text-ink-faint">{commandSentence(command.action, "…", state.today).replace("“…”", "the one you pick")}</span>
+            </div>
+          </div>
         )}
 
         {phase === "thinking" && (
