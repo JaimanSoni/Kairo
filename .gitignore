@@ -59,3 +59,8 @@ garden-art/
 
 # screenshots taken while reviewing changes
 garden-previews/
+
+# agent reference docs dropped in by `vercel integration add` (not part of the app)
+.agents/
+skills-lock.json
+.claude/skills/

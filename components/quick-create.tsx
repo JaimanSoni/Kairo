@@ -54,17 +54,17 @@ export function QuickCreate() {
   return (
     <>
       {open && <button type="button" aria-hidden tabIndex={-1} className="qc-float fixed inset-0 z-[44] cursor-default bg-ink/10 backdrop-blur-[1px]" onClick={() => setOpen(false)} />}
-      <div className="qc-float fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] right-4 z-[45] flex flex-col items-end gap-2.5 md:bottom-7 md:right-7" data-quick-create>
+      <div className="qc-float fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-3 z-[45] flex flex-col items-end gap-2 md:bottom-5 md:right-5" data-quick-create>
         {open && (
           <>
-            <FanItem label="Note" hint="A page to write on" delay={40} onClick={() => pick("note")} id="note">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <FanItem label="Note" delay={40} onClick={() => pick("note")} id="note">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <path d="M6 3.5h8l4 4V20a.5.5 0 0 1-.5.5h-11A.5.5 0 0 1 6 20V4a.5.5 0 0 1 .5-.5z" />
                 <path d="M14 3.5V8h4M9 12.5h6M9 16h4" />
               </svg>
             </FanItem>
-            <FanItem label="Task" hint="Something to do" delay={0} onClick={() => pick("task")} id="task">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <FanItem label="Task" delay={0} onClick={() => pick("task")} id="task">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <circle cx="12" cy="12" r="8.5" />
                 <path d="M8.5 12.2l2.4 2.4 4.6-4.9" />
               </svg>
@@ -77,10 +77,10 @@ export function QuickCreate() {
           aria-expanded={open}
           aria-label={open ? "Close" : "New task or note"}
           data-quick-create-button
-          className="grid size-14 place-items-center rounded-full bg-ink text-paper shadow-xl shadow-ink/25 transition-transform hover:-translate-y-0.5 active:scale-95"
+          className="grid size-12 place-items-center rounded-2xl bg-ink text-paper shadow-lg shadow-ink/25 transition-transform hover:-translate-y-0.5 active:scale-95"
         >
           <span className={`transition-transform duration-200 ${open ? "rotate-45" : ""}`}>
-            <IconPlus size={22} />
+            <IconPlus size={19} />
           </span>
         </button>
       </div>
@@ -89,14 +89,11 @@ export function QuickCreate() {
   );
 }
 
-function FanItem({ label, hint, delay, onClick, id, children }: { label: string; hint: string; delay: number; onClick: () => void; id: string; children: React.ReactNode }) {
+function FanItem({ label, delay, onClick, id, children }: { label: string; delay: number; onClick: () => void; id: string; children: React.ReactNode }) {
   return (
-    <button type="button" onClick={onClick} data-quick-create-option={id} className="qc-item flex items-center gap-3 rounded-full bg-card py-1.5 pl-4 pr-1.5 shadow-lg shadow-ink/15 ring-1 ring-line transition-transform hover:-translate-y-0.5" style={{ animationDelay: `${delay}ms` }}>
-      <span className="text-right">
-        <span className="block text-sm font-semibold leading-tight">{label}</span>
-        <span className="block text-[11px] leading-tight text-ink-faint">{hint}</span>
-      </span>
-      <span className="grid size-10 place-items-center rounded-full bg-sun-soft text-sun-deep">{children}</span>
+    <button type="button" onClick={onClick} data-quick-create-option={id} className="qc-item flex items-center gap-2.5 rounded-2xl bg-card py-1.5 pl-3.5 pr-1.5 shadow-lg shadow-ink/15 ring-1 ring-line transition-transform hover:-translate-y-0.5" style={{ animationDelay: `${delay}ms` }}>
+      <span className="text-sm font-semibold">{label}</span>
+      <span className="grid size-8 place-items-center rounded-xl bg-sun-soft text-sun-deep">{children}</span>
     </button>
   );
 }
