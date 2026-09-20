@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { addDays, gardenLevelOf, gardenScore, SEEDS, type Seed } from "@/lib/habits-shared";
-import { CITY_SHOWN, JOURNAL_SHOWN } from "@/lib/types";
+import { addDays, gardenLevelOf, gardenScore, type Seed } from "@/lib/habits-shared";
+import { CITY_SHOWN } from "@/lib/types";
 import { gardenStore } from "@/lib/habits-client";
 import { navigateApp } from "../app-views";
 import { IconPlus } from "../ui";
@@ -11,9 +11,10 @@ import { HabitMark, PillLink, rescueText, SectionTitle, Switch } from "./bits";
 import { useClock } from "./fx";
 import { IconBell, IconFlame, IconSparkle, IconTrophy } from "./icons";
 import { Plant } from "./plants";
-import { IdeaPicker, ideaLine, PlantSheet } from "./plant-sheet";
-import { GardenBed, GardenHud, PlantRow } from "./plot";
+import { PlantSheet } from "./plant-sheet";
+import { GardenBed, GardenHud, PlantCard } from "./plot";
 import { GardenScene, type Weather } from "./scene";
+import { SeedCategories, useSeedStats } from "./seed-card";
 import { SkyChip } from "./sky";
 import { plotOf, useGarden, useGardenActions } from "./use-garden";
 import { ImmersiveGarden, useGardenView } from "./immersive";
@@ -55,8 +56,8 @@ export function GardenHome() {
   const atRisk = minute >= 18 * 60 ? plots.filter((p) => p.due && p.streak >= 3).length : 0;
   const longest = plots.reduce((n, p) => Math.max(n, p.streak), 0);
   const taken = new Set(habits.map((h) => h.seedId).filter(Boolean));
+  const seedStats = useSeedStats();
   const score = gardenScore(plots.map((p) => p.strength));
-  const ideas = SEEDS.filter((s) => !taken.has(s.id) && (s.id !== "journal" || JOURNAL_SHOWN)).slice(0, 3);
 
   if (status === "loading" || status === "idle") {
     return (
@@ -114,20 +115,32 @@ export function GardenHome() {
       {habits.length === 0 ? (
         <>
           <GardenScene weather="clear" thriving={2} live>
-            <EmptyBed />
+            <EmptyBed onPlant={() => setSheet({})} />
           </GardenScene>
-          <section className="anim-rise mt-5 rounded-2xl border border-line bg-card p-5" data-first-habit>
-            <h2 className="font-display text-2xl leading-tight">Pick your first habit</h2>
-            <p className="mt-1 text-sm text-ink-soft">Tap one to start, or type your own. It grows in your garden as you keep it.</p>
-            <IdeaPicker className="mt-4" onPick={(seed) => setSheet({ seed })} onCustom={(name) => setSheet({ name })} />
-          </section>
+          <FirstSteps />
           {/* the city is open before the first plant: friends who moved in next door are there to visit */}
           {CITY_SHOWN && (
             <div className="mt-5">
               <CityCard score={0} requests={gardenStore.friendRequests()} onOpen={city.show} />
             </div>
           )}
-          <FirstSteps />
+          <section className="mt-8" data-first-habit>
+            <SectionTitle
+              action={
+                <button
+                    type="button"
+                    onClick={() => setSheet({ name: "" })}
+                    className="flex h-7 items-center gap-1 rounded-full border border-line bg-card px-2.5 text-[11px] font-semibold text-ink-soft transition-colors hover:border-ink-faint/40 hover:text-ink"
+                    data-own-habit
+                  >
+                    <IconPlus size={12} /> Your own habit
+                  </button>
+              }
+            >
+              Or start from an idea
+            </SectionTitle>
+            <SeedCategories growing={taken as Set<string>} stats={seedStats} onSelect={(seed) => setSheet({ seed })} />
+          </section>
         </>
       ) : (
         <>
@@ -194,11 +207,11 @@ export function GardenHome() {
 
           <section className="mt-6" aria-label="Today">
             <SectionTitle>Today</SectionTitle>
-            <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card">
+            <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {[...plots]
                 .sort((a, b) => order(a) - order(b))
                 .map((p) => (
-                  <PlantRow key={p.habit.id} info={p} onWater={(h, o) => void water(h, o)} />
+                  <PlantCard key={p.habit.id} info={p} onWater={(h, o) => void water(h, o)} />
                 ))}
             </ul>
             {(covered.length > 0 || atRisk > 0) && (
@@ -211,36 +224,23 @@ export function GardenHome() {
 
           <HowItWorks />
 
-          {ideas.length > 0 && (
-            <section className="mt-8">
-              <SectionTitle
-                action={
-                  <button type="button" onClick={() => navigateApp("/habits/ideas")} className="text-xs font-semibold text-sun-deep hover:underline">
-                    All ideas
-                  </button>
-                }
-              >
-                Ideas to try
-              </SectionTitle>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                {ideas.map((s) => (
-                  <button
-                    key={s.id}
+          <section className="mt-8">
+            <SectionTitle
+              action={
+                <button
                     type="button"
-                    onClick={() => setSheet({ seed: s })}
-                    data-idea-card={s.id}
-                    className="flex items-center gap-3 rounded-2xl border border-line bg-card px-3 py-2.5 text-left transition-all hover:-translate-y-0.5 hover:border-ink-faint/40 hover:shadow-sm"
+                    onClick={() => setSheet({ name: "" })}
+                    className="flex h-7 items-center gap-1 rounded-full border border-line bg-card px-2.5 text-[11px] font-semibold text-ink-soft transition-colors hover:border-ink-faint/40 hover:text-ink"
+                    data-own-habit
                   >
-                    <HabitMark habit={s} size={36} />
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-medium">{s.name}</span>
-                      <span className="block truncate text-xs text-ink-faint">{ideaLine(s)}</span>
-                    </span>
+                    <IconPlus size={12} /> Your own habit
                   </button>
-                ))}
-              </div>
-            </section>
-          )}
+              }
+            >
+              Ideas to try
+            </SectionTitle>
+            <SeedCategories growing={taken as Set<string>} stats={seedStats} onSelect={(seed, isGrowing) => (isGrowing ? navigateApp("/habits") : setSheet({ seed }))} />
+          </section>
         </>
       )}
 
@@ -309,17 +309,39 @@ export function GardenHome() {
 }
 
 /** An empty garden, waiting: three dug beds and a seed in each. */
-function EmptyBed() {
+/**
+ * An empty garden, which is the first thing anyone sees here.
+ *
+ * Bare soil with a bed marked out and nothing in it reads as a mistake, so
+ * the empty plot is the invitation instead: a ring waiting to be filled,
+ * between two plants faded back to what this could look like. The whole
+ * thing is the button, because on a phone a small link under a large
+ * picture is the part nobody taps.
+ */
+function EmptyBed({ onPlant }: { onPlant: () => void }) {
   return (
-    <div className="relative flex flex-col items-center px-6 pb-8 pt-3 text-center">
-      <div className="flex items-end gap-3 sm:gap-8">
-        {[0, 1, 2].map((i) => (
-          <span key={i} className={i === 1 ? "" : "translate-y-2 opacity-90"}>
-            <Plant species={(["tulip", "sunflower", "lavender"] as const)[i]} stage={i === 1 ? 2 : 0} size={i === 1 ? 120 : 96} phase={i} fit="snug" />
+    <div className="relative flex flex-col items-center px-6 pb-8 pt-4 text-center">
+      <button type="button" onClick={onPlant} aria-label="Create your first habit" data-plant-first className="group flex flex-col items-center outline-none">
+        <span className="flex items-end gap-1 sm:gap-6">
+          <span className="translate-y-3 opacity-35 transition-opacity duration-500 group-hover:opacity-55">
+            <Plant species="tulip" stage={3} size={78} phase={0} fit="snug" />
           </span>
-        ))}
-      </div>
-      <p className="mt-2 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-[#1c2624] shadow-sm">Your habits grow here</p>
+          <span className="relative grid size-28 shrink-0 place-items-center sm:size-32">
+            <span className="gd-plot-ring absolute inset-1 rounded-full border-2 border-dashed border-white/75" aria-hidden />
+            <span className="absolute inset-4 rounded-full bg-white/15" aria-hidden />
+            <span className="relative grid size-12 place-items-center rounded-full bg-white text-[#1c2624] shadow-lg transition-transform duration-300 group-hover:scale-110 group-active:scale-95">
+              <IconPlus size={20} />
+            </span>
+          </span>
+          <span className="translate-y-3 opacity-35 transition-opacity duration-500 group-hover:opacity-55">
+            <Plant species="lavender" stage={3} size={78} phase={2} fit="snug" />
+          </span>
+        </span>
+        <span className="mt-3 rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-[#1c2624] shadow-md transition-transform duration-300 group-hover:-translate-y-0.5">
+          Plant your first habit
+        </span>
+        <span className="mt-1.5 text-xs font-medium text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">Something small you want to do most days</span>
+      </button>
     </div>
   );
 }

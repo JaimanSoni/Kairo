@@ -2906,3 +2906,24 @@ body[data-modal] .qc-float {
     animation: none;
   }
 }
+
+/* ---------- habits: the empty plot, waiting for a first habit */
+.gd-plot-ring {
+  animation: gd-plot-ring 3.2s ease-in-out infinite;
+}
+@keyframes gd-plot-ring {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 0.9;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gd-plot-ring {
+    animation: none;
+  }
+}

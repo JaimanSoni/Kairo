@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { scheduleLabel, type HabitView } from "@/lib/habits-shared";
 import { navigateApp } from "../app-views";
-import { HABIT_TINT, HabitMark } from "./bits";
+import { HABIT_TINT } from "./bits";
 import { Burst, Moment, WaterPour } from "./fx";
 import { IconFlame, IconMinus, IconTick } from "./icons";
 import { Plant } from "./plants";
@@ -181,7 +181,7 @@ export function GardenHud({ done, total }: { done: number; total: number }) {
 }
 
 /** A habit as a row: the plain way to see and mark today, and the main one. */
-export function PlantRow({
+export function PlantCard({
   info,
   onWater,
 }: {
@@ -190,68 +190,88 @@ export function PlantRow({
 }) {
   const { habit, live, due, streak } = info;
   const counted = habit.target > 1;
+  const tint = HABIT_TINT[habit.color] ?? HABIT_TINT.sun;
   const meta = live.week ? `${live.week.done} of ${live.week.times} this week` : live.dueToday || live.todayDone ? scheduleLabel(habit.schedule) : "Nothing due today";
   return (
-    <li className="flex items-center gap-3 px-3 py-3" data-habit-row={habit.id}>
+    <li
+      data-habit-row={habit.id}
+      data-done={live.todayDone || undefined}
+      className="group flex flex-col overflow-hidden rounded-2xl border border-line bg-card transition-all hover:-translate-y-0.5 hover:border-ink-faint/40 hover:shadow-md"
+    >
       <a
         href={`/habits/${habit.id}`}
         onClick={(e) => {
           e.preventDefault();
           navigateApp(`/habits/${habit.id}`);
         }}
-        className="flex min-w-0 flex-1 items-center gap-3"
+        className="flex flex-1 flex-col"
       >
-        <HabitMark habit={habit} stage={info.stage} size={44} />
-        <span className="min-w-0">
-          <span className={`block truncate text-sm font-medium ${live.todayDone ? "text-ink-soft" : "text-ink"}`}>{habit.name}</span>
-          <span className="mt-0.5 flex items-center gap-2 truncate text-xs text-ink-faint">
-            <span className="truncate">{meta}</span>
-            {streak > 0 && (
-              <span className="flex shrink-0 items-center gap-0.5 text-clay" title={streakWord(habit, streak)}>
-                <IconFlame size={11} />
-                <span className="tabular-nums">{streak}</span>
-              </span>
-            )}
+        {/* the plant itself, grown as far as the habit is rooted */}
+        <span
+          className="relative flex h-20 items-end justify-center"
+          style={{ background: `linear-gradient(180deg, color-mix(in srgb, ${tint} 5%, transparent), color-mix(in srgb, ${tint} 16%, transparent))` }}
+        >
+          {streak > 0 && (
+            <span className="absolute left-2.5 top-2.5 flex items-center gap-0.5 rounded-full bg-card/90 px-1.5 py-0.5 text-[10px] font-semibold text-clay shadow-sm" title={streakWord(habit, streak)}>
+              <IconFlame size={10} />
+              <span className="tabular-nums">{streak}</span>
+            </span>
+          )}
+          <span className={`transition-transform duration-300 group-hover:scale-105 ${live.todayDone ? "" : "opacity-95"}`}>
+            <Plant species={habit.species} stage={info.stage} size={60} sway={false} ground="none" fit="tight" />
           </span>
-          <StrengthBar strength={info.strength} className="mt-1.5" />
+        </span>
+        <span className="flex flex-1 flex-col px-3 pt-2.5">
+          <span className={`truncate text-sm font-medium leading-snug ${live.todayDone ? "text-ink-soft" : "text-ink"}`}>{habit.name}</span>
+          <span className="mt-0.5 truncate text-xs text-ink-faint">{meta}</span>
+          <StrengthBar strength={info.strength} className="mt-2 pb-0.5" />
         </span>
       </a>
-      {counted ? (
-        <span className="flex shrink-0 items-center rounded-full border border-line bg-paper">
-          <button
-            type="button"
-            onClick={() => onWater(habit, { step: -1 })}
-            disabled={live.todayCount === 0}
-            aria-label={`One less for ${habit.name}`}
-            className="grid size-9 place-items-center rounded-full text-ink-soft transition-colors hover:bg-paper-deep disabled:opacity-30"
-          >
-            <IconMinus />
-          </button>
-          <span className="min-w-12 text-center text-xs font-semibold tabular-nums text-ink">
-            {live.todayCount}/{habit.target}
+
+      {/* one tap, at the bottom of every card in the same place */}
+      <div className="px-3 pb-3 pt-2.5">
+        {counted ? (
+          <span className="flex items-center justify-between rounded-full border border-line bg-paper p-0.5">
+            <button
+              type="button"
+              onClick={() => onWater(habit, { step: -1 })}
+              disabled={live.todayCount === 0}
+              aria-label={`One less for ${habit.name}`}
+              className="grid size-8 shrink-0 place-items-center rounded-full text-ink-soft transition-colors hover:bg-paper-deep disabled:opacity-30"
+            >
+              <IconMinus />
+            </button>
+            <span className="min-w-0 truncate px-1 text-xs font-semibold tabular-nums text-ink">
+              {live.todayCount}/{habit.target}
+            </span>
+            <button
+              type="button"
+              onClick={() => onWater(habit, { step: 1 })}
+              aria-label={`One more for ${habit.name}`}
+              className={`grid size-8 shrink-0 place-items-center rounded-full transition-colors ${live.todayDone ? "bg-moss text-white" : "bg-sun text-on-accent hover:bg-sun-deep"}`}
+            >
+              {live.todayDone ? <IconTick size={14} /> : <span className="text-base font-semibold leading-none">+</span>}
+            </button>
           </span>
+        ) : (
           <button
             type="button"
-            onClick={() => onWater(habit, { step: 1 })}
-            aria-label={`One more for ${habit.name}`}
-            className={`grid size-9 place-items-center rounded-full transition-colors ${live.todayDone ? "bg-moss text-white" : "bg-sun text-on-accent hover:bg-sun-deep"}`}
+            onClick={() => onWater(habit)}
+            aria-label={live.todayDone ? `Unmark ${habit.name}` : `Mark ${habit.name} done`}
+            aria-pressed={live.todayDone}
+            className={`flex h-9 w-full items-center justify-center gap-1.5 rounded-full text-xs font-semibold transition-all active:scale-[0.98] ${
+              live.todayDone
+                ? "bg-moss text-white"
+                : due
+                  ? "border-2 border-sun/60 text-sun-deep hover:bg-sun hover:text-on-accent"
+                  : "border border-line bg-card text-ink-faint hover:border-ink-faint/40 hover:text-ink-soft"
+            }`}
           >
-            {live.todayDone ? <IconTick /> : <span className="text-base font-semibold leading-none">+</span>}
+            <IconTick size={14} />
+            {live.todayDone ? "Done" : due ? "Mark done" : "Not due"}
           </button>
-        </span>
-      ) : (
-        <button
-          type="button"
-          onClick={() => onWater(habit)}
-          aria-label={live.todayDone ? `Unmark ${habit.name}` : `Mark ${habit.name} done`}
-          aria-pressed={live.todayDone}
-          className={`grid size-10 shrink-0 place-items-center rounded-full transition-all active:scale-90 ${
-            live.todayDone ? "bg-moss text-white" : due ? "border-2 border-sun/60 text-sun-deep hover:bg-sun hover:text-on-accent" : "border border-line bg-card text-ink-faint"
-          }`}
-        >
-          <IconTick size={16} />
-        </button>
-      )}
+        )}
+      </div>
     </li>
   );
 }
