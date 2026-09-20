@@ -559,7 +559,8 @@ function WorkingOn({ className = "" }: { className?: string }) {
     const hidden = hiddenListIds(state);
     return Object.values(state.tasks).find((t) => t.startedAt && t.status !== "done" && !(t.listId && hidden.has(t.listId)));
   }, [state]);
-  if (!task) return null;
+  // the focus pill already says what’s being worked on, with its clock: this would say it twice
+  if (!task || state.focus) return null;
 
   return (
     <div

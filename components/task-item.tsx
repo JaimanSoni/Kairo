@@ -65,7 +65,7 @@ export function TaskItem({
   onDrop?: (e: React.DragEvent) => void;
   dropIndicator?: "above" | "below" | null;
 }) {
-  const { state, completeTask, uncompleteTask, updateTask, duplicateTask, deleteTask, setEditing, showToast, startFocus, stopFocus } = useApp();
+  const { state, completeTask, uncompleteTask, updateTask, duplicateTask, deleteTask, setEditing, showToast, startFocus, stopFocus, minimizeFocus } = useApp();
   const toggleStep = useStepToggle();
   const [checking, setChecking] = useState(false);
   const [stepsOpen, setStepsOpen] = useState(false);
@@ -89,6 +89,19 @@ export function TaskItem({
     startFocus(task.id, { minutes: m });
     setAskEstimate(false);
     setCustomMin("");
+  };
+
+  // Starting always means the timer. With a length it starts at once; without one it asks first:
+  // there is no "in progress" without a clock, because a state that says "working" while
+  // measuring nothing answered one question two ways.
+  const start = () => {
+    if (task.estimateMin != null) startFocus(task.id, { minutes: task.estimateMin });
+    else setAskEstimate(true);
+  };
+  /** The running session, brought up full screen. */
+  const openFocus = () => {
+    if (state.focus?.taskId === task.id) minimizeFocus(false);
+    else start();
   };
 
   /* the estimate ask closes like the menu does — click anywhere else */
@@ -184,50 +197,10 @@ export function TaskItem({
         <IconCheck size={12} />
       </button>
 
-      {!done && context !== "log" && (
-        <button
-          onClick={() => {
-            // Starting always means the timer. A task with an estimate starts
-            // at once; one without gets asked for a duration first — there is
-            // no "in progress" without a clock any more, because a state that
-            // says "working" while measuring nothing answered one question
-            // two ways.
-            if (running) stopFocus();
-            else if (task.estimateMin != null) startFocus(task.id, { minutes: task.estimateMin });
-            else setAskEstimate(true);
-          }}
-          aria-pressed={running}
-          aria-label={running ? "Stop working on this" : "Start working on this"}
-          data-tip={
-            running
-              ? "Stop working on this"
-              : task.estimateMin != null
-                ? `Focus for ~${fmtMinutes(task.estimateMin)}`
-                : "Start, pick how long first"
-          }
-          className={`grid size-6 shrink-0 place-items-center rounded-full border-2 transition-colors ${
-            running
-              ? "border-sky bg-sky text-on-accent"
-              : "border-ink-faint/70 text-ink-faint hover:border-sky hover:bg-sky-soft hover:text-sky"
-          }`}
-        >
-          {running ? (
-            <svg width="8" height="8" viewBox="0 0 12 12" fill="currentColor" aria-hidden>
-              <rect x="2.5" y="2.5" width="7" height="7" rx="1.5" />
-            </svg>
-          ) : (
-            // nudged right: an optically centred triangle sits a hair off-centre
-            <svg width="9" height="9" viewBox="0 0 12 12" fill="currentColor" aria-hidden className="translate-x-px">
-              <path d="M3 1.8v8.4a.6.6 0 00.92.5l6.3-4.2a.6.6 0 000-1L3.92 1.3a.6.6 0 00-.92.5z" />
-            </svg>
-          )}
-        </button>
-      )}
-
       {askEstimate && (
         <div
           ref={askRef}
-          className="anim-pop absolute left-8 top-11 z-30 w-60 rounded-xl border border-line bg-card p-3 shadow-lg"
+          className="anim-pop absolute left-10 top-10 z-30 w-60 rounded-xl border border-line bg-card p-3 shadow-lg"
         >
           <div className="mb-2 text-xs font-semibold text-ink">How long will this take?</div>
           <div className="flex flex-wrap gap-1.5">
@@ -278,29 +251,27 @@ export function TaskItem({
         {(running || list || assignee || task.memberIds.length > 0 || task.plannedTime || task.estimateMin || task.dueDate || task.repeat || task.reminderAt || task.carryCount >= 2 || task.subtasks.length > 0 || task.note) && (
           <span className="flex flex-wrap items-center gap-1.5">
             {running && (
-              <Chip tone="sky" title="In progress">
-                <span className="anim-pulse" aria-hidden>●</span> {elapsedLabel(elapsed)}
-              </Chip>
-            )}
-            {running && task.estimateMin != null && state.focus?.taskId !== task.id && (
               <span
                 role="button"
                 tabIndex={0}
-                title={`Focus for ~${fmtMinutes(task.estimateMin)}`}
+                title="Open the focus timer"
+                data-row-focus-open
                 onClick={(e) => {
                   e.stopPropagation();
-                  startFocus(task.id, { minutes: task.estimateMin });
+                  openFocus();
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
                     e.stopPropagation();
-                    startFocus(task.id, { minutes: task.estimateMin });
+                    openFocus();
                   }
                 }}
                 className="cursor-pointer"
               >
-                <Chip tone="sun">⏱ Focus</Chip>
+                <Chip tone="sky">
+                  <span className="anim-pulse" aria-hidden>●</span> Focusing · {elapsedLabel(elapsed)}
+                </Chip>
               </span>
             )}
             {task.plannedTime && !done && (
@@ -340,7 +311,37 @@ export function TaskItem({
                 )}
               </Chip>
             )}
-            {task.estimateMin != null && <Chip>~{fmtMinutes(task.estimateMin)}</Chip>}
+            {task.estimateMin != null &&
+              (done || running || context === "log" ? (
+                <Chip>~{fmtMinutes(task.estimateMin)}</Chip>
+              ) : (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  title={`Start focusing for ${fmtMinutes(task.estimateMin)}`}
+                  aria-label={`Start focusing on this for ${fmtMinutes(task.estimateMin)}`}
+                  data-row-start
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    start();
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      start();
+                    }
+                  }}
+                  className="cursor-pointer rounded-full transition-transform hover:-translate-y-px"
+                >
+                  <Chip tone="sky">
+                    <svg width="8" height="8" viewBox="0 0 12 12" fill="currentColor" aria-hidden>
+                      <path d="M3 1.8v8.4a.6.6 0 00.92.5l6.3-4.2a.6.6 0 000-1L3.92 1.3a.6.6 0 00-.92.5z" />
+                    </svg>
+                    {fmtMinutes(task.estimateMin)}
+                  </Chip>
+                </span>
+              ))}
             {task.dueDate && !done && (
               <Chip tone={dueSoon ? "clay" : "neutral"} title="A real deadline">
                 due {friendlyDay(task.dueDate, today)}
@@ -441,7 +442,7 @@ export function TaskItem({
               // the sheet's overflow and be clipped half-invisible. Near the
               // bottom of the screen it still flips upward.
               const r = e.currentTarget.getBoundingClientRect();
-              const up = window.innerHeight - r.bottom < 190;
+              const up = window.innerHeight - r.bottom < 230;
               setMenuPos({
                 left: Math.max(8, r.right - 176),
                 ...(up
@@ -465,6 +466,17 @@ export function TaskItem({
                 className="anim-pop fixed z-[60] w-44 rounded-xl border border-line bg-card p-1.5 shadow-lg"
                 style={menuPos}
               >
+              {!done && (
+                <MenuBtn
+                  onClick={() => {
+                    setMenuOpen(false);
+                    if (running) stopFocus();
+                    else start();
+                  }}
+                >
+                  <Icon3d name="timer" size={15} /> {running ? "Stop focus" : "Start focus"}
+                </MenuBtn>
+              )}
               <MenuBtn onClick={() => { setMenuOpen(false); setEditing(task.id); }}>
                 <Icon3d name="pencil" size={15} /> Edit
               </MenuBtn>

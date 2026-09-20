@@ -64,7 +64,7 @@ export const QUICK_START = ["philosophy", "capture", "today", "notifications"];
  * sitemap is only worth sending if it's true, and a date that moves on every
  * deploy teaches crawlers to ignore it.
  */
-export const DOCS_UPDATED = "2026-09-18";
+export const DOCS_UPDATED = "2026-09-20";
 
 const ALL_ARTICLES: Article[] = [
   /* ---------------------------------------------------------------- basics */
@@ -1222,7 +1222,7 @@ const ALL_ARTICLES: Article[] = [
     slug: "focus-timer",
     title: "Estimate a task and focus on it",
     summary:
-      "Give a task a duration, then run a full-screen countdown with pause, reset, extra time, and overtime.",
+      "Run a full-screen countdown on one task, with pause, minutes on or off, and overtime. The same session follows you from your computer to your phone.",
     categoryId: "tasks",
     keywords: [
       "focus",
@@ -1255,11 +1255,11 @@ const ALL_ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "Any task with an estimate shows a **▶** button on its card, and a **Start** button in the editor. Either opens a full-screen countdown with a progress ring, already running.",
+            text: "Three ways to start. A task with an estimate wears it as a small **▶ 30m** chip on its card: tap it. Any task has **Start focus** in its three-dot menu. And the task's own sheet has a **Start** button. Each opens a full-screen countdown, already running.",
           },
           {
             t: "note",
-            text: "The timer needs an estimate, that's the only requirement. No estimate, no play button.",
+            text: "A task with no estimate can still be started from its menu or its sheet: Kairo asks how long first, and keeps that as the task's estimate.",
           },
         ],
       },
@@ -1271,12 +1271,12 @@ const ALL_ARTICLES: Article[] = [
             t: "table",
             head: ["Control", "What it does"],
             rows: [
-              ["**Pause / Start**", "Freezes the countdown, or picks it back up"],
-              ["**Reset**", "Returns to the full duration, and leaves the timer **paused**"],
-              ["**+5 min**", "Adds five minutes, whether running or paused"],
+              ["**Pause / Resume**", "Freezes the countdown, or picks it back up"],
+              ["**−5** and **+5**", "Takes five minutes off, or adds five, whether running or paused. **−5** stops once less than six minutes are left"],
+              ["**Start the clock over**", "Back to the full length, running"],
               ["**Done**", "Completes the task and closes focus"],
-              ["**Minimize** (⌄)", "Shrinks to a floating pill that keeps ticking"],
-              ["**Exit** (✕)", "Ends the session, the task is *not* completed"],
+              ["**Minimize**", "Shrinks to a floating pill that keeps ticking. The pill can pause and resume too; tap its time to come back"],
+              ["**End session**", "Ends it, on every device. The task is *not* completed"],
             ],
           },
         ],
@@ -1287,11 +1287,11 @@ const ALL_ARTICLES: Article[] = [
         blocks: [
           {
             t: "p",
-            text: "At zero you get a chime and a vibration, and, if Kairo isn't open in front of you, a notification saying **⏱ Time's up**. The timer then keeps counting *upward* in overtime, showing `+4:20` and turning terracotta.",
+            text: "At zero you get a chime and a vibration, and, if Kairo isn't open in front of you, a notification saying **⏱ Time's up**. The timer then keeps counting *upward* in overtime, showing `+4:20`, and the screen warms from green to amber.",
           },
           {
             t: "p",
-            text: "Overtime is not a failure state. The message reads *“Overtime, still going. Respect.”*",
+            text: "Overtime is not a failure state. Nothing nags; the clock simply keeps count until you press **Done** or end the session.",
           },
         ],
       },
@@ -1302,6 +1302,8 @@ const ALL_ARTICLES: Article[] = [
           {
             t: "ul",
             items: [
+              "**It follows you between devices.** The session is kept with your account, so one started on your computer shows up on your phone as the pill when you open Kairo there, and pausing, adding minutes or ending it on one device does the same on the others. Every device measures against the same clock, so they agree to the second even if one device's clock is off.",
+              "While the focus screen is up the screen stays awake, the controls dim after a few seconds so only the clock remains, the task's steps are there to tick off, and the browser tab shows the time left.",
               "Refresh the page and a running session comes back as the floating pill.",
               "Because the end time is absolute, the countdown keeps burning while the tab is closed.",
               "Each account keeps its own timer, so [switching accounts](/support/accounts) doesn't disturb one.",

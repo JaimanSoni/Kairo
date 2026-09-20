@@ -2844,3 +2844,65 @@ body[data-modal] .qc-float {
     opacity: 0.7;
   }
 }
+
+/* ---------- focus: the lights go down, whatever the theme */
+.fc-screen {
+  background: radial-gradient(120% 90% at 50% 0%, #17332d 0%, #0e1f1b 45%, #08120f 100%);
+  animation: fc-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.fc-screen[data-overtime] {
+  background: radial-gradient(120% 90% at 50% 0%, #3a2a20 0%, #1f1612 45%, #120c09 100%);
+}
+@keyframes fc-in {
+  from {
+    opacity: 0;
+    transform: scale(1.03);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* a slow light behind the clock, brighter while it runs */
+.fc-glow {
+  background: radial-gradient(38% 30% at 50% 46%, rgba(139, 224, 201, 0.16), transparent 70%);
+  opacity: 0.55;
+  transition: opacity 1.2s;
+}
+.fc-screen[data-running] .fc-glow {
+  opacity: 1;
+  animation: fc-glow 7s ease-in-out infinite;
+}
+.fc-screen[data-overtime] .fc-glow {
+  background: radial-gradient(38% 30% at 50% 46%, rgba(255, 176, 138, 0.16), transparent 70%);
+}
+@keyframes fc-glow {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+/* the ring breathes, slowly: in for four, out for four */
+.fc-breathe {
+  animation: fc-breathe 8s ease-in-out infinite;
+  transform-origin: center;
+}
+@keyframes fc-breathe {
+  0%,
+  100% {
+    scale: 1;
+  }
+  50% {
+    scale: 1.025;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fc-screen,
+  .fc-screen[data-running] .fc-glow,
+  .fc-breathe {
+    animation: none;
+  }
+}
