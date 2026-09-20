@@ -1,7 +1,7 @@
 import { ObjectId } from "mongodb";
 import { getDb } from "./db";
 import { addDays, isScheduledDay, live, mondayOf, type LogLite } from "./habits-shared";
-import { armPrecise, scheduledCollection, sendToUser } from "./push";
+import { wakeAt, scheduledCollection, sendToUser } from "./push";
 import { epochIn, safeTimeZone, todayIn } from "./tz";
 import type { HabitRecord } from "./habits";
 
@@ -49,7 +49,7 @@ export async function scheduleHabitReminders(habit: Pick<HabitRecord, "_id" | "u
         tag: `habit-${habit._id.toHexString()}`,
         url: `/habits/${habit._id.toHexString()}`,
       });
-      armPrecise(next.fireAt);
+      await wakeAt(next.fireAt);
     }
   }
   await scheduleEveningSave(habit.userId, habit.timezone);
@@ -69,7 +69,7 @@ export async function scheduleEveningSave(userId: ObjectId, timezone: string): P
   const next = nextFire(EVENING, tz, () => true);
   if (!next) return;
   await scheduled.insertOne({ userId, kind: "garden-evening", timezone: tz, fireAt: next.fireAt, title: "Kairo", tag: "garden-evening", url: "/habits" });
-  armPrecise(next.fireAt);
+  await wakeAt(next.fireAt);
 }
 
 async function logsFor(habitId: ObjectId, from: string): Promise<Map<string, LogLite>> {

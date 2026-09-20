@@ -19,12 +19,15 @@ export function DatePicker({
   today,
   allowClear = true,
   clearLabel = "No day",
+  quickPicks,
 }: {
   value: string | null;
   onChange: (date: string | null) => void;
   today: string;
   allowClear?: boolean;
   clearLabel?: string;
+  /** The shortcuts above the calendar, in place of Today / Tomorrow / Next Mon. */
+  quickPicks?: { label: string; date: string }[];
 }) {
   const [view, setView] = useState(() => (value && value >= today ? value : today).slice(0, 7));
   const [vy, vm] = view.split("-").map(Number);
@@ -49,9 +52,11 @@ export function DatePicker({
   ];
 
   const quicks: { label: string; date: string | null }[] = [
-    { label: "Today", date: today },
-    { label: "Tomorrow", date: addDays(today, 1) },
-    { label: "Next Mon", date: nextWeekday(1, today) },
+    ...(quickPicks ?? [
+      { label: "Today", date: today },
+      { label: "Tomorrow", date: addDays(today, 1) },
+      { label: "Next Mon", date: nextWeekday(1, today) },
+    ]),
     ...(allowClear ? [{ label: clearLabel, date: null }] : []),
   ];
 

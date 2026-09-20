@@ -11,7 +11,7 @@ import { useStepToggle } from "./step-row";
 import { SendTaskModal, ShareTaskModal } from "./share-modal";
 import { Icon3d, ListMark } from "./img3d";
 import { PersonAvatar } from "./person-avatar";
-import { Chip, IconCheck, IconDots, IconStar } from "./ui";
+import { Chip, IconCheck, IconDots, IconStar, IconTrash } from "./ui";
 
 /**
  * Whole minutes since `startedAt`, re-rendering about twice a minute.
@@ -151,11 +151,6 @@ export function TaskItem({
           .map((pid) => personById(state, pid))
           .filter((p): p is NonNullable<typeof p> => p !== null)
       : [];
-
-  const plan = (patch: Partial<Task>) => {
-    updateTask(task.id, patch);
-    setMenuOpen(false);
-  };
 
   return (
     <div
@@ -446,7 +441,7 @@ export function TaskItem({
               // the sheet's overflow and be clipped half-invisible. Near the
               // bottom of the screen it still flips upward.
               const r = e.currentTarget.getBoundingClientRect();
-              const up = window.innerHeight - r.bottom < 330;
+              const up = window.innerHeight - r.bottom < 190;
               setMenuPos({
                 left: Math.max(8, r.right - 176),
                 ...(up
@@ -470,28 +465,8 @@ export function TaskItem({
                 className="anim-pop fixed z-[60] w-44 rounded-xl border border-line bg-card p-1.5 shadow-lg"
                 style={menuPos}
               >
-              {!done && task.plannedFor !== today && (
-                <MenuBtn onClick={() => plan({ plannedFor: today, status: "planned" })}>
-                  <Icon3d name="sun" size={15} /> Do today
-                </MenuBtn>
-              )}
-              {!done && task.plannedFor !== addDays(today, 1) && (
-                <MenuBtn onClick={() => plan({ plannedFor: addDays(today, 1), status: "planned" })}>
-                  <Icon3d name="sun-cloud" size={15} /> Tomorrow
-                </MenuBtn>
-              )}
-              {!done && (task.plannedFor || task.status !== "inbox") && (
-                <MenuBtn onClick={() => plan({ plannedFor: null, status: "inbox", spotlight: false })}>
-                  <Icon3d name="inbox" size={15} /> Back to inbox
-                </MenuBtn>
-              )}
-              {!done && task.status !== "someday" && (
-                <MenuBtn onClick={() => plan({ plannedFor: null, status: "someday", spotlight: false })}>
-                  <Icon3d name="moon" size={15} /> Someday
-                </MenuBtn>
-              )}
               <MenuBtn onClick={() => { setMenuOpen(false); setEditing(task.id); }}>
-                <Icon3d name="pencil" size={15} /> Edit details
+                <Icon3d name="pencil" size={15} /> Edit
               </MenuBtn>
               {!task.id.startsWith("temp-") && (
                 <MenuBtn
@@ -511,7 +486,7 @@ export function TaskItem({
               )}
                 <div className="my-1 border-t border-line" />
                 <MenuBtn onClick={() => { setMenuOpen(false); deleteTask(task.id); }}>
-                  <Icon3d name="leaf" size={15} /> Let it go
+                  <span className="grid w-[15px] place-items-center text-clay"><IconTrash size={14} /></span> <span className="text-clay">Delete</span>
                 </MenuBtn>
               </div>,
               document.body

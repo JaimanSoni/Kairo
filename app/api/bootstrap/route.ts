@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { requireSession, unauthorized } from "@/lib/api-auth";
 import { loadUserData } from "@/lib/tasks";
+import { catchUpPushes } from "@/lib/push";
 
 /**
  * Bootstraps the client: all live tasks (inbox/planned/someday), recently
@@ -9,6 +10,8 @@ import { loadUserData } from "@/lib/tasks";
 export async function GET() {
   const session = await requireSession();
   if (!session) return unauthorized();
+  // someone opening the app is a chance to notice a push that's overdue: after the response, never in its way
+  after(() => catchUpPushes());
 
   const { tasks, lists, people } = await loadUserData(session.userId);
 

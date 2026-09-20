@@ -11,7 +11,7 @@ import {
 import { friendlyDay, fmtMinutes, weekdayName } from "../dates";
 import { sanitizeRepeat } from "../repeat";
 import { epochIn } from "../tz";
-import { scheduledCollection, ensureTicker, armPrecise, processDuePushes } from "../push";
+import { scheduledCollection, ensureTicker, wakeAt, processDuePushes } from "../push";
 import type { Subtask, Task } from "../types";
 import { canWrite, type McpContext } from "./context";
 import { ToolFail } from "./fail";
@@ -1309,7 +1309,7 @@ const setReminder: Tool = {
       createdAt: new Date(),
     });
     ensureTicker();
-    armPrecise(fireAt);
+    await wakeAt(fireAt);
     void processDuePushes().catch(() => {});
 
     return json({

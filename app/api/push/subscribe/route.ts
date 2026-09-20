@@ -8,7 +8,7 @@ export async function POST(request: Request) {
   const session = await requireSession();
   if (!session) return unauthorized();
 
-  let body: { subscription?: { endpoint?: unknown; keys?: { p256dh?: unknown; auth?: unknown } } };
+  let body: { subscription?: { endpoint?: unknown; keys?: { p256dh?: unknown; auth?: unknown } }; replaces?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -41,6 +41,10 @@ export async function POST(request: Request) {
     },
     { upsert: true }
   );
+  // the browser swapped this device’s subscription: the old address is dead, so it goes
+  if (typeof body.replaces === "string" && body.replaces !== sub.endpoint) {
+    await subs.deleteOne({ endpoint: body.replaces, userId: new ObjectId(session.userId) });
+  }
   await rememberPushDevice(sub.endpoint);
   ensureTicker();
   return NextResponse.json({ ok: true });

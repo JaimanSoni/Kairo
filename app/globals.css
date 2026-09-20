@@ -2726,3 +2726,89 @@ body[data-modal] .nt-float {
     animation: gd-bubble-still 7s linear both;
   }
 }
+
+/* ---------- a task, opened: a question slides in, the card slides back, and an answer pops */
+.te-in {
+  animation: te-in 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes te-in {
+  from {
+    opacity: 0;
+    transform: translateX(22px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.te-back {
+  animation: te-back 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes te-back {
+  from {
+    opacity: 0;
+    transform: translateX(-22px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.te-pop {
+  animation: te-pop 0.34s cubic-bezier(0.3, 1.5, 0.5, 1) both;
+}
+@keyframes te-pop {
+  0% {
+    transform: scale(0.93);
+  }
+  60% {
+    transform: scale(1.04);
+  }
+  100% {
+    transform: none;
+  }
+}
+.te-say {
+  animation: te-say 0.3s ease-out both;
+}
+@keyframes te-say {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .te-in,
+  .te-back,
+  .te-pop,
+  .te-say {
+    animation: none;
+  }
+}
+
+/* ---------- the plus in the corner: it stands down under a sheet or the full-screen garden, and its options rise in */
+body[data-modal] .qc-float {
+  display: none !important;
+}
+.qc-item {
+  animation: qc-item 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+@keyframes qc-item {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .qc-item {
+    animation: none;
+  }
+}

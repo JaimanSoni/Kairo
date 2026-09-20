@@ -2,7 +2,11 @@
 
 import { useMemo, useState } from "react";
 import type { Task } from "@/lib/types";
-import { fullDate, fmtMinutes, localDayOf } from "@/lib/dates";
+import { fullDate, fmtMinutes, localDayOf, parseDateStr, weekdayName } from "@/lib/dates";
+
+const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** "20 Sep": the date in the corner of a phone. */
+const shortDate = (date: string) => `${Number(date.slice(8))} ${MONTH_SHORT[parseDateStr(date).getMonth()]}`;
 import { parseQuickAdd } from "@/lib/nlp";
 import Link from "next/link";
 import { byOrder, hiddenListIds, useApp, visibleLists } from "./store";
@@ -119,14 +123,18 @@ export function TodayView() {
   }, [doneToday, state.lists]);
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 pb-32 pt-8 sm:px-6">
-      {/* header */}
-      <header className="anim-rise mb-6">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h1 className="font-display text-4xl" data-greeting>
+    <div className="mx-auto w-full max-w-2xl px-4 pb-32 pt-4 sm:px-6 sm:pt-8">
+      {/* header: on a phone the greeting sits high, with the date in the corner beside it */}
+      <header className="anim-rise mb-5 sm:mb-6">
+        <div className="flex items-start justify-between gap-3 sm:items-baseline">
+          <h1 className="min-w-0 font-display text-[2rem] leading-tight sm:text-4xl" data-greeting>
             {greetingFor(hour, state.user.name)}
           </h1>
-          <span className="text-sm text-ink-soft">{fullDate(today)}</span>
+          <span className="mt-1.5 shrink-0 text-right text-xs leading-tight text-ink-soft sm:mt-0 sm:text-sm" data-today-date>
+            <span className="block font-semibold text-ink sm:hidden">{weekdayName(today)}</span>
+            <span className="sm:hidden">{shortDate(today)}</span>
+            <span className="hidden sm:inline">{fullDate(today)}</span>
+          </span>
         </div>
         <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-ink-soft">
           {totalEstimate > 0 && (

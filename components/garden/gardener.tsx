@@ -37,6 +37,7 @@ export function Gardener({
   allDone,
   className,
   quiet = false,
+  says,
 }: {
   phase: Phase;
   minute: number;
@@ -45,9 +46,11 @@ export function Gardener({
   className: string;
   /** On the small card: a tap on him opens the garden like the rest of it, rather than making him speak again. */
   quiet?: boolean;
+  /** Something of his own to say, in place of the hour's greeting. */
+  says?: string;
 }) {
   const [taps, setTaps] = useState(0);
-  const line = greetingFor(minute, weather, allDone);
+  const line = says ?? greetingFor(minute, weather, allDone);
   return (
     <div className={`absolute z-[4] ${quiet ? "pointer-events-none" : ""} ${className}`} style={{ aspectRatio: RATIO }} data-gardener={quiet ? "quiet" : ""}>
       {quiet ? (

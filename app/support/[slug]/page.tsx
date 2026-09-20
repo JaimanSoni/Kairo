@@ -34,7 +34,7 @@ export async function generateMetadata({
       title: `${article.title} · Kairo Help`,
       description: article.summary,
       type: "article",
-      images: [{ url: "/og.png", width: 1200, height: 630, alt: "Kairo, where good days grow" }],
+      images: [{ url: "/og-bloom.png", width: 1200, height: 630, alt: "Kairo. Your whole day, in bloom" }],
     },
   };
 }
@@ -61,7 +61,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     keywords: article.keywords.join(", "),
     dateModified: DOCS_UPDATED,
     mainEntityOfPage: `${SITE_URL}/support/${article.slug}`,
-    image: `${SITE_URL}/og.png`,
+    image: `${SITE_URL}/og-bloom.png`,
     publisher: {
       "@type": "Organization",
       name: "Kairo",

@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Kairo",
     short_name: "Kairo",
     description:
-      "Where good days grow. Plan a day you'll actually finish, and grow your habits into a garden you can see.",
+      "Your whole day, in bloom. Tasks, habits and notes in one calm place, with a garden that grows as you keep your habits.",
     start_url: "/today",
     display: "standalone",
     orientation: "portrait",

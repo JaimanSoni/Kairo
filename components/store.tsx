@@ -10,7 +10,7 @@ import {
   useRef,
 } from "react";
 import type { AccountInfo, List, Task, UserProfile, SpacePrefs } from "@/lib/types";
-import { friendlyDay, todayStr } from "@/lib/dates";
+import { addDays, friendlyDay, planEpoch, todayStr } from "@/lib/dates";
 import { nextOccurrence } from "@/lib/repeat";
 import { cancelPush } from "@/lib/push-client";
 import type { ParsedInput } from "@/lib/nlp";
@@ -240,7 +240,7 @@ async function api<T>(url: string, options?: RequestInit): Promise<T> {
 
 /* ---------------- context ---------------- */
 
-export type SweepAction = "today" | "later" | "someday" | "done" | "letgo";
+export type SweepAction = "today" | "tomorrow" | "later" | "someday" | "done" | "letgo";
 
 type AppContextValue = {
   state: State;
@@ -252,7 +252,8 @@ type AppContextValue = {
   /** Marks a task as being worked on now, or stops it. Only one at a time. */
   toggleStarted: (id: string) => void;
   duplicateTask: (id: string) => void;
-  completeTask: (id: string) => void;
+  /** `on`: the day it was actually done, when that wasn't today (settling yesterday in the morning). */
+  completeTask: (id: string, opts?: { on?: string }) => void;
   uncompleteTask: (id: string) => void;
   deleteTask: (id: string, opts?: { silent?: boolean }) => void;
   reorderTasks: (orderedIds: string[]) => void;
@@ -527,7 +528,8 @@ export function AppProvider({
       if (!prev) return;
       const next: Task = { ...prev, ...patch };
       if (patch.status === "done" && prev.status !== "done") {
-        next.completedAt = new Date().toISOString();
+        // the moment it was finished: now, unless it is being logged for an earlier day
+        next.completedAt = patch.completedAt ?? new Date().toISOString();
         next.spotlight = false;
       }
       if (patch.status && patch.status !== "done") next.completedAt = null;
@@ -541,6 +543,7 @@ export function AppProvider({
       const fields: (keyof Task)[] = [
         "title", "note", "status", "plannedFor", "plannedTime", "dueDate", "spotlight", "listId",
         "estimateMin", "order", "carryCount", "repeat", "reminderAt", "startedAt", "assigneeId", "subtasks",
+        "completedAt",
       ];
       for (const f of fields) {
         if (f in patch) body[f] = patch[f];
@@ -683,16 +686,19 @@ export function AppProvider({
   );
 
   const completeTask = useCallback(
-    (id: string) => {
+    (id: string, opts?: { on?: string }) => {
       const t = stateRef.current.tasks[id];
       if (!t || t.status === "done") return;
+      // done on an earlier day: it belongs to that day's wins, not today's. The end of that day stands in for the moment.
+      const doneOn = opts?.on && opts.on < stateRef.current.today ? opts.on : null;
+      const doneAt = doneOn ? new Date(planEpoch(doneOn, "23:59")).toISOString() : null;
 
       track("task-complete");
       if (t.reminderAt) cancelPush(`remind-${id}`); // a done task needs no reminder
 
       if (t.repeat) {
         const today = stateRef.current.today;
-        const nowIso = new Date().toISOString();
+        const nowIso = doneAt ?? new Date().toISOString();
 
         // 1) the finished copy that lands in Done today / the Log. It keeps
         //    today as its planned day so un-completing it brings it back to
@@ -706,7 +712,7 @@ export function AppProvider({
           dueDate: null,
           status: "done",
           spotlight: false,
-          plannedFor: today,
+          plannedFor: doneOn ?? today,
           // the way back: un-completing this copy rejoins the series
           instanceOf: id.startsWith("temp-") ? null : id,
           completedAt: nowIso,
@@ -720,7 +726,8 @@ export function AppProvider({
             title: instance.title,
             note: instance.note,
             status: "done",
-            plannedFor: today,
+            plannedFor: doneOn ?? today,
+            ...(doneAt ? { completedAt: doneAt } : {}),
             plannedTime: instance.plannedTime,
             listId: instance.listId,
             estimateMin: instance.estimateMin,
@@ -733,7 +740,8 @@ export function AppProvider({
           .catch(() => syncError(() => dispatch({ type: "REMOVE_TASK", id: tempId })));
 
         // 2) advance the series
-        const after = t.plannedFor && t.plannedFor > today ? t.plannedFor : today;
+        // done for an earlier day: the series may well be due again today
+        const after = doneOn ? addDays(today, -1) : t.plannedFor && t.plannedFor > today ? t.plannedFor : today;
         const next = nextOccurrence(t.repeat, after);
         updateTask(id, {
           plannedFor: next,
@@ -751,6 +759,7 @@ export function AppProvider({
 
       updateTask(id, {
         status: "done",
+        ...(doneAt ? { completedAt: doneAt } : {}),
         ...(t.reminderAt ? { reminderAt: null } : {}),
         ...(t.startedAt ? { startedAt: null } : {}),
       });
@@ -870,10 +879,10 @@ export function AppProvider({
 
         // repeating tasks: "done" logs+advances, "letgo" means skip — never delete the series
         if (t.repeat && action === "done") {
-          completeTask(id);
+          completeTask(id, { on: t.plannedFor ?? undefined });
           continue;
         }
-        if (t.repeat && (action === "letgo" || action === "later" || action === "someday")) {
+        if (t.repeat && (action === "letgo" || action === "later" || action === "someday" || action === "tomorrow")) {
           const next = nextOccurrence(t.repeat, today);
           const skipped: Task = { ...t, plannedFor: next, spotlight: false, carryCount: 0 };
           upserts.push(skipped);
@@ -900,6 +909,9 @@ export function AppProvider({
           case "today":
             patch = { plannedFor: today, status: "planned", carryCount: t.carryCount + 1 };
             break;
+          case "tomorrow":
+            patch = { plannedFor: addDays(today, 1), status: "planned", spotlight: false, carryCount: t.carryCount + 1 };
+            break;
           case "later":
             patch = { plannedFor: null, status: "inbox", spotlight: false };
             break;
@@ -907,11 +919,12 @@ export function AppProvider({
             patch = { plannedFor: null, status: "someday", spotlight: false };
             break;
           case "done":
-            patch = { status: "done" };
+            // finished on the day it was planned for, not this morning: it's that day's win
+            patch = { status: "done", ...(t.plannedFor && t.plannedFor < today ? { completedAt: new Date(planEpoch(t.plannedFor, "23:59")).toISOString() } : {}) };
             break;
         }
         const next: Task = { ...t, ...patch };
-        if (patch.status === "done") next.completedAt = new Date().toISOString();
+        if (patch.status === "done") next.completedAt = patch.completedAt ?? new Date().toISOString();
         upserts.push(next);
         if (!id.startsWith("temp-")) updates.push({ id, ...patch });
       }

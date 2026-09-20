@@ -203,6 +203,7 @@ export function GardenScene({
   decorLevel = 1,
   hud,
   live = false,
+  gardenerLine,
 }: {
   /** The garden's own weather, for when the real weather isn't shown. */
   weather: Weather;
@@ -222,6 +223,8 @@ export function GardenScene({
   hud?: React.ReactNode;
   /** Your own garden: it has the sky you have, where you are. */
   live?: boolean;
+  /** Something for the gardener to say, in place of the hour's greeting. */
+  gardenerLine?: string;
 }) {
   const variant: SceneVariant = asked ?? (compact ? "compact" : "hero");
   const mini = variant === "mini";
@@ -266,10 +269,10 @@ export function GardenScene({
   );
   const meadowTile = mini ? 220 : immersive ? 520 : 380;
   /** How tall the meadow under the foot of the hills is: the fade needs grass behind it. */
-  const footHeight = { mini: "h-3", compact: "h-7", hero: "h-8 sm:h-10", immersive: "h-10 sm:h-12" }[variant];
+  const footHeight = { mini: "h-3.5", compact: "h-7", hero: "h-8 sm:h-10", immersive: "h-10 sm:h-12" }[variant];
 
-  const skyHeight = { mini: "h-24 sm:h-28", compact: "h-32", hero: "h-48 sm:h-60", immersive: "h-[36%] min-h-44 shrink-0" }[variant];
-  const landHeight = { mini: "h-16 sm:h-20", compact: "h-28 sm:h-32", hero: "h-32 sm:h-40", immersive: "h-44 sm:h-52" }[variant];
+  const skyHeight = { mini: "h-32 sm:h-28", compact: "h-32", hero: "h-48 sm:h-60", immersive: "h-[36%] min-h-44 shrink-0" }[variant];
+  const landHeight = { mini: "h-24 sm:h-20", compact: "h-28 sm:h-32", hero: "h-32 sm:h-40", immersive: "h-44 sm:h-52" }[variant];
 
   return (
     <div
@@ -475,7 +478,7 @@ export function GardenScene({
       </div>
 
       {/* on the small card on Today, the gardener stands in its bottom-left corner, in front of the grass */}
-      {mini && !night && <Gardener phase={phase} minute={min} weather={look.thunder ? "storm" : look.rain ? "rain" : look.snow ? "snow" : look.fog ? "fog" : "clear"} allDone={allDone} className="bottom-[4%] left-[2.5%] h-[66%]" quiet />}
+      {mini && !night && <Gardener phase={phase} minute={min} weather={look.thunder ? "storm" : look.rain ? "rain" : look.snow ? "snow" : look.fog ? "fog" : "clear"} allDone={allDone} className="bottom-[4%] left-[2.5%] h-[66%]" quiet says={gardenerLine} />}
 
       {/* fog banks, then whatever is falling, over everything but the words on the sky */}
       {look.fog && (

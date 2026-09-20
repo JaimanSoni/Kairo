@@ -39,6 +39,43 @@ export async function pushEnabled(): Promise<boolean> {
   return (await reg.pushManager.getSubscription()) !== null;
 }
 
+/**
+ * Keeps this device reachable. Browsers replace a push subscription now and
+ * then, and a server that hears a subscription is gone deletes it; either way
+ * the device stops getting pushes while everything here still looks "on". So
+ * each time the app opens, a device that was allowed to notify makes sure it
+ * still has a subscription (subscribing again if not) and tells the server
+ * which one it is. Never asks for permission: that's what enablePush is for.
+ */
+export async function syncPushSubscription(): Promise<"synced" | "off"> {
+  if (!pushSupported() || Notification.permission !== "granted") return "off";
+  const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  if (!key) return "off";
+  try {
+    const reg = (await navigator.serviceWorker.getRegistration()) ?? (await registerServiceWorker());
+    if (!reg) return "off";
+    let subscription = await reg.pushManager.getSubscription();
+    // only a device that was subscribed before is put back: turning pushes off stays off
+    const wasOn = localStorage.getItem(PUSH_ON_KEY) === "1";
+    if (!subscription) {
+      if (!wasOn) return "off";
+      subscription = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64ToUint8(key) as BufferSource });
+    }
+    const res = await fetch("/api/push/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subscription: subscription.toJSON() }),
+    });
+    if (res.ok) localStorage.setItem(PUSH_ON_KEY, "1");
+    return res.ok ? "synced" : "off";
+  } catch {
+    return "off";
+  }
+}
+
+/** Remembers that this device had pushes on, so a lost subscription is put back rather than quietly staying lost. */
+const PUSH_ON_KEY = "kairo:push-on";
+
 export type EnableResult =
   | { status: "enabled" }
   | { status: "denied" }
@@ -82,6 +119,11 @@ export async function enablePush(): Promise<EnableResult> {
       body: JSON.stringify({ subscription: subscription.toJSON() }),
     });
     if (!res.ok) return { status: "failed", detail: `server rejected subscription (${res.status})` };
+    try {
+      localStorage.setItem(PUSH_ON_KEY, "1");
+    } catch {
+      /* private mode: it just won't be put back by itself */
+    }
     return { status: "enabled" };
   } catch (err) {
     console.error("Push subscribe failed:", err);
@@ -91,6 +133,11 @@ export async function enablePush(): Promise<EnableResult> {
 }
 
 export async function disablePush(): Promise<void> {
+  try {
+    localStorage.removeItem(PUSH_ON_KEY);
+  } catch {
+    /* nothing to forget */
+  }
   if (!pushSupported()) return;
   const reg = await navigator.serviceWorker.getRegistration();
   const sub = await reg?.pushManager.getSubscription();

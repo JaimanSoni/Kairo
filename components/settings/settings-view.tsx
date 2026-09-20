@@ -181,7 +181,7 @@ export default function SettingsView() {
           <AccountsSection />
           <DataSection />
           <HelpSection />
-          <p className="px-1 text-center text-xs text-ink-faint">kairo, where good days grow</p>
+          <p className="px-1 text-center text-xs text-ink-faint">kairo. your whole day, in bloom</p>
           {/* room under the last section, so every section can reach the top when it is chosen */}
           <div aria-hidden className="h-[45vh]" />
         </div>

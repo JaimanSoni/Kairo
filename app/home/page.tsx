@@ -21,8 +21,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/home" },
   description:
     CITY_SHOWN
-      ? "Kairo is where good days grow. Plan a day you'll actually finish, keep habits that grow into a living garden, write notes and a journal, and move in next door to your friends in Kairo City. No red badges, no overdue guilt."
-      : "Kairo is where good days grow. Plan a day you'll actually finish, keep habits that grow into a living garden, and write notes for everything else. No red badges, no overdue guilt.",
+      ? "Kairo is your whole day, in bloom: one calm place for tasks, habits and notes. Plan a day you'll actually finish, keep habits that grow into a living garden, write notes and a journal, and move in next door to your friends in Kairo City. No red badges, no overdue guilt."
+      : "Kairo is your whole day, in bloom: one calm place for tasks, habits and notes. Plan a day you'll actually finish, keep habits that grow into a living garden, and write notes for everything else. No red badges, no overdue guilt.",
   keywords: [
     "daily planner",
     "habit tracker",
@@ -43,13 +43,13 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "Kairo",
     url: "/",
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: SITE_TITLE }],
+    images: [{ url: "/og-bloom.png", width: 1200, height: 630, alt: SITE_TITLE }],
   },
   twitter: {
     card: "summary_large_image",
     title: SITE_TITLE,
     description: CITY_SHOWN ? "Plan the day. Grow your habits into a garden. Visit your friends' gardens in Kairo City." : "Plan the day. Grow your habits into a garden. Write down everything else.",
-    images: ["/og.png"],
+    images: ["/og-bloom.png"],
   },
 };
 
@@ -67,8 +67,8 @@ const JSON_LD = {
   operatingSystem: "Web, iOS, Android",
   description:
     CITY_SHOWN
-    ? "Where good days grow: a daily planner with guilt-free fresh starts and AI capture, habits that grow into a living garden, notes and a journal, and Kairo City, a street of gardens you share with friends."
-    : "Where good days grow: a daily planner with guilt-free fresh starts and AI capture, habits that grow into a living garden, and notes.",
+    ? "Your whole day, in bloom: a daily planner with guilt-free fresh starts and AI capture, habits that grow into a living garden, notes and a journal, and Kairo City, a street of gardens you share with friends."
+    : "Your whole day, in bloom: a daily planner with guilt-free fresh starts and AI capture, habits that grow into a living garden, and notes.",
   offers: {
     "@type": "Offer",
     price: (PRICE_MINOR / 100).toFixed(2),
@@ -352,12 +352,12 @@ export default async function Landing({
           </a>
           )}
           <h1 className="font-display mx-auto text-6xl leading-[0.98] tracking-tight sm:text-8xl">
-            Where good days{" "}
-            <em className="bg-gradient-to-r from-sun via-moss to-sky bg-clip-text pr-[0.12em] -mr-[0.08em] text-transparent">grow</em>.
+            Your whole day, in{" "}
+            <em className="bg-gradient-to-r from-sun via-moss to-sky bg-clip-text pr-[0.12em] -mr-[0.08em] text-transparent">bloom</em>.
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-ink-soft">
-            Plan a day you&apos;ll actually finish. Keep habits that grow into a garden you can see.
-            {CITY_SHOWN ? "Then move in next door to your friends in Kairo City." : "And write down everything else."}
+            Tasks, habits and notes in one calm place. Plan a day you&apos;ll actually finish, and keep habits that grow into a garden you can see.
+            {CITY_SHOWN ? " Then move in next door to your friends in Kairo City." : ""}
           </p>
 
           <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -672,7 +672,7 @@ export default async function Landing({
       </section>
 
       <footer className="border-t border-line/60 px-5 py-8 text-center text-xs leading-6 text-ink-faint">
-        <Mark size={12} className="inline text-sun" /> kairo, where good days grow
+        <Mark size={12} className="inline text-sun" /> kairo. your whole day, in bloom
         {" · "}
         <Link href="/support" className="underline underline-offset-2 hover:text-ink-soft">
           Help

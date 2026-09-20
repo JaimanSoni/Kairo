@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { getSession, getSessionAccounts } from "@/lib/session";
 import { loadUserData } from "@/lib/tasks";
+import { catchUpPushes } from "@/lib/push";
 import { getUserById, shouldWelcome, spacesOf } from "@/lib/users";
 import { isAdminEmail } from "@/lib/admin";
 import { accessFor, getBillingSettings, type UserBilling } from "@/lib/billing";
@@ -73,6 +75,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   const { tasks, lists, people } = appLocked ? { tasks: [], lists: [], people: [] } : await loadUserData(session.userId);
+
+  // Someone opening the app is a chance to notice a push that's overdue (a net
+  // under the scheduler's exact call). After the page is sent, never in its way.
+  after(() => catchUpPushes());
 
   return (
     <AppProvider

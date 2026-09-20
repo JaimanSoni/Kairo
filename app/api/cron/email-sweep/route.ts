@@ -4,6 +4,8 @@ import { getBillingSettings, TRIAL_DAYS } from "@/lib/billing";
 import { getPlan } from "@/lib/plans";
 import { sendEmail } from "@/lib/email";
 import { renewalEmail, trialEndingEmail } from "@/lib/email-templates";
+import { processDuePushes } from "@/lib/push";
+import { armPendingWakes } from "@/lib/push-wake";
 
 /**
  * The daily clock behind the two T-minus emails: "your paid month ends soon"
@@ -33,6 +35,10 @@ export async function GET(request: Request) {
   if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+
+  // the last net under reminders: send anything stranded, and book any moment the scheduler doesn't have yet
+  await processDuePushes().catch((err) => console.error("[cron] push sweep failed", err));
+  await armPendingWakes().catch((err) => console.error("[cron] wake arming failed", err));
 
   const settings = await getBillingSettings();
   if (!settings.paymentsEnabled) {

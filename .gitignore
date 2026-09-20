@@ -56,3 +56,6 @@ scripts/leads/leads-harvest*.json
 
 # the painted garden art as generated; the app ships trimmed WebP copies from public/art/garden
 garden-art/
+
+# screenshots taken while reviewing changes
+garden-previews/

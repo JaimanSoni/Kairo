@@ -12,15 +12,15 @@ export const SITE_URL = (process.env.APP_URL || "https://kairo.jaimansoni.com").
 
 export const SITE_NAME = "Kairo";
 
-export const SITE_TAGLINE = "Where good days grow.";
+export const SITE_TAGLINE = "Your whole day, in bloom.";
 
 /** The name and the line together, the way titles and link previews say it. */
-export const SITE_TITLE = "Kairo, where good days grow";
+export const SITE_TITLE = "Kairo. Your whole day, in bloom";
 
 export const SITE_DESCRIPTION =
   CITY_SHOWN
     ? "Plan a day you'll actually finish, keep habits that grow into a garden you can see, and move in next door to your friends in Kairo City."
-    : "Plan a day you'll actually finish, keep habits that grow into a garden you can see, and write down everything else.";
+    : "Tasks, habits and notes in one calm place. Plan a day you'll actually finish, and watch your habits grow into a garden you can see.";
 
 /** Where a human should write to — matches the legal pages and /support/contact. */
 export const SUPPORT_EMAIL = "kairo.support@jaimansoni.com";

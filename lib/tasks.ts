@@ -244,6 +244,8 @@ export async function listsCollection() {
 }
 
 type TaskPatch = {
+  /** With status "done": the moment it was actually finished, when that wasn't now (yesterday's task, settled this morning). */
+  completedAt?: string;
   title?: string;
   note?: string;
   status?: TaskStatus;
@@ -277,6 +279,11 @@ export function sanitizeTaskPatch(body: Record<string, unknown>): TaskPatch | nu
   if ("status" in body) {
     if (!TASK_STATUSES.includes(body.status as TaskStatus)) return null;
     patch.status = body.status as TaskStatus;
+  }
+  if ("completedAt" in body && body.completedAt !== undefined && body.completedAt !== null) {
+    // only ever a real moment that has already happened, and only alongside "done"
+    if (!isIsoDateTime(body.completedAt) || Date.parse(body.completedAt) > Date.now() + 60_000) return null;
+    if (body.status === "done") patch.completedAt = body.completedAt;
   }
   if ("plannedFor" in body) {
     if (body.plannedFor !== null && !isDateString(body.plannedFor)) return null;
@@ -375,8 +382,9 @@ export function buildTaskUpdate(patch: TaskPatch): Document {
   }
   // a time only makes sense on a planned day — drop it when the day is cleared
   if (patch.plannedFor === null) set.plannedTime = null;
+  delete set.completedAt;
   if (patch.status === "done") {
-    set.completedAt = new Date();
+    set.completedAt = patch.completedAt ? new Date(patch.completedAt) : new Date();
     set.spotlight = false;
     // finishing ends the work — nothing stays "in progress" once it's done
     set.startedAt = null;

@@ -15,7 +15,7 @@ import { SITE_URL } from "@/lib/site";
  */
 
 const PITCH =
-  "Kairo is where my good days grow: I plan the day, keep my habits, and watch them grow into a garden. It's the first one I've actually kept using.";
+  "Kairo is my whole day in one place: I plan the day, keep my habits, and watch them grow into a garden. It's the first one I've actually kept using.";
 
 const SHARE_URL = SITE_URL;
 

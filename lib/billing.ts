@@ -10,6 +10,23 @@ import { resolveAccess } from "./access";
 import { getPlan, planFeatureMap } from "./plans";
 import type { Access } from "./access";
 
+/**
+ * An account's access is cached for a few seconds per server (users.ts). Every
+ * write to what decides access drops that cache here, because the moment that
+ * matters most is the one right after someone pays: without this, the app kept
+ * treating a customer who had just paid as locked out until the cache ran out
+ * on its own. Imported lazily: users.ts and this module would otherwise import
+ * each other.
+ */
+async function accessChanged(userId: string): Promise<void> {
+  try {
+    const { bustUserGate } = await import("./users");
+    bustUserGate(userId);
+  } catch {
+    /* the cache runs out by itself in seconds */
+  }
+}
+
 export { TRIAL_DAYS, resolveAccess, can } from "./access";
 export type { Access, BillingSettings, SubStatus, UserBilling } from "./access";
 
@@ -81,6 +98,7 @@ export async function updateUserBilling(userId: string, patch: UserBilling): Pro
     }
     await db.collection("users").updateOne({ _id: new ObjectId(userId) }, { $set: set });
   });
+  await accessChanged(userId);
 }
 
 /** Finds the account a webhook refers to, without trusting the payload's notes. */
@@ -105,6 +123,13 @@ export async function findUserBySubscriptionId(
  * {@link creditOneMonth}, which does.
  */
 async function extendPaidPeriod(userId: string, from = Date.now()): Promise<number> {
+  const end = await extendPaidPeriodOnce(userId, from);
+  // the month just bought must count from this second, not when a cache runs out
+  await accessChanged(userId);
+  return end;
+}
+
+async function extendPaidPeriodOnce(userId: string, from: number): Promise<number> {
   return withDbRetry(async () => {
     const db = await getDb();
     // One atomic pipeline update, for two reasons that are both money:
@@ -540,4 +565,5 @@ export async function setComped(
       }
     );
   });
+  await accessChanged(userId);
 }

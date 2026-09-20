@@ -32,7 +32,7 @@ export async function generateMetadata({
       url: `/blog/${post.slug}`,
       publishedTime: post.published,
       modifiedTime: post.updated,
-      images: [{ url: "/og.png", width: 1200, height: 630, alt: "Kairo, where good days grow" }],
+      images: [{ url: "/og-bloom.png", width: 1200, height: 630, alt: "Kairo. Your whole day, in bloom" }],
     },
   };
 }
@@ -64,7 +64,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
     dateModified: post.updated,
     keywords: post.keywords.join(", "),
     mainEntityOfPage: `${SITE_URL}/blog/${post.slug}`,
-    image: `${SITE_URL}/og.png`,
+    image: `${SITE_URL}/og-bloom.png`,
     author: { "@type": "Person", name: "Jaiman Soni", url: SITE_URL },
     publisher: {
       "@type": "Organization",

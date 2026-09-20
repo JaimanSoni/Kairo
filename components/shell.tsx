@@ -8,9 +8,10 @@ import { navigateApp } from "./app-views";
 import { upgradeHref, useCan } from "./entitlements";
 import { animalAvatar } from "@/lib/avatars";
 import { track } from "@/lib/analytics-client";
-import { registerServiceWorker } from "@/lib/push-client";
+import { registerServiceWorker, syncPushSubscription } from "@/lib/push-client";
 import { playNotify } from "@/lib/sound";
 import { Omnibar } from "./omnibar";
+import { QuickCreate } from "./quick-create";
 import { TaskEditor } from "./task-editor";
 import { FocusOverlay } from "./focus";
 import { AppLockGate } from "./app-lock";
@@ -66,9 +67,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
     }
   }, [pathname]);
 
-  // service worker for web push (timer-end notifications)
+  // service worker for web push; and each time the app opens, this device makes sure the server can still reach it
   useEffect(() => {
-    registerServiceWorker();
+    void registerServiceWorker().then(() => syncPushSubscription());
   }, []);
 
   // The admin's browser opts itself out of every tracker, first-party and
@@ -334,6 +335,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
           )
         )}
       </nav>
+
+      {/* the plus in the corner: a new task or a new note, from anywhere */}
+      <QuickCreate />
 
       {/* overlays */}
       {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}
