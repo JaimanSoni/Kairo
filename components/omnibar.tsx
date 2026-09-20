@@ -7,6 +7,7 @@ import { friendlyDay, fmtMinutes, fmtTime12 } from "@/lib/dates";
 import { repeatLabel, type Repeat } from "@/lib/repeat";
 import { guestCapReached, hiddenListIds, useApp, visibleLists } from "./store";
 import { commandDone, commandSentence, matchTasks, parseCommand, pickOne, type Action } from "@/lib/commands";
+import { askPermission } from "./permission-ask";
 import { track } from "@/lib/analytics-client";
 import { getSpeechRecognition, type SpeechRec } from "@/lib/speech";
 import { IconX, Modal } from "./ui";
@@ -115,13 +116,16 @@ export function Omnibar() {
 
   useEffect(() => () => recRef.current?.abort(), []);
 
-  const toggleVoice = () => {
+  const toggleVoice = async () => {
     if (listening) {
       recRef.current?.stop();
       return;
     }
     const SR = getSpeechRecognition();
     if (!SR) return;
+    // the browser asks for the microphone the moment listening starts, so the
+    // reason for it has to come first, while there is still a choice to make
+    if (!(await askPermission("microphone"))) return;
     const rec = new SR();
     rec.continuous = false;
     rec.interimResults = true;
@@ -561,7 +565,7 @@ export function Omnibar() {
               />
               {speechSupported && (
                 <button
-                  onClick={toggleVoice}
+                  onClick={() => void toggleVoice()}
                   aria-label={listening ? "Stop listening" : "Speak instead of typing"}
                   title={listening ? "Stop listening" : "Speak instead of typing"}
                   className={`grid size-9 shrink-0 place-items-center rounded-xl transition-colors ${listening ? "anim-pulse bg-clay text-on-accent" : "text-ink-faint hover:bg-paper-deep hover:text-ink"}`}

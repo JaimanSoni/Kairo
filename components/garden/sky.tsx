@@ -141,19 +141,20 @@ function SkySheet({ onClose }: { onClose: () => void }) {
     <Modal onClose={onClose} above>
       <div className="p-5" data-sky-sheet>
         <div className="flex items-center gap-3">
-          <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-sky/12 text-sky">{sky ? <SkyGlyph sky={sky} night={night} size={26} /> : null}</span>
+          {sky && (
+            <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-sky/12 text-sky">
+              <SkyGlyph sky={sky} night={night} size={24} />
+            </span>
+          )}
           <div className="min-w-0">
-            <h2 className="font-display text-2xl leading-tight">{sky ? `${skyLabel(sky, night)}${temp ? `, ${temp}` : ""}` : "Your garden's own weather"}</h2>
-            <p className="text-sm text-ink-soft">{sky ? `${sky.place ? `In ${sky.place}` : "Where you are"}, this hour` : "Clouds that clear as the day's habits get done"}</p>
+            <h2 className="font-display text-xl leading-tight">{sky ? `${skyLabel(sky, night)}${temp ? `, ${temp}` : ""}` : "Garden weather"}</h2>
+            <p className="truncate text-sm text-ink-soft">{sky ? (sky.place ? `${sky.place}, this hour` : "Where you are, this hour") : "Clears as habits get done"}</p>
           </div>
         </div>
-        <p className="mt-3 text-sm leading-6 text-ink-soft">
-          Your garden has the sky you have: rain when it rains, fog, snow, a storm, and the sun setting when yours does. Finish the day&apos;s habits and the rainbow still comes out.
-        </p>
         <SkyOptions className="mt-4" />
         <SkyPreviewPanel className="mt-4" />
-        <p className="mt-4 text-xs leading-5 text-ink-faint">Weather from {WEATHER_CREDIT}. Where you are is rounded to about 10 km, and Kairo doesn&apos;t keep it.</p>
-        <div className="mt-3 flex justify-end">
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <p className="text-[11px] text-ink-faint">Weather from {WEATHER_CREDIT}</p>
           <button type="button" onClick={onClose} className="h-9 rounded-full px-4 text-sm font-semibold text-ink-soft hover:bg-paper-deep">
             Done
           </button>
@@ -163,30 +164,37 @@ function SkySheet({ onClose }: { onClose: () => void }) {
   );
 }
 
-/** Where the garden's weather comes from: your connection, this device, or nowhere. Kept on this device. */
+/**
+ * Whether the garden follows the real weather. Kept on this device.
+ *
+ * There used to be three answers, two of which were the same answer with
+ * different plumbing. There are two now: on, or the garden's own weather.
+ * On means this device's location if the browser will give it, and the town
+ * your connection comes from if it won't — so a refused prompt quietly
+ * downgrades instead of breaking the feature, and the line underneath says
+ * which one it ended up using.
+ */
 export function SkyOptions({ className = "" }: { className?: string }) {
   const { state, setMode } = useSkySettings();
   const [busy, setBusy] = useState<SkyMode | null>(null);
   const mode = state?.mode ?? "auto";
+  const precise = mode === "here" && !state?.locationError;
+  const where = precise ? "This device" : (state?.connection ?? "Your connection");
+  const choices: { value: SkyMode; title: string; body: string }[] = [
+    { value: "here", title: "Real weather", body: busy ? "Looking…" : where },
+    { value: "off", title: "Off", body: "The garden's own sky" },
+  ];
   const pick = async (m: SkyMode) => {
     setBusy(m);
     await setMode(m);
     setBusy(null);
   };
-  const choices: { value: SkyMode; title: string; body: string }[] = [
-    {
-      value: "auto",
-      title: "Where my connection is",
-      body: state?.connection ? `Right now that's ${state.connection}. No setup, and usually right.` : "The town your internet connection comes from. No setup, and usually right.",
-    },
-    { value: "here", title: "This device's location", body: "More exact, for when your connection says you're somewhere you're not. Your browser asks once." },
-    { value: "off", title: "Off", body: "The garden keeps weather of its own, which clears as the day's habits get done." },
-  ];
   return (
     <div className={className}>
-      <div className="grid gap-2" role="radiogroup" aria-label="Where the garden's weather comes from">
+      <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="The garden's weather">
         {choices.map((c) => {
-          const on = mode === c.value;
+          // anything that isn't off is the real weather, however it was found
+          const on = c.value === "off" ? mode === "off" : mode !== "off";
           return (
             <button
               key={c.value}
@@ -195,29 +203,20 @@ export function SkyOptions({ className = "" }: { className?: string }) {
               aria-checked={on}
               disabled={busy !== null}
               onClick={() => void pick(c.value)}
-              className={`flex items-start gap-3 rounded-2xl border p-3 text-left transition-colors disabled:cursor-wait ${on ? "border-sun bg-sun-soft/40" : "border-line hover:border-ink-faint"}`}
+              className={`rounded-2xl border p-3 text-left transition-colors disabled:cursor-wait ${on ? "border-sun bg-sun-soft/40" : "border-line hover:border-ink-faint"}`}
               data-sky-mode={c.value}
             >
-              <span className={`mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border-2 ${on ? "border-sun" : "border-line"}`} aria-hidden>
-                {on && <span className="size-1.5 rounded-full bg-sun" />}
-              </span>
-              <span className="min-w-0">
-                <span className="block text-sm font-medium">{busy === c.value ? (c.value === "here" ? "Finding you…" : "Checking the sky…") : c.title}</span>
-                <span className="mt-0.5 block text-xs leading-5 text-ink-soft">{c.body}</span>
-              </span>
+              <span className="block text-sm font-medium">{c.title}</span>
+              <span className="mt-0.5 block truncate text-xs text-ink-faint">{c.body}</span>
             </button>
           );
         })}
       </div>
-      {state?.locationError === "denied" && (
-        <p className="mt-2 text-xs leading-5 text-clay" data-sky-denied>
-          Your browser didn&apos;t share this device&apos;s location, so the weather follows your connection instead. You can allow it in the browser&apos;s site settings.
+      {mode !== "off" && state?.locationError === "denied" && (
+        <p className="mt-2 text-xs text-ink-faint" data-sky-denied>
+          This device&apos;s location is blocked, so the weather follows your connection.
         </p>
       )}
-      {state?.locationError === "unavailable" && mode === "here" && (
-        <p className="mt-2 text-xs leading-5 text-ink-faint">This device couldn&apos;t find where it is just now, so this hour&apos;s weather is for your connection&apos;s town.</p>
-      )}
-      {mode !== "off" && state?.status === "unknown" && <p className="mt-2 text-xs leading-5 text-ink-faint">We can&apos;t tell where you are from this connection. Try this device&apos;s location instead.</p>}
     </div>
   );
 }

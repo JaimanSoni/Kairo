@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { playComplete } from "@/lib/sound";
-import { cancelPush, enablePush, pushEnabled, pushPermission, schedulePush } from "@/lib/push-client";
+import { cancelPush, pushEnabled, pushPermission, schedulePush } from "@/lib/push-client";
+import { askPermission } from "./permission-ask";
 import { hiddenListIds, useApp } from "./store";
 import { useStepToggle } from "./step-row";
 import { IconCheck, IconX } from "./ui";
@@ -604,15 +605,12 @@ export function FocusOverlay() {
           {pushOn === false && perm === "default" && !overtime && (
             <button
               onClick={async () => {
-                const result = await enablePush();
-                if (result.status === "enabled") {
-                  setPushOn(true);
-                  if (timer.running) scheduleEndPush(timer.endAt, task.id, task.title);
-                  showToast({ message: "You'll get a ping when time's up." });
-                } else {
-                  setPerm(pushPermission());
-                  showToast({ message: result.status === "denied" ? "Notifications are blocked for this site" : result.status === "insecure" ? "Push needs HTTPS or localhost" : result.status === "failed" ? `Couldn't enable: ${result.detail}` : "Push isn't supported here" });
-                }
+                const ok = await askPermission("notifications");
+                setPerm(pushPermission());
+                if (!ok) return;
+                setPushOn(true);
+                if (timer.running) scheduleEndPush(timer.endAt, task.id, task.title);
+                showToast({ message: "You'll get a ping when time's up." });
               }}
               className="rounded-full px-3 py-1 text-xs font-medium text-white/45 hover:text-white/80"
             >

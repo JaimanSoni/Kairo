@@ -6,7 +6,8 @@ import { addDays, friendlyDay, fmtMinutes, fmtTime12, nextWeekday, parseDateStr,
 import { firstOccurrence, type Repeat } from "@/lib/repeat";
 import { parseQuickAdd } from "@/lib/nlp";
 import { playComplete } from "@/lib/sound";
-import { cancelPush, enablePush, pushEnabled, schedulePush } from "@/lib/push-client";
+import { cancelPush, pushEnabled, schedulePush } from "@/lib/push-client";
+import { askPermission } from "./permission-ask";
 import { personById, useApp, visibleLists } from "./store";
 import { Icon3d, ListMark } from "./img3d";
 import { PersonAvatar } from "./person-avatar";
@@ -252,24 +253,9 @@ export function TaskEditor({ task }: { task: Task }) {
       showToast({ message: "That time’s already gone. Pick one still ahead." });
       return false;
     }
-    let ok = await pushEnabled();
-    if (!ok) {
-      const result = await enablePush();
-      ok = result.status === "enabled";
-      if (!ok) {
-        showToast({
-          message:
-            result.status === "denied"
-              ? "Notifications are blocked for this site, allow them in browser settings"
-              : result.status === "insecure"
-                ? "Push needs HTTPS or localhost, LAN IPs can't receive notifications"
-                : result.status === "failed"
-                  ? `Couldn't enable notifications: ${result.detail}`
-                  : "Push isn't supported in this browser",
-        });
-        return false;
-      }
-    }
+    // the ask explains itself before the browser's own box appears, and says
+    // how to undo a refusal — a reminder nothing can deliver is worse than none
+    if (!(await pushEnabled()) && !(await askPermission("notifications"))) return false;
     updateTask(task.id, { reminderAt: fireAt });
     schedulePush({
       fireAt,

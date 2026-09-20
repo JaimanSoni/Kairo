@@ -14,6 +14,7 @@ import { Omnibar } from "./omnibar";
 import { QuickCreate } from "./quick-create";
 import { TaskEditor } from "./task-editor";
 import { FocusOverlay } from "./focus";
+import { PermissionAsk } from "./permission-ask";
 import { AppLockGate } from "./app-lock";
 import { CommandPalette } from "./command-palette";
 import { ThemeToggle } from "./theme";
@@ -346,6 +347,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       {menu && !guest && <AccountMenu placement={menu} onClose={() => setMenu(null)} />}
       <FocusOverlay />
       <AppLockGate />
+      <PermissionAsk />
       {!state.user.isPaying && !guest && <CoffeeNudge busy={somethingOnScreen || Boolean(state.user.welcome)} today={state.today} />}
       {state.user.welcome && !guest && !state.appLocked && <Welcome />}
 
