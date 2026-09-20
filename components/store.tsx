@@ -273,6 +273,14 @@ type AppContextValue = {
   reopenSweep: () => void;
   startFocus: (taskId: string, opts?: { minutes?: number | null; adopt?: boolean; minimized?: boolean }) => void;
   stopFocus: () => void;
+  /**
+   * Stop working on one task, whether or not this device has its timer.
+   * A row calls itself "focusing" from the task's own `startedAt`, which
+   * outlives any one device's session, so stopping must clear the task —
+   * going only through the session left a task stuck saying "focusing"
+   * with nothing that could stop it.
+   */
+  stopWork: (taskId: string) => void;
   minimizeFocus: (minimized: boolean) => void;
   setListUnlocked: (listId: string, unlocked: boolean) => void;
   lockApp: () => void;
@@ -1084,6 +1092,22 @@ export function AppProvider({
     }
     dispatch({ type: "SET_FOCUS", focus: null });
   }, [updateTask]);
+  const stopWork = useCallback(
+    (taskId: string) => {
+      const t = stateRef.current.tasks[taskId];
+      if (t?.startedAt && t.status !== "done") updateTask(taskId, { startedAt: null });
+      const cur = stateRef.current.focus;
+      if (cur?.taskId === taskId) dispatch({ type: "SET_FOCUS", focus: null });
+      // the account's session can outlive this device's copy of it (started
+      // elsewhere, or left behind by a tab that went away): end it there too,
+      // unless this device is mid-session on some other task
+      else if (!cur && !stateRef.current.user.guest) {
+        api("/api/focus", { method: "DELETE" }).catch(() => {});
+      }
+    },
+    [updateTask]
+  );
+
   const minimizeFocus = useCallback((minimized: boolean) => {
     const cur = stateRef.current.focus;
     if (cur) dispatch({ type: "SET_FOCUS", focus: { ...cur, minimized } });
@@ -1222,6 +1246,7 @@ export function AppProvider({
       reopenSweep,
       startFocus,
       stopFocus,
+      stopWork,
       minimizeFocus,
       setListUnlocked,
       lockApp,
@@ -1234,7 +1259,7 @@ export function AppProvider({
     [
       state, addTask, getTask, updateTask, toggleStarted, duplicateTask, completeTask, uncompleteTask, deleteTask,
       reorderTasks, sweep, createList, renameList, upsertList, reorderLists, deleteList, showToast,
-      setOmnibar, setEditing, dismissSweep, reopenSweep, startFocus, stopFocus, minimizeFocus,
+      setOmnibar, setEditing, dismissSweep, reopenSweep, startFocus, stopFocus, stopWork, minimizeFocus,
       setListUnlocked, lockApp, unlockApp, setAppLockEnabled, setAvatarChoice, setSpaces, refreshData,
     ]
   );

@@ -65,7 +65,7 @@ export function TaskItem({
   onDrop?: (e: React.DragEvent) => void;
   dropIndicator?: "above" | "below" | null;
 }) {
-  const { state, completeTask, uncompleteTask, updateTask, duplicateTask, deleteTask, setEditing, showToast, startFocus, stopFocus, minimizeFocus } = useApp();
+  const { state, completeTask, uncompleteTask, updateTask, duplicateTask, deleteTask, setEditing, showToast, startFocus, stopWork, minimizeFocus } = useApp();
   const toggleStep = useStepToggle();
   const [checking, setChecking] = useState(false);
   const [stepsOpen, setStepsOpen] = useState(false);
@@ -470,7 +470,7 @@ export function TaskItem({
                 <MenuBtn
                   onClick={() => {
                     setMenuOpen(false);
-                    if (running) stopFocus();
+                    if (running) stopWork(task.id);
                     else start();
                   }}
                 >
