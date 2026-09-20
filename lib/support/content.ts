@@ -2797,11 +2797,47 @@ const ALL_ARTICLES: Article[] = [
               "**\"I did the gym and the invoice\"** finds both and completes them, advancing anything that repeats.",
               "**\"What carried over?\"** offers the same five choices the morning sweep does, including letting something go.",
               "**\"What did I get done this week?\"** reads the Log.",
+              "**Left running on its own**, it can say what it is doing and [stop to ask you something](#watching-from-your-phone), wherever you are.",
             ],
           },
           {
             t: "note",
             text: "The assistant is told how Kairo thinks before it touches anything: a planned day is not a deadline, [spotlight](/support/today) holds three, and carried-over work is never presented as overdue. It plans the way Kairo does, not the way a generic to-do list would.",
+          },
+        ],
+      },
+      {
+        id: "watching-from-your-phone",
+        heading: "Watching it work, from your phone",
+        blocks: [
+          {
+            t: "p",
+            text: "An assistant with a key can also be *given* a task and left to it — a coding agent on your laptop, a script, anything that holds a key. The point of this is what happens after you walk away from the machine: what it is doing, and what it needs from you, come with you.",
+          },
+          {
+            t: "p",
+            text: "While something is working, the task wears a live chip and **Today** grows a small section at the top: one line per task saying what is happening. When it finishes its part, that line becomes what it did. Finishing is not ticking off — the task stays yours to check and complete.",
+          },
+          {
+            t: "p",
+            text: "When it reaches something it can't decide alone, it stops and asks. The question is **pushed to your phone**, sits at the top of Today under *An agent needs you*, and you answer in a sentence. It picks your answer up and carries on. This is the part that matters: an agent that asked a question two hours ago has been sitting idle for two hours.",
+          },
+          {
+            t: "ul",
+            items: [
+              "**report_progress** — one line on what it's doing, and `finished: true` when its part is over.",
+              "**ask_user** — stop, ask one question, push it to your phone.",
+              "**get_answer** — pick your answer up once you've given it.",
+              "**list_agent_work** — everything being worked on, for picking up where a previous run left off.",
+            ],
+          },
+          {
+            t: "note",
+            text: "Only you can write the answer, and only a key can write the progress: the app's ordinary editing routes refuse to touch either. A read-only key can watch and read answers, but cannot report progress or ask anything.",
+          },
+          {
+            t: "tip",
+            text: "Tell your agent, once, to report progress on long jobs and to ask rather than guess on anything irreversible. Most will do it from then on, and you get a phone you can trust to tell you when you're needed.",
           },
         ],
       },

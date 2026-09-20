@@ -12,6 +12,7 @@ import Link from "next/link";
 import { byOrder, hiddenListIds, useApp, visibleLists } from "./store";
 import { Icon3d } from "./img3d";
 import { FreshStart } from "./fresh-start";
+import { AgentWork } from "./agent-work";
 import { StepRow } from "./step-row";
 import { TaskItem } from "./task-item";
 import { EmptyState, IconLock, IconPlus } from "./ui";
@@ -168,6 +169,9 @@ export function TodayView() {
       {/* yesterday's leftovers, settled at the top of the day rather than over it;
           never while locked, when their titles would read out past the lock */}
       {carryover.length > 0 && !state.sweepDismissed && !state.appLocked && <FreshStart carryover={carryover} />}
+
+      {/* what is being done for you while you're elsewhere; nothing at all when nothing is */}
+      <AgentWork />
 
       {!state.appLocked && state.user.spaces.garden && <TodayGardenStrip />}
 

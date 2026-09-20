@@ -61,6 +61,7 @@ import {
 import { JOURNAL_TOOLS } from "./journal-tools";
 import { NOTES_TOOLS } from "./notes-tools";
 import { HABIT_TOOLS } from "./habit-tools";
+import { AGENT_TOOLS } from "./agent-tools";
 
 /** A soft cap, the same six hours the day's capacity meter uses. */
 const DAY_CAPACITY_MIN = 6 * 60;
@@ -1591,6 +1592,7 @@ export const TOOLS: Tool[] = [
   ...JOURNAL_TOOLS,
   ...NOTES_TOOLS,
   ...HABIT_TOOLS,
+  ...AGENT_TOOLS,
 ];
 
 const BY_NAME = new Map(TOOLS.map((t) => [t.name, t]));

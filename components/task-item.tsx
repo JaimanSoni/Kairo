@@ -6,6 +6,7 @@ import type { Task } from "@/lib/types";
 import { addDays, friendlyDay, fmtMinutes, fmtReminder, fmtTime12 } from "@/lib/dates";
 import { repeatLabel } from "@/lib/repeat";
 import { personById, useApp } from "./store";
+import { agentState } from "@/lib/agent-run";
 import { playComplete } from "@/lib/sound";
 import { useStepToggle } from "./step-row";
 import { SendTaskModal, ShareTaskModal } from "./share-modal";
@@ -248,8 +249,21 @@ export function TaskItem({
         <span className={`w-full truncate text-[15px] leading-snug ${done ? "strike-done" : ""}`}>
           {task.title}
         </span>
-        {(running || list || assignee || task.memberIds.length > 0 || task.plannedTime || task.estimateMin || task.dueDate || task.repeat || task.reminderAt || task.carryCount >= 2 || task.subtasks.length > 0 || task.note) && (
+        {(task.agent || running || list || assignee || task.memberIds.length > 0 || task.plannedTime || task.estimateMin || task.dueDate || task.repeat || task.reminderAt || task.carryCount >= 2 || task.subtasks.length > 0 || task.note) && (
           <span className="flex flex-wrap items-center gap-1.5">
+            {task.agent && !done && (
+              <Chip tone={agentState(task.agent) === "waiting" ? "clay" : "sky"} title={agentState(task.agent) === "waiting" ? task.agent.question ?? undefined : task.agent.note || undefined}>
+                {agentState(task.agent) === "waiting" ? (
+                  <>Needs you</>
+                ) : agentState(task.agent) === "finished" ? (
+                  <>{task.agent.by} finished</>
+                ) : (
+                  <>
+                    <span className="anim-pulse" aria-hidden>●</span> {task.agent.by}
+                  </>
+                )}
+              </Chip>
+            )}
             {running && (
               <span
                 role="button"

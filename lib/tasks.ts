@@ -1,4 +1,5 @@
 import { ObjectId, type Document, type WithId } from "mongodb";
+import { toAgentRun } from "./agent-run";
 import { getDb, withDbRetry } from "./db";
 import { sanitizeRepeat, type Repeat } from "./repeat";
 import { resolveAvatar } from "./avatars";
@@ -54,6 +55,7 @@ export function toTask(doc: WithId<Document>): Task {
     subtasks: Array.isArray(doc.subtasks) ? (doc.subtasks as Subtask[]) : [],
     completedAt: doc.completedAt ? (doc.completedAt as Date).toISOString() : null,
     createdAt: doc.createdAt ? (doc.createdAt as Date).toISOString() : new Date(0).toISOString(),
+    agent: toAgentRun(doc.agent),
   };
 }
 

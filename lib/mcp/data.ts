@@ -82,6 +82,8 @@ export type ShapedTask = {
   steps?: { id: string; title: string; done: boolean; plannedFor?: string }[];
   assigneeId?: string;
   sharedWith?: number;
+  /** What an agent is doing with this task, when one is. */
+  agent?: { note: string; by: string; at: string; finished: boolean; question?: string; answer?: string };
   completedAt?: string;
   createdAt?: string;
 };
@@ -117,6 +119,9 @@ export function shapeTask(task: Task, scope: Scope, opts?: { full?: boolean }): 
   }
   if (task.assigneeId) out.assigneeId = task.assigneeId;
   if (task.memberIds.length > 0) out.sharedWith = task.memberIds.length;
+  if (task.agent) {
+    out.agent = { note: task.agent.note, by: task.agent.by, at: task.agent.at, finished: Boolean(task.agent.finishedAt), ...(task.agent.question ? { question: task.agent.question } : {}), ...(task.agent.answer ? { answer: task.agent.answer } : {}) };
+  }
   if (task.completedAt) out.completedAt = task.completedAt;
   if (opts?.full) out.createdAt = task.createdAt;
   return out;

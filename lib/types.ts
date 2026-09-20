@@ -1,4 +1,5 @@
 import type { Repeat } from "./repeat";
+import type { AgentRun } from "./agent-run";
 
 export type TaskStatus = "inbox" | "planned" | "done" | "someday";
 
@@ -66,6 +67,12 @@ export type Task = {
   subtasks: Subtask[];
   completedAt: string | null;
   createdAt: string;
+  /**
+   * What something working on your behalf is doing with this task, and the
+   * one question it's waiting on. Written by MCP connections, never by the
+   * app's own editing routes; the answer is the one part only you can write.
+   */
+  agent: AgentRun | null;
 };
 
 export type List = {

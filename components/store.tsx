@@ -207,6 +207,7 @@ function guestApi<T>(url: string, options?: RequestInit): T {
       subtasks: Array.isArray(body.subtasks) ? (body.subtasks as Task["subtasks"]) : [],
       completedAt: status === "done" ? now : null,
       createdAt: now,
+      agent: null,
     };
     return { task } as T;
   }
@@ -281,6 +282,8 @@ type AppContextValue = {
    * with nothing that could stop it.
    */
   stopWork: (taskId: string) => void;
+  /** Answer the question an agent stopped on, so it can carry on. */
+  answerAgent: (taskId: string, answer: string) => void;
   minimizeFocus: (minimized: boolean) => void;
   setListUnlocked: (listId: string, unlocked: boolean) => void;
   lockApp: () => void;
@@ -499,6 +502,7 @@ export function AppProvider({
         subtasks: opts?.subtasks ?? [],
         completedAt: null,
         createdAt: now,
+        agent: null,
       };
       dispatch({ type: "UPSERT_TASK", task });
 
@@ -637,6 +641,7 @@ export function AppProvider({
         reminderAt: null,
         completedAt: null,
         createdAt: now,
+        agent: null,
       };
       dispatch({ type: "UPSERT_TASK", task });
 
@@ -1108,6 +1113,20 @@ export function AppProvider({
     [updateTask]
   );
 
+  const answerAgent = useCallback(
+    (taskId: string, answer: string) => {
+      const task = stateRef.current.tasks[taskId];
+      if (!task?.agent?.question) return;
+      const before = task;
+      dispatch({ type: "UPSERT_TASK", task: { ...task, agent: { ...task.agent, answer } } });
+      api<{ task: Task }>(`/api/tasks/${taskId}/answer`, { method: "POST", body: JSON.stringify({ answer }) })
+        .then(({ task: saved }) => dispatch({ type: "UPSERT_TASK", task: saved }))
+        .catch(() => syncError(() => dispatch({ type: "UPSERT_TASK", task: before })));
+      showToast({ message: "Sent. It'll pick that up and carry on." });
+    },
+    [syncError, showToast]
+  );
+
   const minimizeFocus = useCallback((minimized: boolean) => {
     const cur = stateRef.current.focus;
     if (cur) dispatch({ type: "SET_FOCUS", focus: { ...cur, minimized } });
@@ -1247,6 +1266,7 @@ export function AppProvider({
       startFocus,
       stopFocus,
       stopWork,
+      answerAgent,
       minimizeFocus,
       setListUnlocked,
       lockApp,
@@ -1259,7 +1279,7 @@ export function AppProvider({
     [
       state, addTask, getTask, updateTask, toggleStarted, duplicateTask, completeTask, uncompleteTask, deleteTask,
       reorderTasks, sweep, createList, renameList, upsertList, reorderLists, deleteList, showToast,
-      setOmnibar, setEditing, dismissSweep, reopenSweep, startFocus, stopFocus, stopWork, minimizeFocus,
+      setOmnibar, setEditing, dismissSweep, reopenSweep, startFocus, stopFocus, stopWork, answerAgent, minimizeFocus,
       setListUnlocked, lockApp, unlockApp, setAppLockEnabled, setAvatarChoice, setSpaces, refreshData,
     ]
   );
