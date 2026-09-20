@@ -9,7 +9,7 @@ import {
   useReducer,
   useRef,
 } from "react";
-import type { AccountInfo, List, Task, UserProfile, SpacePrefs } from "@/lib/types";
+import type { AccountInfo, List, Subtask, Task, UserProfile, SpacePrefs } from "@/lib/types";
 import { addDays, friendlyDay, planEpoch, todayStr } from "@/lib/dates";
 import { nextOccurrence } from "@/lib/repeat";
 import { cancelPush } from "@/lib/push-client";
@@ -245,7 +245,8 @@ export type SweepAction = "today" | "tomorrow" | "later" | "someday" | "done" | 
 type AppContextValue = {
   state: State;
   /** Optimistically adds a task; resolves to the persisted id (null if save failed). */
-  addTask: (input: ParsedInput, opts?: { status?: Task["status"] }) => Promise<string | null>;
+  /** `subtasks`: steps the task is born with. They go out with the create itself; adding them a moment later used to race the new id and lose them. */
+  addTask: (input: ParsedInput, opts?: { status?: Task["status"]; subtasks?: Subtask[] }) => Promise<string | null>;
   /** Reads the latest version of a task (safe inside async callbacks). */
   getTask: (id: string) => Task | undefined;
   updateTask: (id: string, patch: Partial<Task>) => void;
@@ -460,7 +461,7 @@ export function AppProvider({
 
 
   const addTask = useCallback(
-    (input: ParsedInput, opts?: { status?: Task["status"] }) => {
+    (input: ParsedInput, opts?: { status?: Task["status"]; subtasks?: Subtask[] }) => {
       if (guestCapReached()) return Promise.resolve(null);
       if (guestMode) guestCreated++;
       const tempId = `temp-${crypto.randomUUID()}`;
@@ -487,7 +488,7 @@ export function AppProvider({
         instanceOf: null,
         ownerId: user.id,
         memberIds: [],
-        subtasks: [],
+        subtasks: opts?.subtasks ?? [],
         completedAt: null,
         createdAt: now,
       };
@@ -506,6 +507,7 @@ export function AppProvider({
           estimateMin: task.estimateMin,
           order: task.order,
           repeat: task.repeat,
+          ...(task.subtasks.length ? { subtasks: task.subtasks } : {}),
         }),
       })
         .then(({ task: saved }) => {

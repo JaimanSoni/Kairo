@@ -8,8 +8,7 @@ import { repeatLabel, type Repeat } from "@/lib/repeat";
 import { guestCapReached, useApp, visibleLists } from "./store";
 import { track } from "@/lib/analytics-client";
 import { getSpeechRecognition, type SpeechRec } from "@/lib/speech";
-import { Icon3d } from "./img3d";
-import { Chip, IconJournal, IconNotes, Kbd, Modal } from "./ui";
+import { IconX, Modal } from "./ui";
 import { captureJournalLine, captureNote, type CaptureResult } from "./capture-targets";
 import { navigateApp } from "./app-views";
 
@@ -39,21 +38,20 @@ type AiParsed = {
 };
 
 /**
- * Quick capture. Zero required fields — plain text goes to the inbox instantly
- * (local token parse), then AI quietly refines details in the background.
- * Voice input via the Web Speech API where available.
+ * Capture: one box. Say or type a thought the way you'd say it, and it comes
+ * back as tasks to look over before anything is added.
+ *
+ * The panel shows one thing at a time: the box (with a single quiet line
+ * under it, saying how to use it or what's been understood so far), then a
+ * moment of working it out, then the tasks in plain words with one button to
+ * add them. No icons to decode, no hints competing for the eye. Back returns
+ * to the box with what was typed; closing the panel adds nothing.
+ *
+ * Shift+Enter still adds straight away and keeps the box open, for getting a
+ * run of thoughts down fast. Voice input via the Web Speech API where available.
  */
 /** What the expanding lower section is showing. */
 type Phase = "input" | "thinking" | "done";
-
-const THINKING_LINES = [
-  "Reading what you meant…",
-  "Splitting it into tasks…",
-  "Filling in days and times…",
-  "Choosing the right lists…",
-  "Polishing the details…",
-  "Taking a moment, still on it…",
-];
 
 export function Omnibar() {
   const { state, addTask, getTask, updateTask, setOmnibar, showToast } = useApp();
@@ -73,7 +71,6 @@ export function Omnibar() {
   const [saving, setSaving] = useState(false);
   const [listening, setListening] = useState(false);
   const [phase, setPhase] = useState<Phase>("input");
-  const [thinkLine, setThinkLine] = useState(0);
   const [result, setResult] = useState<AiParsed[] | null>(null);
   // true when the preview is the local fallback, not an AI answer — the
   // difference must be visible, or a failed call looks like a bad parse
@@ -90,17 +87,6 @@ export function Omnibar() {
   const recRef = useRef<SpeechRec | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const speechSupported = useMemo(() => getSpeechRecognition() !== null, []);
-
-  // the loader narrates while AI works: one line at a time, holding on the
-  // last (the counter is reset where the thinking phase starts)
-  useEffect(() => {
-    if (phase !== "thinking") return;
-    const t = setInterval(
-      () => setThinkLine((n) => Math.min(n + 1, THINKING_LINES.length - 1)),
-      1100
-    );
-    return () => clearInterval(t);
-  }, [phase]);
 
   const lists = useMemo(() => visibleLists(state), [state]);
   const parsed = useMemo(() => parseQuickAdd(text, lists), [text, lists]);
@@ -223,7 +209,7 @@ export function Omnibar() {
       if (state.user.guest) {
         // rapid entry stays local for guests: burning a free AI run on a
         // background refine nobody watched would be a waste of the three
-        showToast({ message: `✨ Captured` });
+        showToast({ message: "Added." });
         return;
       }
       void aiParse(raw).then(async ({ tasks: parsed }) => {
@@ -234,18 +220,11 @@ export function Omnibar() {
         if (parsed.length > 0) {
           const [first, ...extras] = parsed;
           applyAiToTask(first, current, id, local);
-          for (const x of extras) {
-            const newId = await createTaskFromAiPreset(x);
-            if (newId && x.subtasks.length > 0) {
-              updateTask(newId, {
-                subtasks: x.subtasks.map((t) => ({ id: crypto.randomUUID(), title: t, done: false })),
-              });
-            }
-          }
+          for (const x of extras) await createTaskFromAiPreset(x);
         }
         showToast({
           message:
-            parsed.length > 0 ? `✨ Captured` : "Captured. AI couldn't refine it this time",
+            parsed.length > 0 ? "Added." : "Added as you typed it.",
         });
       });
       return;
@@ -263,7 +242,6 @@ export function Omnibar() {
 
   /** The reveal pipeline, reusable so a failed AI call can be retried. */
   const runReveal = (raw: string, local: ParsedInput) => {
-    setThinkLine(0);
     setPhase("thinking");
     setAiFell(false);
     // guests get the real AI too — the server counts their 3 free runs
@@ -298,7 +276,7 @@ export function Omnibar() {
       if (local.repeat && !tasks[0].repeat) {
         tasks = [{ ...tasks[0], repeat: local.repeat }, ...tasks.slice(1)];
       }
-      const wait = Math.max(150, 1600 - (Date.now() - started));
+      const wait = Math.max(0, 450 - (Date.now() - started));
       await new Promise((r) => setTimeout(r, wait));
       setAiLeft(outcome?.left ?? null);
       setAiLimited(outcome?.limited ?? false);
@@ -341,30 +319,26 @@ export function Omnibar() {
     for (const p of result) {
       await createTaskFromAiPreset(p);
     }
-    showToast({ message: `✨ Filed ${result.length} ${result.length === 1 ? "task" : "tasks"}` });
+    showToast({ message: result.length === 1 ? "Added." : `Added ${result.length} tasks.` });
     again();
   };
 
-  /** Creates a single task from an AI parsed preset. Returns its id. */
+  /** Creates a single task from an AI parsed preset, steps and all, in one go. Returns its id. */
   const createTaskFromAiPreset = (p: AiParsed): Promise<string | null> => {
-    return addTask({
-      title: p.title,
-      plannedFor: p.plannedFor,
-      plannedTime: p.plannedTime,
-      dueDate: p.dueDate,
-      estimateMin: p.estimateMin,
-      listId: p.listId,
-      listName: p.listName,
-      spotlight: p.spotlight,
-      repeat: p.repeat ?? null,
-    }).then(async (newId) => {
-      if (newId && p.subtasks.length > 0) {
-        updateTask(newId, {
-          subtasks: p.subtasks.map((t) => ({ id: crypto.randomUUID(), title: t, done: false })),
-        });
-      }
-      return newId;
-    });
+    return addTask(
+      {
+        title: p.title,
+        plannedFor: p.plannedFor,
+        plannedTime: p.plannedTime,
+        dueDate: p.dueDate,
+        estimateMin: p.estimateMin,
+        listId: p.listId,
+        listName: p.listName,
+        spotlight: p.spotlight,
+        repeat: p.repeat ?? null,
+      },
+      p.subtasks.length > 0 ? { subtasks: p.subtasks.map((t) => ({ id: crypto.randomUUID(), title: t, done: false })) } : undefined
+    );
   };
 
   /** Apply AI parsed values to an already-created task (rapid-entry path). */
@@ -425,311 +399,206 @@ export function Omnibar() {
     queueMicrotask(() => inputRef.current?.focus());
   };
 
-  const dismiss = () => {
-    setOmnibar(false);
+  /** Back to the box with what was typed, to fix it and try again. Files nothing. */
+  const backToEdit = () => {
+    const raw = lastRawRef.current;
+    again();
+    setText(raw);
   };
+
+  /** A task in the preview, in words: "Tomorrow · 6 PM · 30m · Work · 3 steps". */
+  const detailsOf = (p: AiParsed): string =>
+    [
+      p.plannedFor ? friendlyDay(p.plannedFor, state.today) : "Inbox",
+      p.plannedTime ? fmtTime12(p.plannedTime) : null,
+      p.dueDate ? `due ${friendlyDay(p.dueDate, state.today)}` : null,
+      p.estimateMin != null ? fmtMinutes(p.estimateMin) : null,
+      p.listId ? (lists.find((l) => l.id === p.listId)?.name ?? null) : null,
+      p.repeat ? `repeats ${repeatLabel(p.repeat)}` : null,
+      p.spotlight ? "spotlight" : null,
+      p.subtasks.length > 0 ? `${p.subtasks.length} ${p.subtasks.length === 1 ? "step" : "steps"}` : null,
+    ]
+      .filter((x): x is string => Boolean(x))
+      .join(" · ");
+
+  /** What's been understood so far, as it's typed. */
+  const understood = [
+    parsed.plannedFor ? friendlyDay(parsed.plannedFor, state.today) : null,
+    parsed.plannedTime ? fmtTime12(parsed.plannedTime) : null,
+    parsed.dueDate ? `due ${friendlyDay(parsed.dueDate, state.today)}` : null,
+    parsed.estimateMin != null ? fmtMinutes(parsed.estimateMin) : null,
+    parsed.listName,
+    parsed.repeat ? `repeats ${repeatLabel(parsed.repeat)}` : null,
+    parsed.spotlight ? "spotlight" : null,
+  ].filter((x): x is string => Boolean(x));
+
+  const placeholder = listening ? "Listening…" : activeMode === "note" ? "Write a note" : activeMode === "journal" ? "A line for today's page" : "What's on your mind?";
+  const hint =
+    activeMode === "note"
+      ? "Saves as a new page in Notes. The first line becomes its title."
+      : activeMode === "journal"
+        ? "Adds to today's journal page."
+        : "Type it the way you'd say it, like “pay rent friday 6pm”.";
+  const count = result?.length ?? 0;
 
   return (
     <Modal onClose={() => setOmnibar(false)} anchor="top">
-      <div className="p-4">
-        {/* what this capture becomes; a task unless you say otherwise */}
-        {modes.length > 1 && phase === "input" && (
-          <div role="tablist" aria-label="Capture as" className="mb-3 flex w-max rounded-full border border-line bg-paper-deep p-0.5" data-capture-modes>
-            {modes.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                role="tab"
-                aria-selected={activeMode === m.id}
-                onClick={() => {
-                  setMode(m.id);
-                  inputRef.current?.focus();
-                }}
-                className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
-                  activeMode === m.id ? "bg-card text-ink shadow-sm" : "text-ink-faint hover:text-ink-soft"
-                }`}
-              >
-                {m.id === "task" ? <Icon3d name="sparkle" size={13} /> : m.id === "note" ? <IconNotes size={13} /> : <IconJournal size={13} />}
-                {m.label}
-              </button>
-            ))}
-          </div>
-        )}
-        {/* the input dims while AI narrates below it, and wakes for the next one */}
-        <div
-          className={`flex items-center gap-2 transition-opacity duration-300 ${
-            phase === "thinking" ? "pointer-events-none opacity-40" : ""
-          }`}
-        >
-          <Icon3d name="feather" size={20} className="shrink-0" />
-          <input
-            ref={inputRef}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => {
-              // the Enter that commits an IME candidate must not also submit
-              if (e.key === "Enter" && !e.nativeEvent.isComposing) submit(e.shiftKey);
-            }}
-            placeholder={
-              listening
-                ? "Listening…"
-                : activeMode === "note"
-                  ? "A note. Its first line becomes the title."
-                  : activeMode === "journal"
-                    ? "A line for today's page…"
-                    : "What's on your mind? Say it or type it."
-            }
-            aria-label={activeMode === "note" ? "New note" : activeMode === "journal" ? "A line for today's journal page" : "What's on your mind"}
-            className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-ink-faint sm:text-lg"
-            autoFocus
-            enterKeyHint="done"
-          />
-          {speechSupported && (
-            <button
-              onClick={toggleVoice}
-              aria-label={listening ? "Stop listening" : "Speak a task"}
-              data-tip={listening ? "Stop listening" : "Speak instead"}
-              data-tip-side="bottom"
-              className={`grid size-10 shrink-0 place-items-center rounded-full transition-colors ${
-                listening
-                  ? "anim-pulse bg-clay text-on-accent"
-                  : "bg-paper-deep text-ink-soft hover:bg-sun-soft hover:text-sun-deep"
-              }`}
-            >
-              <MicIcon listening={listening} />
-            </button>
-          )}
-          <button
-            onClick={() => submit(false)}
-            disabled={activeMode === "task" ? !parsed.title : !text.trim() || saving}
-            aria-label="Capture"
-            data-tip="Capture (Enter)"
-            data-tip-side="bottom"
-            className="grid size-10 shrink-0 place-items-center rounded-full bg-ink text-paper transition-opacity disabled:opacity-25"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M8 13V3M3.5 7.5L8 3l4.5 4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-        </div>
-
-        {/* ------------------------------------------------ the reveal
-            The section below the input grows and shrinks smoothly (the 0fr
-            to 1fr grid trick animates auto height), first narrating what AI
-            is doing, then holding the finished task where it can be seen. */}
-        <div
-          className="grid transition-[grid-template-rows] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]"
-          style={{ gridTemplateRows: phase === "input" ? "0fr" : "1fr" }}
-        >
-          <div className="overflow-hidden">
-            {phase === "thinking" && (
-              <div className="flex flex-col items-center gap-3 py-8">
-                <span className="anim-pulse">
-                  <Icon3d name="sparkle" size={34} />
-                </span>
-                <span key={thinkLine} className="anim-rise text-sm font-medium text-ink-soft">
-                  {THINKING_LINES[thinkLine]}
-                </span>
+      <div className="p-5 sm:p-6" data-capture>
+        {phase === "input" && (
+          <>
+            {/* what this becomes: a task unless you say otherwise */}
+            {modes.length > 1 && (
+              <div role="tablist" aria-label="Capture as" className="mb-4 inline-grid auto-cols-fr grid-flow-col gap-1 rounded-xl bg-paper-deep p-1" data-capture-modes>
+                {modes.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeMode === m.id}
+                    onClick={() => {
+                      setMode(m.id);
+                      inputRef.current?.focus();
+                    }}
+                    className={`h-8 rounded-lg px-4 text-[13px] transition-colors ${activeMode === m.id ? "bg-card font-semibold text-ink shadow-sm" : "font-medium text-ink-soft hover:text-ink"}`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
               </div>
             )}
-            {phase === "done" && result && (
-              <div className="anim-pop py-3">
-                {result.length > 1 && (
-                  <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-sun-deep">
-                    <Icon3d name="sparkle" size={15} /> That was {result.length} things. Here&apos;s how they&apos;ll be filed:
-                  </p>
-                )}
-                <div className="space-y-2">
-                  {result.map((p, i) => (
-                    <div
-                      key={`preview-${i}`}
-                      className="anim-rise rounded-2xl border border-line bg-paper-deep/40 p-3.5"
-                      style={{ animationDelay: `${i * 110}ms` }}
+
+            <div className="flex items-center gap-2 rounded-2xl border border-line bg-paper py-1.5 pl-4 pr-1.5 focus-within:border-sun">
+              <input
+                ref={inputRef}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onKeyDown={(e) => {
+                  // the Enter that commits an IME candidate must not also submit
+                  if (e.key === "Enter" && !e.nativeEvent.isComposing) submit(e.shiftKey);
+                }}
+                placeholder={placeholder}
+                aria-label={activeMode === "note" ? "New note" : activeMode === "journal" ? "A line for today's journal page" : "What's on your mind"}
+                className="min-w-0 flex-1 bg-transparent py-2 text-base outline-none placeholder:text-ink-faint"
+                autoFocus
+                enterKeyHint="done"
+              />
+              {speechSupported && (
+                <button
+                  onClick={toggleVoice}
+                  aria-label={listening ? "Stop listening" : "Speak instead of typing"}
+                  title={listening ? "Stop listening" : "Speak instead of typing"}
+                  className={`grid size-9 shrink-0 place-items-center rounded-xl transition-colors ${listening ? "anim-pulse bg-clay text-on-accent" : "text-ink-faint hover:bg-paper-deep hover:text-ink"}`}
+                  data-capture-mic
+                >
+                  <MicIcon listening={listening} />
+                </button>
+              )}
+              <button
+                onClick={() => submit(false)}
+                disabled={activeMode === "task" ? !parsed.title : !text.trim() || saving}
+                title="Enter adds it. Shift+Enter adds it and keeps this open for the next one."
+                className="h-9 shrink-0 rounded-xl bg-ink px-4 text-sm font-semibold text-paper transition-opacity disabled:opacity-25"
+                data-capture-add
+              >
+                {activeMode === "task" ? "Add" : "Save"}
+              </button>
+            </div>
+
+            {/* one quiet line: how to use it, or what's been understood so far */}
+            <div className="mt-2.5 flex min-h-6 flex-wrap items-center gap-1.5 px-1 text-[13px] text-ink-faint" data-capture-line>
+              {listening ? (
+                <span className="text-ink-soft">Listening. Say it the way you&apos;d say it to a friend.</span>
+              ) : activeMode !== "task" || !text.trim() ? (
+                <span>{hint}</span>
+              ) : (
+                understood.map((u) => (
+                  <span key={u} className="rounded-full bg-sun-soft px-2 py-0.5 text-xs font-medium text-sun-deep">
+                    {u}
+                  </span>
+                ))
+              )}
+            </div>
+          </>
+        )}
+
+        {phase === "thinking" && (
+          <div className="flex items-center gap-3 py-6" role="status" data-capture-thinking>
+            <span className="cap-dots flex gap-1" aria-hidden>
+              <span />
+              <span />
+              <span />
+            </span>
+            <span className="text-sm text-ink-soft">Working out the details…</span>
+          </div>
+        )}
+
+        {phase === "done" && result && (
+          <div className="anim-rise" data-capture-preview>
+            <h2 className="font-display text-xl leading-tight">{count === 1 ? "Here's your task" : `That's ${count} tasks`}</h2>
+            <ul className="mt-3 divide-y divide-line overflow-hidden rounded-2xl border border-line">
+              {result.map((p, i) => (
+                <li key={`${p.title}-${i}`} className="flex items-center gap-3 bg-card px-4 py-3" data-capture-task>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] font-medium leading-snug">{p.title}</span>
+                    <span className="mt-0.5 block text-[13px] text-ink-soft">{detailsOf(p)}</span>
+                  </span>
+                  {count > 1 && (
+                    <button
+                      onClick={() => setResult((r) => (r ? r.filter((_, j) => j !== i) : r))}
+                      disabled={filing}
+                      aria-label={`Leave out ${p.title}`}
+                      title="Leave this one out"
+                      className="grid size-8 shrink-0 place-items-center rounded-lg text-ink-faint hover:bg-paper-deep hover:text-ink"
                     >
-                      <div className="flex items-start gap-2.5">
-                        <span className="mt-0.5 grid size-[20px] shrink-0 place-items-center rounded-full bg-moss text-on-accent">
-                          <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden>
-                            <path d="M2 6l3 3 5-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-[15px] font-medium leading-snug">{p.title}</div>
-                          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                            {p.plannedFor ? (
-                              <Chip tone="sun">
-                                <Icon3d name="sun" size={15} /> {friendlyDay(p.plannedFor, state.today)}
-                              </Chip>
-                            ) : (
-                              <Chip>
-                                <Icon3d name="inbox" size={15} /> inbox
-                              </Chip>
-                            )}
-                            {p.plannedTime && <Chip tone="sun">🕐 {fmtTime12(p.plannedTime)}</Chip>}
-                            {p.dueDate && <Chip tone="clay">due {friendlyDay(p.dueDate, state.today)}</Chip>}
-                            {p.estimateMin != null && <Chip>~{fmtMinutes(p.estimateMin)}</Chip>}
-                            {p.listId && (
-                              <Chip>#{lists.find((l) => l.id === p.listId)?.name ?? "list"}</Chip>
-                            )}
-                            {p.spotlight && <Chip tone="sun">✦ spotlight</Chip>}
-                            {p.repeat && (
-                              <Chip tone="sky">
-                                <Icon3d name="repeat" size={15} /> {repeatLabel(p.repeat)}
-                              </Chip>
-                            )}
-                            {p.subtasks.length > 0 && <Chip>{p.subtasks.length} steps</Chip>}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {!aiFell &&
-                  result.some((p) => p.plannedFor || p.plannedTime || p.listId || p.subtasks.length > 0) && (
-                  <p className="mt-2.5 flex items-center gap-1 text-[11px] text-ink-faint">
-                    <Icon3d name="sparkle" size={14} /> AI filled in dates, times, and lists
-                  </p>
-                )}
-                {state.user.guest && aiLimited && (
-                  <p className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-ink-faint">
-                    <span>Your 3 free AI captures are used, so this filed as typed.</span>
-                    <a
-                      href="/api/auth/google"
-                      data-track="guest-signin"
-                      className="font-semibold text-sun-deep underline underline-offset-2 hover:text-sun"
-                    >
-                      Sign in for unlimited AI
-                    </a>
-                  </p>
-                )}
-                {state.user.guest && !aiLimited && !aiFell && aiLeft != null && (
-                  <p className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-ink-faint">
-                    <span>
-                      {aiLeft === 0
-                        ? "That was your last free AI capture."
-                        : `${aiLeft} free AI ${aiLeft === 1 ? "capture" : "captures"} left.`}
-                    </span>
-                    <a
-                      href="/api/auth/google"
-                      data-track="guest-signin"
-                      className="font-semibold text-sun-deep underline underline-offset-2 hover:text-sun"
-                    >
+                      <IconX size={13} />
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+
+            {/* at most one footnote, and only when something needs saying */}
+            {(aiFell || (guest && (aiLimited || aiLeft != null))) && (
+              <p className="mt-2.5 px-1 text-[13px] text-ink-faint" data-capture-note>
+                {guest && aiLimited ? (
+                  <>
+                    Your 3 free AI captures are used, so this is as you typed it.{" "}
+                    <a href="/api/auth/google" data-track="guest-signin" className="font-semibold text-sun-deep hover:underline">
                       Sign in for unlimited
                     </a>
-                  </p>
-                )}
-                {aiFell && !aiLimited && (
-                  <p className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-ink-faint">
-                    <span>AI couldn&apos;t be reached, so this is the plain capture.</span>
-                    <button
-                      onClick={retryAi}
-                      className="font-semibold text-sun-deep underline underline-offset-2 hover:text-sun"
-                    >
-                      Try AI again
+                  </>
+                ) : aiFell ? (
+                  <>
+                    AI couldn&apos;t be reached, so this is as you typed it.{" "}
+                    <button onClick={retryAi} className="font-semibold text-sun-deep hover:underline">
+                      Try again
                     </button>
-                  </p>
+                  </>
+                ) : (
+                  <>
+                    {aiLeft === 0 ? "That was your last free AI capture." : `${aiLeft} free AI ${aiLeft === 1 ? "capture" : "captures"} left.`}{" "}
+                    <a href="/api/auth/google" data-track="guest-signin" className="font-semibold text-sun-deep hover:underline">
+                      Sign in for unlimited
+                    </a>
+                  </>
                 )}
-                <div className="mt-3 flex gap-2">
-                  <button
-                    onClick={() => void fileAll()}
-                    autoFocus
-                    disabled={filing}
-                    className="flex-1 rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-paper disabled:opacity-60"
-                  >
-                    {filing
-                      ? "Filing…"
-                      : `Done — file ${result.length} ${result.length === 1 ? "task" : "tasks"}`}
-                  </button>
-                  <button
-                    onClick={dismiss}
-                    disabled={filing}
-                    className="rounded-full border border-line bg-card px-4 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:border-ink/10 disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                </div>
-                <div className="mt-2 flex gap-2">
-                  <button
-                    onClick={() => void fileAndCaptureAnother()}
-                    disabled={filing}
-                    className="flex-1 rounded-full border border-line bg-card px-4 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:border-sun hover:text-sun-deep disabled:opacity-50"
-                  >
-                    File these &amp; capture another
-                  </button>
-                </div>
-              </div>
+              </p>
             )}
+
+            <div className="mt-5 flex items-center justify-between gap-1 whitespace-nowrap">
+              <button onClick={backToEdit} disabled={filing} className="-ml-2 rounded-full px-2.5 py-2 text-sm font-semibold text-ink-soft hover:bg-paper-deep disabled:opacity-50" data-capture-back>
+                Back
+              </button>
+              <div className="flex items-center gap-1">
+                <button onClick={() => void fileAndCaptureAnother()} disabled={filing || count === 0} className="rounded-full px-2.5 py-2 text-sm font-semibold text-ink-soft hover:bg-paper-deep disabled:opacity-50" data-capture-add-another>
+                  Add &amp; <span className="hidden sm:inline">write </span>another
+                </button>
+                <button onClick={() => void fileAll()} autoFocus disabled={filing || count === 0} className="rounded-full bg-ink px-4 py-2 text-sm font-semibold text-paper disabled:opacity-50 sm:px-5" data-capture-confirm>
+                  {filing ? "Adding…" : count === 1 ? "Add task" : `Add ${count} tasks`}
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-
-        {/* one row, three states: recording · idle explainer · live preview */}
-        {phase === "input" && (
-        <div className="mt-3 flex min-h-7 flex-wrap items-center gap-1.5">
-          {listening ? (
-            <div className="anim-shimmer flex items-center gap-2.5">
-              <span className="flex h-4 items-center gap-[3px]" aria-hidden>
-                {[0, 1, 2, 3].map((i) => (
-                  <span
-                    key={i}
-                    className="anim-bar h-full w-[3px] rounded-full bg-clay"
-                    style={{ animationDelay: `${i * 130}ms` }}
-                  />
-                ))}
-              </span>
-              <span className="text-sm text-ink-soft">
-                Just talk. <b className="font-medium text-ink">AI does the rest.</b>
-              </span>
-            </div>
-          ) : activeMode !== "task" ? (
-            <span className="flex items-center gap-1.5 text-[12px] leading-snug text-ink-soft">
-              {activeMode === "note" ? <IconNotes size={13} className="text-ink-faint" /> : <IconJournal size={13} className="text-ink-faint" />}
-              {activeMode === "note" ? "Saved as a new page in Notes, just as you typed it." : "Added to today's journal page, under the time."}
-            </span>
-          ) : !text.trim() ? (
-            <div className="anim-shimmer flex items-center gap-2">
-              {/* shrink-0 is the fix: without it flex crushed this pill and
-                  the sparkle spilled out of its own background */}
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-sun-soft px-2 py-0.5 text-[11px] font-semibold text-sun-deep">
-                <Icon3d name="sparkle" size={15} /> AI
-              </span>
-              <span className="text-[12px] leading-snug text-ink-soft">
-                Say anything. The details fill themselves in.
-              </span>
-            </div>
-          ) : (
-            <>
-              {parsed.plannedFor && (
-                <Chip tone="sun">
-                  <Icon3d name="sun" size={15} /> {friendlyDay(parsed.plannedFor, state.today)}
-                </Chip>
-              )}
-              {parsed.plannedTime && <Chip tone="sun">🕐 {fmtTime12(parsed.plannedTime)}</Chip>}
-              {parsed.dueDate && <Chip tone="clay">due {friendlyDay(parsed.dueDate, state.today)}</Chip>}
-              {parsed.estimateMin != null && <Chip>~{fmtMinutes(parsed.estimateMin)}</Chip>}
-              {parsed.listName && <Chip>#{parsed.listName}</Chip>}
-              {parsed.repeat && <Chip tone="sky">
-                  <Icon3d name="repeat" size={15} /> {repeatLabel(parsed.repeat)}
-                </Chip>}
-              {parsed.spotlight && <Chip tone="sun">✦ spotlight</Chip>}
-              {!parsed.plannedFor && !parsed.dueDate && (
-                <Chip>
-                  <Icon3d name="inbox" size={15} /> inbox, decide later
-                </Chip>
-              )}
-              <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-ink-faint">
-                <Icon3d name="sparkle" size={15} /> AI tidies the rest
-              </span>
-            </>
-          )}
-        </div>
-        )}
-
-        {phase === "input" && (
-        <div className="mt-3 hidden items-center justify-between border-t border-line pt-3 text-xs text-ink-faint sm:flex">
-          <span>
-            <Kbd>enter</Kbd> {activeMode === "task" ? "capture" : "save"} · <Kbd>shift+enter</Kbd> {activeMode === "task" ? "more" : "save, add another"}
-          </span>
-          <span>{activeMode === "task" ? "try: pay rent fri 6pm ~15m #life" : activeMode === "note" ? "try: gift ideas for mum" : "try: the walk cleared my head"}</span>
-        </div>
         )}
       </div>
     </Modal>

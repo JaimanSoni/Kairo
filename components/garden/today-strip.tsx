@@ -11,6 +11,7 @@ import { IconTick } from "./icons";
 import { Plant } from "./plants";
 import { gardenLevelOf, gardenScore } from "@/lib/habits-shared";
 import { GardenScene, type Weather } from "./scene";
+import { SkyChip } from "./sky";
 import { plotOf, useGarden, type PlotInfo } from "./use-garden";
 import { gardenStore } from "@/lib/habits-client";
 import { useClock } from "./fx";
@@ -22,6 +23,15 @@ function subscribeWide(cb: () => void) {
   const mq = window.matchMedia("(min-width: 640px)");
   mq.addEventListener("change", cb);
   return () => mq.removeEventListener("change", cb);
+}
+
+/** Four arrows out: this opens bigger. */
+function IconExpand({ size = 13 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path d="M9.5 2.5h4v4M6.5 13.5h-4v-4M13.5 2.5 9 7M2.5 13.5 7 9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
 }
 
 /**
@@ -124,10 +134,26 @@ export default function TodayGardenStrip() {
         className="gd-card group relative block cursor-pointer rounded-2xl outline-none transition-transform duration-300 hover:-translate-y-0.5 focus-visible:ring-4 focus-visible:ring-sun/40"
         data-garden-card
       >
-        {/* just the picture: nothing laid over the sky. The whole card opens the garden, where the day's count and the weather are. */}
-        <GardenScene variant="mini" weather={weather} thriving={thriving} allDone={allDone} decorLevel={level} live>
+        {/* over the sky: the weather on the left, and the way to the full screen on the right. The day's count lives inside the garden. */}
+        <GardenScene
+          variant="mini"
+          weather={weather}
+          thriving={thriving}
+          allDone={allDone}
+          decorLevel={level}
+          live
+          hud={
+            // the card opens the garden; the weather, and its sheet, keep their taps to themselves
+            <span className="contents" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+              <SkyChip />
+            </span>
+          }
+        >
           <MiniBed plots={plots} />
         </GardenScene>
+        <span className="gd-hud gd-card-cta absolute right-2.5 top-2.5 grid size-8 place-items-center rounded-full text-white transition-transform" aria-hidden data-open-garden-icon>
+          <IconExpand size={14} />
+        </span>
       </div>
       {view.open && <ImmersiveGarden onClose={view.hide} />}
     </section>
