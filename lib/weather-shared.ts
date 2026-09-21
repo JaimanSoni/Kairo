@@ -52,7 +52,14 @@ export function skyLabel(sky: LiveSky, night: boolean): string {
 }
 
 /** "26°", in whichever scale the place reads its thermometers in. */
+/**
+ * The temperature, with its unit, in the one people there actually use:
+ * Fahrenheit in the United States and the handful of places that follow it,
+ * Celsius everywhere else, India included. The unit is always written out —
+ * a bare "24°" is a guess for anyone who isn't sure where the number came from.
+ */
 export function skyTemp(sky: LiveSky): string | null {
   if (sky.tempC === null) return null;
-  return `${Math.round(sky.fahrenheit ? (sky.tempC * 9) / 5 + 32 : sky.tempC)}°`;
+  const f = sky.fahrenheit;
+  return `${Math.round(f ? (sky.tempC * 9) / 5 + 32 : sky.tempC)}°${f ? "F" : "C"}`;
 }
