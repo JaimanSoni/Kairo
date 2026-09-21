@@ -63,8 +63,15 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-/** Runs before paint: resolves the stored theme so there is no flash. */
-const themeScript = `(function(){try{var t=localStorage.getItem('kairo-theme');var d=t==='dark'||((!t||t==='system')&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';}catch(e){}})();`;
+/**
+ * Runs before paint: resolves the stored theme so there is no flash.
+ *
+ * A published note (/p/...) is always light. It's a page someone chose to
+ * put in front of other people, so it should read the way it was written,
+ * not the way each visitor's phone happens to be set; and its author,
+ * checking it, should see what everyone else sees.
+ */
+const themeScript = `(function(){try{var pub=location.pathname.indexOf('/p/')===0;var t=localStorage.getItem('kairo-theme');var d=!pub&&(t==='dark'||((!t||t==='system')&&matchMedia('(prefers-color-scheme: dark)').matches));document.documentElement.dataset.theme=d?'dark':'light';}catch(e){}})();`;
 
 export default function RootLayout({
   children,

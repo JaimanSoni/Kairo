@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { publicNote } from "@/lib/notes";
@@ -19,6 +19,9 @@ import { SITE_NAME } from "@/lib/site";
  */
 
 type Props = { params: Promise<{ slug: string }> };
+
+/** Light, like the page itself: the phone's address bar shouldn't go dark over it. */
+export const viewport: Viewport = { themeColor: "#f4f7f6" };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
