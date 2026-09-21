@@ -403,12 +403,19 @@ export function DraggableList({ tasks, context }: { tasks: Task[]; context: "tod
 export function AddRow({
   placeholder,
   plannedFor,
+  day,
   listId,
   status,
   trailing,
 }: {
   placeholder: string;
+  /** Where the task goes when the words don't name a day. A day typed into the words wins. */
   plannedFor?: string | null;
+  /**
+   * This row is a day (a calendar column): the task lands on it whatever the
+   * words say, and a day named in them stays part of the title.
+   */
+  day?: string;
   listId?: string | null;
   status?: Task["status"];
   /** Rendered inside the row, after the input — e.g. a destination switch. */
@@ -419,8 +426,8 @@ export function AddRow({
 
   const submit = () => {
     if (!text.trim()) return;
-    const parsed = parseQuickAdd(text, visibleLists(state));
-    if (plannedFor !== undefined && !parsed.plannedFor) parsed.plannedFor = plannedFor;
+    const parsed = parseQuickAdd(text, visibleLists(state), day ? { day } : undefined);
+    if (!day && plannedFor !== undefined && !parsed.plannedFor) parsed.plannedFor = plannedFor;
     if (listId !== undefined && !parsed.listId) parsed.listId = listId ?? null;
     addTask(parsed, status ? { status } : undefined);
     setText("");

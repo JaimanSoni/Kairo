@@ -342,6 +342,7 @@ export function CalendarView() {
             return (
               <div
                 key={day}
+                data-day={day}
                 role="button"
                 tabIndex={0}
                 onClick={() => pick(day)}
@@ -586,7 +587,7 @@ function DayPanel({
         </div>
       )}
 
-      {day >= today && <AddRow placeholder={`Add to ${friendlyDay(day, today)}…`} plannedFor={day} />}
+      {day >= today && <AddRow placeholder={`Add to ${friendlyDay(day, today)}…`} day={day} />}
 
       <DayHabits date={day} today={today} className="mt-4" />
       <DayJournal date={day} today={today} summary={page} access={access} className="mt-4" />

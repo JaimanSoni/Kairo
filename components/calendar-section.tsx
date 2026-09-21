@@ -207,7 +207,7 @@ export function CalendarSection() {
                     nothing yet, drop something here
                   </div>
                 )}
-                <AddRow placeholder="Add…" plannedFor={day} />
+                <AddRow placeholder="Add…" day={day} />
               </section>
             );
           })}

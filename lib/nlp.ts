@@ -128,7 +128,15 @@ function extractRepeat(text: string): { repeat: Repeat | null; rest: string } {
  *   spotlight:  !
  * Everything unrecognized stays in the title.
  */
-export function parseQuickAdd(raw: string, lists: List[]): ParsedInput {
+/**
+ * `day`: the task is being added to a day that is already chosen, such as a
+ * column on the calendar. Then the day belongs to the place, not the words: a
+ * day named in the text ("a post to go out on friday") is part of what the
+ * task says, so it stays in the title and moves nothing, and a time or a
+ * repeat is counted from that day rather than from today.
+ */
+export function parseQuickAdd(raw: string, lists: List[], opts?: { day?: string }): ParsedInput {
+  const fixedDay = opts?.day ?? null;
   const result: ParsedInput = {
     title: "",
     plannedFor: null,
@@ -156,7 +164,7 @@ export function parseQuickAdd(raw: string, lists: List[]): ParsedInput {
   }
 
   // "next week" → next Monday
-  if (/\bnext week\b/i.test(text)) {
+  if (!fixedDay && /\bnext week\b/i.test(text)) {
     result.plannedFor = nextWeekday(1);
     text = text.replace(/\bnext week\b/i, " ");
   }
@@ -193,7 +201,7 @@ export function parseQuickAdd(raw: string, lists: List[]): ParsedInput {
       }
     }
 
-    const date = parseDateToken(word);
+    const date = fixedDay ? null : parseDateToken(word);
     if (date && result.plannedFor === null) {
       result.plannedFor = date;
       continue;
@@ -212,8 +220,10 @@ export function parseQuickAdd(raw: string, lists: List[]): ParsedInput {
 
   // a repeating task needs a day — snap to the rule's first occurrence
   if (result.repeat && !result.plannedFor) {
-    result.plannedFor = firstOccurrence(result.repeat, todayStr());
+    result.plannedFor = firstOccurrence(result.repeat, fixedDay ?? todayStr());
   }
+  // a day chosen by where the task is being added
+  if (fixedDay && !result.plannedFor) result.plannedFor = fixedDay;
   // a time implies a day — default to today when none was given
   if (result.plannedTime && !result.plannedFor) {
     result.plannedFor = todayStr();
