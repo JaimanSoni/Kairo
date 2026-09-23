@@ -40,7 +40,7 @@ function spaceHref(space: (typeof SPACES)[number]): string {
 }
 
 export function Shell({ children }: { children: React.ReactNode }) {
-  const { state, setOmnibar } = useApp();
+  const { state, setOmnibar, lockApp } = useApp();
   const pathname = usePathname();
   const router = useRouter();
   // the account menu, opened from the phone's top bar or the foot of the sidebar
@@ -99,6 +99,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   // app-wide keyboard shortcuts (dead while the app-lock gate is up)
   const appLocked = state.appLocked;
   const today = state.today;
+  const lockEnabled = state.user.appLockEnabled;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (appLocked) return;
@@ -109,6 +110,17 @@ export function Shell({ children }: { children: React.ReactNode }) {
         // them and every re-invocation was another counted event
         track("search-open");
         setPaletteOpen((v) => !v);
+        return;
+      }
+
+      // Ctrl/Cmd+L locks, the way the same keys lock a computer. Checked up
+      // here with the palette, above the typing guard, because the moment you
+      // want it is usually the moment someone walks up while you're typing.
+      // Only claimed when a PIN is set: with nothing to lock, the key belongs
+      // to the browser.
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "l" && lockEnabled) {
+        e.preventDefault();
+        lockApp();
         return;
       }
 
@@ -133,7 +145,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [router, setOmnibar, appLocked, today, prefs]);
+  }, [router, setOmnibar, appLocked, today, prefs, lockEnabled, lockApp]);
 
   const editingTask = state.editingId ? state.tasks[state.editingId] : null;
 

@@ -255,6 +255,7 @@ const ALL_ARTICLES: Article[] = [
             rows: [
               { k: "N", d: "Open capture. `C` does the same thing." },
               { k: "⌘K / Ctrl K", d: "Open the search palette, find any task, list, or action." },
+              { k: "⌘L / Ctrl L", d: "Lock Kairo, once you have set an [app-lock PIN](/support/locks). Works while you are typing." },
               { k: "1", d: "Go to Today" },
               { k: "2", d: "Go to Calendar" },
               { k: "3", d: "Go to Lists" },
