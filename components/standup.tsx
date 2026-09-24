@@ -225,10 +225,9 @@ function htmlFromText(text: string, signed: boolean): string {
       continue;
     }
     flush();
-    if (signed && /sent using Kairo/i.test(trimmed)) {
-      out.push(
-        `<div>${esc(trimmed.replace(/kairo\s*$/i, ""))}<a href="https://kairo.jaimansoni.com">kairo</a></div>`
-      );
+    const link = signed && trimmed.match(/^(.*?)(https?:\/\/\S+)$/i);
+    if (link) {
+      out.push(`<div>${esc(link[1])}<a href="${esc(link[2])}">${esc(link[2])}</a></div>`);
       continue;
     }
     out.push(`<div>${esc(trimmed)}</div>`);

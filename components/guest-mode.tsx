@@ -111,6 +111,8 @@ function GuestOverlays({ authError }: { authError?: string }) {
   const [nudge, setNudge] = useState<number | null>(null);
   const [capOpen, setCapOpen] = useState(false);
   const [errorShown, setErrorShown] = useState(Boolean(authError));
+  /** Arrived on somebody else's recommendation, and shown the way in at once. */
+  const [invited, setInvited] = useState(false);
   /** Milestones already spent. Populated on mount from what is already there. */
   const spent = useRef<Set<number> | null>(null);
 
@@ -120,6 +122,27 @@ function GuestOverlays({ authError }: { authError?: string }) {
   // unique browsers server-side, so no client-side dedup state is needed
   useEffect(() => {
     track("guest-visit");
+  }, []);
+
+  /**
+   * Somebody followed a link with a tag on it.
+   *
+   * Nothing else in the world links here with one, so this visit came from a
+   * person recommending Kairo to their own team -- the warmest kind of
+   * arrival there is. They are already sold; making them hunt for the way in
+   * is the one thing that could lose them. So the door is opened for them.
+   *
+   * The tag is taken back out of the address afterwards, so a refresh is a
+   * refresh rather than the same door opening again.
+   */
+  useEffect(() => {
+    queueMicrotask(() => {
+      const ref = new URLSearchParams(window.location.search).get("ref");
+      if (!ref) return;
+      track("ref-visit", { ref: ref.slice(0, 40) });
+      setInvited(true);
+      window.history.replaceState(null, "", window.location.pathname);
+    });
   }, []);
 
   // the hard gate: any blocked creation fires this event from the store, so
@@ -184,6 +207,34 @@ function GuestOverlays({ authError }: { authError?: string }) {
             </button>
           </div>
         </div>
+      )}
+
+      {invited && !capOpen && (
+        <Modal onClose={() => setInvited(false)}>
+          <div className="p-6 text-center" data-ref-welcome>
+            <Icon3d name="party" size={44} className="mx-auto" />
+            <h2 className="font-display mt-3 text-2xl tracking-tight">Somebody sent you here</h2>
+            <p className="mx-auto mt-1.5 max-w-sm text-sm leading-6 text-ink-soft">
+              Kairo is a day planner that stays calm: your tasks, your habits and your notes in one
+              place. Sign in free and it follows you to every device, with capture, reminders and
+              sharing switched on.
+            </p>
+            <a
+              href="/api/auth/google"
+              data-track="ref-signin"
+              className="mt-5 flex w-full items-center justify-center gap-3 rounded-full bg-sun py-2.5 pl-2.5 pr-6 text-sm font-semibold text-on-accent shadow-lg shadow-sun/25 transition-transform active:scale-[0.99]"
+            >
+              <GoogleBadge size={30} /> Continue with Google
+            </a>
+            <button
+              onClick={() => setInvited(false)}
+              className="mt-2 w-full rounded-full px-5 py-2 text-sm font-medium text-ink-faint hover:text-ink"
+              data-ref-dismiss
+            >
+              Look around first
+            </button>
+          </div>
+        </Modal>
       )}
 
       {capOpen && (

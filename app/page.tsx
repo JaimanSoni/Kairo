@@ -27,7 +27,6 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "Kairo",
     url: "/",
-    images: [{ url: "/og-bloom.png", width: 1200, height: 630, alt: "Kairo. Your whole day, in bloom" }],
   },
 };
 

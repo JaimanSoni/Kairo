@@ -18,7 +18,18 @@ const TEAM_DOMAIN = "allevents.in";
 /** Kairo's own author, whichever address he is signed in with, who gets to say so at the bottom. */
 const AUTHORS = ["jaimansoni@gmail.com", "jaiman@allevents.in"];
 
-export const KAIRO_URL = "https://kairo.jaimansoni.com";
+/**
+ * Where the sign-off points.
+ *
+ * The tag is not a word anybody could guess, which is the whole point of it:
+ * nothing else in the world links to this address with it, so every visit
+ * carrying it came from an update somebody posted in their own channel.
+ * Landing with it opens the way in at once, because a person following a
+ * colleague's recommendation is already sold and should not have to go
+ * looking for the door.
+ */
+export const KAIRO_REF = "u7kq2m";
+export const KAIRO_URL = `https://kairo.jaimansoni.com/?ref=${KAIRO_REF}`;
 
 export function standupEmail(email: string | null | undefined): string {
   return typeof email === "string" ? email.trim().toLowerCase() : "";
@@ -56,7 +67,7 @@ export function standupText(lines: StandupLines, opts: { signed?: boolean } = {}
     `${heading}\n${items.length ? items.map((l) => BULLET + l).join("\n") : `${BULLET}Nothing to report`}`;
 
   const body = [block("Yesterday's Update:", lines.yesterday), block("Today's Plan:", lines.today)].join("\n\n");
-  return opts.signed ? `${body}\n\nsent using Kairo, try here: kairo` : body;
+  return opts.signed ? `${body}\n\nsent using Kairo, try here: ${KAIRO_URL}` : body;
 }
 
 /**
@@ -76,7 +87,7 @@ export function standupHtml(lines: StandupLines, opts: { signed?: boolean } = {}
       : `<ul><li>Nothing to report</li></ul>`);
 
   const body = block("Yesterday's Update:", lines.yesterday) + "<br>" + block("Today's Plan:", lines.today);
-  return opts.signed ? `${body}<br><div>sent using Kairo, try here: <a href="${KAIRO_URL}">kairo</a></div>` : body;
+  return opts.signed ? `${body}<br><div>sent using Kairo, try here: <a href="${KAIRO_URL}">${KAIRO_URL}</a></div>` : body;
 }
 
 /* ------------------------------------------------------- keeping it honest */
