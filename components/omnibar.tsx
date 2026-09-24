@@ -7,9 +7,12 @@ import { friendlyDay, fmtMinutes, fmtTime12 } from "@/lib/dates";
 import { repeatLabel, type Repeat } from "@/lib/repeat";
 import { guestCapReached, hiddenListIds, useApp, visibleLists } from "./store";
 import { commandDone, commandSentence, matchTasks, parseCommand, pickOne, type Action } from "@/lib/commands";
-import { askPermission } from "./permission-ask";
+
 import { track } from "@/lib/analytics-client";
-import { getSpeechRecognition, type SpeechRec } from "@/lib/speech";
+import { useDictation } from "./dictation/use-dictation";
+import { DictationLine } from "./dictation/dictation-line";
+import { DictationOffer, useDictationOffer } from "./dictation/offer";
+import { buildVocab } from "@/lib/dictation/polish";
 import { IconX, Modal } from "./ui";
 import { captureJournalLine, captureNote, type CaptureResult } from "./capture-targets";
 import { navigateApp } from "./app-views";
@@ -81,7 +84,6 @@ export function Omnibar() {
   });
   const activeMode: CaptureMode = modes.some((m) => m.id === mode) ? mode : "task";
   const [saving, setSaving] = useState(false);
-  const [listening, setListening] = useState(false);
   const [phase, setPhase] = useState<Phase>("input");
   const [result, setResult] = useState<AiParsed[] | null>(null);
   // true when the preview is the local fallback, not an AI answer — the
@@ -96,9 +98,8 @@ export function Omnibar() {
   // second click arrives inside that gap — a ref flips synchronously
   const filingRef = useRef(false);
   const lastRawRef = useRef("");
-  const recRef = useRef<SpeechRec | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const speechSupported = useMemo(() => getSpeechRecognition() !== null, []);
+  const micRef = useRef<HTMLButtonElement>(null);
 
   const lists = useMemo(() => visibleLists(state), [state]);
   const parsed = useMemo(() => parseQuickAdd(text, lists), [text, lists]);
@@ -114,39 +115,55 @@ export function Omnibar() {
   const only = useMemo(() => pickOne(matches), [matches]);
   const commanding = Boolean(command && matches.length);
 
-  useEffect(() => () => recRef.current?.abort(), []);
+  /**
+   * The words this person uses, which no speech model has ever seen: what
+   * their lists are called, what their habits are called, and the names that
+   * turn up in their own tasks. It is the difference between "add paneer to
+   * grocery's" and "add paneer to Groceries".
+   */
+  const vocab = useMemo(
+    () =>
+      buildVocab(
+        lists.map((l) => l.name),
+        [],
+        Object.values(state.tasks)
+          .slice(-300)
+          .map((t) => t.title),
+      ),
+    [lists, state.tasks],
+  );
 
-  const toggleVoice = async () => {
-    if (listening) {
-      recRef.current?.stop();
+  const dictation = useDictation({
+    vocab,
+    onHeard: ({ text: heard }) => {
+      setText(heard);
+      queueMicrotask(() => inputRef.current?.focus());
+    },
+    onInterim: setText,
+    onTrouble: (message) => showToast({ message }),
+  });
+  const listening = dictation.phase === "listening";
+  const [offered, setOffered] = useState(true);
+  const offerDictation = useDictationOffer(dictation.lastEngine, dictation.onDevice) && offered;
+
+  /**
+   * The meter on the microphone, written straight to the element.
+   *
+   * It is one custom property on one button, set from a timer that only runs
+   * while somebody is actually speaking. Going through state instead would
+   * re-render the whole capture box fifteen times a second for a ring that
+   * grows and shrinks.
+   */
+  useEffect(() => {
+    if (!listening) {
+      micRef.current?.style.removeProperty("--heard");
       return;
     }
-    const SR = getSpeechRecognition();
-    if (!SR) return;
-    // the browser asks for the microphone the moment listening starts, so the
-    // reason for it has to come first, while there is still a choice to make
-    if (!(await askPermission("microphone"))) return;
-    const rec = new SR();
-    rec.continuous = false;
-    rec.interimResults = true;
-    rec.lang = navigator.language || "en-US";
-    rec.onresult = (e) => {
-      let transcript = "";
-      for (let i = 0; i < e.results.length; i++) transcript += e.results[i][0].transcript;
-      setText(transcript);
-    };
-    rec.onend = () => {
-      setListening(false);
-      inputRef.current?.focus();
-    };
-    rec.onerror = () => {
-      setListening(false);
-      showToast({ message: "Couldn't hear that, try again, or just type" });
-    };
-    recRef.current = rec;
-    setListening(true);
-    rec.start();
-  };
+    const tick = window.setInterval(() => {
+      micRef.current?.style.setProperty("--heard", dictation.level().toFixed(2));
+    }, 70);
+    return () => window.clearInterval(tick);
+  }, [listening, dictation]);
 
   /**
    * Ask the AI to parse raw text into structured tasks. Returns the parsed
@@ -563,13 +580,18 @@ export function Omnibar() {
                 autoFocus
                 enterKeyHint="done"
               />
-              {speechSupported && (
+              {dictation.supported && (
                 <button
-                  onClick={() => void toggleVoice()}
+                  ref={micRef}
+                  onClick={dictation.toggle}
+                  disabled={dictation.phase === "thinking" || dictation.phase === "fetching"}
                   aria-label={listening ? "Stop listening" : "Speak instead of typing"}
                   title={listening ? "Stop listening" : "Speak instead of typing"}
-                  className={`grid size-9 shrink-0 place-items-center rounded-xl transition-colors ${listening ? "anim-pulse bg-clay text-on-accent" : "text-ink-faint hover:bg-paper-deep hover:text-ink"}`}
+                  className={`grid size-9 shrink-0 place-items-center rounded-xl transition-colors disabled:opacity-60 ${
+                    listening ? "bg-clay text-on-accent shadow-[0_0_0_calc(var(--heard,0)*10px)_rgba(203,109,81,0.22)]" : "text-ink-faint hover:bg-paper-deep hover:text-ink"
+                  }`}
                   data-capture-mic
+                  data-dictation-phase={dictation.phase}
                 >
                   <MicIcon listening={listening} />
                 </button>
@@ -585,10 +607,21 @@ export function Omnibar() {
               </button>
             </div>
 
+            {offerDictation && (
+              <DictationOffer
+                onYes={() => {
+                  setOffered(false);
+                  dictation.useOnDevice(true);
+                  showToast({ message: "Dictation moves to this device on your next tap" });
+                }}
+                onNo={() => setOffered(false)}
+              />
+            )}
+
             {/* one quiet line: how to use it, or what's been understood so far */}
             <div className="mt-2.5 flex min-h-6 flex-wrap items-center gap-1.5 px-1 text-[13px] text-ink-faint" data-capture-line>
-              {listening ? (
-                <span className="text-ink-soft">Listening. Say it the way you&apos;d say it to a friend.</span>
+              {dictation.phase !== "idle" ? (
+                <DictationLine phase={dictation.phase} progress={dictation.progress} onDevice={dictation.onDevice} />
               ) : command && matches.length ? (
                 <span className="text-ink-soft" data-capture-command>
                   {only ? commandSentence(command.action, only.title, state.today) : matches.length + " of your tasks could be that one"}

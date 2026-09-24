@@ -21,6 +21,7 @@ import { CITY_SHOWN, JOURNAL_SHOWN } from "@/lib/types";
 import { useGarden } from "../garden/use-garden";
 import { LeaveCity } from "../garden/city/leave";
 import { SkyOptions, SkyPreviewPanel } from "../garden/sky";
+import { DictationControls } from "../dictation/settings";
 
 /**
  * Settings, as a page of its own.
@@ -559,6 +560,13 @@ function PrivacySection() {
         />
       )}
       {CITY_SHOWN && state.user.spaces.garden && <CityRow />}
+      <Row
+        lead={<Tile tone="moss"><Glyph><path d="M8 2.5a2 2 0 0 1 2 2v3a2 2 0 1 1-4 0v-3a2 2 0 0 1 2-2zM4 7.5a4 4 0 0 0 8 0M8 11.5v2" /></Glyph></Tile>}
+        title="Dictation"
+        description="Speaking into Kairo can be done here, by a model on this device, instead of by your browser's maker."
+      >
+        <DictationControls />
+      </Row>
     </Section>
   );
 }

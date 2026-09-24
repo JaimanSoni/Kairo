@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { enablePush, pushEnabled, pushPermission } from "@/lib/push-client";
+import { readSettings } from "@/lib/dictation/engine";
 import { Modal } from "./ui";
 
 /**
@@ -105,7 +106,8 @@ const COPY: Record<PermissionKind, { title: string; lead: string; gets: string[]
     gets: [
       "Say a whole sentence — the day, the time and the list are picked out of it",
       "Useful with your hands full, or walking",
-      "Your browser does the listening; Kairo only receives the words",
+      // replaced at the point of asking by whichever of these is true
+      "Your browser does the listening, which means what you say goes to whoever made it",
     ],
     allow: "Allow the microphone",
   },
@@ -120,6 +122,7 @@ export function PermissionAsk() {
   const [stage, setStage] = useState<Stage>("ask");
   const [busy, setBusy] = useState(false);
   const [p, setP] = useState<Place>(NOWHERE);
+  const [onDevice, setOnDevice] = useState(false);
 
   const settle = (next: Pending, granted: boolean) => {
     next.resolve(granted);
@@ -159,6 +162,7 @@ export function PermissionAsk() {
       if (next) void open(next);
       else setPending(null);
     };
+    queueMicrotask(() => setOnDevice(readSettings().on));
     if (queued) queueMicrotask(() => queued && void open(queued));
     return () => {
       notify = null;
@@ -170,6 +174,17 @@ export function PermissionAsk() {
   if (!pending) return null;
   const kind = pending.kind;
   const copy = COPY[kind];
+  /**
+   * The last line of the microphone's case has to be whichever one is true.
+   * With the model on this device it is a promise worth making, and without
+   * it the browser really does send the audio to its maker -- saying the
+   * first while doing the second is the kind of claim that costs the trust
+   * the rest of this modal is built on.
+   */
+  const gets =
+    kind === "microphone" && onDevice
+      ? [...copy.gets.slice(0, -1), "Kairo does the listening on this device: what you say never leaves it"]
+      : copy.gets;
   const close = () => settle(pending, false);
 
   /* the one place a browser API is actually called */
@@ -205,7 +220,7 @@ export function PermissionAsk() {
             <h2 className="font-display text-2xl leading-tight">{copy.title}</h2>
             <p className="mt-1.5 text-sm text-ink-soft">{copy.lead}</p>
             <ul className="mt-4 space-y-2.5">
-              {copy.gets.map((g) => (
+              {gets.map((g) => (
                 <li key={g} className="flex gap-2.5 text-sm leading-snug">
                   <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-sun" aria-hidden />
                   <span className="text-ink-soft">{g}</span>
