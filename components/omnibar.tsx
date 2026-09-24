@@ -522,9 +522,6 @@ export function Omnibar() {
                     ? "Getting ready…"
                     : "Tap, and say what's on your mind"}
             </p>
-            <p className="mt-1 text-center text-[13px] leading-5 text-ink-soft">
-              {listening ? "Ramble. I'll pick the tasks out of it." : "Anything at all — I'll find the tasks in it."}
-            </p>
 
             {dictation.progress && dictation.progress.total > 0 && (
               <div className="mt-3 w-full max-w-64">
