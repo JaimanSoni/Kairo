@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Burst, Moment } from "./fx";
 import { LevelDecor } from "./city/decor";
 import { PaintedBalloon, PaintedCloud, PaintedLand, PaintedMeadow } from "./painted";
@@ -48,6 +49,8 @@ export function phaseOf(min: number, sun?: { rise: number; set: number } | null)
   if (h < 19) return "golden";
   return "dusk";
 }
+
+const PHASES: Phase[] = ["night", "dawn", "day", "golden", "dusk"];
 
 const SKY: Record<Phase, string> = {
   night: "linear-gradient(180deg, #081229 0%, #16284b 55%, #2a4570 100%)",
@@ -152,7 +155,14 @@ const RAIN_FALL: Record<SceneVariant, number> = { mini: 0.42, compact: 0.55, her
 const SNOW_COUNT: Record<SceneVariant, [number, number, number]> = { mini: [12, 20, 30], compact: [24, 40, 60], hero: [34, 56, 84], immersive: [56, 100, 150] };
 const SNOW_FALL: Record<SceneVariant, number> = { mini: 5, compact: 7, hero: 9, immersive: 13 };
 
-function Rain({ level, variant, windy }: { level: number; variant: SceneVariant; windy: boolean }) {
+/**
+ * Falling weather is the heaviest thing in the garden: an immersive downpour is
+ * two hundred and twenty elements, and it is redrawn for anything that changes
+ * anywhere in the scene -- the clock ticking over a minute, a habit being
+ * watered. It depends on three numbers and nothing else, so it is held still
+ * unless one of them moves.
+ */
+const Rain = memo(function Rain({ level, variant, windy }: { level: number; variant: SceneVariant; windy: boolean }) {
   const count = RAIN_COUNT[variant][level - 1];
   const fall = RAIN_FALL[variant] * [1.3, 1, 0.82][level - 1];
   return (
@@ -166,9 +176,9 @@ function Rain({ level, variant, windy }: { level: number; variant: SceneVariant;
       ))}
     </div>
   );
-}
+});
 
-function Snow({ level, variant, windy, count: asked }: { level: number; variant: SceneVariant; windy: boolean; count?: number }) {
+const Snow = memo(function Snow({ level, variant, windy, count: asked }: { level: number; variant: SceneVariant; windy: boolean; count?: number }) {
   const count = asked ?? SNOW_COUNT[variant][level - 1];
   const fall = SNOW_FALL[variant] * [1.2, 1, 0.85][level - 1];
   return (
@@ -181,7 +191,7 @@ function Snow({ level, variant, windy, count: asked }: { level: number; variant:
       ))}
     </div>
   );
-}
+});
 
 /** A fork of lightning out of the cloud; it and the flash behind it share one clock. */
 function Bolt({ left, delay, width }: { left: string; delay: string; width: number }) {
@@ -290,7 +300,16 @@ export function GardenScene({
       data-all-done={allDone || undefined}
     >
       {/* sky */}
-      <div className={`relative ${skyHeight}`} style={{ background: SKY[phase] }}>
+      <div className={`relative ${skyHeight}`}>
+        {/*
+          Every hour's sky is here, one of them showing. CSS cannot tween one
+          gradient into another, so an hour turning over -- dawn into day, day
+          into golden -- fades its sky up over the one before it instead of
+          cutting to it while you are looking.
+        */}
+        {PHASES.map((p) => (
+          <div key={p} className="pointer-events-none absolute inset-0 transition-opacity duration-[1400ms]" style={{ background: SKY[p], opacity: p === phase ? 1 : 0 }} aria-hidden />
+        ))}
         <div className="gd-par pointer-events-none absolute inset-0" style={drift(-16, -8)} aria-hidden>
           {dark &&
             STARS.slice(0, stars).map((s, i) => (

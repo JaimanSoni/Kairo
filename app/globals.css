@@ -2562,6 +2562,18 @@ body[data-modal] .nt-float {
   animation-duration: 1.6s;
 }
 /* the weather, in a word, over the sky */
+/* A plant is drawn at one of a few sizes, and steps up as it takes root.
+   Stepping is what it is -- but it can be seen to do it, rather than being one
+   size in one frame and a bigger one in the next. */
+.gd-grow {
+  transition: transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .gd-grow {
+    transition: none;
+  }
+}
+
 .gd-sky-chip {
   transition: transform 0.2s;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { GardenScene } from "../garden/scene";
 
 /**
@@ -139,6 +139,152 @@ function plotOf(seed: Seed, i: number, stage: number, streak: number, done: bool
 
 /* ------------------------------------------------------------------ film */
 
+/**
+ * The film's clock, kept outside React.
+ *
+ * Every frame moves this one number, and three quite different things read it:
+ * the drift and the captions, which are a style on a handful of elements; the
+ * bed, which is nine plants; and the scene behind them, which is the whole
+ * painted world and by far the most expensive thing on the page. Held as state
+ * on the film, the scene was handed a freshly built bed sixty times a second
+ * and redrew itself for it -- which is what made the picture stutter, however
+ * high the frame rate read.
+ *
+ * As a store, each part listens for itself. The bed re-renders every frame,
+ * where it costs nine style changes; the scene re-renders only when something
+ * it actually draws has changed, a couple of dozen times in the whole film.
+ */
+let filmNow = 0;
+const filmWatchers = new Set<() => void>();
+const watchFilm = (fn: () => void) => {
+  filmWatchers.add(fn);
+  return () => void filmWatchers.delete(fn);
+};
+function setFilmNow(ms: number) {
+  if (ms === filmNow) return;
+  filmNow = ms;
+  for (const fn of filmWatchers) fn();
+}
+const useFilmTime = () => useSyncExternalStore(watchFilm, () => filmNow, () => 0);
+
+/** The push-in, which the recorder winds by hand. One film to a page. */
+let driftAnim: Animation | null = null;
+
+/* ------------------------------------------------------------ the planting */
+
+type Spot = { seed: Seed; index: number; born: number; left: number; bottom: number; size: number; z: number };
+
+/** Where each plant stands. None of it moves, so it is worked out once. */
+function layOut(cast: Seed[], perRow: number, portrait: boolean, width: number): Spot[] {
+  // Each shape of frame is planted differently. A wide one has room for five
+  // across and a shallow horizon; a phone has two, each big enough to read, so
+  // its rows sit much further apart and the back row steps sideways to keep
+  // out from behind the names in front.
+  const plan = portrait
+    ? { band: 66, near: 47, far: 74, big: 0.46, small: 0.34, odd: -0.25, even: 0 }
+    : { band: 100, near: 19, far: 38, big: 0.52, small: 0.4, odd: 0.5, even: 0 };
+  const rows = Math.max(1, Math.ceil(cast.length / perRow));
+  const cell = plan.band / perRow;
+  const edge = (100 - plan.band) / 2;
+  return cast.map((seed, index) => {
+    const row = Math.floor(index / perRow);
+    const col = index % perRow;
+    const depth = rows > 1 ? row / (rows - 1) : 0;
+    return {
+      seed,
+      index,
+      born: B.first + seed.at,
+      left: edge + cell * (col + 0.5) + cell * (row % 2 === 1 ? plan.odd : plan.even),
+      bottom: lerp(plan.near, plan.far, depth),
+      // sizes are pre-zoom: the push-in enlarges them again
+      size: (width / perRow) * lerp(plan.big, plan.small, depth),
+      z: 10 - row,
+    };
+  });
+}
+
+/** How far along a plant is, as the stages the real bed draws. */
+const growAt = (t: number, born: number) => easeOut(seg(t, born, 11000));
+const stageAt = (t: number, born: number) => 1 + Math.min(4, Math.floor(growAt(t, born) * 4.999));
+/**
+ * A streak to go with each stage. It steps when the plant does rather than
+ * counting up every frame, because the number is drawn inside the plant, and a
+ * number that changes redraws it.
+ */
+const STREAK = [0, 4, 24, 48, 72, 96];
+
+/**
+ * One plant, drawn by the real bed.
+ *
+ * Everything it is handed changes a handful of times in the whole film -- the
+ * stage it has reached, whether the day is done -- so it sits still between
+ * those moments, however often the bed around it re-renders. The growing is
+ * the wrapper's business, and that is only a transform.
+ */
+const Slot = memo(function Slot({
+  seed,
+  index,
+  stage,
+  done,
+  size,
+  burst,
+}: {
+  seed: Seed;
+  index: number;
+  stage: number;
+  done: boolean;
+  size: number;
+  burst: boolean;
+}) {
+  const info = useMemo(() => plotOf(seed, index, stage, STREAK[stage], done), [seed, index, stage, done]);
+  const moments = useMemo<Moments>(() => ({ [seed.id]: { water: 0, burst: burst ? 1 : 0 } }), [seed.id, burst]);
+  return <Plot info={info} index={index} moments={moments} onWater={noop} size={size} />;
+});
+
+/**
+ * The bed, which keeps its own time.
+ *
+ * It is handed to the scene once and never replaced, so a plant growing is no
+ * reason for the world behind it to be drawn again: the bed hears the clock
+ * itself.
+ */
+const Bed = memo(function Bed({ spots }: { spots: Spot[] }) {
+  const t = useFilmTime();
+  const burst = t > B.done;
+  return (
+    <div style={{ position: "relative", width: "100%", height: "100%" }}>
+      {spots.map((s) => {
+        // a plant fades up out of the grass over a second, and never pops
+        const up = easeOut(seg(t, s.born, 1300));
+        if (up <= 0) return null;
+        const life = seg(t, s.born, 11000);
+        // and keeps swelling between its stages, so that growing is one
+        // continuous thing rather than four jumps with stillness in between
+        const swell = lerp(0.86, 1, easeOut(life)) * lerp(0.92, 1, up);
+        return (
+          <div
+            key={s.seed.id}
+            style={{
+              position: "absolute",
+              left: `${s.left}%`,
+              bottom: `${s.bottom}%`,
+              transform: `translate(-50%, ${lerp(14, 0, up)}px) scale(${swell})`,
+              transformOrigin: "bottom center",
+              opacity: up,
+              zIndex: s.z,
+              willChange: "transform, opacity",
+            }}
+          >
+            <Slot seed={s.seed} index={s.index} stage={stageAt(t, s.born)} done={t > B.done - 600 || life > 0.9} size={s.size} burst={burst} />
+          </div>
+        );
+      })}
+    </div>
+  );
+});
+
+/* ------------------------------------------------------------------ frame */
+
 type Stage = { w: number; h: number; portrait: boolean };
 
 function useStage(): Stage {
@@ -155,7 +301,7 @@ function useStage(): Stage {
 export function GardenFilm() {
   const stage = useStage();
   const { w: width, portrait } = stage;
-  const [t, setT] = useState(0);
+  const t = useFilmTime();
 
   useEffect(() => {
     const w = window as unknown as { __seek?: (ms: number) => Promise<void>; __duration?: number; __ready?: boolean };
@@ -166,7 +312,7 @@ export function GardenFilm() {
     const t0 = performance.now();
     const freeRun = (now: number) => {
       if (driven) return;
-      setT((now - t0) % (DURATION + 1200));
+      setFilmNow((now - t0) % (DURATION + 1200));
       raf = requestAnimationFrame(freeRun);
     };
     raf = requestAnimationFrame(freeRun);
@@ -175,13 +321,23 @@ export function GardenFilm() {
     w.__seek = async (ms: number) => {
       driven = true;
       cancelAnimationFrame(raf);
-      setT(ms);
+      setFilmNow(ms);
       // three frames, not two: the hour and the weather go out through the sky
       // store, so the scene re-renders a beat after the film does
       await nextFrame();
       await nextFrame();
       await nextFrame();
-      for (const anim of document.getAnimations()) anim.pause();
+      // Ambient motion -- clouds crossing, a plant swaying -- is paused, so
+      // every frame is photographed at the same moment of it. Anything with an
+      // end, though, is a change on its way somewhere: an hour's sky coming up
+      // over the last one, a ring filling. Those are run to their end instead,
+      // so no frame is caught halfway through one.
+      for (const anim of document.getAnimations()) {
+        if ((anim.effect?.getTiming().iterations ?? 1) === Infinity) anim.pause();
+        else anim.finish();
+      }
+      // the push-in is one of those paused: wind it to the moment being shot
+      if (driftAnim) driftAnim.currentTime = ms;
       await nextFrame();
     };
     w.__ready = true;
@@ -194,21 +350,19 @@ export function GardenFilm() {
 
   /* -------------------------------------------------- the hour and the sky */
 
-  // the scene is rebuilt about twelve times a second; the captions, the card
-  // and the drift stay at the refresh rate, where they cost nothing
-  const tq = Math.round(t / 80) * 80;
-
-
   // Sunrise while the first habit takes, morning as the garden fills, a shower
   // at the top of the afternoon, then golden hour for the finish.
-  // the hour moves in small steps the scene can glide between, rather than
-  // sixty a second the sky store has to absorb
   const minuteRaw =
-    tq < B.rain
-      ? lerp(6 * 60 + 20, 12 * 60 + 30, easeInOut(seg(tq, B.first - 400, B.rain - B.first)))
-      : lerp(12 * 60 + 30, 17 * 60 + 40, easeInOut(seg(tq, B.rain, 7000)));
-  const minute = Math.round(minuteRaw / 3) * 3;
-  const weather = SKIES.reduce((w, step) => (tq >= step.at ? step.w : w), SKIES[0].w);
+    t < B.rain
+      ? lerp(6 * 60 + 20, 12 * 60 + 30, easeInOut(seg(t, B.first - 400, B.rain - B.first)))
+      : lerp(12 * 60 + 30, 17 * 60 + 40, easeInOut(seg(t, B.rain, 7000)));
+  // The hour is handed over in half-hours, not minute by minute. Every change
+  // redraws the whole painted world, while the sun takes a second to slide
+  // between any two positions it is given -- so half-hours reach it faster
+  // than it can finish sliding, and it simply moves, for a twentieth of the
+  // work.
+  const minute = Math.round(minuteRaw / 30) * 30;
+  const weather = SKIES.reduce((w, step) => (t >= step.at ? step.w : w), SKIES[0].w);
 
   const applied = useRef("");
   useEffect(() => {
@@ -238,74 +392,38 @@ export function GardenFilm() {
    * is exactly what the real immersive garden does at this size too. So the
    * portrait cut pushes in from the top: the horizon drops to the middle of
    * the frame, the far meadow falls off the bottom, and what is left is the
-   * part worth looking at, closer. The plants are then placed in the band
-   * that survives, three to a row, well inside both edges.
+   * part worth looking at, closer.
    */
   const zoom = portrait ? 1.35 : 1;
 
-  const garden = useMemo(() => {
-    const grown = cast.map((seed, i) => {
-      const born = B.first + seed.at;
-      // each plant grows its four stages over the beats that follow it
-      const life = seg(tq, born, 11000);
-      const st = 1 + Math.min(4, Math.floor(easeOut(life) * 4.999));
-      const streak = Math.round(lerp(1, 96, easeOut(life)));
-      const done = tq > B.done - 600 || life > 0.9;
-      return { seed, i, born, info: plotOf(seed, i, st, streak, done), stage: st };
+  /**
+   * The push-in, handed to the compositor rather than done in React.
+   *
+   * It is the slowest thing on screen -- five per cent over the whole film --
+   * and it was the most expensive. A scale written as a style every frame is a
+   * scale the browser has never been told the end of, so it re-rastered the
+   * whole garden, rain and all, sixty times a second to keep it sharp. Given
+   * the whole move up front, it rasters once and slides the picture instead,
+   * and the frame times during the rain halve.
+   */
+  const sceneRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = sceneRef.current;
+    if (!el) return;
+    const anim = el.animate([{ transform: `scale(${zoom * 1.02})` }, { transform: `scale(${zoom * 1.07})` }], {
+      duration: DURATION + 1200,
+      iterations: Infinity,
+      easing: "linear",
     });
-    // no watering splash on arrival: a plant that simply comes up is calmer.
-    // The burst is kept for the end, where the garden finishes together.
-    const moments: Moments = {};
-    for (const g of grown) moments[g.seed.id] = { water: 0, burst: tq > B.done ? 1 : 0 };
+    driftAnim = anim;
+    return () => anim.cancel();
+  }, [zoom]);
 
-    // Each shape of frame is planted differently. A wide one has room for five
-    // across and a shallow horizon; a phone has two, each big enough to read,
-    // so its rows sit much further apart and the back row steps a quarter of a
-    // cell sideways to keep out from behind the names in front.
-    const plan = portrait
-      ? { band: 66, near: 47, far: 74, big: 0.46, small: 0.34, odd: -0.25, even: 0 }
-      : { band: 100, near: 19, far: 38, big: 0.52, small: 0.4, odd: 0.5, even: 0 };
-
-    const bed = (
-      <div style={{ position: "relative", width: "100%", height: "100%" }}>
-        {grown.map((g) => {
-          // a plant fades up out of the grass over a second, and never pops
-          const up = easeOut(seg(tq, g.born, 1300));
-          if (up <= 0) return null;
-          const row = Math.floor(g.i / perRow);
-          const col = g.i % perRow;
-          const rows = Math.max(1, Math.ceil(cast.length / perRow));
-          const depth = rows > 1 ? row / (rows - 1) : 0;
-
-          // back rows sit higher, smaller, and offset sideways, so nothing
-          // stands directly behind anything else. Portrait keeps to the middle
-          // of the frame, because the push-in crops the sides.
-          const cell = plan.band / perRow;
-          const edge = (100 - plan.band) / 2;
-          const left = edge + cell * (col + 0.5) + cell * (row % 2 === 1 ? plan.odd : plan.even);
-          // sizes are pre-zoom: the push-in enlarges them again
-          const size = (width / perRow) * lerp(plan.big, plan.small, depth);
-          return (
-            <div
-              key={g.seed.id}
-              style={{
-                position: "absolute",
-                left: `${left}%`,
-                bottom: `${lerp(plan.near, plan.far, depth)}%`,
-                transform: `translate(-50%, ${lerp(14, 0, up)}px) scale(${lerp(0.88, 1, up)})`,
-                transformOrigin: "bottom center",
-                opacity: up,
-                zIndex: 10 - row,
-              }}
-            >
-              <Plot info={g.info} index={g.i} moments={moments} onWater={noop} size={size} />
-            </div>
-          );
-        })}
-      </div>
-    );
-    return { bed, thriving: grown.filter((g) => tq > g.born && g.stage >= 4).length, allDone: tq > B.done };
-  }, [tq, perRow, width, portrait, cast]);
+  const spots = useMemo(() => layOut(cast, perRow, portrait, width), [cast, perRow, portrait, width]);
+  // handed to the scene once, and never replaced
+  const bed = useMemo(() => <Bed spots={spots} />, [spots]);
+  const allDone = t > B.done;
+  const thriving = spots.reduce((n, s) => n + (t > s.born && stageAt(t, s.born) >= 4 ? 1 : 0), 0);
 
 
   const unit = stage.portrait ? stage.w / 1080 : stage.w / 1920;
@@ -319,17 +437,19 @@ export function GardenFilm() {
 
       {/* the real scene, at the size of the screen, drifting slowly closer */}
       <div
+        ref={sceneRef}
         style={{
           position: "absolute",
           inset: 0,
-          transform: `scale(${zoom * lerp(1.02, 1.07, seg(t, 0, DURATION))})`,
+          // where the animation above starts, so the first frame is not a jump
+          transform: `scale(${zoom * 1.02})`,
           transformOrigin: portrait ? "50% 15%" : "50% 76%",
           // its own layer: the drift is then the compositor's job, not a repaint
           willChange: "transform",
         }}
       >
-        <MemoScene variant="immersive" weather="clear" thriving={garden.thriving} allDone={garden.allDone} celebrate={garden.allDone ? 1 : 0} decorLevel={1} live>
-          {garden.bed}
+        <MemoScene variant="immersive" weather="clear" thriving={thriving} allDone={allDone} celebrate={allDone ? 1 : 0} decorLevel={1} live>
+          {bed}
         </MemoScene>
       </div>
 

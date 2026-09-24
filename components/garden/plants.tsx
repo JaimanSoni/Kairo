@@ -97,7 +97,7 @@ export function Plant({ species, stage, health = "healthy", ripe = 0, golden = 0
       )}
       <g className={sway && stage > 0 ? "gd-sway" : ""} style={{ transformOrigin: "60px 128px", animationDelay: `${-phase}s` }}>
         {stage === 0 ? <Seed /> : stage <= 2 ? <Sprout stage={stage} d={d} species={species} /> : (
-          <g transform={`translate(60 128) scale(${s}) translate(-60 -128)`}>
+          <g className="gd-grow" transform={`translate(60 128) scale(${s}) translate(-60 -128)`}>
             <Species {...draw} />
           </g>
         )}

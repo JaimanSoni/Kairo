@@ -49,7 +49,7 @@ type Grade = { filter?: string; tint?: string; amount?: number };
 export const GRADE: Record<Phase, Grade> = {
   day: {},
   dawn: { filter: "brightness(0.96) saturate(0.95)", tint: "#e6a2c4", amount: 0.38 },
-  golden: { filter: "saturate(1.08) brightness(1.02)", tint: "#ffb060", amount: 0.4 },
+  golden: { filter: "brightness(1.02) saturate(1.08)", tint: "#ffb060", amount: 0.4 },
   dusk: { filter: "brightness(0.82) saturate(0.8)", tint: "#6a55a8", amount: 0.62 },
   night: { filter: "brightness(0.7) saturate(0.7)", tint: "#1f3470", amount: 0.88 },
 };
@@ -79,10 +79,16 @@ export function Paint({ src, fit, grade, frost, className, style }: { src: strin
   return (
     <div className={`absolute ${className ?? ""}`} style={style}>
       <div
-        className="absolute inset-0"
+        className="absolute inset-0 transition-[filter] duration-[1200ms]"
         style={{ backgroundImage: `url(${src})`, backgroundSize: fit.size, backgroundRepeat: fit.repeat, backgroundPosition: fit.position, filter: grade.filter }}
       />
-      {grade.tint && <div className="absolute inset-0" style={{ ...mask(), background: grade.tint, opacity: grade.amount, mixBlendMode: "multiply" }} />}
+      {/* the hour's colour is always on the paint, at nothing when the hour is
+          plain daylight: a layer that is always here can fade when the hour
+          turns over, where one that comes and goes can only cut */}
+      <div
+        className="absolute inset-0 transition-[background-color,opacity] duration-[1200ms]"
+        style={{ ...mask(), background: grade.tint ?? "transparent", opacity: grade.tint ? (grade.amount ?? 0) : 0, mixBlendMode: "multiply" }}
+      />
       {frost > 0 && <div className="absolute inset-0" style={{ ...mask(), background: "#f4f8fb", opacity: frost * 0.55 }} />}
     </div>
   );
