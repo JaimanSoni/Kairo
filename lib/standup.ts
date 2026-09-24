@@ -1,7 +1,7 @@
 /**
- * The morning standup, for people who have to post one.
+ * The morning update, for people who have to post one.
  *
- * At AllEvents everyone writes the same message into the same Slack channel
+ * At AllEvents everyone writes the same update into the same Slack channel
  * every morning: what they did yesterday, what they are doing today. Kairo
  * already knows both -- it is the thing they ticked off and the thing they
  * planned -- so writing it out again by hand is the app failing to be useful
@@ -15,8 +15,8 @@
 /** Where this is the daily ritual. */
 const TEAM_DOMAIN = "allevents.in";
 
-/** Kairo's own author, who gets to say so at the bottom. */
-const AUTHOR = "jaimansoni@gmail.com";
+/** Kairo's own author, whichever address he is signed in with, who gets to say so at the bottom. */
+const AUTHORS = ["jaimansoni@gmail.com", "jaiman@allevents.in"];
 
 export const KAIRO_URL = "https://kairo.jaimansoni.com";
 
@@ -27,12 +27,12 @@ export function standupEmail(email: string | null | undefined): string {
 /** Whether to offer it at all. */
 export function wantsStandup(email: string | null | undefined): boolean {
   const at = standupEmail(email);
-  return at.endsWith(`@${TEAM_DOMAIN}`) || at === AUTHOR;
+  return at.endsWith(`@${TEAM_DOMAIN}`) || AUTHORS.includes(at);
 }
 
 /** Whether the message ends with where it came from. */
 export function signsOff(email: string | null | undefined): boolean {
-  return standupEmail(email) === AUTHOR;
+  return AUTHORS.includes(standupEmail(email));
 }
 
 export type StandupLines = { yesterday: string[]; today: string[] };

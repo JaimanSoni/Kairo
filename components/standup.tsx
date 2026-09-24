@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The standup, written for you, on the page you are already looking at.
+ * The morning update, written for you, on the page you are already looking at.
  *
  * Kairo knows what got ticked off yesterday and what is planned today, which
  * is the whole content of the message. What it cannot know is how your team
@@ -116,13 +116,13 @@ export function StandupButton() {
         data-standup-open
       >
         <SlackGlyph />
-        Write my standup
+        Write my update
       </button>
 
       {phase.kind !== "idle" && (
         <Modal onClose={close}>
           <div className="p-5 sm:p-6" data-standup>
-            <h2 className="font-display text-2xl leading-tight">Your standup</h2>
+            <h2 className="font-display text-2xl leading-tight">Your update</h2>
             <p className="mt-1 text-sm text-ink-soft">
               {phase.kind === "ready"
                 ? "Out of what you finished yesterday and what's on today. Change anything that isn't how you'd say it."
