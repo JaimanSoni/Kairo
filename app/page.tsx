@@ -16,13 +16,13 @@ import { GuestExperience } from "@/components/guest-mode";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
-  title: "Kairo. Your whole day, in bloom",
+  title: "Kairo. Tasks, habits and notes in one place",
   description:
     CITY_SHOWN
       ? "Start right now, no account needed. Plan a day you'll actually finish, grow habits into a garden you can see, and walk around Kairo City. Sign in later and everything follows you."
       : "Start right now, no account needed. Plan a day you'll actually finish, grow habits into a garden you can see, and keep notes for everything else. Sign in later and everything follows you.",
   openGraph: {
-    title: "Kairo. Your whole day, in bloom",
+    title: "Kairo. Tasks, habits and notes in one place",
     description: CITY_SHOWN ? "Plan the day, grow your habits into a garden, and walk Kairo City. Try it instantly, no sign-up." : "Plan the day, grow your habits into a garden, and keep notes. Try it instantly, no sign-up.",
     type: "website",
     siteName: "Kairo",

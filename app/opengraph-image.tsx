@@ -21,7 +21,7 @@ import { SITE_NAME } from "@/lib/site";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = "Kairo — tasks, habits and notes in one calm place";
+export const alt = "Kairo — tasks, habits and notes in one place";
 
 const PAPER = "#f4f7f6";
 const INK = "#1c2624";
@@ -71,7 +71,7 @@ export default function Image() {
         </div>
 
         <div style={{ marginTop: 30, fontSize: 40, color: INK_SOFT, letterSpacing: -0.6 }}>
-          Tasks, habits and notes in one calm place.
+          Tasks, habits and notes in one place.
         </div>
 
         <div style={{ position: "absolute", bottom: 54, fontSize: 26, color: "#93a39d", letterSpacing: 0.4 }}>

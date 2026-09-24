@@ -14,8 +14,15 @@ export const SITE_NAME = "Kairo";
 
 export const SITE_TAGLINE = "Your whole day, in bloom.";
 
-/** The name and the line together, the way titles and link previews say it. */
-export const SITE_TITLE = "Kairo. Your whole day, in bloom";
+/**
+ * The name and what it is, the way titles and link previews say it.
+ *
+ * A title is read by somebody who has never heard of this, in a tab strip or
+ * a row of search results, so it says what the thing is rather than how it
+ * feels about itself. The poetry lives on the page, where there is room for
+ * it.
+ */
+export const SITE_TITLE = "Kairo. Tasks, habits and notes in one place";
 
 export const SITE_DESCRIPTION =
   CITY_SHOWN
