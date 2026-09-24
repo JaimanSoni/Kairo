@@ -130,7 +130,7 @@ export function DictationLab() {
   const toggleRecord = useCallback(async () => {
     if (take.current) return endTake();
     if (!(await load())) return;
-    take.current = await startRecording({ quietMs: 2000, onQuiet: () => void endTake() });
+    take.current = await startRecording({ onLimit: () => void endTake() });
     setListening(true);
     setStatus("Listening…");
   }, [load, endTake]);

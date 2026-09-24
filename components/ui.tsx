@@ -222,9 +222,16 @@ export function Modal({
    * typing, because the keyboard owns the bottom of a phone screen and a
    * bottom sheet ends up crushed against it. Desktop is identical either way.
    */
-  anchor?: "sheet" | "top";
+  /**
+   * "top" keeps a phone's keyboard territory clear, which is what anything
+   * you type into needs. "center" is for a panel with nothing to type into.
+   */
+  anchor?: "sheet" | "top" | "center";
 }) {
   const top = anchor === "top";
+  const middle = anchor === "center";
+  // both are the same panel; they differ only in where the phone puts it
+  const dropped = top || middle;
   // portals need a DOM; server render and first hydration pass return null
   const mounted = useSyncExternalStore(
     () => () => {},
@@ -247,8 +254,8 @@ export function Modal({
         onClose();
         return;
       }
-      if (top) {
-        // the top panel leaves the way it came: a short lift and fade
+      if (dropped) {
+        // a dropped panel leaves the way it came: a short lift and fade
         closingRef.current = true;
         panel.style.transition = "transform 150ms ease-in, opacity 150ms ease-in";
         panel.style.transform = "translate3d(0,-16px,0)";
@@ -277,7 +284,7 @@ export function Modal({
       }
       setTimeout(onClose, ms - 20);
     },
-    [onClose, top]
+    [onClose, dropped]
   );
 
   const animatedClose = useCallback(() => dismiss(0), [dismiss]);
@@ -341,9 +348,9 @@ export function Modal({
 
   /* drag-to-dismiss (mobile bottom sheet). Native listeners because React's
      root touch handlers are passive and can't preventDefault scrolling. A
-     top-anchored panel has no handle and no sheet gesture. */
+     panel that drops in has no handle and no sheet gesture. */
   useEffect(() => {
-    if (top) return;
+    if (dropped) return;
     const panel = panelRef.current;
     if (!panel) return;
 
@@ -467,7 +474,7 @@ export function Modal({
     // on its first pass, so this effect finds no panel and bails — without
     // re-running on the mounted flip, such a sheet (Fresh Start is the one
     // that auto-opens with the page) never gets its drag listeners at all
-  }, [dismiss, top, mounted]);
+  }, [dismiss, dropped, mounted]);
 
   if (!mounted) return null;
 
@@ -486,7 +493,11 @@ export function Modal({
     // stays clear below.
     <div
       className={`fixed inset-0 ${above ? "z-[80]" : "z-50"} flex justify-center sm:items-center sm:p-4 ${
-        top ? "items-start p-3 pt-[max(0.75rem,env(safe-area-inset-top))]" : "items-end"
+        top
+          ? "items-start p-3 pt-[max(0.75rem,env(safe-area-inset-top))]"
+          : middle
+            ? "items-center p-3"
+            : "items-end"
       }`}
     >
       <div
@@ -507,11 +518,11 @@ export function Modal({
           // only the panel's own entrance, not animations from children
           if (e.target === e.currentTarget) clearEntranceAnimation();
         }}
-        className={`${top ? "anim-modal-drop rounded-2xl max-h-[85dvh]" : "anim-modal rounded-t-3xl max-h-[92dvh] pb-[env(safe-area-inset-bottom)]"} no-scrollbar relative w-full ${wide ? "sm:max-w-2xl" : "sm:max-w-lg"} overflow-y-auto overscroll-contain border border-line bg-card shadow-2xl will-change-transform sm:rounded-2xl sm:pb-0`}
+        className={`${dropped ? "anim-modal-drop rounded-2xl max-h-[85dvh]" : "anim-modal rounded-t-3xl max-h-[92dvh] pb-[env(safe-area-inset-bottom)]"} no-scrollbar relative w-full ${wide ? "sm:max-w-2xl" : "sm:max-w-lg"} overflow-y-auto overscroll-contain border border-line bg-card shadow-2xl will-change-transform sm:rounded-2xl sm:pb-0`}
         role="dialog"
         aria-modal
       >
-        {!top && (
+        {!dropped && (
           <div data-sheet-handle className="sticky top-0 z-20 -mb-3 flex touch-none justify-center pb-4 pt-2.5 sm:hidden" aria-hidden>
             <div className="h-1 w-10 rounded-full bg-ink-faint/40" />
           </div>

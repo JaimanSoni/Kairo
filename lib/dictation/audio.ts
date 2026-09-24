@@ -24,8 +24,14 @@ const EDGE_MS = 160;
 /** Shorter than this and the model starts talking to itself. */
 const MIN_MS = 1100;
 
-/** Nobody dictates a task for this long; past it we stop and transcribe. */
-export const MAX_MS = 60_000;
+/**
+ * A backstop, not a feature.
+ *
+ * Nothing stops a take but the person who started it. This exists only for
+ * the microphone left open in a forgotten tab, and is long enough that
+ * nobody talking will ever meet it.
+ */
+export const MAX_MS = 180_000;
 
 export type Recording = {
   /** 0 to 1, for a meter. Cheap enough to poll on a frame. */
@@ -55,10 +61,17 @@ export function canRecord(): boolean {
  * The constraints are the browser's own cleanup, which is built for speech
  * and is better than anything we would do afterwards: it cancels the echo of
  * our own notification sounds, suppresses steady noise like a fan, and levels
- * a quiet voice. `onQuiet` fires once the person has clearly stopped talking,
- * so the caller can end the take without anyone pressing anything.
+ * a quiet voice.
+ *
+ * It records until it is told to stop, and nothing else ends it.
+ *
+ * It used to end itself after a stretch of quiet, and the quiet it waited for
+ * was never right: long enough for somebody thinking mid-sentence was long
+ * enough to feel broken for somebody who had finished, and short enough to
+ * feel quick cut people off between thoughts. Thinking out loud is exactly
+ * what capture asks for, so the take is the speaker's to end.
  */
-export async function startRecording(opts: { onQuiet?: () => void; quietMs?: number } = {}): Promise<Recording> {
+export async function startRecording(opts: { onLimit?: () => void } = {}): Promise<Recording> {
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: {
       channelCount: 1,
@@ -94,35 +107,13 @@ export async function startRecording(opts: { onQuiet?: () => void; quietMs?: num
   };
   rec.start();
 
-  // The take ends itself. We only start counting silence once there has been
-  // something to be silent after, so a slow start never cuts anyone off.
-  let spoke = false;
-  let quietSince = 0;
-  const quietFor = opts.quietMs ?? 1300;
-  const watch = window.setInterval(() => {
-    const level = readLevel();
-    if (level > SILENCE * 3) {
-      spoke = true;
-      quietSince = 0;
-      return;
-    }
-    if (!spoke) return;
-    const now = performance.now();
-    if (!quietSince) quietSince = now;
-    else if (now - quietSince > quietFor) {
-      window.clearInterval(watch);
-      opts.onQuiet?.();
-    }
-  }, 100);
-
   const shutDown = () => {
-    window.clearInterval(watch);
     clearTimeout(cap);
     stream.getTracks().forEach((t) => t.stop());
     void ctx.close().catch(() => {});
   };
 
-  const cap = setTimeout(() => opts.onQuiet?.(), MAX_MS);
+  const cap = setTimeout(() => opts.onLimit?.(), MAX_MS);
 
   return {
     level: readLevel,

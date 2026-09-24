@@ -163,12 +163,8 @@ export function useDictation({ vocab, onHeard, onInterim, onTrouble }: Options) 
     }
 
     try {
-      const take = await startRecording({
-        onQuiet: () => {
-          // said their piece and stopped: end the take for them
-          void endTake();
-        },
-      });
+      // nothing ends this but the person who started it, bar the backstop
+      const take = await startRecording({ onLimit: () => void endTake() });
       recording.current = take;
       setPhase("listening");
     } catch {
@@ -182,9 +178,18 @@ export function useDictation({ vocab, onHeard, onInterim, onTrouble }: Options) 
     // the browser asks for the microphone the moment listening starts, so the
     // reason for it has to come first, while there is still a choice to make
     if (!(await askPermission("microphone"))) return;
-    if (onDevice) await listenOnDevice();
+    /*
+     * Read the setting here, not off the state.
+     *
+     * `onDevice` lands a microtask after mount, and capture opens listening
+     * the moment it mounts -- so the first capture of a session raced it and
+     * lost, and went out through the browser's recogniser while the model sat
+     * on the device unused. Whichever engine is right is a fact about storage,
+     * so it is read at the moment it is needed.
+     */
+    if (readSettings().on && canRecord()) await listenOnDevice();
     else listenInBrowser();
-  }, [phase, onDevice, listenOnDevice, listenInBrowser]);
+  }, [phase, listenOnDevice, listenInBrowser]);
 
   const stop = useCallback(() => {
     if (browser.current) {

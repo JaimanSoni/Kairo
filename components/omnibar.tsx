@@ -497,7 +497,7 @@ export function Omnibar() {
   const count = result?.length ?? 0;
 
   return (
-    <Modal onClose={() => setOmnibar(false)} anchor="top">
+    <Modal onClose={() => setOmnibar(false)} anchor={voice ? "center" : "top"}>
       <div className="p-5 sm:p-6" data-capture>
         {phase === "input" && voice && (
           <div className="flex flex-col items-center py-4" data-capture-voice>
@@ -515,7 +515,7 @@ export function Omnibar() {
 
             <p className="mt-5 text-center text-[15px] font-medium text-ink" data-capture-voice-line>
               {listening
-                ? "I'm listening…"
+                ? "I'm listening. Take your time."
                 : dictation.phase === "thinking"
                   ? "Writing that down…"
                   : dictation.phase === "fetching"
@@ -529,17 +529,52 @@ export function Omnibar() {
               </div>
             )}
 
-            <button
-              onClick={() => {
-                dictation.cancel();
-                setTyping(true);
-                queueMicrotask(() => inputRef.current?.focus());
-              }}
-              className="mt-6 rounded-full px-3 py-1.5 text-[13px] font-semibold text-ink-soft hover:bg-paper-deep"
-              data-capture-type-instead
-            >
-              Type it instead
-            </button>
+{/* the take is yours to start and yours to end; nothing else ends it */}
+            <div className="mt-6 flex w-full items-center justify-between gap-2">
+              {listening ? (
+                <>
+                  <button
+                    onClick={dictation.cancel}
+                    className="rounded-full px-3 py-2 text-[13px] font-semibold text-ink-soft hover:bg-paper-deep"
+                    data-capture-voice-cancel
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={dictation.toggle}
+                    className="flex items-center gap-2 rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-paper"
+                    data-capture-done
+                    autoFocus
+                  >
+                    <span className="block size-2.5 rounded-[3px] bg-paper" aria-hidden />
+                    Done
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => {
+                      dictation.cancel();
+                      setTyping(true);
+                      queueMicrotask(() => inputRef.current?.focus());
+                    }}
+                    className="rounded-full px-3 py-2 text-[13px] font-semibold text-ink-soft hover:bg-paper-deep"
+                    data-capture-type-instead
+                  >
+                    Type it instead
+                  </button>
+                  <button
+                    onClick={dictation.toggle}
+                    disabled={dictation.phase !== "idle"}
+                    className="flex items-center gap-2 rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-paper disabled:opacity-40"
+                    data-capture-start
+                  >
+                    <MicIcon listening={false} />
+                    Start
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         )}
 
