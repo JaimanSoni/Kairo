@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { StandupButton } from "./standup";
 import type { Task } from "@/lib/types";
 import { fullDate, fmtMinutes, localDayOf, parseDateStr, weekdayName } from "@/lib/dates";
 
@@ -136,6 +137,10 @@ export function TodayView() {
             <span className="sm:hidden">{shortDate(today)}</span>
             <span className="hidden sm:inline">{fullDate(today)}</span>
           </span>
+        </div>
+        {/* the one thing some people have to do before anything else */}
+        <div className="mt-3.5 empty:mt-0">
+          <StandupButton />
         </div>
         <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-ink-soft">
           {totalEstimate > 0 && (

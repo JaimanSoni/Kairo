@@ -1,5 +1,6 @@
 import type { List } from "./types";
 import { sanitizeRepeat, type Repeat } from "./repeat";
+import { tidyLines, type StandupLines, type StandupTask } from "./standup";
 
 export type AiParsed = {
   title: string;
@@ -355,4 +356,83 @@ function validateAgainstInput(input: string, tasks: AiParsed[]): AiParsed[] {
     }
     return true;
   });
+}
+
+/* ---------------------------------------------------------------- standup */
+
+/**
+ * The daily standup, written out of what was actually ticked off.
+ *
+ * The hard part is not the facts, it is the register. Ask a model for a
+ * "status update" and it writes like a press release: leveraged, aligned,
+ * spearheaded, end-to-end. Nobody talks like that to their own team, and a
+ * channel full of it is a channel nobody reads. So the prompt spends most of
+ * its length on how to sound, and almost none on what to include -- because
+ * what to include is already decided by what the person ticked off.
+ *
+ * It returns the lines, not the message: the headings and the bullets are
+ * ours to put on, so the shape is identical every morning whatever the model
+ * does.
+ */
+export async function aiStandup(
+  yesterday: StandupTask[],
+  today: StandupTask[]
+): Promise<StandupLines | null> {
+  if (yesterday.length === 0 && today.length === 0) return null;
+
+  const show = (tasks: StandupTask[]) =>
+    tasks.length === 0 ? "  (nothing)" : tasks.map((t) => `  - ${t.title}${t.list ? `  [${t.list}]` : ""}`).join("\n");
+
+  const system = `You write one person's morning standup for their team's chat channel.
+
+Reply with ONLY a raw JSON object, no markdown fences, no commentary, of EXACTLY this shape:
+{"yesterday": [string, ...], "today": [string, ...]}
+
+HOW A LINE HAS TO SOUND
+Like telling a colleague at the next desk what you are up to. Short, plain, specific, a little bit dull. Somebody reading it should know what you are working on, and that is the whole job.
+Yesterday's lines are finished work, in the past: "Fixed the login redirect", "Sent the Q3 numbers to Priya".
+Today's lines are what you are getting on with: "Finishing the payment retries", "Starting on the venue import".
+Keep the real nouns out of the task -- the feature, the client, the file, the person. That is the only part anyone else needs.
+
+NEVER use these words, or anything that sounds like them:
+leverage, align, alignment, synergy, deep dive, circle back, bandwidth, streamline, spearhead, drive, driving, robust, seamless, utilise, facilitate, ideate, roadmap, stakeholder, deliverable, action item, end-to-end, holistic, optimise, enable, unlock, impactful, key, various, multiple, several, successfully, efficiently, as per, kindly, EOD, ASAP, KPI, ETA.
+No greeting, no "Hi team", no sign-off, no emoji, no headings, no numbering, no bullet characters. Only the lines.
+Do not write "Worked on" more than once; say what was actually done instead.
+
+WHAT GOES IN
+One line per thing. Tasks that are plainly the same piece of work become one line; unrelated ones stay apart.
+A title that says little on its own ("deck", "ravi", "follow up") gets a line as plain as it stands -- "Worked on the deck" -- and never gets detail it does not have. A thin line is fine. An invented one is not.
+Leave out anything that is not work: shopping, gym, family, doctors, bills, anything personal. This goes in a work channel.
+At most 8 lines in each list. If a list has nothing in it, return [] for that one.
+Use only what you are given. Never invent a task, a name, a number or a date.
+
+EXAMPLES
+Given yesterday: "fix login bug", "reply to ravi about the quotation", "buy paneer"
+-> {"yesterday":["Fixed the login bug","Replied to Ravi about the quotation"],"today":[]}
+(the groceries are not the team's business)
+
+Given yesterday: "deck", "deck feedback from ops"
+-> {"yesterday":["Worked on the deck and went through the feedback from ops"],"today":[]}
+(one piece of work, one line, and no detail invented for "deck")
+
+Given today: "finish payment retries", "standup notes", "venue import script"
+-> {"yesterday":[],"today":["Finishing the payment retries","Writing up the standup notes","Starting on the venue import script"]}`;
+
+  const user = `Finished yesterday:\n${show(yesterday)}\n\nPlanned for today:\n${show(today)}`;
+
+  const t0 = Date.now();
+  let content = await callOllama(system, user);
+  if (!content && Date.now() - t0 < 2500) content = await callOllama(system, user);
+  if (!content) return null;
+
+  const raw = extractJson(content);
+  if (!raw) return null;
+
+  const lines: StandupLines = {
+    yesterday: tidyLines(raw.yesterday),
+    today: tidyLines(raw.today),
+  };
+  // an answer with nothing in either list is not an answer
+  if (lines.yesterday.length === 0 && lines.today.length === 0) return null;
+  return lines;
 }
