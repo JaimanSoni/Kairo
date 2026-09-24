@@ -1,4 +1,5 @@
 import type { List } from "./types";
+import { sanitizeRepeat, type Repeat } from "./repeat";
 
 export type AiParsed = {
   title: string;
@@ -10,6 +11,15 @@ export type AiParsed = {
   listName: string | null;
   spotlight: boolean;
   subtasks: string[];
+  /**
+   * A recurrence rule, when the user said one.
+   *
+   * This used to be the one thing the local parser did that the model could
+   * not, so a capture's rule was lifted off a second, local parse and pasted
+   * onto the model's first task. With nothing parsing captures but the model,
+   * "gym every monday" has to survive here or it does not survive at all.
+   */
+  repeat: Repeat | null;
 };
 
 const OLLAMA_URL = "https://ollama.com/api/chat";
@@ -67,10 +77,30 @@ function systemPrompt(today: string, time: string, lists: List[]): string {
 
   return `You extract structured tasks from messy natural language, often a voice transcript in Indian English.
 Reply with ONLY a raw JSON object, no markdown fences, no commentary, of EXACTLY this shape:
-{"tasks": [{"title": string, "plannedFor": "YYYY-MM-DD" or null, "plannedTime": "HH:MM" or null, "dueDate": "YYYY-MM-DD" or null, "estimateMin": integer or null, "listName": string or null, "spotlight": boolean, "subtasks": [strings]}]}
+{"tasks": [{"title": string, "plannedFor": "YYYY-MM-DD" or null, "plannedTime": "HH:MM" or null, "dueDate": "YYYY-MM-DD" or null, "estimateMin": integer or null, "listName": string or null, "spotlight": boolean, "subtasks": [strings], "repeat": null or {"type":"daily","interval":N} or {"type":"weekly","weekdays":[0-6]} or {"type":"monthly","dayOfMonth":N}}]}
+
+WHAT YOU ARE READING
+Usually someone talking, out loud, unrehearsed — not a typed list. They think mid-sentence, repeat themselves, change their minds, say things that are not tasks at all, and mix Hindi and English in one breath. Your job is to hear the commitments inside that and leave the rest of it alone.
+
+A task is something the person intends to DO. These are NOT tasks, and must never appear in the output:
+  - how they feel or what they notice: "I'm so tired today", "traffic was mad"
+  - things already finished: "I already called mom", "sent the invoice this morning"
+  - wishes and idle thoughts with no intent: "I wish I could go to Goa sometime"
+  - talking to the app: "okay so", "let me think", "add this to my list", "note this down"
+  - questions they are asking themselves out loud, unless they resolve into a decision to do something
+If NOTHING in the input is a task, return exactly {"tasks": []}. That is a correct and useful answer. Never pad the output with the raw text as a task to have something to say.
+
+CHANGING THEIR MIND
+People correct themselves out loud: "call Ravi on Monday — no wait, Tuesday", "move it to 6, actually 7". The LAST thing they say about a task wins, and the correction never becomes a second task. Words like "no", "wait", "actually", "sorry", "I mean", "scratch that" mark a correction.
+
+SAID TWICE IS ONCE
+The same commitment mentioned more than once in one capture is ONE task, with every detail they gave it across all the mentions.
 
 CRITICAL — ANTI-HALLUCINATION
-Use ONLY words, dates, and actions the user actually said. NEVER invent a task that isn't mentioned in the input. If the input is unclear or you can't parse it, return a single task with the raw text as title and null for everything else. It is ALWAYS better to return one safe task than to guess.
+Use ONLY words, dates, and actions the user actually said. NEVER invent a task that isn't mentioned in the input. When something IS clearly a commitment but you cannot make out its details, keep the person's own words as the title and leave every other field null. Guessing a date is worse than leaving it empty.
+
+HINDI AND HINGLISH
+Write the title in English, but keep names, places and specifics exactly as said. "kal Ravi ko call karna hai" is "Call Ravi" planned for tomorrow. "paneer lena hai" is "Buy paneer". Never translate a person's name or a brand.
 
 HOW MANY TASKS
 One capture often contains SEVERAL distinct tasks joined by "and", "also", "then", "after that", or just run together. Output one task object per distinct action, in the order spoken, at most ${MAX_TASKS}.
@@ -103,28 +133,48 @@ estimateMin: any stated or implied duration: "within 30 mins"=30, "half an hour"
 listName: pick the ONE list whose MEANING fits (fruits or supermarket goes to a groceries-style list, gym or run to a fitness-style list, office work to a work-style list). Copy the name EXACTLY from: [${listNames}]. If none fits, null. NEVER invent a list.
 spotlight: true only for explicit priority language (most important, top priority, must do today, critical).
 subtasks: only when the user lists multiple concrete steps of THIS task; each short and imperative. Usually [].
+repeat: ONLY when the user says it happens again and again — "every monday", "daily", "every two days", "every month on the 5th", "every weekday". weekdays are 0=Sun..6=Sat, so "every monday" is {"type":"weekly","weekdays":[1]} and "every weekday" is {"type":"weekly","weekdays":[1,2,3,4,5]}. "daily" is {"type":"daily","interval":1}, "every other day" is {"type":"daily","interval":2}. A single future date is NOT a repeat. Otherwise null.
 Never invent dates, times, durations or steps. When unsure, use null.
 
 EXAMPLES (dates resolved with the calendar above; lists here are illustrative, always use the user's actual list names)
 "go for shopping next weekend and buy some fruits"
--> {"tasks":[{"title":"Go shopping and buy fruits","plannedFor":"${fmt(nextWeekendSat)}","plannedTime":null,"dueDate":null,"estimateMin":null,"listName":"Groceries","spotlight":false,"subtasks":[]}]}
+-> {"tasks":[{"title":"Go shopping and buy fruits","plannedFor":"${fmt(nextWeekendSat)}","plannedTime":null,"dueDate":null,"estimateMin":null,"listName":"Groceries","spotlight":false,"subtasks":[],"repeat":null}]}
 (one errand, not two tasks: the fruits are part of the shopping trip)
 "call the bank tomorrow at 11 and gym today at 7"
--> {"tasks":[{"title":"Call the bank","plannedFor":"${fmt(plus(1))}","plannedTime":"11:00","dueDate":null,"estimateMin":null,"listName":null,"spotlight":false,"subtasks":[]},{"title":"Gym session","plannedFor":"${today}","plannedTime":"19:00","dueDate":null,"estimateMin":null,"listName":"Fitness","spotlight":false,"subtasks":[]}]}
+-> {"tasks":[{"title":"Call the bank","plannedFor":"${fmt(plus(1))}","plannedTime":"11:00","dueDate":null,"estimateMin":null,"listName":null,"spotlight":false,"subtasks":[],"repeat":null},{"title":"Gym session","plannedFor":"${today}","plannedTime":"19:00","dueDate":null,"estimateMin":null,"listName":"Fitness","spotlight":false,"subtasks":[],"repeat":null}]}
 (two independent actions, each with its own day and time)
 "call mom today evening 6pm and go to gym tomorrow morning"
--> {"tasks":[{"title":"Call mom","plannedFor":"${today}","plannedTime":"18:00","dueDate":null,"estimateMin":null,"listName":null,"spotlight":false,"subtasks":[]},{"title":"Go to gym","plannedFor":"${fmt(plus(1))}","plannedTime":"09:00","dueDate":null,"estimateMin":null,"listName":"Fitness","spotlight":false,"subtasks":[]}]}
+-> {"tasks":[{"title":"Call mom","plannedFor":"${today}","plannedTime":"18:00","dueDate":null,"estimateMin":null,"listName":null,"spotlight":false,"subtasks":[],"repeat":null},{"title":"Go to gym","plannedFor":"${fmt(plus(1))}","plannedTime":"09:00","dueDate":null,"estimateMin":null,"listName":"Fitness","spotlight":false,"subtasks":[],"repeat":null}]}
 (two tasks, different days, each with its own day-part time)
 "call mom in the morning and go to college tomorrow"
--> {"tasks":[{"title":"Call mom","plannedFor":"${time < "09:00" ? today : fmt(plus(1))}","plannedTime":"09:00","dueDate":null,"estimateMin":null,"listName":null,"spotlight":false,"subtasks":[]},{"title":"Go to college","plannedFor":"${fmt(plus(1))}","plannedTime":null,"dueDate":null,"estimateMin":null,"listName":null,"spotlight":false,"subtasks":[]}]}
+-> {"tasks":[{"title":"Call mom","plannedFor":"${time < "09:00" ? today : fmt(plus(1))}","plannedTime":"09:00","dueDate":null,"estimateMin":null,"listName":null,"spotlight":false,"subtasks":[],"repeat":null},{"title":"Go to college","plannedFor":"${fmt(plus(1))}","plannedTime":null,"dueDate":null,"estimateMin":null,"listName":null,"spotlight":false,"subtasks":[],"repeat":null}]}
 (two tasks; "in the morning" with no day means the next morning from right now)
 "i want to add a new feature in the linkedin agent; call mom at 7 pm to remind her for dinner; build a new agent"
--> {"tasks":[{"title":"Add a new feature in the LinkedIn agent","plannedFor":null,"plannedTime":null,"dueDate":null,"estimateMin":null,"listName":"Work","spotlight":false,"subtasks":[]},{"title":"Call mom to remind her for dinner","plannedFor":"${today}","plannedTime":"19:00","dueDate":null,"estimateMin":null,"listName":null,"spotlight":false,"subtasks":[]},{"title":"Build a new agent","plannedFor":null,"plannedTime":null,"dueDate":null,"estimateMin":null,"listName":"Work","spotlight":false,"subtasks":[]}]}
+-> {"tasks":[{"title":"Add a new feature in the LinkedIn agent","plannedFor":null,"plannedTime":null,"dueDate":null,"estimateMin":null,"listName":"Work","spotlight":false,"subtasks":[],"repeat":null},{"title":"Call mom to remind her for dinner","plannedFor":"${today}","plannedTime":"19:00","dueDate":null,"estimateMin":null,"listName":null,"spotlight":false,"subtasks":[],"repeat":null},{"title":"Build a new agent","plannedFor":null,"plannedTime":null,"dueDate":null,"estimateMin":null,"listName":"Work","spotlight":false,"subtasks":[],"repeat":null}]}
 (three tasks: semicolons separate them, and the two work items are different pieces of work, so they never merge)
 "umm I have to finish the client report we have to complete it within 30 mins also book flights for goa"
--> {"tasks":[{"title":"Finish the client report","plannedFor":null,"plannedTime":null,"dueDate":null,"estimateMin":30,"listName":"Work","spotlight":false,"subtasks":[]},{"title":"Book flights for Goa","plannedFor":null,"plannedTime":null,"dueDate":null,"estimateMin":null,"listName":null,"spotlight":false,"subtasks":[]}]}
+-> {"tasks":[{"title":"Finish the client report","plannedFor":null,"plannedTime":null,"dueDate":null,"estimateMin":30,"listName":"Work","spotlight":false,"subtasks":[],"repeat":null},{"title":"Book flights for Goa","plannedFor":null,"plannedTime":null,"dueDate":null,"estimateMin":null,"listName":null,"spotlight":false,"subtasks":[],"repeat":null}]}
+"okay so umm today was pretty rough, anyway I need to call Ravi about the quotation, uh tomorrow I think, and I really should hit the gym, I keep saying that"
+-> {"tasks":[{"title":"Call Ravi about the quotation","plannedFor":"${fmt(plus(1))}","plannedTime":null,"dueDate":null,"estimateMin":null,"listName":null,"spotlight":false,"subtasks":[],"repeat":null},{"title":"Hit the gym","plannedFor":null,"plannedTime":null,"dueDate":null,"estimateMin":null,"listName":"Fitness","spotlight":false,"subtasks":[],"repeat":null}]}
+(the tiredness and "I keep saying that" are not tasks; "I really should" is still an intent)
+
+"call Ravi on monday, no wait, tuesday is better"
+-> {"tasks":[{"title":"Call Ravi","plannedFor":"${fmt(plus(((2 - dow + 7) % 7) || 7))}","plannedTime":null,"dueDate":null,"estimateMin":null,"listName":null,"spotlight":false,"subtasks":[],"repeat":null}]}
+(one task, corrected — never two)
+
+"I already paid the rent, and I'm so done with this week"
+-> {"tasks":[]}
+(finished, and a feeling — nothing to do)
+
+"gym every monday and wednesday at 7 am"
+-> {"tasks":[{"title":"Gym","plannedFor":null,"plannedTime":"07:00","dueDate":null,"estimateMin":null,"listName":"Fitness","spotlight":false,"subtasks":[],"repeat":{"type":"weekly","weekdays":[1,3]}}]}
+
+"kal shaam ko Shreya ko call karna hai aur paneer bhi lena hai"
+-> {"tasks":[{"title":"Call Shreya","plannedFor":"${fmt(plus(1))}","plannedTime":"19:00","dueDate":null,"estimateMin":null,"listName":null,"spotlight":false,"subtasks":[],"repeat":null},{"title":"Buy paneer","plannedFor":"${fmt(plus(1))}","plannedTime":null,"dueDate":null,"estimateMin":null,"listName":"Groceries","spotlight":false,"subtasks":[],"repeat":null}]}
+(two tasks; the evening belongs to the call, tomorrow covers both)
+
 "submit the tax file by friday"
--> {"tasks":[{"title":"Submit the tax file","plannedFor":null,"plannedTime":null,"dueDate":"${fmt(plus(((5 - dow + 7) % 7) || 7))}","estimateMin":null,"listName":null,"spotlight":false,"subtasks":[]}]}`;
+-> {"tasks":[{"title":"Submit the tax file","plannedFor":null,"plannedTime":null,"dueDate":"${fmt(plus(((5 - dow + 7) % 7) || 7))}","estimateMin":null,"listName":null,"spotlight":false,"subtasks":[],"repeat":null}]}`;
 }
 
 /** Pulls the first JSON object out of a possibly fenced / chatty response. */
@@ -179,6 +229,8 @@ function sanitizeOne(raw: Record<string, unknown>, lists: List[]): AiParsed | nu
     listName: list?.name ?? null,
     spotlight: raw.spotlight === true,
     subtasks,
+    // the same check the API uses on a rule typed by hand
+    repeat: sanitizeRepeat(raw.repeat) ?? null,
   };
 }
 
@@ -245,6 +297,17 @@ export async function aiParseTasks(
 
   const raw = extractJson(content);
   if (!raw) return null;
+
+  /**
+    * An empty list is an answer, not a failure.
+    *
+    * People think out loud, and most of what they say is not a task: "I'm so
+    * tired, the traffic was insane" contains nothing to do, and the model
+    * saying so is it working. Returning null here instead made the capture
+    * report that the AI could not be reached, which is a lie about the one
+    * case the prompt is proudest of.
+    */
+  if (Array.isArray(raw.tasks) && raw.tasks.length === 0) return [];
 
   // accept both the asked-for {tasks:[...]} and a bare single object
   const items = Array.isArray(raw.tasks) ? raw.tasks : [raw];

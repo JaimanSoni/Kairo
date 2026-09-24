@@ -25,6 +25,23 @@ import { polish, type Fix, type Vocab } from "@/lib/dictation/polish";
 import { askPermission } from "../permission-ask";
 
 export type Phase = "idle" | "fetching" | "warming" | "listening" | "thinking";
+
+/**
+ * Whether the microphone is already ours to use.
+ *
+ * The point is to find out without asking: a capture that opens listening is
+ * a delight the second time and an ambush the first, and a permission prompt
+ * nobody expected is how permissions get denied for good. Browsers that will
+ * not answer this question are treated as a no.
+ */
+export async function micAlreadyAllowed(): Promise<boolean> {
+  try {
+    const r = await navigator.permissions?.query({ name: "microphone" as PermissionName });
+    return r?.state === "granted";
+  } catch {
+    return false;
+  }
+}
 export type Engine = "device" | "browser";
 
 export type Heard = { text: string; engine: Engine; fixes: Fix[]; ms: number };

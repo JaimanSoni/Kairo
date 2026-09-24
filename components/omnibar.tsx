@@ -2,16 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Task } from "@/lib/types";
-import { parseQuickAdd, type ParsedInput } from "@/lib/nlp";
 import { friendlyDay, fmtMinutes, fmtTime12 } from "@/lib/dates";
 import { repeatLabel, type Repeat } from "@/lib/repeat";
 import { guestCapReached, hiddenListIds, useApp, visibleLists } from "./store";
 import { commandDone, commandSentence, matchTasks, parseCommand, pickOne, type Action } from "@/lib/commands";
 
 import { track } from "@/lib/analytics-client";
-import { useDictation } from "./dictation/use-dictation";
+import { micAlreadyAllowed, useDictation } from "./dictation/use-dictation";
 import { DictationLine } from "./dictation/dictation-line";
-import { DictationOffer, useDictationOffer } from "./dictation/offer";
+import { Orb } from "./dictation/orb";
 import { buildVocab } from "@/lib/dictation/polish";
 import { IconX, Modal } from "./ui";
 import { captureJournalLine, captureNote, type CaptureResult } from "./capture-targets";
@@ -66,10 +65,10 @@ type AiParsed = {
  * run of thoughts down fast. Voice input via the Web Speech API where available.
  */
 /** What the expanding lower section is showing. */
-type Phase = "input" | "thinking" | "done" | "choose";
+type Phase = "input" | "thinking" | "done" | "choose" | "failed";
 
 export function Omnibar() {
-  const { state, addTask, getTask, updateTask, completeTask, uncompleteTask, deleteTask, startFocus, setOmnibar, showToast } = useApp();
+  const { state, addTask, updateTask, completeTask, uncompleteTask, deleteTask, startFocus, setOmnibar, showToast } = useApp();
   const [text, setText] = useState("");
   const guest = Boolean(state.user.guest);
   const modes: { id: CaptureMode; label: string }[] = [
@@ -88,7 +87,10 @@ export function Omnibar() {
   const [result, setResult] = useState<AiParsed[] | null>(null);
   // true when the preview is the local fallback, not an AI answer — the
   // difference must be visible, or a failed call looks like a bad parse
-  const [aiFell, setAiFell] = useState(false);
+  /** Why the last capture produced nothing, when it produced nothing. */
+  const [trouble, setTrouble] = useState<"unreachable" | "nothing" | null>(null);
+  /** The words as they were said, kept so a failure can hand them straight back. */
+  const [said, setSaid] = useState("");
   // guest bookkeeping, straight from the server's mouth: how many free AI
   // runs remain, and whether the well is dry (429)
   const [aiLeft, setAiLeft] = useState<number | null>(null);
@@ -100,10 +102,9 @@ export function Omnibar() {
   const lastRawRef = useRef("");
   const inputRef = useRef<HTMLInputElement>(null);
   const micRef = useRef<HTMLButtonElement>(null);
+  const orbRef = useRef<HTMLButtonElement>(null);
 
   const lists = useMemo(() => visibleLists(state), [state]);
-  const parsed = useMemo(() => parseQuickAdd(text, lists), [text, lists]);
-
   /* an instruction about something that already exists, and the task it means */
   const command = useMemo(() => (activeMode === "task" && text.trim() ? parseCommand(text, lists, state.today) : null), [activeMode, text, lists, state.today]);
   const reachable = useMemo(() => {
@@ -137,14 +138,47 @@ export function Omnibar() {
     vocab,
     onHeard: ({ text: heard }) => {
       setText(heard);
-      queueMicrotask(() => inputRef.current?.focus());
+      // Spoken captures go straight through. Reading your own words back and
+      // pressing a button is the typing this replaced; if it comes out wrong
+      // the preview is still a preview, and nothing is filed without it.
+      if (activeMode === "task") queueMicrotask(() => submit(false, heard));
+      else queueMicrotask(() => inputRef.current?.focus());
     },
     onInterim: setText,
     onTrouble: (message) => showToast({ message }),
   });
   const listening = dictation.phase === "listening";
-  const [offered, setOffered] = useState(true);
-  const offerDictation = useDictationOffer(dictation.lastEngine, dictation.onDevice) && offered;
+  /**
+   * Capture opens listening.
+   *
+   * Talking is the fastest way to get a thought out of your head, and asking
+   * somebody to choose it every time is asking them to type. So the box opens
+   * on the microphone and typing is the thing you switch to, not the thing
+   * you start from -- and it switches the moment anyone touches a key.
+   */
+  const [typing, setTyping] = useState(false);
+  const voice = activeMode === "task" && dictation.supported && !typing;
+
+  /**
+   * Start listening as the panel opens, but only where that cannot surprise
+   * anyone: the microphone has to have been allowed already. The first time,
+   * the orb waits to be tapped, because a permission prompt nobody asked for
+   * is how permissions get denied forever.
+   */
+  useEffect(() => {
+    if (activeMode !== "task") return;
+    let dropped = false;
+    void (async () => {
+      const allowed = await micAlreadyAllowed();
+      if (!dropped && allowed) dictation.toggle();
+    })();
+    return () => {
+      dropped = true;
+    };
+    // this panel is mounted only while it is open, so mount is open
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
 
   /**
    * The meter on the microphone, written straight to the element.
@@ -157,10 +191,15 @@ export function Omnibar() {
   useEffect(() => {
     if (!listening) {
       micRef.current?.style.removeProperty("--heard");
+      // only the level: the element's own size lives in that attribute too
+      (orbRef.current?.firstElementChild as HTMLElement | null)?.style.removeProperty("--heard");
       return;
     }
     const tick = window.setInterval(() => {
-      micRef.current?.style.setProperty("--heard", dictation.level().toFixed(2));
+      const heard = dictation.level().toFixed(2);
+      micRef.current?.style.setProperty("--heard", heard);
+      // the orb reads it off its own element, so the whole panel never re-renders
+      (orbRef.current?.firstElementChild as HTMLElement | null)?.style.setProperty("--heard", heard);
     }, 70);
     return () => window.clearInterval(tick);
   }, [listening, dictation]);
@@ -279,9 +318,9 @@ export function Omnibar() {
     }
   };
 
-  const submit = (keepOpen: boolean) => {
+  const submit = (keepOpen: boolean, spoken?: string) => {
     if (phase !== "input") return;
-    const raw = text.trim();
+    const raw = (spoken ?? text).trim();
     if (!raw) return;
     if (activeMode !== "task") {
       void saveElsewhere(raw, keepOpen);
@@ -298,100 +337,74 @@ export function Omnibar() {
     // separate names so the funnel can count guests who actually tried it
     track(state.user.guest ? "guest-capture" : "capture");
 
-    // rapid entry (shift+enter): instant local-parse capture + bg AI refine
-    if (keepOpen) {
-      const local = parseQuickAdd(raw, lists);
-      if (!local.title) local.title = raw;
-      const idPromise = addTask(local);
-      setText("");
-      if (state.user.guest) {
-        // rapid entry stays local for guests: burning a free AI run on a
-        // background refine nobody watched would be a waste of the three
-        showToast({ message: "Added." });
-        return;
-      }
-      void aiParse(raw).then(async ({ tasks: parsed }) => {
-        const id = await idPromise;
-        if (!id) return;
-        const current = getTask(id);
-        if (!current || current.status === "done") return;
-        if (parsed.length > 0) {
-          const [first, ...extras] = parsed;
-          applyAiToTask(first, current, id, local);
-          for (const x of extras) await createTaskFromAiPreset(x);
-        }
-        showToast({
-          message:
-            parsed.length > 0 ? "Added." : "Added as you typed it.",
-        });
-      });
-      return;
-    }
-
-    // full reveal: AI parses → show preview → user clicks Done to create.
-    // Closing the panel before Done files NOTHING, by design: the preview is
-    // a consent screen, and consent withheld means no writes.
-    const local = parseQuickAdd(raw, lists);
-    if (!local.title) local.title = raw;
+    // Rapid entry (shift+enter) files straight through, without the preview,
+    // and then stays open. It still goes through the same parse as everything
+    // else: there is one thing in this app that turns talk into tasks, and a
+    // faster, worse second one filing quietly behind it was never a kindness.
     setText("");
     lastRawRef.current = raw;
-    runReveal(raw, local);
+    setSaid(raw);
+    runReveal(raw, keepOpen);
   };
 
-  /** The reveal pipeline, reusable so a failed AI call can be retried. */
-  const runReveal = (raw: string, local: ParsedInput) => {
+  /**
+   * Turn what was said into tasks, and show them.
+   *
+   * There is no second parser behind this one. When the parse cannot be had,
+   * the capture says so and offers to try again, and it keeps every word the
+   * person said so nothing is lost while they decide. Filing a worse guess
+   * under the same button looked like the app understood when it had not,
+   * and a plan built out of those is worse than no plan.
+   */
+  const runReveal = (raw: string, fileAtOnce = false) => {
     setPhase("thinking");
-    setAiFell(false);
-    // guests get the real AI too — the server counts their 3 free runs
+    setTrouble(null);
     const parsed = aiParse(raw);
-    // must outlast the server's Ollama leash (15s) plus overhead, or the
-    // client gives up on answers that were still coming
-    const timeout = new Promise<AiOutcome | null>((r) =>
-      setTimeout(() => r(null), 20000)
-    );
+    // must outlast the server's leash (15s) plus overhead, or the client
+    // gives up on answers that were still coming
+    const timeout = new Promise<AiOutcome | null>((r) => setTimeout(() => r(null), 20000));
     void (async () => {
       const started = Date.now();
       const outcome = await Promise.race([parsed, timeout]);
-      let tasks: AiParsed[] | null = outcome?.tasks ?? null;
-      // if AI returned nothing or timed out, fall back to local single-task
-      // parse — and say so, because a silent fallback looks like a bad parse
-      const fell = !tasks || tasks.length === 0;
-      if (!tasks || tasks.length === 0) {
-        tasks = [{
-          title: local.title,
-          plannedFor: local.plannedFor,
-          plannedTime: local.plannedTime,
-          dueDate: local.dueDate,
-          estimateMin: local.estimateMin,
-          listId: local.listId,
-          listName: local.listName,
-          spotlight: local.spotlight,
-          subtasks: [],
-        }];
-      }
-      // AI never sets repeats, so "every monday" would silently vanish here:
-      // the local parse's rule rides on the first task it plainly belongs to
-      if (local.repeat && !tasks[0].repeat) {
-        tasks = [{ ...tasks[0], repeat: local.repeat }, ...tasks.slice(1)];
-      }
-      const wait = Math.max(0, 450 - (Date.now() - started));
-      await new Promise((r) => setTimeout(r, wait));
+      const tasks = outcome?.tasks ?? null;
       setAiLeft(outcome?.left ?? null);
       setAiLimited(outcome?.limited ?? false);
-      setAiFell(fell);
+
+      if (!tasks) {
+        setTrouble("unreachable");
+        setPhase("failed");
+        return;
+      }
+      // Understood, and there was nothing in it to do. That is an answer, not
+      // a failure: people think out loud, and most of a sentence is not a task.
+      if (tasks.length === 0) {
+        setTrouble("nothing");
+        setPhase("failed");
+        return;
+      }
+
+      const wait = Math.max(0, 450 - (Date.now() - started));
+      await new Promise((r) => setTimeout(r, wait));
       setResult(tasks);
+      // rapid entry: file them and stay open for the next thought
+      if (fileAtOnce) {
+        filingRef.current = true;
+        for (const p of tasks) await createTaskFromAiPreset(p);
+        filingRef.current = false;
+        showToast({ message: tasks.length === 1 ? "Added." : `Added ${tasks.length} tasks.` });
+        again();
+        return;
+      }
       setPhase("done");
     })();
   };
 
-  /** Re-run the AI on the same capture after a failed call. */
+  /** Try the same words again. */
   const retryAi = () => {
     const raw = lastRawRef.current;
     if (!raw || filingRef.current) return;
-    const local = parseQuickAdd(raw, lists);
-    if (!local.title) local.title = raw;
     setResult(null);
-    runReveal(raw, local);
+    runReveal(raw);
   };
 
   /**
@@ -439,57 +452,12 @@ export function Omnibar() {
     );
   };
 
-  /** Apply AI parsed values to an already-created task (rapid-entry path). */
-  const applyAiToTask = (ai: AiParsed, task: Task, id: string, local: ParsedInput) => {
-    const patch: Partial<Task> = {};
-    const untouched = <K extends keyof Task>(k: K, localVal: Task[K]) =>
-      task[k] === localVal;
-
-    if (ai.title && ai.title !== task.title && untouched("title", local.title)) {
-      patch.title = ai.title;
-    }
-    if (ai.plannedFor && ai.plannedFor !== task.plannedFor && untouched("plannedFor", local.plannedFor)) {
-      patch.plannedFor = ai.plannedFor;
-      if (task.status === "inbox") patch.status = "planned";
-    }
-    if (
-      ai.plannedTime &&
-      ai.plannedTime !== task.plannedTime &&
-      untouched("plannedTime", local.plannedTime) &&
-      (patch.plannedFor || task.plannedFor)
-    ) {
-      patch.plannedTime = ai.plannedTime;
-    }
-    if (ai.dueDate && ai.dueDate !== task.dueDate && untouched("dueDate", local.dueDate)) {
-      patch.dueDate = ai.dueDate;
-    }
-    if (ai.estimateMin && ai.estimateMin !== task.estimateMin && untouched("estimateMin", local.estimateMin)) {
-      patch.estimateMin = ai.estimateMin;
-    }
-    if (ai.listId && ai.listId !== task.listId && untouched("listId", local.listId)) {
-      patch.listId = ai.listId;
-    }
-    if (ai.spotlight && !task.spotlight && untouched("spotlight", local.spotlight)) {
-      const spotCount = Object.values(state.tasks).filter(
-        (t) => t.spotlight && t.status !== "done"
-      ).length;
-      if (spotCount < 3) patch.spotlight = true;
-    }
-    if (ai.subtasks.length > 0 && task.subtasks.length === 0) {
-      patch.subtasks = ai.subtasks.map((t) => ({
-        id: crypto.randomUUID(),
-        title: t,
-        done: false,
-      }));
-    }
-    if (Object.keys(patch).length > 0) updateTask(id, patch);
-  };
 
   /** Back to a fresh input, same panel — for capturing the next one. */
   const again = () => {
     filingRef.current = false;
     setResult(null);
-    setAiFell(false);
+    setTrouble(null);
     setAiLeft(null);
     setAiLimited(false);
     setFiling(false);
@@ -519,17 +487,6 @@ export function Omnibar() {
       .filter((x): x is string => Boolean(x))
       .join(" · ");
 
-  /** What's been understood so far, as it's typed. */
-  const understood = [
-    parsed.plannedFor ? friendlyDay(parsed.plannedFor, state.today) : null,
-    parsed.plannedTime ? fmtTime12(parsed.plannedTime) : null,
-    parsed.dueDate ? `due ${friendlyDay(parsed.dueDate, state.today)}` : null,
-    parsed.estimateMin != null ? fmtMinutes(parsed.estimateMin) : null,
-    parsed.listName,
-    parsed.repeat ? `repeats ${repeatLabel(parsed.repeat)}` : null,
-    parsed.spotlight ? "spotlight" : null,
-  ].filter((x): x is string => Boolean(x));
-
   const placeholder = listening ? "Listening…" : activeMode === "note" ? "Write a note" : activeMode === "journal" ? "A line for today's page" : "What's on your mind?";
   const hint =
     activeMode === "note"
@@ -542,7 +499,54 @@ export function Omnibar() {
   return (
     <Modal onClose={() => setOmnibar(false)} anchor="top">
       <div className="p-5 sm:p-6" data-capture>
-        {phase === "input" && (
+        {phase === "input" && voice && (
+          <div className="flex flex-col items-center py-4" data-capture-voice>
+            <button
+              onClick={dictation.toggle}
+              disabled={dictation.phase === "thinking"}
+              ref={orbRef}
+              className="rounded-full outline-none transition-transform focus-visible:ring-2 focus-visible:ring-sun active:scale-[0.98]"
+              aria-label={listening ? "Stop listening" : "Start listening"}
+              data-capture-orb
+              data-orb-phase={dictation.phase}
+            >
+              <Orb state={listening ? "listening" : dictation.phase === "thinking" || dictation.phase === "fetching" ? "thinking" : "waiting"} />
+            </button>
+
+            <p className="mt-5 text-center text-[15px] font-medium text-ink" data-capture-voice-line>
+              {listening
+                ? "I'm listening…"
+                : dictation.phase === "thinking"
+                  ? "Writing that down…"
+                  : dictation.phase === "fetching"
+                    ? "Getting ready…"
+                    : "Tap, and say what's on your mind"}
+            </p>
+            <p className="mt-1 text-center text-[13px] leading-5 text-ink-soft">
+              {listening ? "Ramble. I'll pick the tasks out of it." : "Anything at all — I'll find the tasks in it."}
+            </p>
+
+            {dictation.progress && dictation.progress.total > 0 && (
+              <div className="mt-3 w-full max-w-64">
+                <DictationLine phase="fetching" progress={dictation.progress} onDevice={dictation.onDevice} />
+              </div>
+            )}
+
+            <button
+              onClick={() => {
+                dictation.cancel();
+                setTyping(true);
+                queueMicrotask(() => inputRef.current?.focus());
+              }}
+              className="mt-6 rounded-full px-3 py-1.5 text-[13px] font-semibold text-ink-soft hover:bg-paper-deep"
+              data-capture-type-instead
+            >
+              Type it instead
+            </button>
+          </div>
+        )}
+
+        {phase === "input" && !voice && (
           <>
             {/* what this becomes: a task unless you say otherwise */}
             {modes.length > 1 && (
@@ -598,7 +602,7 @@ export function Omnibar() {
               )}
               <button
                 onClick={() => submit(false)}
-                disabled={commanding ? false : activeMode === "task" ? !parsed.title : !text.trim() || saving}
+                disabled={commanding ? false : !text.trim() || saving}
                 title={commanding ? "Enter does it. Shift+Enter does it and keeps this open." : "Enter adds it. Shift+Enter adds it and keeps this open for the next one."}
                 className="h-9 shrink-0 rounded-xl bg-ink px-4 text-sm font-semibold text-paper transition-opacity disabled:opacity-25"
                 data-capture-add
@@ -606,17 +610,6 @@ export function Omnibar() {
                 {commanding ? "Do it" : activeMode === "task" ? "Add" : "Save"}
               </button>
             </div>
-
-            {offerDictation && (
-              <DictationOffer
-                onYes={() => {
-                  setOffered(false);
-                  dictation.useOnDevice(true);
-                  showToast({ message: "Dictation moves to this device on your next tap" });
-                }}
-                onNo={() => setOffered(false)}
-              />
-            )}
 
             {/* one quiet line: how to use it, or what's been understood so far */}
             <div className="mt-2.5 flex min-h-6 flex-wrap items-center gap-1.5 px-1 text-[13px] text-ink-faint" data-capture-line>
@@ -626,14 +619,8 @@ export function Omnibar() {
                 <span className="text-ink-soft" data-capture-command>
                   {only ? commandSentence(command.action, only.title, state.today) : matches.length + " of your tasks could be that one"}
                 </span>
-              ) : activeMode !== "task" || !text.trim() ? (
-                <span>{hint}</span>
               ) : (
-                understood.map((u) => (
-                  <span key={u} className="rounded-full bg-sun-soft px-2 py-0.5 text-xs font-medium text-sun-deep">
-                    {u}
-                  </span>
-                ))
+                <span>{hint}</span>
               )}
             </div>
           </>
@@ -674,6 +661,45 @@ export function Omnibar() {
           </div>
         )}
 
+        {/*
+          Nothing was filed, and every word is still here.
+          A capture that cannot be read is not a capture that gets guessed at:
+          it is handed back intact, so the thought is never the thing that was
+          lost. "Nothing to do in that" is an answer too -- people think out
+          loud, and most of a sentence is not a task.
+        */}
+        {phase === "failed" && (
+          <div className="anim-rise py-2" data-capture-failed={trouble ?? "unreachable"}>
+            <p className="text-sm font-medium text-ink">
+              {trouble === "nothing" ? "Nothing in that sounded like something to do." : "Couldn't read that just now."}
+            </p>
+            <p className="mt-1 text-[13px] leading-5 text-ink-soft">
+              {trouble === "nothing"
+                ? "Your words are still here, so you can add to them or say it another way."
+                : "Nothing was added, and your words are still here."}
+            </p>
+            <p className="mt-3 rounded-xl bg-paper-deep px-3.5 py-2.5 text-sm leading-6 text-ink-soft" data-capture-failed-words>
+              {said}
+            </p>
+            <div className="mt-4 flex items-center gap-2">
+              <button onClick={retryAi} className="rounded-full bg-ink px-4 py-2 text-sm font-semibold text-paper" data-capture-retry>
+                Try again
+              </button>
+              <button
+                onClick={() => {
+                  setText(said);
+                  setPhase("input");
+                  queueMicrotask(() => inputRef.current?.focus());
+                }}
+                className="rounded-full px-3 py-2 text-sm font-semibold text-ink-soft hover:bg-paper-deep"
+                data-capture-failed-edit
+              >
+                Edit it
+              </button>
+            </div>
+          </div>
+        )}
+
         {phase === "done" && result && (
           <div className="anim-rise" data-capture-preview>
             <h2 className="font-display text-xl leading-tight">{count === 1 ? "Here's your task" : `That's ${count} tasks`}</h2>
@@ -700,21 +726,14 @@ export function Omnibar() {
             </ul>
 
             {/* at most one footnote, and only when something needs saying */}
-            {(aiFell || (guest && (aiLimited || aiLeft != null))) && (
+            {guest && (aiLimited || aiLeft != null) && (
               <p className="mt-2.5 px-1 text-[13px] text-ink-faint" data-capture-note>
-                {guest && aiLimited ? (
+                {aiLimited ? (
                   <>
-                    Your 3 free AI captures are used, so this is as you typed it.{" "}
+                    Your 3 free AI captures are used.{" "}
                     <a href="/api/auth/google" data-track="guest-signin" className="font-semibold text-sun-deep hover:underline">
                       Sign in for unlimited
                     </a>
-                  </>
-                ) : aiFell ? (
-                  <>
-                    AI couldn&apos;t be reached, so this is as you typed it.{" "}
-                    <button onClick={retryAi} className="font-semibold text-sun-deep hover:underline">
-                      Try again
-                    </button>
                   </>
                 ) : (
                   <>

@@ -26,14 +26,16 @@ const WEIGHT_CACHE = "transformers-cache";
 export type Settings = { on: boolean; tier: Tier; language: string | null };
 
 export function readSettings(): Settings {
-  const fallback: Settings = { on: false, tier: suggestedTier(), language: "en" };
+  // On unless it was turned off. Dictation is not an extra here, so the
+  // absence of an answer is not a no -- only Settings saying so is.
+  const fallback: Settings = { on: true, tier: suggestedTier(), language: "en" };
   if (typeof localStorage === "undefined") return fallback;
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (!raw) return fallback;
     const saved = JSON.parse(raw) as Partial<Settings>;
     return {
-      on: saved.on === true,
+      on: saved.on !== false,
       tier: saved.tier && saved.tier in MODELS ? saved.tier : fallback.tier,
       language: saved.language === undefined ? "en" : saved.language,
     };

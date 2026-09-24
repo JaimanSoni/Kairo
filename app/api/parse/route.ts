@@ -71,6 +71,8 @@ export async function POST(request: Request) {
       await refundGuestParse(ip);
       return NextResponse.json({ error: "AI parse unavailable" }, { status: 502 });
     }
+    // nor must a capture that turned out to have nothing to do in it
+    if (parsed.length === 0) await refundGuestParse(ip);
     return NextResponse.json({ parsed, guestRunsLeft: gate.left });
   }
 

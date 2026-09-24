@@ -2574,6 +2574,178 @@ body[data-modal] .nt-float {
   }
 }
 
+/* ------------------------------------------------------------------ the orb
+   What you talk to in capture. Three tight masses of colour orbit inside a
+   dark circle, each on its own clock, so the surface never repeats and never
+   settles. `--heard` -- written to the element from the microphone's level,
+   never through React -- swells the ring around it and pushes the colour out.
+   Everything animates transform and opacity only, so speaking costs nothing
+   to repaint. */
+.cap-orb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  --heard: 0;
+  /* a voice peaks in spikes; a ring that tracks them exactly looks nervous */
+  --swell: calc(var(--heard) * 0.6);
+}
+.cap-orb-skin {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #071614;
+  /* the dark rim is what keeps it a body of light rather than a coloured ball */
+  box-shadow:
+    inset 0 0 22px 2px rgba(3, 12, 11, 0.72),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  /* the colours are light, not paint: lift them rather than adding more */
+  filter: saturate(1.25) brightness(1.12);
+  transform: scale(calc(1 + var(--swell) * 0.08));
+  transition: transform 110ms ease-out;
+}
+.cap-orb-lobe {
+  position: absolute;
+  inset: -6%;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  filter: blur(14px);
+  will-change: transform;
+}
+.cap-orb-a {
+  background: radial-gradient(circle at 32% 34%, rgba(38, 238, 208, 1), rgba(12, 170, 152, 0.45) 28%, transparent 48%);
+  animation: cap-orb-orbit-a 7.5s ease-in-out infinite;
+}
+.cap-orb-b {
+  background: radial-gradient(circle at 68% 42%, rgba(126, 240, 146, 0.95), rgba(76, 190, 104, 0.4) 26%, transparent 46%);
+  animation: cap-orb-orbit-b 11s ease-in-out infinite;
+}
+.cap-orb-c {
+  background: radial-gradient(circle at 50% 72%, rgba(104, 190, 255, 0.95), rgba(78, 160, 220, 0.38) 27%, transparent 48%);
+  animation: cap-orb-orbit-c 9.3s ease-in-out infinite;
+}
+/* a fourth, far dimmer, only to break up the other three */
+.cap-orb-d {
+  background: radial-gradient(circle at 60% 26%, rgba(196, 245, 226, 0.55), transparent 34%);
+  animation: cap-orb-orbit-b 14.7s ease-in-out infinite reverse;
+}
+/* a slow sheen turning over the top, so the surface reads as moving even when
+   the lobes happen to line up */
+.cap-orb-sheen {
+  position: absolute;
+  inset: -20%;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0%, rgba(255, 255, 255, 0.1) 18%, transparent 38%, transparent 100%);
+  mix-blend-mode: screen;
+  animation: cap-orb-turn 6.5s linear infinite;
+  will-change: transform;
+}
+/* the ring: quiet when nothing is being said, pushed out by a voice */
+.cap-orb-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 calc(1px + var(--swell) * 18px) rgba(12, 147, 132, calc(0.09 + var(--swell) * 0.24));
+  transition:
+    box-shadow 110ms ease-out,
+    opacity 300ms ease;
+}
+
+@keyframes cap-orb-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes cap-orb-orbit-a {
+  0%,
+  100% {
+    transform: translate3d(-9%, 6%, 0) scale(1.06);
+  }
+  33% {
+    transform: translate3d(8%, -7%, 0) scale(0.9);
+  }
+  66% {
+    transform: translate3d(3%, 9%, 0) scale(1.02);
+  }
+}
+@keyframes cap-orb-orbit-b {
+  0%,
+  100% {
+    transform: translate3d(7%, -5%, 0) scale(0.94);
+  }
+  40% {
+    transform: translate3d(-8%, 7%, 0) scale(1.08);
+  }
+  70% {
+    transform: translate3d(-2%, -8%, 0) scale(0.98);
+  }
+}
+@keyframes cap-orb-orbit-c {
+  0%,
+  100% {
+    transform: translate3d(4%, 8%, 0) scale(1.02);
+  }
+  45% {
+    transform: translate3d(-6%, -9%, 0) scale(0.92);
+  }
+  75% {
+    transform: translate3d(9%, 2%, 0) scale(1.06);
+  }
+}
+@keyframes cap-orb-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+/* waiting: breathing, and nothing more */
+.cap-orb-waiting .cap-orb-skin {
+  animation: cap-orb-breathe 4s ease-in-out infinite;
+}
+.cap-orb-waiting .cap-orb-glow {
+  opacity: 0.5;
+}
+
+/* listening: the colour comes forward with the voice */
+.cap-orb-listening .cap-orb-lobe {
+  filter: blur(calc(14px - var(--swell) * 5px));
+}
+.cap-orb-listening .cap-orb-skin {
+  filter: saturate(calc(1.25 + var(--swell) * 0.5)) brightness(calc(1.12 + var(--swell) * 0.22));
+}
+
+/* thinking: everything hurries, and the ring closes in */
+.cap-orb-thinking .cap-orb-lobe {
+  animation-duration: 2.2s;
+}
+.cap-orb-thinking .cap-orb-sheen {
+  animation-duration: 1.4s;
+}
+.cap-orb-thinking .cap-orb-skin {
+  animation: cap-orb-breathe 1.2s ease-in-out infinite;
+}
+.cap-orb-thinking .cap-orb-glow {
+  box-shadow: 0 0 0 3px rgba(12, 147, 132, 0.28);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cap-orb-lobe,
+  .cap-orb-sheen,
+  .cap-orb-skin {
+    animation: none;
+  }
+  .cap-orb-skin,
+  .cap-orb-glow {
+    transition: none;
+  }
+}
+
 .gd-sky-chip {
   transition: transform 0.2s;
 }
