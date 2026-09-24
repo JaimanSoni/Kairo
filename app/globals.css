@@ -2596,13 +2596,9 @@ body[data-modal] .nt-float {
   height: 100%;
   border-radius: 50%;
   overflow: hidden;
-  background: #071614;
-  /* the dark rim is what keeps it a body of light rather than a coloured ball */
-  box-shadow:
-    inset 0 0 22px 2px rgba(3, 12, 11, 0.72),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-  /* the colours are light, not paint: lift them rather than adding more */
-  filter: saturate(1.25) brightness(1.12);
+  /* no disc behind it: the colour floats on whatever the panel already is,
+     which is what keeps it from sitting on the card like a sticker */
+  background: transparent;
   transform: scale(calc(1 + var(--swell) * 0.08));
   transition: transform 110ms ease-out;
 }
@@ -2610,25 +2606,24 @@ body[data-modal] .nt-float {
   position: absolute;
   inset: -6%;
   border-radius: 50%;
-  mix-blend-mode: screen;
-  filter: blur(14px);
+  filter: blur(15px);
   will-change: transform;
 }
 .cap-orb-a {
-  background: radial-gradient(circle at 32% 34%, rgba(38, 238, 208, 1), rgba(12, 170, 152, 0.45) 28%, transparent 48%);
+  background: radial-gradient(circle at 32% 34%, rgba(12, 186, 167, 0.92), rgba(12, 170, 152, 0.4) 30%, transparent 52%);
   animation: cap-orb-orbit-a 7.5s ease-in-out infinite;
 }
 .cap-orb-b {
-  background: radial-gradient(circle at 68% 42%, rgba(126, 240, 146, 0.95), rgba(76, 190, 104, 0.4) 26%, transparent 46%);
+  background: radial-gradient(circle at 68% 42%, rgba(86, 202, 110, 0.9), rgba(76, 190, 104, 0.34) 28%, transparent 50%);
   animation: cap-orb-orbit-b 11s ease-in-out infinite;
 }
 .cap-orb-c {
-  background: radial-gradient(circle at 50% 72%, rgba(104, 190, 255, 0.95), rgba(78, 160, 220, 0.38) 27%, transparent 48%);
+  background: radial-gradient(circle at 50% 72%, rgba(78, 160, 226, 0.88), rgba(78, 160, 220, 0.32) 29%, transparent 52%);
   animation: cap-orb-orbit-c 9.3s ease-in-out infinite;
 }
 /* a fourth, far dimmer, only to break up the other three */
 .cap-orb-d {
-  background: radial-gradient(circle at 60% 26%, rgba(196, 245, 226, 0.55), transparent 34%);
+  background: radial-gradient(circle at 60% 26%, rgba(120, 220, 198, 0.5), transparent 38%);
   animation: cap-orb-orbit-b 14.7s ease-in-out infinite reverse;
 }
 /* a slow sheen turning over the top, so the surface reads as moving even when
@@ -2637,8 +2632,9 @@ body[data-modal] .nt-float {
   position: absolute;
   inset: -20%;
   border-radius: 50%;
-  background: conic-gradient(from 0deg, transparent 0%, rgba(255, 255, 255, 0.1) 18%, transparent 38%, transparent 100%);
-  mix-blend-mode: screen;
+  /* a slow turn of colour rather than of light, so it reads on any card */
+  background: conic-gradient(from 0deg, transparent 0%, rgba(12, 147, 132, 0.16) 16%, transparent 40%, transparent 100%);
+  filter: blur(10px);
   animation: cap-orb-turn 6.5s linear infinite;
   will-change: transform;
 }
@@ -2717,7 +2713,7 @@ body[data-modal] .nt-float {
   filter: blur(calc(14px - var(--swell) * 5px));
 }
 .cap-orb-listening .cap-orb-skin {
-  filter: saturate(calc(1.25 + var(--swell) * 0.5)) brightness(calc(1.12 + var(--swell) * 0.22));
+  filter: saturate(calc(1 + var(--swell) * 0.6));
 }
 
 /* thinking: everything hurries, and the ring closes in */
