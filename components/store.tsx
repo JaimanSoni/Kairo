@@ -247,7 +247,8 @@ type AppContextValue = {
   state: State;
   /** Optimistically adds a task; resolves to the persisted id (null if save failed). */
   /** `subtasks`: steps the task is born with. They go out with the create itself; adding them a moment later used to race the new id and lose them. */
-  addTask: (input: ParsedInput, opts?: { status?: Task["status"]; subtasks?: Subtask[] }) => Promise<string | null>;
+  /** `completedAt` files it finished at a moment that has already passed, for a day being written up afterwards. */
+  addTask: (input: ParsedInput, opts?: { status?: Task["status"]; subtasks?: Subtask[]; completedAt?: string }) => Promise<string | null>;
   /** Reads the latest version of a task (safe inside async callbacks). */
   getTask: (id: string) => Task | undefined;
   updateTask: (id: string, patch: Partial<Task>) => void;
@@ -472,7 +473,7 @@ export function AppProvider({
 
 
   const addTask = useCallback(
-    (input: ParsedInput, opts?: { status?: Task["status"]; subtasks?: Subtask[] }) => {
+    (input: ParsedInput, opts?: { status?: Task["status"]; subtasks?: Subtask[]; completedAt?: string }) => {
       if (guestCapReached()) return Promise.resolve(null);
       if (guestMode) guestCreated++;
       const tempId = `temp-${crypto.randomUUID()}`;
@@ -500,7 +501,8 @@ export function AppProvider({
         ownerId: user.id,
         memberIds: [],
         subtasks: opts?.subtasks ?? [],
-        completedAt: null,
+        // something being written down after the fact was finished then, not now
+        completedAt: status === "done" ? (opts?.completedAt ?? now) : null,
         createdAt: now,
         agent: null,
       };
@@ -519,6 +521,7 @@ export function AppProvider({
           estimateMin: task.estimateMin,
           order: task.order,
           repeat: task.repeat,
+          ...(task.completedAt ? { completedAt: task.completedAt } : {}),
           ...(task.subtasks.length ? { subtasks: task.subtasks } : {}),
         }),
       })

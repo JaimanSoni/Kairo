@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { StandupButton } from "./standup";
 import type { Task } from "@/lib/types";
-import { fullDate, fmtMinutes, localDayOf, parseDateStr, weekdayName } from "@/lib/dates";
+import { fullDate, fmtMinutes, localDayOf, middayOf, parseDateStr, weekdayName } from "@/lib/dates";
 
 const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 /** "20 Sep": the date in the corner of a phone. */
@@ -409,6 +409,7 @@ export function AddRow({
   placeholder,
   plannedFor,
   day,
+  doneOn,
   listId,
   status,
   trailing,
@@ -421,6 +422,11 @@ export function AddRow({
    * words say, and a day named in them stays part of the title.
    */
   day?: string;
+  /**
+   * This row is a day that has already been and gone, so anything put into it
+   * is a record rather than a plan: it is filed finished, on that day.
+   */
+  doneOn?: string;
   listId?: string | null;
   status?: Task["status"];
   /** Rendered inside the row, after the input — e.g. a destination switch. */
@@ -434,7 +440,7 @@ export function AddRow({
     const parsed = parseQuickAdd(text, visibleLists(state), day ? { day } : undefined);
     if (!day && plannedFor !== undefined && !parsed.plannedFor) parsed.plannedFor = plannedFor;
     if (listId !== undefined && !parsed.listId) parsed.listId = listId ?? null;
-    addTask(parsed, status ? { status } : undefined);
+    addTask(parsed, doneOn ? { status: "done", completedAt: middayOf(doneOn) } : status ? { status } : undefined);
     setText("");
   };
 

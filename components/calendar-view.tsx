@@ -587,7 +587,18 @@ function DayPanel({
         </div>
       )}
 
-      {day >= today && <AddRow placeholder={`Add to ${friendlyDay(day, today)}…`} day={day} />}
+      {day >= today ? (
+        <AddRow placeholder={`Add to ${friendlyDay(day, today)}…`} day={day} />
+      ) : (
+        /*
+         * A day that has gone still takes things, because plenty of what you
+         * did never made it into a list at the time. What goes in here is
+         * filed finished, on that day -- it is a record of that day, not a
+         * plan for it, and it turns up in the log and in that morning's
+         * update where it belongs.
+         */
+        <AddRow placeholder={`Add something you did ${friendlyDay(day, today).toLowerCase()}…`} day={day} doneOn={day} />
+      )}
 
       <DayHabits date={day} today={today} className="mt-4" />
       <DayJournal date={day} today={today} summary={page} access={access} className="mt-4" />

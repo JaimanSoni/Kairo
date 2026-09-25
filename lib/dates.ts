@@ -22,6 +22,20 @@ export function localDayOf(iso: string): string {
   return Number.isNaN(d.getTime()) ? iso.slice(0, 10) : toDateStr(d);
 }
 
+/**
+ * The middle of a day, as a real instant.
+ *
+ * Something finished on a past day has to be stamped with a moment, not a
+ * date, because that is what completion is recorded as. Midday is the safe
+ * one: midnight either end can fall into the day before or after once a
+ * clock changes or a summary is drawn up in another timezone, and nobody
+ * cares what o'clock it was on a day they are filling in afterwards.
+ */
+export function middayOf(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d, 12, 0, 0, 0).toISOString();
+}
+
 export function addDays(dateStr: string, days: number): string {
   const [y, m, d] = dateStr.split("-").map(Number);
   const date = new Date(y, m - 1, d);
