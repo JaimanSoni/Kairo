@@ -510,6 +510,52 @@ export function TaskItem({
                   <Icon3d name="bird" size={15} /> Share
                 </MenuBtn>
               )}
+              {/*
+                Where it goes next, which is most of what anybody opens this
+                menu for. Same three moves the morning sweep offers, so a task
+                lands in the same state whichever way you send it there.
+              */}
+              {!done && (
+                <>
+                  <div className="my-1 border-t border-line" />
+                  <MenuBtn
+                    onClick={() => {
+                      setMenuOpen(false);
+                      updateTask(task.id, { plannedFor: addDays(state.today, 1), status: "planned", spotlight: false });
+                      showToast({ message: "Moved to tomorrow." });
+                    }}
+                  >
+                    <Icon3d name="sunrise" size={15} /> Tomorrow
+                  </MenuBtn>
+                  {/*
+                    A repeating task keeps its date. Parking one with no date
+                    leaves the series nothing to count from, and the sweep
+                    refuses it for the same reason.
+                  */}
+                  {!task.repeat && (
+                    <>
+                      <MenuBtn
+                        onClick={() => {
+                          setMenuOpen(false);
+                          updateTask(task.id, { plannedFor: null, status: "inbox", spotlight: false });
+                          showToast({ message: "Back in your Inbox, with no date." });
+                        }}
+                      >
+                        <Icon3d name="inbox" size={15} /> Inbox
+                      </MenuBtn>
+                      <MenuBtn
+                        onClick={() => {
+                          setMenuOpen(false);
+                          updateTask(task.id, { plannedFor: null, status: "someday", spotlight: false });
+                          showToast({ message: "Parked in Someday. No date, no pressure." });
+                        }}
+                      >
+                        <Icon3d name="moon" size={15} /> Someday
+                      </MenuBtn>
+                    </>
+                  )}
+                </>
+              )}
                 <div className="my-1 border-t border-line" />
                 <MenuBtn onClick={() => { setMenuOpen(false); deleteTask(task.id); }}>
                   <span className="grid w-[15px] place-items-center text-clay"><IconTrash size={14} /></span> <span className="text-clay">Delete</span>
