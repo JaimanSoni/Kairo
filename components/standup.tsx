@@ -10,14 +10,13 @@
  * that posts itself.
  *
  * Copy puts two flavours on the clipboard: plain text for anywhere, and HTML
- * so that Slack, which takes rich text, keeps the bullets as bullets and the
- * link as a link.
+ * so that Slack, which takes rich text, keeps the bullets as bullets.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useApp } from "./store";
 import { Modal } from "./ui";
-import { signsOff, standupHtml, standupText, wantsStandup, type StandupLines } from "@/lib/standup";
+import { standupHtml, standupText, wantsStandup, type StandupLines } from "@/lib/standup";
 import { track } from "@/lib/analytics-client";
 
 /** Midnight to midnight, yesterday, where the person actually is. */
@@ -32,7 +31,7 @@ function yesterdayWindow(): { from: string; to: string } {
 type State =
   | { kind: "idle" }
   | { kind: "working" }
-  | { kind: "ready"; text: string; lines: StandupLines; signed: boolean }
+  | { kind: "ready"; text: string; lines: StandupLines }
   | { kind: "empty" }
   | { kind: "failed" };
 
@@ -59,8 +58,8 @@ export function StandupButton() {
         setPhase({ kind: "failed" });
         return;
       }
-      const body = (await res.json()) as { text: string; lines: StandupLines; signed: boolean };
-      setPhase({ kind: "ready", text: body.text, lines: body.lines, signed: body.signed });
+      const body = (await res.json()) as { text: string; lines: StandupLines };
+      setPhase({ kind: "ready", text: body.text, lines: body.lines });
     } catch {
       setPhase({ kind: "failed" });
     }
@@ -81,9 +80,8 @@ export function StandupButton() {
   const copy = async () => {
     const text = phase.kind === "ready" ? (box.current?.value ?? phase.text) : "";
     if (!text) return;
-    const signed = phase.kind === "ready" && phase.signed;
     try {
-      const html = htmlFromText(text, signed);
+      const html = htmlFromText(text);
       if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
         await navigator.clipboard.write([
           new ClipboardItem({
@@ -204,7 +202,7 @@ export function StandupButton() {
  * The edited text, as rich text. Anything under a heading is a bullet, and
  * the sign-off's "kairo" becomes the link it is meant to be.
  */
-function htmlFromText(text: string, signed: boolean): string {
+function htmlFromText(text: string): string {
   const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const out: string[] = [];
   let list: string[] = [];
@@ -225,7 +223,8 @@ function htmlFromText(text: string, signed: boolean): string {
       continue;
     }
     flush();
-    const link = signed && trimmed.match(/^(.*?)(https?:\/\/\S+)$/i);
+    // a line somebody typed an address into stays clickable when it is pasted
+    const link = trimmed.match(/^(.*?)(https?:\/\/\S+)$/i);
     if (link) {
       out.push(`<div>${esc(link[1])}<a href="${esc(link[2])}">${esc(link[2])}</a></div>`);
       continue;
@@ -248,4 +247,4 @@ function SlackGlyph() {
 }
 
 /* re-exported so the Today view can ask the same question without the import dance */
-export { wantsStandup, standupText, standupHtml, signsOff };
+export { wantsStandup, standupText, standupHtml };

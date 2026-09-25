@@ -15,18 +15,13 @@
 /** Where this is the daily ritual. */
 const TEAM_DOMAIN = "allevents.in";
 
-/** Kairo's own author, whichever address he is signed in with, who gets to say so at the bottom. */
-const AUTHORS = ["jaimansoni@gmail.com", "jaiman@allevents.in"];
-
 /**
- * Where the sign-off points.
+ * The tagged way in, for a link shared by hand.
  *
- * The tag is not a word anybody could guess, which is the whole point of it:
- * nothing else in the world links to this address with it, so every visit
- * carrying it came from an update somebody posted in their own channel.
- * Landing with it opens the way in at once, because a person following a
- * colleague's recommendation is already sold and should not have to go
- * looking for the door.
+ * Nothing writes this into a message any more, but following it still opens
+ * the sign-in at once rather than leaving somebody who was recommended the
+ * thing to go looking for the door -- and a visit carrying the tag can only
+ * have come from a link somebody passed on deliberately.
  */
 export const KAIRO_REF = "u7kq2m";
 export const KAIRO_URL = `https://kairo.jaimansoni.com/?ref=${KAIRO_REF}`;
@@ -37,13 +32,7 @@ export function standupEmail(email: string | null | undefined): string {
 
 /** Whether to offer it at all. */
 export function wantsStandup(email: string | null | undefined): boolean {
-  const at = standupEmail(email);
-  return at.endsWith(`@${TEAM_DOMAIN}`) || AUTHORS.includes(at);
-}
-
-/** Whether the message ends with where it came from. */
-export function signsOff(email: string | null | undefined): boolean {
-  return AUTHORS.includes(standupEmail(email));
+  return standupEmail(email).endsWith(`@${TEAM_DOMAIN}`);
 }
 
 export type StandupLines = { yesterday: string[]; today: string[] };
@@ -62,12 +51,11 @@ const BULLET = "• ";
  * The message itself. The model writes the lines; the shape is ours, because
  * the shape is the part the channel expects to be the same every day.
  */
-export function standupText(lines: StandupLines, opts: { signed?: boolean } = {}): string {
+export function standupText(lines: StandupLines): string {
   const block = (heading: string, items: string[]) =>
     `${heading}\n${items.length ? items.map((l) => BULLET + l).join("\n") : `${BULLET}Nothing to report`}`;
 
-  const body = [block("Yesterday's Update:", lines.yesterday), block("Today's Plan:", lines.today)].join("\n\n");
-  return opts.signed ? `${body}\n\nsent using Kairo, try here: ${KAIRO_URL}` : body;
+  return [block("Yesterday's Update:", lines.yesterday), block("Today's Plan:", lines.today)].join("\n\n");
 }
 
 /**
@@ -78,7 +66,7 @@ export function standupText(lines: StandupLines, opts: { signed?: boolean } = {}
  * puts both flavours on it and lets Slack choose. Everywhere else gets the
  * plain one, which is why the plain one has to read properly on its own.
  */
-export function standupHtml(lines: StandupLines, opts: { signed?: boolean } = {}): string {
+export function standupHtml(lines: StandupLines): string {
   const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const block = (heading: string, items: string[]) =>
     `<div>${esc(heading)}</div>` +
@@ -86,8 +74,7 @@ export function standupHtml(lines: StandupLines, opts: { signed?: boolean } = {}
       ? `<ul>${items.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>`
       : `<ul><li>Nothing to report</li></ul>`);
 
-  const body = block("Yesterday's Update:", lines.yesterday) + "<br>" + block("Today's Plan:", lines.today);
-  return opts.signed ? `${body}<br><div>sent using Kairo, try here: <a href="${KAIRO_URL}">${KAIRO_URL}</a></div>` : body;
+  return block("Yesterday's Update:", lines.yesterday) + "<br>" + block("Today's Plan:", lines.today);
 }
 
 /* ------------------------------------------------------- keeping it honest */

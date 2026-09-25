@@ -4,7 +4,7 @@ import { requireSession, badRequest } from "@/lib/api-auth";
 import { isDateString, listAccessFilter, listsCollection, lockedListIds, tasksCollection, toList } from "@/lib/tasks";
 import { aiStandup } from "@/lib/ai";
 import { getUserById } from "@/lib/users";
-import { signsOff, standupText, wantsStandup, type StandupTask } from "@/lib/standup";
+import { standupText, wantsStandup, type StandupTask } from "@/lib/standup";
 
 /**
  * The morning standup, out of yesterday's finished work and today's plan.
@@ -91,9 +91,8 @@ export async function POST(request: Request) {
   if (!lines) return NextResponse.json({ error: "AI unavailable" }, { status: 502 });
 
   return NextResponse.json({
-    text: standupText(lines, { signed: signsOff(user?.email) }),
+    text: standupText(lines),
     lines,
-    signed: signsOff(user?.email),
     counts: { yesterday: yesterdayTasks.length, today: todayTasks.length },
   });
 }
