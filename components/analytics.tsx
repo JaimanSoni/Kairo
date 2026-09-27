@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import Script from "next/script";
 import { usePathname } from "next/navigation";
+import { NO_REPLAY_KEY } from "@/lib/analytics-client";
 
 /**
  * Microsoft Clarity (heatmaps, session replay) and Google Analytics (traffic).
@@ -21,7 +22,7 @@ const loader = (id: string) => `(function(c,l,a,r,i,t,y){
   y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
 })(window, document, "clarity", "script", "${id}");`;
 
-// neither the hostname nor the opt-out flag changes within a page's lifetime
+// neither the hostname nor the opt-out flags change within a page's lifetime
 const subscribeNever = () => () => {};
 
 function trackable(): boolean {
@@ -35,6 +36,15 @@ function trackable(): boolean {
   return true;
 }
 
+/** Whether this browser is one of the ones that is never filmed. */
+function recordable(): boolean {
+  try {
+    return !localStorage.getItem(NO_REPLAY_KEY);
+  } catch {
+    return true;
+  }
+}
+
 export function Analytics() {
   const pathname = usePathname();
 
@@ -43,6 +53,8 @@ export function Analytics() {
   // browser the admin has signed in with). The scripts loaded afterInteractive
   // anyway, so nothing arrives later than it used to.
   const on = useSyncExternalStore(subscribeNever, trackable, () => false);
+  // counted either way; filmed only if this browser has not opted out of it
+  const filmed = useSyncExternalStore(subscribeNever, recordable, () => false);
 
   // Local runs would otherwise fill the recordings with development noise.
   if (process.env.NODE_ENV !== "production") return null;
@@ -56,7 +68,7 @@ export function Analytics() {
 
   return (
     <>
-      {CLARITY_ID && (
+      {CLARITY_ID && filmed && (
         <Script id="ms-clarity" strategy="afterInteractive">
           {loader(CLARITY_ID)}
         </Script>

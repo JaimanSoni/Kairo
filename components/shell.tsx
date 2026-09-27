@@ -7,7 +7,7 @@ import { hiddenListIds, useApp } from "./store";
 import { navigateApp } from "./app-views";
 import { upgradeHref, useCan } from "./entitlements";
 import { animalAvatar } from "@/lib/avatars";
-import { track } from "@/lib/analytics-client";
+import { track, replayable, NO_REPLAY_KEY } from "@/lib/analytics-client";
 import { registerServiceWorker, syncPushSubscription } from "@/lib/push-client";
 import { playNotify } from "@/lib/sound";
 import { Omnibar } from "./omnibar";
@@ -86,6 +86,21 @@ export function Shell({ children }: { children: React.ReactNode }) {
       // private mode without storage just falls back to the server-side guard
     }
   }, [isAdmin]);
+
+  // Some accounts are never filmed, and the flag outlives sign-out for the
+  // same reason the admin one does: it is the machine that gets recorded, not
+  // the session. Recording already running is stopped where it stands, so the
+  // visit somebody signs in on is not the one that gets kept.
+  const email = state.user.email;
+  useEffect(() => {
+    if (replayable(email)) return;
+    try {
+      localStorage.setItem(NO_REPLAY_KEY, "1");
+      (window as Window & { clarity?: (cmd: string) => void }).clarity?.("stop");
+    } catch {
+      // no storage, or Clarity never loaded: nothing to do either way
+    }
+  }, [email]);
 
   // when a push arrives while a tab is open, play the in-app chime
   useEffect(() => {

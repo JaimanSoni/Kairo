@@ -16,6 +16,26 @@
 
 type Props = Record<string, string | number | boolean>;
 
+/**
+ * Whose sessions are never recorded.
+ *
+ * Session replay is for watching a stranger meet the app and get stuck. The
+ * people who build it are neither: their recordings are all deliberate
+ * poking at half-finished things, which teaches nothing and buries the
+ * sessions that would.
+ *
+ * This only stops the replay. Page counts still count them, because a
+ * pageview is a number and a recording is a film of somebody working.
+ */
+const NEVER_REPLAYED = ["jaiman@allevents.in"];
+
+export function replayable(email: string | null | undefined): boolean {
+  return !NEVER_REPLAYED.includes((email ?? "").trim().toLowerCase());
+}
+
+/** Where a browser remembers it is not to be filmed. */
+export const NO_REPLAY_KEY = "kairo-norecord";
+
 function id(store: Storage, key: string): string {
   let v = store.getItem(key);
   if (!v) {
