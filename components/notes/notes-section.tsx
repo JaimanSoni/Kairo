@@ -2,12 +2,11 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
-import { notesStore } from "@/lib/notes-client";
-import { useApp } from "../store";
-import { EmptyState } from "../ui";
-import { GoogleBadge } from "../guest-mode";
+import { notesStore, showEmptyNotes } from "@/lib/notes-client";
+import { GUEST_NOTE_EVENT, useApp } from "../store";
 import { navigateApp } from "../app-views";
 import { useNoteActions } from "./actions";
+import { GuestAsk } from "../guest-ask";
 import { QuickFind, TrashDialog } from "./dialogs";
 import { NotesHome } from "./home";
 import { NotePageView } from "./note-page";
@@ -48,13 +47,25 @@ export default function NotesSection() {
   const id = match ? match[1] : null;
   const stray = !id && pathname !== "/notes" && pathname !== "/notes/";
   const guest = Boolean(state.user.guest);
+  const [asking, setAsking] = useState(false);
+
+  // every way of making a page ends here when there is no account to put it in
+  useEffect(() => {
+    const ask = () => setAsking(true);
+    window.addEventListener(GUEST_NOTE_EVENT, ask);
+    return () => window.removeEventListener(GUEST_NOTE_EVENT, ask);
+  }, []);
 
   useEffect(() => {
     if (stray) window.history.replaceState(null, "", "/notes");
   }, [stray]);
 
   useEffect(() => {
-    if (guest) return;
+    if (guest) {
+      // nothing to fetch, but everything to show
+      showEmptyNotes();
+      return;
+    }
     notesUi.init(state.user.id);
     void notesStore.ensureLoaded();
   }, [guest, state.user.id]);
@@ -77,32 +88,17 @@ export default function NotesSection() {
     return () => window.removeEventListener("keydown", onKey);
   }, [guest]);
 
-  if (guest) {
-    return (
-      <div className="mx-auto w-full max-w-2xl px-4 pb-32 pt-8 sm:px-6">
-        <header className="anim-rise mb-6">
-          <h1 className="font-display text-4xl">Notes</h1>
-          <p className="mt-1 text-sm text-ink-soft">Pages inside pages, written your way.</p>
-        </header>
-        <EmptyState
-          icon="feather"
-          title="Keep notes that grow with you"
-          body="Plans, lists, meeting notes, a page for every project — with toggles, tables, links between pages and Kairo tasks right inside them. Notes live in your account, not in this browser, so they start when you sign in."
-        >
-          <a
-            href="/api/auth/google"
-            data-track="guest-signin"
-            className="mt-3 flex items-center gap-2 rounded-full bg-ink py-1.5 pl-1.5 pr-4 text-sm font-semibold text-paper transition-all hover:-translate-y-0.5 hover:shadow-md"
-          >
-            <GoogleBadge size={24} /> Sign in to start writing
-          </a>
-        </EmptyState>
-      </div>
-    );
-  }
-
   return (
     <div className="flex min-h-dvh">
+      {asking && (
+        <GuestAsk
+          where="note"
+          title="Pages need somewhere to live"
+          body="Notes live in your account, not in this browser, so they follow you to every device and nothing is lost when you close the tab. Sign in free and this page is your first one."
+          action="Sign in and start writing"
+          onClose={() => setAsking(false)}
+        />
+      )}
       {wide && notesUi.panelOpen() && <NotesPanel activeId={id} onFind={() => setFinding(true)} onTrash={() => setTrashOpen(true)} />}
       <div className="min-w-0 flex-1">
         {id ? (

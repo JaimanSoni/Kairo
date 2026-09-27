@@ -151,6 +151,21 @@ type TreeState = {
 };
 
 const tree: TreeState = { status: "idle", pages: new Map(), tick: 0 };
+
+/**
+ * An empty shelf, ready, without asking the server for one.
+ *
+ * There is no account to fetch pages from, but the page itself is worth
+ * seeing: the templates, the search, the shape of the thing. Shown this way
+ * it is the same Notes a new account opens on, rather than a locked door
+ * with a description of what is behind it.
+ */
+export function showEmptyNotes(): void {
+  if (tree.status === "ready" && tree.pages.size === 0) return;
+  tree.status = "ready";
+  tree.pages = new Map();
+  emit();
+}
 const listeners = new Set<() => void>();
 let childCache: { tick: number; index: Map<string | null, NoteMeta[]> } | null = null;
 

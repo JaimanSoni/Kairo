@@ -181,6 +181,26 @@ export const gardenStore = {
     if (garden.status !== "idle") gardenStore.reset();
   },
 
+  /**
+   * An empty garden, ready, without asking the server for one.
+   *
+   * There is no account to fetch, but there is everything to show: with this
+   * the habits page renders the same garden a new account sees -- the real
+   * sky, the real empty bed, the real invitation -- instead of a poster of
+   * one. Nothing can be written into it, because there is nowhere to write.
+   */
+  showEmpty() {
+    if (garden.status === "ready" && garden.habits.length === 0) return;
+    garden.status = "ready";
+    garden.habits = [];
+    garden.archived = [];
+    garden.logs = new Map();
+    garden.gardener = null;
+    garden.cheers = { today: 0, from: [] };
+    garden.friendRequests = 0;
+    emit();
+  },
+
   ensureLoaded(): Promise<void> {
     return garden.status === "ready" ? Promise.resolve() : gardenStore.reload();
   },

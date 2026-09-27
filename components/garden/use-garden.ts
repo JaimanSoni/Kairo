@@ -16,7 +16,13 @@ export function useGarden() {
   const userId = state.user.id;
 
   useEffect(() => {
-    if (guest) return;
+    if (guest) {
+      // no account to load, and nothing to wait for: show the garden a new
+      // one would start with, rather than a skeleton that never resolves
+      gardenStore.forUser(undefined);
+      gardenStore.showEmpty();
+      return;
+    }
     gardenStore.forUser(userId);
     void gardenStore.refresh(today);
   }, [guest, today, userId]);

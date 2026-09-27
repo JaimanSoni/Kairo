@@ -6,7 +6,7 @@ import { notesApi, notesStore } from "@/lib/notes-client";
 import type { NoteMeta, NoteMetaPatch, NotePage } from "@/lib/notes-shared";
 import { track } from "@/lib/analytics-client";
 import { navigateApp } from "../app-views";
-import { useApp } from "../store";
+import { GUEST_NOTE_EVENT, useApp } from "../store";
 import { notesUi } from "./ui-state";
 
 /**
@@ -44,7 +44,8 @@ export function openPageId(): string | null {
 }
 
 export function useNoteActions() {
-  const { showToast } = useApp();
+  const { state, showToast } = useApp();
+  const guest = Boolean(state.user.guest);
 
   return useMemo(() => {
     const restore = async (id: string) => {
@@ -68,6 +69,16 @@ export function useNoteActions() {
         doc?: JNode;
         open?: boolean;
       } = {}): Promise<NotePage | null> {
+        /*
+         * A guest can reach this from the header, the empty page, a template
+         * or the command palette, so the asking happens here rather than at
+         * four buttons that would drift apart. There is nowhere to save a
+         * page until there is an account to save it to.
+         */
+        if (guest) {
+          window.dispatchEvent(new Event(GUEST_NOTE_EVENT));
+          return null;
+        }
         const r = await notesApi.create({
           parentId: opts.parentId ?? null,
           afterId: opts.afterId ?? null,
@@ -204,7 +215,7 @@ export function useNoteActions() {
         }
       },
     };
-  }, [showToast]);
+  }, [showToast, guest]);
 }
 
 export type NoteActions = ReturnType<typeof useNoteActions>;

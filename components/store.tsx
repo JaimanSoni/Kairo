@@ -159,6 +159,9 @@ export const GUEST_STORAGE_KEY = "kairo-guest-v1";
 export const GUEST_TASK_CAP = 10;
 export const GUEST_CAP_EVENT = "kairo-guest-cap";
 
+/** A guest reached for a page. Notes shows the ask; the store stays out of it. */
+export const GUEST_NOTE_EVENT = "kairo-guest-note";
+
 let guestCreated = 0;
 
 /** True (and announces it) when the guest has used up their slate. */

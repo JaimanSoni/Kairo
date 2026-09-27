@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { GuestAsk } from "../guest-ask";
 import { useSearchParams } from "next/navigation";
 import { addDays, gardenLevelOf, gardenScore, type Seed } from "@/lib/habits-shared";
 import { CITY_SHOWN } from "@/lib/types";
@@ -29,7 +30,19 @@ type Sheet = { seed?: Seed; name?: string };
  * finishing the day clears the sky.
  */
 export function GardenHome() {
-  const { status, habits, archived, today } = useGarden();
+  const { status, habits, archived, today, guest } = useGarden();
+  /**
+   * A guest gets the garden itself, not a picture of one.
+   *
+   * It is the same component a new account opens on -- the same sky, the
+   * same empty bed, the same invitation in the middle of it. The only
+   * difference is where the invitation leads: there is nowhere to plant a
+   * habit until there is an account to plant it in, so reaching for it is
+   * where the asking happens, after they have seen what they would be
+   * signing up to rather than before.
+   */
+  const [asking, setAsking] = useState(false);
+  const plant = () => (guest ? setAsking(true) : setSheet({}));
   const { moments, celebrate, water, compost } = useGardenActions();
   const minute = useClock();
   const params = useSearchParams();
@@ -104,7 +117,7 @@ export function GardenHome() {
           </PillLink>
           <button
             type="button"
-            onClick={() => setSheet({})}
+            onClick={plant}
             className="flex h-9 items-center gap-1.5 rounded-full bg-ink px-3.5 text-xs font-semibold text-paper transition-colors hover:bg-ink/90"
           >
             <IconPlus size={14} /> New habit
@@ -115,7 +128,7 @@ export function GardenHome() {
       {habits.length === 0 ? (
         <>
           <GardenScene weather="clear" thriving={2} live>
-            <EmptyBed onPlant={() => setSheet({})} />
+            <EmptyBed onPlant={plant} />
           </GardenScene>
           <FirstSteps />
           {/* the city is open before the first plant: friends who moved in next door are there to visit */}
@@ -300,6 +313,16 @@ export function GardenHome() {
             </span>
           </button>
         </div>
+      )}
+
+      {asking && (
+        <GuestAsk
+          where="habit"
+          title="Plant it for real"
+          body="A habit needs somewhere to live, and a garden that remembers. Sign in free and this one is yours: a plant for every habit, under your real sky, growing each day you keep it."
+          action="Sign in and plant it"
+          onClose={() => setAsking(false)}
+        />
       )}
 
       {view.open && <ImmersiveGarden onClose={view.hide} />}
