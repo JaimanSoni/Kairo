@@ -35,6 +35,36 @@ export function wantsStandup(email: string | null | undefined): boolean {
   return standupEmail(email).endsWith(`@${TEAM_DOMAIN}`);
 }
 
+/**
+ * How far back "yesterday" reaches.
+ *
+ * On a Monday it is Friday, because that is the last time anybody did any
+ * work and it is what the channel is waiting to hear about. Reading out an
+ * empty Sunday is not an update.
+ *
+ * It reaches back to the start of the last working day and runs to the start
+ * of today, so a Monday covers Friday, Saturday and Sunday: somebody who
+ * finished something at the weekend still gets to say so, and Friday -- the
+ * part that matters -- is in there either way.
+ *
+ * The longest this is ever allowed to be is Friday to Monday. Anything wider
+ * is a bug, and the server refuses it.
+ */
+export const LONGEST_WINDOW_DAYS = 3;
+
+export function sinceLastWorkingDay(now = new Date()): { from: string; to: string } {
+  const to = new Date(now);
+  to.setHours(0, 0, 0, 0);
+
+  const from = new Date(to);
+  do {
+    from.setDate(from.getDate() - 1);
+  } while (from.getDay() === 0 || from.getDay() === 6); // back past Sunday and Saturday
+  from.setHours(0, 0, 0, 0); // a clock change in between must not shift the edge
+
+  return { from: from.toISOString(), to: to.toISOString() };
+}
+
 export type StandupLines = { yesterday: string[]; today: string[] };
 
 /**

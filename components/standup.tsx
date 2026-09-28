@@ -16,17 +16,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useApp } from "./store";
 import { Modal } from "./ui";
-import { standupHtml, standupText, wantsStandup, type StandupLines } from "@/lib/standup";
+import { sinceLastWorkingDay, standupHtml, standupText, wantsStandup, type StandupLines } from "@/lib/standup";
 import { track } from "@/lib/analytics-client";
-
-/** Midnight to midnight, yesterday, where the person actually is. */
-function yesterdayWindow(): { from: string; to: string } {
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  const from = new Date(start);
-  from.setDate(from.getDate() - 1);
-  return { from: from.toISOString(), to: start.toISOString() };
-}
 
 type State =
   | { kind: "idle" }
@@ -48,7 +39,8 @@ export function StandupButton() {
       const res = await fetch("/api/standup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ today: state.today, ...yesterdayWindow() }),
+        // the window is worked out here, where the clock is the person's own
+        body: JSON.stringify({ today: state.today, ...sinceLastWorkingDay() }),
       });
       if (res.status === 422) {
         setPhase({ kind: "empty" });

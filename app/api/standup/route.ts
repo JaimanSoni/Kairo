@@ -4,7 +4,7 @@ import { requireSession, badRequest } from "@/lib/api-auth";
 import { isDateString, listAccessFilter, listsCollection, lockedListIds, tasksCollection, toList } from "@/lib/tasks";
 import { aiStandup } from "@/lib/ai";
 import { getUserById } from "@/lib/users";
-import { standupText, wantsStandup, type StandupTask } from "@/lib/standup";
+import { LONGEST_WINDOW_DAYS, standupText, wantsStandup, type StandupTask } from "@/lib/standup";
 
 /**
  * The morning standup, out of yesterday's finished work and today's plan.
@@ -39,8 +39,10 @@ export async function POST(request: Request) {
   if (!from || !to || Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || to <= from) {
     return badRequest("from and to required");
   }
-  // a window wider than two days is not a yesterday
-  if (to.getTime() - from.getTime() > 2 * 24 * 60 * 60 * 1000) return badRequest("window too wide");
+  // Friday to Monday is the widest a "yesterday" ever gets, plus a day of
+  // slack for a clock change falling inside it
+  const widest = (LONGEST_WINDOW_DAYS + 1) * 24 * 60 * 60 * 1000;
+  if (to.getTime() - from.getTime() > widest) return badRequest("window too wide");
 
   const userId = new ObjectId(session.userId);
   const lists = await listsCollection();
