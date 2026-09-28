@@ -21,15 +21,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const session = await getSession();
   if (!session) redirect("/");
 
-  const [userDoc, roster, billingSettings] = await Promise.all([
+  // Four independent reads, so they go together rather than in a queue. The
+  // plans are in here for latency alone: nothing below needs them before the
+  // account, and waiting for them in turn added a whole round trip to every
+  // cold load.
+  const [userDoc, roster, billingSettings, plans] = await Promise.all([
     getUserById(session.userId),
     getSessionAccounts(),
     getBillingSettings(),
+    listSellablePlans(),
   ]);
 
   // Offered on the paywall and the trial banner. Read here rather than in the
   // client components so a price can never be taken from the browser.
-  const sellable = (await listSellablePlans()).map((p) => ({
+  const sellable = plans.map((p) => ({
     key: p.key,
     name: p.name,
     tagline: p.tagline,

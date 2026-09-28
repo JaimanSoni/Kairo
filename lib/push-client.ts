@@ -16,8 +16,15 @@ export function pushPermission(): NotificationPermission | "unsupported" {
   return Notification.permission;
 }
 
+/**
+ * The worker does two jobs now — pushes, and caching the app's own files —
+ * and only the first needs the Push API. Gating registration on push support
+ * meant a browser without it got neither, so the check here is only that
+ * workers exist at all. `syncPushSubscription` still decides for itself
+ * whether there is anything to subscribe.
+ */
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
-  if (!pushSupported()) return null;
+  if (typeof window === "undefined" || !("serviceWorker" in navigator)) return null;
   try {
     return await navigator.serviceWorker.register("/sw.js");
   } catch {

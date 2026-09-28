@@ -150,16 +150,15 @@ export async function loadUserData(
     const lists = await listsCollection();
     const recentCutoff = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
 
-    const listDocs = await lists
-      .find(listAccessFilter(userId))
-      .sort({ order: 1, createdAt: 1 })
-      .toArray();
-
-    // Each user keeps their own list order, so reordering never disturbs the
-    // people you share a list with. Unranked lists keep their natural order.
-    const userDoc = await db
-      .collection("users")
-      .findOne({ _id: userId }, { projection: { listOrder: 1 } });
+    // The lists and the order they are shown in are independent reads, so they
+    // go together: one round trip to Atlas instead of two, on the path every
+    // cold load waits behind.
+    const [listDocs, userDoc] = await Promise.all([
+      lists.find(listAccessFilter(userId)).sort({ order: 1, createdAt: 1 }).toArray(),
+      // Each user keeps their own list order, so reordering never disturbs the
+      // people you share a list with. Unranked lists keep their natural order.
+      db.collection("users").findOne({ _id: userId }, { projection: { listOrder: 1 } }),
+    ]);
     const ranks = new Map<string, number>(
       (Array.isArray(userDoc?.listOrder) ? (userDoc.listOrder as unknown[]) : [])
         .filter((id): id is string => typeof id === "string")

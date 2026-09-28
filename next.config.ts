@@ -29,6 +29,14 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      // The worker is the one file that must never be held anywhere. It is
+      // what decides how everything else is cached, so a stale copy would
+      // keep serving a retired build's rules — and nothing short of clearing
+      // site data would get a fix out.
+      {
+        source: "/sw.js",
+        headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }],
+      },
     ];
   },
   async redirects() {

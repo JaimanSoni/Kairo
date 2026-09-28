@@ -10,9 +10,14 @@ const bodyFont = DM_Sans({
   subsets: ["latin"],
 });
 
+// Not preloaded: the mono face is for payment ids, an error reference and the
+// journal's optional typewriter setting — nothing on the pages people actually
+// open. Preloading it put a font nobody sees in front of the ones they do.
+// Still declared, so the moment something mono renders, it arrives.
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  preload: false,
 });
 
 const displayFont = Fraunces({
